@@ -65,5 +65,5 @@
 
 <h2>Contact</h2>
 <p>
-  For any queries, you can reach out to <a href="mailto:tashfiq61@gmail.com">Your Email</a>.
+  For any queries, you can reach out via <a href="mailto:tashfiq61@gmail.com">my email</a>.
 </p>
