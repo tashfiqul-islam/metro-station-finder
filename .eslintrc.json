@@ -1,3 +1,57 @@
 {
-  "extends": "next/core-web-vitals"
+  "env": {
+    "node": true,
+    "es2021": true,
+    "browser": true
+  },
+  "extends": [
+    "next/core-web-vitals",
+    "eslint:recommended",
+    "plugin:react/recommended",
+    "plugin:@typescript-eslint/recommended",
+    "plugin:prettier/recommended"
+  ],
+  "parserOptions": {
+    "ecmaVersion": 12,
+    "sourceType": "module",
+    "ecmaFeatures": {
+      "jsx": true
+    }
+  },
+  "rules": {
+    "prettier/prettier": ["error", {}, { "usePrettierrc": true }],
+    "react/react-in-jsx-scope": "off",
+    "react/jsx-filename-extension": [1, { "extensions": [".js", ".jsx", ".ts", ".tsx"] }],
+    "no-unused-vars": ["warn", { "vars": "all", "args": "after-used", "ignoreRestSiblings": false }],
+    "no-console": "off",
+    "consistent-return": "error",
+    "array-callback-return": "warn",
+    "eqeqeq": ["error", "always"],
+    "no-throw-literal": "error",
+    "no-return-assign": ["error", "always"],
+    "no-param-reassign": ["error", { "props": true }],
+    "no-shadow": "warn",
+    "no-confusing-arrow": ["error", { "allowParens": true }],
+    "no-unused-expressions": ["error", { "allowShortCircuit": true, "allowTernary": true }],
+    "no-use-before-define": ["error", { "functions": false, "classes": true }],
+    "node/no-missing-import": "error",
+    "node/no-unsupported-features/es-syntax": "off",
+    "prefer-const": "error",
+    "prefer-template": "error",
+    "template-curly-spacing": ["error", "never"],
+    "arrow-body-style": ["error", "as-needed"],
+    "no-var": "error",
+    "prefer-arrow-callback": "error",
+    "prefer-destructuring": ["error", { "object": true, "array": false }],
+    "prefer-rest-params": "error",
+    "prefer-spread": "error",
+    "object-shorthand": ["error", "always"],
+    "no-duplicate-imports": "error",
+    "newline-per-chained-call": ["error", { "ignoreChainWithDepth": 2 }]
+  },
+  "plugins": [
+    "react",
+    "@typescript-eslint",
+    "prettier"
+  ]
 }
