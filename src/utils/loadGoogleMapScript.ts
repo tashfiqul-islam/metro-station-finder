@@ -22,7 +22,7 @@ export const loadGoogleMapScript = (apiKey: string): Promise<void> =>
       return;
     }
 
-    // check if script is being loaded
+    // Check if script is being loaded
     const checkIfScriptIsBeingLoaded = () => {
       if (isScriptBeingLoaded) {
         setTimeout(checkIfScriptIsBeingLoaded, 200);
