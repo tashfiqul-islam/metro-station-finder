@@ -36,18 +36,26 @@ const HomePage: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
-      <header className="w-full max-w-lg mx-auto mt-10">
-        <SearchBar onSearch={handleSearch} />
-        {errorMessage && (
-          <p className="text-red-600 text-center mt-2">{errorMessage}</p>
-        )}
-      </header>
-      <main className="w-full max-w-lg mx-auto mt-5">
-        {typeof window !== 'undefined' && (
-          <MapView userLocation={userLocation} metroStation={nearestMetro} />
-        )}
-      </main>
+    <div
+      className="flex flex-col items-center justify-start min-h-screen"
+      style={{ backgroundColor: '#121212' }}
+    >
+      <div className="w-full text-center py-10">
+        <h1 className="text-xl font-bold text-white">Metro Station Finder</h1>
+      </div>
+      <div className="flex flex-col items-center justify-center w-full pt-5">
+        <header className="w-full max-w-lg mx-auto mt-5">
+          <SearchBar onSearch={handleSearch} />
+          {errorMessage && (
+            <p className="text-red-600 text-center mt-2">{errorMessage}</p>
+          )}
+        </header>
+        <main className="w-full max-w-lg mx-auto mt-5">
+          {typeof window !== 'undefined' && (
+            <MapView userLocation={userLocation} metroStation={nearestMetro} />
+          )}
+        </main>
+      </div>
     </div>
   );
 };

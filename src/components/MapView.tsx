@@ -81,7 +81,7 @@ const MapView: React.FC<MapViewProps> = ({ userLocation, metroStation }) => {
     <div className="flex flex-col items-center">
       <div
         ref={mapRef}
-        className="w-full h-96 mt-5"
+        className="w-full h-96 mt-5 border border-gray-500 rounded-lg"
         id="map"
         style={{ width: 'calc(250%)' }}
       ></div>
