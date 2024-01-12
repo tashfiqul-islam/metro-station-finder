@@ -1,8 +1,11 @@
 /* eslint-disable consistent-return */
 /* eslint-disable node/no-missing-import */
+// MapView.tsx
+// This component displays a Google Map and manages rendering of locations and directions.
+
 import React, { useEffect, useRef, useState } from 'react';
 import { loadGoogleMapScript } from '../utils/loadGoogleMapScript';
-import { MetroStation } from '../types';
+import { MetroStation } from '../utils/constants';
 
 interface MapViewProps {
   userLocation: google.maps.LatLngLiteral | null;
@@ -13,21 +16,17 @@ const MapView: React.FC<MapViewProps> = ({ userLocation, metroStation }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<google.maps.Map>();
 
-  // Load and initialize the Google Map
+  // Effect to load and initialize the Google Map
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     loadGoogleMapScript(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '')
       .then(() => {
-        const initialCenter = { lat: 23.8103, lng: 90.4125 }; // Center on Dhaka
+        const initialCenter = { lat: 23.8103, lng: 90.4125 }; // Dhaka's coordinates
         const newMap = new google.maps.Map(mapRef.current!, {
           center: initialCenter,
           zoom: 12,
         });
-
-        // Initialize the directions renderer service
-        const directionsRenderer = new google.maps.DirectionsRenderer();
-        directionsRenderer.setMap(newMap);
 
         setMap(newMap);
       })
@@ -42,7 +41,6 @@ const MapView: React.FC<MapViewProps> = ({ userLocation, metroStation }) => {
     const directionsRenderer = new google.maps.DirectionsRenderer();
     directionsRenderer.setMap(map);
 
-    // Set markers for user location and nearest metro station
     const userMarker = new google.maps.Marker({
       position: userLocation,
       map,
@@ -55,12 +53,12 @@ const MapView: React.FC<MapViewProps> = ({ userLocation, metroStation }) => {
       title: 'Nearest Metro Station',
     });
 
-    // Request for directions
+    // Request and render directions
     directionsService.route(
       {
         origin: userLocation,
         destination: { lat: metroStation.lat, lng: metroStation.lng },
-        travelMode: google.maps.TravelMode.WALKING, // or DRIVING, based on preference
+        travelMode: google.maps.TravelMode.WALKING,
       },
       (result, status) => {
         if (status === google.maps.DirectionsStatus.OK) {
@@ -71,7 +69,7 @@ const MapView: React.FC<MapViewProps> = ({ userLocation, metroStation }) => {
       },
     );
 
-    // Cleanup function to remove markers
+    // Cleanup markers and directions renderer
     return () => {
       userMarker.setMap(null);
       metroMarker.setMap(null);
@@ -85,7 +83,7 @@ const MapView: React.FC<MapViewProps> = ({ userLocation, metroStation }) => {
         ref={mapRef}
         className="w-full h-96 mt-5"
         id="map"
-        style={{ width: 'calc(250%)' }} // Updated width
+        style={{ width: 'calc(250%)' }}
       ></div>
     </div>
   );

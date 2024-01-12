@@ -1,5 +1,5 @@
 /* eslint-disable node/no-missing-import */
-import { MetroStation, metroStations } from '../types'; // Import the MetroStation type and predefined stations
+import { MetroStation, metroStations } from '../utils/constants'; // Import the MetroStation type and predefined stations
 
 /**
  * Geocode an address using Google Maps Geocoding API

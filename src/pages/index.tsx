@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import dynamic from 'next/dynamic';
 import SearchBar from '../components/SearchBar';
 import { findNearestMetro } from '../services/metroServices';
-import { MetroStation } from '../types';
+import { MetroStation } from '../utils/constants';
 
 // Dynamically import MapView with no server-side rendering
 const MapView = dynamic(() => import('../components/MapView'), { ssr: false });

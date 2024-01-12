@@ -1,10 +1,11 @@
-/* eslint-disable no-unused-vars */
 /* eslint-disable node/no-missing-import */
+// SearchBar.tsx
+// This component provides an input field with Google Places Autocomplete functionality.
+
 import React, { useState, useEffect, useRef } from 'react';
 import { loadGoogleMapScript } from '../utils/loadGoogleMapScript';
 import { dhakaBounds } from '../utils/constants';
 
-// Define the props for the SearchBar component
 interface SearchBarProps {
   onSearch: (location: google.maps.LatLngLiteral) => void;
 }
@@ -14,60 +15,45 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
   const autoCompleteRef = useRef<HTMLInputElement>(null);
   const [isScriptLoaded, setIsScriptLoaded] = useState(false);
 
-  // Load the Google Maps script
+  // Effect to load the Google Maps script
   useEffect(() => {
-    loadGoogleMapScript(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '').then(
-      () => {
-        setIsScriptLoaded(true);
-      },
-    );
+    loadGoogleMapScript(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '')
+      .then(() => setIsScriptLoaded(true))
+      .catch(error => console.error('Error loading Google Maps:', error));
   }, []);
 
-  // Initialize Google Places Autocomplete
+  // Effect to initialize Google Places Autocomplete
   useEffect(() => {
-    let autoComplete: google.maps.places.Autocomplete | null = null;
+    if (!isScriptLoaded || !autoCompleteRef.current) return;
 
-    const initializeAutoComplete = () => {
-      if (isScriptLoaded && autoCompleteRef.current) {
-        const bounds = new google.maps.LatLngBounds(
-          new google.maps.LatLng(
-            dhakaBounds.southwest.lat,
-            dhakaBounds.southwest.lng,
-          ),
-          new google.maps.LatLng(
-            dhakaBounds.northeast.lat,
-            dhakaBounds.northeast.lng,
-          ),
-        );
+    // Create bounds for the autocomplete suggestions
+    const bounds = new google.maps.LatLngBounds(
+      new google.maps.LatLng(
+        dhakaBounds.southwest.lat,
+        dhakaBounds.southwest.lng,
+      ),
+      new google.maps.LatLng(
+        dhakaBounds.northeast.lat,
+        dhakaBounds.northeast.lng,
+      ),
+    );
 
-        autoComplete = new google.maps.places.Autocomplete(
-          autoCompleteRef.current,
-          {
-            bounds, // Use the LatLngBounds object
-            componentRestrictions: { country: 'BD' },
-          },
-        );
+    // Initialize Autocomplete
+    const autoComplete = new google.maps.places.Autocomplete(
+      autoCompleteRef.current,
+      {
+        bounds,
+        componentRestrictions: { country: 'BD' },
+      },
+    );
 
-        autoComplete.addListener('place_changed', () => {
-          const place = autoComplete?.getPlace();
-          if (place?.geometry?.location) {
-            setInputValue(place.formatted_address || '');
-            onSearch(place.geometry.location.toJSON());
-          }
-        });
+    autoComplete.addListener('place_changed', () => {
+      const place = autoComplete.getPlace();
+      if (place.geometry?.location) {
+        setInputValue(place.formatted_address || '');
+        onSearch(place.geometry.location.toJSON());
       }
-    };
-
-    // Check if the 'google' object is available periodically
-    const checkGoogleAvailability = () => {
-      if (window.google) {
-        initializeAutoComplete();
-      } else {
-        setTimeout(checkGoogleAvailability, 100); // Check again after 100ms
-      }
-    };
-
-    checkGoogleAvailability();
+    });
   }, [isScriptLoaded, onSearch]);
 
   // Handle manual search submission

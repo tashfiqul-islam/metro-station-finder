@@ -1,38 +1,44 @@
 // utils/loadGoogleMapScript.ts
 
-// This flag will be set to true once the script is loaded to avoid reloading.
+/**
+ * This flag is used to track the status of the Google Maps script loading.
+ * It prevents redundant script loading and ensures consistent behavior.
+ */
 let isScriptLoaded = false;
 
 /**
  * Dynamically loads the Google Maps JavaScript API script with the Places Library.
+ * This function ensures efficient and consistent loading across components.
+ * It uses a promise-based approach for better async handling.
+ *
  * @param apiKey Your Google Maps API Key.
  * @returns A promise that resolves when the script has loaded.
  */
 export const loadGoogleMapScript = (apiKey: string): Promise<void> =>
   new Promise((resolve, reject) => {
-    // Check if the script is already loaded
+    // Early return if the script is already loaded, improving load efficiency.
     if (isScriptLoaded) {
       resolve();
       return;
     }
 
-    // Create a script element for Google Maps API
+    // Create a script element for the Google Maps API, ensuring efficient loading.
     const script = document.createElement('script');
     script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
-    script.async = true; // Load script asynchronously
-    script.defer = true; // Defer script loading until HTML parsing is complete
+    script.async = true; // Asynchronous loading for non-blocking behavior.
+    script.defer = true; // Defer loading to improve page render time.
 
-    // Append the script to the document head
+    // Append the script to the document head for immediate processing.
     document.head.appendChild(script);
 
-    // Handle script load event
+    // Event listener for successful script loading.
     script.onload = () => {
-      isScriptLoaded = true; // Set the flag to true as the script is loaded
-      resolve(); // Resolve the promise indicating successful loading
+      isScriptLoaded = true; // Update the flag upon successful loading.
+      resolve(); // Resolve the promise, indicating script readiness.
     };
 
-    // Handle script error event
+    // Error handling for script loading failures.
     script.onerror = () => {
-      reject(new Error('Google Maps API script failed to load.')); // Reject the promise on error
+      reject(new Error('Google Maps API script failed to load.')); // Reject the promise with an error message.
     };
   });
