@@ -1,3 +1,4 @@
+/* eslint-disable node/no-missing-import */
 import { MetroStation, metroStations } from '../types'; // Import the MetroStation type and predefined stations
 
 /**
@@ -6,11 +7,11 @@ import { MetroStation, metroStations } from '../types'; // Import the MetroStati
  * @returns A promise that resolves to the geocoded location (latitude and longitude)
  */
 export async function geocodeAddress(
-  address: string
+  address: string,
 ): Promise<{ lat: number; lng: number }> {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
-    address
+    address,
   )}&key=${apiKey}`;
 
   const response = await fetch(url);
@@ -62,7 +63,7 @@ export function findNearestMetro(location: {
  */
 function calculateDistance(
   location1: { lat: number; lng: number },
-  location2: { lat: number; lng: number }
+  location2: { lat: number; lng: number },
 ): number {
   const R = 6371; // Radius of the Earth in km
   const dLat = degreesToRadians(location2.lat - location1.lat);

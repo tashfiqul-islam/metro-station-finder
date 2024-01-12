@@ -1,37 +1,38 @@
+// utils/loadGoogleMapScript.ts
+
 // This flag will be set to true once the script is loaded to avoid reloading.
 let isScriptLoaded = false;
 
 /**
- * Dynamically loads the Google Maps JavaScript API script.
+ * Dynamically loads the Google Maps JavaScript API script with the Places Library.
  * @param apiKey Your Google Maps API Key.
  * @returns A promise that resolves when the script has loaded.
  */
-export const loadGoogleMapScript = (apiKey: string): Promise<void> => {
-  return new Promise((resolve, reject) => {
-    // If the script is already loaded, resolve immediately
+export const loadGoogleMapScript = (apiKey: string): Promise<void> =>
+  new Promise((resolve, reject) => {
+    // Check if the script is already loaded
     if (isScriptLoaded) {
       resolve();
       return;
     }
 
-    // Create a script element and set its attributes for Google Maps API
+    // Create a script element for Google Maps API
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}`;
-    script.async = true;
-    script.defer = true;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+    script.async = true; // Load script asynchronously
+    script.defer = true; // Defer script loading until HTML parsing is complete
 
     // Append the script to the document head
     document.head.appendChild(script);
 
-    // Resolve the promise once the script is loaded
+    // Handle script load event
     script.onload = () => {
-      isScriptLoaded = true;
-      resolve();
+      isScriptLoaded = true; // Set the flag to true as the script is loaded
+      resolve(); // Resolve the promise indicating successful loading
     };
 
-    // Reject the promise if there is an error loading the script
-    script.onerror = error => {
-      reject(new Error('Google Maps API script failed to load.'));
+    // Handle script error event
+    script.onerror = () => {
+      reject(new Error('Google Maps API script failed to load.')); // Reject the promise on error
     };
   });
-};

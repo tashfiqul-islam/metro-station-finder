@@ -1,7 +1,7 @@
 {
   "env": {
     "node": true,
-    "es2021": true,
+    "es2022": true,
     "browser": true
   },
   "extends": [
@@ -11,8 +11,9 @@
     "plugin:@typescript-eslint/recommended",
     "plugin:prettier/recommended"
   ],
+  "parser": "@typescript-eslint/parser",
   "parserOptions": {
-    "ecmaVersion": 12,
+    "ecmaVersion": 2022,
     "sourceType": "module",
     "ecmaFeatures": {
       "jsx": true
@@ -34,7 +35,7 @@
     "no-confusing-arrow": ["error", { "allowParens": true }],
     "no-unused-expressions": ["error", { "allowShortCircuit": true, "allowTernary": true }],
     "no-use-before-define": ["error", { "functions": false, "classes": true }],
-    "node/no-missing-import": "error",
+    "node/no-missing-import": ["error", { "allowModules": [], "resolvePaths": [], "tryExtensions": [".js", ".json", ".node"] }],
     "node/no-unsupported-features/es-syntax": "off",
     "prefer-const": "error",
     "prefer-template": "error",
@@ -52,6 +53,7 @@
   "plugins": [
     "react",
     "@typescript-eslint",
-    "prettier"
+    "prettier",
+    "node"
   ]
 }
