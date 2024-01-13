@@ -1,7 +1,8 @@
 /* eslint-disable node/no-missing-import */
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import SearchBar from '../components/SearchBar';
+import MetroInfoCard from '../components/MetroInfoCard'; // Import MetroInfoCard
 import { findNearestMetro } from '../services/metroServices';
 import { MetroStation } from '../utils/constants';
 
@@ -12,21 +13,30 @@ const HomePage: React.FC = () => {
   // Initial coordinates for Dhaka's center
   const initialDhakaCenter = { lat: 23.8103, lng: 90.4125 };
 
-  // State for user location, nearest metro, and error messages
+  // State for user location, nearest metro, distance, unit, and error messages
   const [userLocation, setUserLocation] =
     useState<google.maps.LatLngLiteral>(initialDhakaCenter);
   const [nearestMetro, setNearestMetro] = useState<MetroStation | null>(null);
+  const [distance, setDistance] = useState<number | null>(null);
+  const [unit, setUnit] = useState<'km' | 'miles'>('km');
   const [errorMessage, setErrorMessage] = useState<string>('');
+
+  // Callback to handle distance and unit updates from MapView
+  const handleDistanceUpdate = (
+    newDistance: number,
+    newUnit: 'km' | 'miles',
+  ) => {
+    setDistance(newDistance);
+    setUnit(newUnit);
+  };
 
   // Handle location search
   const handleSearch = async (location: google.maps.LatLngLiteral) => {
     try {
       setErrorMessage(''); // Reset any previous error messages
       setUserLocation(location); // Update user location
-
-      // Find and update nearest metro station
       const nearest = findNearestMetro(location);
-      setNearestMetro(nearest);
+      setNearestMetro(nearest); // Update nearest metro station
     } catch (error) {
       console.error('Error in search:', error);
       setErrorMessage(
@@ -35,26 +45,74 @@ const HomePage: React.FC = () => {
     }
   };
 
+  const [isClient, setIsClient] = useState(false);
+
+  // This effect sets isClient to true after component mounts, indicating client-side rendering
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   return (
     <div
-      className="flex flex-col items-center justify-start min-h-screen"
+      className="flex flex-col min-h-screen"
       style={{ backgroundColor: '#121212' }}
     >
+      {/* Header Section */}
       <div className="w-full text-center py-10">
         <h1 className="text-xl font-bold text-white">Metro Station Finder</h1>
       </div>
-      <div className="flex flex-col items-center justify-center w-full pt-5">
+
+      {/* Main Content Section */}
+      <div className="flex-grow">
         <header className="w-full max-w-lg mx-auto mt-5">
           <SearchBar onSearch={handleSearch} />
           {errorMessage && (
             <p className="text-red-600 text-center mt-2">{errorMessage}</p>
           )}
         </header>
+
         <main className="w-full max-w-lg mx-auto mt-5">
-          {typeof window !== 'undefined' && (
-            <MapView userLocation={userLocation} metroStation={nearestMetro} />
+          {isClient && (
+            <>
+              {/* MapView Section */}
+              <div className="mb-4">
+                <MapView
+                  userLocation={userLocation}
+                  metroStation={nearestMetro}
+                  onDistanceCalculated={handleDistanceUpdate}
+                />
+              </div>
+
+              {/* MetroInfoCard Section */}
+              {distance !== null && nearestMetro && (
+                <div className="mt-10">
+                  <MetroInfoCard
+                    metroStation={nearestMetro}
+                    distance={distance}
+                    unit={unit}
+                  />
+                </div>
+              )}
+            </>
           )}
         </main>
+      </div>
+
+      {/* Footer Section */}
+      <div className="w-full text-center py-5">
+        <p className="text-slate-300 text-sm">
+          &copy; 2024 | v0.0.1 | Made with{' '}
+          <span className="text-red-500">&hearts;</span> by
+          <a
+            href="https://github.com/tashfiqul-islam"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-500 hover:text-blue-700"
+          >
+            {' '}
+            Tashfiq
+          </a>
+        </p>
       </div>
     </div>
   );
