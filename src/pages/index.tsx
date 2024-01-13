@@ -2,9 +2,10 @@
 import React, { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import SearchBar from '../components/SearchBar';
-import MetroInfoCard from '../components/MetroInfoCard'; // Import MetroInfoCard
+import MetroInfoCard from '../components/MetroInfoCard';
 import { findNearestMetro } from '../services/metroServices';
 import { MetroStation } from '../utils/constants';
+import { FaGithub } from 'react-icons/fa';
 
 // Dynamically import MapView with no server-side rendering
 const MapView = dynamic(() => import('../components/MapView'), { ssr: false });
@@ -58,8 +59,18 @@ const HomePage: React.FC = () => {
       style={{ backgroundColor: '#121212' }}
     >
       {/* Header Section */}
-      <div className="w-full text-center py-10">
-        <h1 className="text-xl font-bold text-white">Metro Station Finder</h1>
+      <div className="w-full text-center py-10 relative">
+        <h1 className="text-2xl font-bold text-white font-mono">
+          Metro Station Finder
+        </h1>
+        <a
+          href="https://github.com/tashfiqul-islam/metro-station-finder"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hidden md:absolute top-8 right-12 mt-2 text-white hover:text-slate-400 md:block"
+        >
+          <FaGithub size={24} /> {/* GitHub Icon */}
+        </a>
       </div>
 
       {/* Main Content Section */}

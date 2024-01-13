@@ -70,10 +70,23 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
     }
   };
 
+  // CSS media query to adjust the search bar for mobile screens
+  const mobileStyles = `
+@media (max-width: 767px) {
+  .search-bar-container {
+    padding-left: 15px;
+    padding-right: 15px;
+  }
+}
+`;
+
   return (
     <div className="flex justify-center w-full">
       <form onSubmit={handleSearchSubmit} className="w-full">
-        <div className="flex items-center w-full">
+        <div
+          className="flex items-center w-full search-bar-container"
+          style={{ padding: '0 15px' }}
+        >
           {/* Bangladesh abbreviation (non-dropdown) */}
           <div className="flex-shrink-0 z-10 inline-flex items-center py-2.5 px-4 text-sm font-medium text-center text-gray-500 bg-gray-100 border border-gray-300 rounded-s-lg hover:bg-gray-200 focus:ring-4 focus:outline-none focus:ring-gray-100 dark:bg-gray-700 dark:hover:bg-gray-600 dark:focus:ring-gray-700 dark:text-white dark:border-gray-600">
             <span>BD</span>
@@ -116,6 +129,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
           </div>
         </div>
       </form>
+      <style>{mobileStyles}</style>
     </div>
   );
 };
