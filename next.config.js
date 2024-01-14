@@ -4,6 +4,10 @@ const nextConfig = {
   images: {
     unoptimized: true, // Disable Image Optimization API for export
   },
+  env: {
+    NEXT_PUBLIC_GOOGLE_MAPS_API_KEY:
+      process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
+  },
 };
 
 module.exports = nextConfig;
