@@ -79,7 +79,7 @@
 </p>
 
 <!-- GitHub Profile README GIF -->
-<img src="https://github.com/tashfiqul-islam/metro-station-finder/raw/master/public/metro-station-finder.gif" alt="GitHub Profile README GIF" width="100%">
+<img src="https://github.com/tashfiqul-islam/metro-station-finder/raw/master/public/metro-station-finder.gif" alt="Metro Station Finder">
 
 <br>
 
