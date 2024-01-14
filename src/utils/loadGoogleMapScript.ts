@@ -60,6 +60,4 @@ export const loadGoogleMapScript = (apiKey: string): Promise<void> =>
         reject(new Error('Google Maps API script failed to load.')); // Reject the promise with an error message.
       };
     }
-
-    // Create a script element for the Google Maps API, ensuring efficient loading.
   });

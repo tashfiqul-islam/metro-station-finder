@@ -97,13 +97,15 @@ const MapView: React.FC<MapViewProps> = ({
       })
       .catch(error => {
         console.error('Error loading Google Maps:', error);
-        // Display a user-friendly error message to the user.
+        setErrorMessage('Error loading Google Maps'); // Set error message
       });
   }, []);
 
   // Effect to update markers, directions, and calculate distance
   useEffect(() => {
-    if (!map || !userLocation || !metroStation) return;
+    if (!map || !userLocation || !metroStation) {
+      return;
+    }
 
     const directionsService = new google.maps.DirectionsService();
     const directionsRenderer = new google.maps.DirectionsRenderer();
@@ -144,7 +146,7 @@ const MapView: React.FC<MapViewProps> = ({
         const friendlyErrorMessage =
           'Unable to find directions. Please try again.';
         console.error('Directions request failed due to', status);
-        setErrorMessage(friendlyErrorMessage);
+        setErrorMessage(friendlyErrorMessage); // Set error message
       }
     });
 
@@ -160,7 +162,7 @@ const MapView: React.FC<MapViewProps> = ({
   // CSS media query to adjust the map size for desktop screens
   const desktopStyles = `
 @media (min-width: 768px) {
-  #map {
+  .map-container {
     width: calc(225%);
   }
 }
@@ -169,7 +171,7 @@ const MapView: React.FC<MapViewProps> = ({
   // CSS to add padding on left and right sides for mobile screens
   const mobileStyles = `
 @media (max-width: 767px) {
-  #map {
+  .map-container {
     width: calc(100% - 30px); /* 5px padding on each side */
     margin: 0 30px; /* Add margin to center the map */
   }
@@ -180,10 +182,13 @@ const MapView: React.FC<MapViewProps> = ({
     <div className="flex flex-col items-center">
       <div
         ref={mapRef}
-        className="w-full h-96 mt-5 border border-gray-500 rounded-lg"
+        className="w-full h-96 mt-5 border border-gray-500 rounded-lg map-container"
         id="map"
         style={{ height: '450px' }}
       ></div>
+      {errorMessage && (
+        <p className="text-red-600 text-center mt-2">{errorMessage}</p>
+      )}
       <style>
         {desktopStyles}
         {mobileStyles}

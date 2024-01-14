@@ -41,10 +41,7 @@ const MetroInfoCard: React.FC<MetroInfoCardProps> = ({
               <span className="font-normal">{metroStation.name}</span>
             </p>
           </div>
-          <div
-            className="flex items-center mt-5"
-            style={{ marginLeft: '-36.5px' }}
-          >
+          <div className="flex items-center mt-5">
             {' '}
             {/* Apply negative margin to the second section */}
             {/* Icon for Direction */}
