@@ -147,7 +147,7 @@ https://github.com/tashfiqul-islam/metro-station-finder/assets/43652209/b0eb5019
 <!-- Contributing -->
 <h2>Contributing</h2>
 <p>
-  Contributions to the Metro Station Finder are welcome. Please ensure to update tests as appropriate.
+  Contributions to the Metro Station Finder are welcome. Please reach out to me if you've more ideas for this.
 </p>
 
 <br>
