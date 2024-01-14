@@ -3,9 +3,8 @@ name: Deploy metro-station-finder
 on:
   push:
     branches: ['master']
-    paths:
-      - '**'
-      - '!readme.md' # Exclude readme.md from triggering the workflow
+    paths-ignore:
+      - 'readme.md' # Ignore changes to readme.md
   workflow_dispatch:
 
 permissions:

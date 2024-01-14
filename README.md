@@ -79,7 +79,9 @@
 </p>
 
 <!-- GitHub Profile README GIF -->
-<img src="https://github.com/tashfiqul-islam/metro-station-finder/raw/master/public/metro-station-finder.gif" alt="Metro Station Finder">
+<p align="center">
+  <img src="https://github.com/tashfiqul-islam/metro-station-finder/raw/master/public/metro-station-finder.gif" alt="Metro Station Finder" style="max-width: 100%; height: auto;">
+</p>
 
 <br>
 
