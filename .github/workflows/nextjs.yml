@@ -67,13 +67,13 @@ jobs:
       - name: Install dependencies
         run: ${{ steps.detect-package-manager.outputs.manager }} ${{ steps.detect-package-manager.outputs.command }}
 
-      # Build the Next.js application
-      - name: Build with Next.js
-        run: ${{ steps.detect-package-manager.outputs.runner }} next build
-
       # Set the Google Maps API Key as an environment variable
       - name: Set Google Maps API Key
         run: echo "NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY }}" >> $GITHUB_ENV
+
+      # Build the Next.js application
+      - name: Build with Next.js
+        run: ${{ steps.detect-package-manager.outputs.runner }} next build
 
       # Upload the build artifact
       - name: Upload artifact
