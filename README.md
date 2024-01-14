@@ -78,10 +78,8 @@
   Enter a location in the search bar and click the 'Search' button. The map will update to show your location and the nearest metro station, along with the distance to it.
 </p>
 
-<!-- GitHub Profile README GIF -->
-<p align="center">
-  <img src="https://github.com/tashfiqul-islam/metro-station-finder/raw/master/public/metro-station-finder.gif" alt="Metro Station Finder" style="max-width: 100%; height: auto;">
-</p>
+<!-- Video Demo -->
+https://github.com/tashfiqul-islam/metro-station-finder/assets/43652209/b0eb5019-acd9-485a-bcd5-036ac2a673df
 
 <br>
 
