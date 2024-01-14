@@ -1,6 +1,6 @@
 <!--Banner --->
 <div align="center">
-  <img src="https://github.com/tashfiqul-islam/metro-station-finder/blob/master/public/msf-banner.png" alt="Metro-Banner" />
+  <img src="https://github.com/tashfiqul-islam/metro-station-finder/blob/master/public/metro-station-finder.png" alt="Metro-Banner" />
 </div>
 
 <!-- Project Title Section -->
