@@ -79,6 +79,7 @@
 </p>
 
 <!-- Video Demo -->
+
 https://github.com/tashfiqul-islam/metro-station-finder/assets/43652209/b0eb5019-acd9-485a-bcd5-036ac2a673df
 
 <br>
@@ -125,6 +126,21 @@ https://github.com/tashfiqul-islam/metro-station-finder/assets/43652209/b0eb5019
   <code>npm run dev</code>
   <li><p>Navigate to <a href="http://localhost:3000">http://localhost:3000</a> to view the application.</p></li>
 </ol>
+
+<br>
+
+<!-- Credit Section -->
+<h2>👏 Credits</h2>
+<div style="display: flex; gap: 1rem;">
+  <a href="https://flowbite.com" target="_blank">
+    <img src="https://img.shields.io/badge/Search%20Bar%20Design-FLOWBITES-0073e6?style=for-the-badge&logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAZElEQVR42mP8/wM/Af1EWY2UYMRgKLFq1q6K9rKVavXq3Kioq2NrY2W4KA8kwsi4EK8vgAAAABJRU5ErkJggg=="
+      alt="FLOWBITES" />
+  </a>
+  <a href="https://snazzymaps.com" target="_blank">
+    <img src="https://img.shields.io/badge/Custom%20Map%20Design-SNAZZY%20MAPS-77AA77?style=for-the-badge&logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAVUlEQVR42mL4/wM/D5WYuyZjBhYGBgaGhobGBoYGBhYWVl5fJtihqKgohweKioKKIoYHoIuBoeGBooChoaGioKChhIKGhgoCBHYMGABiSp0HhIHM0AAAAAElFTkSuQmCC"
+      alt="SNAZZY MAPS" />
+  </a>
+</div>
 
 <br>
 
