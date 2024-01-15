@@ -1,4 +1,4 @@
-<!--Banner --->
+<!-- Banner -->
 <div align="center">
   <img src="https://github.com/tashfiqul-islam/metro-station-finder/blob/master/public/assets/metro-station-finder.png" alt="Metro-Banner" />
 </div>
@@ -38,26 +38,26 @@
 <!-- Technology Stack Section -->
 <h2>💻 Tech Stack</h2>
 <p>
-    <!-- Next.js Badge -->
-    <a href="https://nextjs.org/" target="_blank">
-        <img src="https://img.shields.io/badge/Next.js-14.0.4-000000?style=for-the-badge&logo=next.js&logoColor=white" alt="Next.js">
-    </a>
-    <!-- React Badge -->
-    <a href="https://reactjs.org/" target="_blank">
-        <img src="https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=white" alt="React">
-    </a>
-    <!-- Tailwind CSS Badge -->
-    <a href="https://tailwindcss.com/" target="_blank">
-        <img src="https://img.shields.io/badge/Tailwind CSS-3.4.1-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS">
-    </a>
-    <!-- Google Maps API Badge -->
-    <a href="https://developers.google.com/maps/documentation/javascript/overview" target="_blank">
-        <img src="https://img.shields.io/badge/Google Maps API-Latest-4285F4?style=for-the-badge&logo=google-maps&logoColor=white" alt="Google Maps API">
-    </a>
-    <!-- TypeScript Badge -->
-    <a href="https://www.typescriptlang.org/" target="_blank">
-        <img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript">
-    </a>
+  <!-- Next.js Badge -->
+  <a href="https://nextjs.org/" target="_blank">
+    <img src="https://img.shields.io/badge/Next.js-14.0.4-000000?style=for-the-badge&logo=next.js&logoColor=white" alt="Next.js">
+  </a>
+  <!-- React Badge -->
+  <a href="https://reactjs.org/" target="_blank">
+    <img src="https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=white" alt="React">
+  </a>
+  <!-- Tailwind CSS Badge -->
+  <a href="https://tailwindcss.com/" target="_blank">
+    <img src="https://img.shields.io/badge/Tailwind CSS-3.4.1-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS">
+  </a>
+  <!-- Google Maps API Badge -->
+  <a href="https://developers.google.com/maps/documentation/javascript/overview" target="_blank">
+    <img src="https://img.shields.io/badge/Google Maps API-Latest-4285F4?style=for-the-badge&logo=google-maps&logoColor=white" alt="Google Maps API">
+  </a>
+  <!-- TypeScript Badge -->
+  <a href="https://www.typescriptlang.org/" target="_blank">
+    <img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript">
+  </a>
 </p>
 
 <br>
@@ -137,7 +137,7 @@
     <img src="https://img.shields.io/badge/Search%20Bar%20Design-FLOWBITES-0073e6?style=for-the-badge&logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAZElEQVR42mP8/wM/Af1EWY2UYMRgKLFq1q6K9rKVavXq3Kioq2NrY2W4KA8kwsi4EK8vgAAAABJRU5ErkJggg=="
       alt="FLOWBITES" />
   </a>
-  <a href="https://snazzymaps.com" target="_blank">
+  <a href="https://snazzymaps.com/style/83/muted-blue" target="_blank">
     <img src="https://img.shields.io/badge/Custom%20Map%20Design-SNAZZY%20MAPS-77AA77?style=for-the-badge&logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAVUlEQVR42mL4/wM/D5WYuyZjBhYGBgaGhobGBoYGBhYWVl5fJtihqKgohweKioKKIoYHoIuBoeGBooChoaGioKChhIKGhgoCBHYMGABiSp0HhIHM0AAAAAElFTkSuQmCC"
       alt="SNAZZY MAPS" />
   </a>
