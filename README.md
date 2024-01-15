@@ -91,7 +91,7 @@
 <!-- Prerequisites -->
 <h3>Prerequisites</h3>
 <p>
-  <img src="https://img.shields.io/badge/Node.js-v20.10.0-339933?style=for-the-badge&logo=node.js&logoColor=white" alt="Node.js">
+  <img src="https://img.shields.io/badge/Node.js-v20.11.0-339933?style=for-the-badge&logo=node.js&logoColor=white" alt="Node.js">
   <img src="https://img.shields.io/badge/npm-v10.3.0-CB3837?style=for-the-badge&logo=npm&logoColor=white" alt="npm">
 </p>
 <h6>
