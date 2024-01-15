@@ -30,7 +30,7 @@ const MetroInfoCard: React.FC<MetroInfoCardProps> = ({
           <div className="flex items-center">
             {/* Icon for Metro Station */}
             <Image
-              src="https://github.com/tashfiqul-islam/metro-station-finder/raw/master/public/metro-station.png"
+              src="https://github.com/tashfiqul-islam/metro-station-finder/raw/master/public/assets/metro-station.png"
               alt="Metro Station"
               width={24}
               height={24}
@@ -46,7 +46,7 @@ const MetroInfoCard: React.FC<MetroInfoCardProps> = ({
             {/* Apply negative margin to the second section */}
             {/* Icon for Direction */}
             <Image
-              src="https://github.com/tashfiqul-islam/metro-station-finder/raw/master/public/direction.png"
+              src="https://github.com/tashfiqul-islam/metro-station-finder/raw/master/public/assets/direction.png"
               alt="Direction"
               width={24}
               height={24}
