@@ -8,3 +8,10 @@
     font-family: "Roboto", system-ui, sans-serif;
   }
 }
+
+/* Media query for screens smaller than 640px (mobile) */
+@media (max-width: 640px) {
+  h1 {
+    font-size: 1.5rem; /* 2xl (24px) for mobile */
+  }
+}
