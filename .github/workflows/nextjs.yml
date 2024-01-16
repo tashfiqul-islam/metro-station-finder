@@ -77,6 +77,12 @@ jobs:
       - name: Build with Next.js
         run: ${{ steps.detect-package-manager.outputs.runner }} next build
 
+      - name: Debug Workspace Contents
+        run: ls -R $GITHUB_WORKSPACE
+
+      - name: Debug Out Directory Contents
+        run: ls -R ./out
+
       # Upload the build artifact
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
