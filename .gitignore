@@ -3,7 +3,6 @@
 
 # Next.js build output
 /.next/
-/out/
 
 # Production build folder
 /build/
