@@ -2,7 +2,6 @@
   "name": "metro-station-finder",
   "version": "0.0.2",
   "private": true,
-  "type": "commonjs",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

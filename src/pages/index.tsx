@@ -8,7 +8,6 @@ import { findNearestMetro } from '../services/metroServices';
 import { MetroStation } from '../utils/constants';
 import { FaGithub } from 'react-icons/fa';
 import Image from 'next/image';
-import img from '../../public/assets/logo.png';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 
@@ -111,7 +110,7 @@ const HomePage: React.FC = () => {
             onClick={handleLogoClick}
           >
             <Image
-              src={img}
+              src="/assets/logo.png"
               alt="Metro Station Finder Logo"
               width={65}
               height={65} // Adjust the height to maintain aspect ratio
