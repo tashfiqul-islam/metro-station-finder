@@ -1,7 +1,8 @@
 {
   "name": "metro-station-finder",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
+  "type": "commonjs",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -13,13 +14,15 @@
   "dependencies": {
     "@react-google-maps/api": "^2.19.2",
     "next": "14.0.4",
+    "next-images": "^1.8.5",
     "node-fetch": "^3.3.2",
     "npm": "^10.3.0",
     "react": "^18",
     "react-dom": "^18",
     "react-icons": "^5.0.1",
     "serve": "^14.2.1",
-    "serve-handler": "^6.1.5"
+    "serve-handler": "^6.1.5",
+    "sharp": "^0.33.2"
   },
   "devDependencies": {
     "@types/node": "^20",
