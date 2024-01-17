@@ -80,9 +80,21 @@ const HomePage: React.FC = () => {
     <>
       {/* Favicon section */}
       <Head>
-        <link rel="icon" href="/favicon-16x16.png" sizes="16x16" />
-        <link rel="icon" href="/favicon-32x32.png" sizes="32x32" />
-        <link rel="icon" href="/favicon.png" sizes="any" />
+        <link
+          rel="icon"
+          href="https://github.com/tashfiqul-islam/metro-station-finder/raw/master/public/favicon-16x16.png"
+          sizes="16x16"
+        />
+        <link
+          rel="icon"
+          href="https://github.com/tashfiqul-islam/metro-station-finder/raw/master/public/favicon-32x32.png"
+          sizes="32x32"
+        />
+        <link
+          rel="icon"
+          href="https://github.com/tashfiqul-islam/metro-station-finder/raw/master/public/favicon.png"
+          sizes="any"
+        />
       </Head>
       {/* Background color */}
       <div
