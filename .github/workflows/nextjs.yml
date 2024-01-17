@@ -67,15 +67,11 @@ jobs:
       - name: Set Google Maps API Key
         run: echo "NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY }}" >> $GITHUB_ENV
 
-      # Build the Next.js application
+      # Build the Next.js application (handles static export in Next.js 14)
       - name: Build with Next.js
         run: ${{ steps.detect-package-manager.outputs.runner }} next build
 
-      # Export the Next.js application (added step for static export)
-      - name: Export with Next.js
-        run: ${{ steps.detect-package-manager.outputs.runner }} next export
-
-      # Upload the build artifact (updated path to 'out' directory)
+      # Upload the build artifact from 'out' directory
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
