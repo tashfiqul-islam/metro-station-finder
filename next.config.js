@@ -1,15 +1,25 @@
-/**
- * @type {import('next').NextConfig}
- **/
-const nextConfig = {
-  distDir: 'build',
+const isProd = process.env.NODE_ENV === 'production';
+
+module.exports = {
+  // Base path for GitHub Pages
+  basePath: isProd ? '/metro-station-finder' : '',
+  assetPrefix: isProd ? '/metro-station-finder/' : '',
+
+  // Static export settings
+  exportPathMap() {
+    return {
+      '/': { page: '/' },
+    };
+  },
+
+  // Environment variables
   env: {
     NEXT_PUBLIC_GOOGLE_MAPS_API_KEY:
-      process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '', // Provide a default empty string value
+      process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
   },
+
+  // Image optimization settings
   images: {
-    disableStaticImages: true, // Disable Image Optimization
+    disableStaticImages: true,
   },
 };
-
-module.exports = nextConfig;

@@ -4,7 +4,7 @@ on:
   push:
     branches: ['master']
     paths-ignore:
-      - 'readme.md' # Ignore changes to readme.md
+      - 'readme.md'  # Ignore changes to readme.md
   workflow_dispatch:
 
 permissions:
@@ -49,18 +49,12 @@ jobs:
           node-version: '20.11.0'
           cache: ${{ steps.detect-package-manager.outputs.manager }}
 
-      # Configure GitHub Pages for Next.js
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-        with:
-          static_site_generator: next
-
-      # Restore cache for Next.js
+      # Restore cache for Next.js (updated to reflect the new build directory)
       - name: Restore cache
         uses: actions/cache@v3
         with:
           path: |
-            .next/cache
+            .next/cache  # Update this path if your cache directory is different
           key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json', '**/yarn.lock') }}-${{ hashFiles('**.[jt]s', '**.[jt]sx') }}
           restore-keys: |
             ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json', '**/yarn.lock') }}-
@@ -77,11 +71,15 @@ jobs:
       - name: Build with Next.js
         run: ${{ steps.detect-package-manager.outputs.runner }} next build
 
-      # Upload the build artifact
+      # Export the Next.js application (added step for static export)
+      - name: Export with Next.js
+        run: ${{ steps.detect-package-manager.outputs.runner }} next export
+
+      # Upload the build artifact (updated path to 'out' directory)
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./build
+          path: ./out
 
   deploy:
     environment:
