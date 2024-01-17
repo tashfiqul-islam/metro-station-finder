@@ -19,10 +19,8 @@ const nextConfig = {
 
   // Image optimization settings
   images: {
-    disableStaticImages: true,
+    unoptimized: true,
   },
-
-  // Additional configurations...
 };
 
 module.exports = nextConfig;
