@@ -6,7 +6,6 @@ import MetroInfoCard from '../components/MetroInfoCard';
 import { findNearestMetro } from '../services/metroServices';
 import { MetroStation } from '../utils/constants';
 import { FaGithub } from 'react-icons/fa';
-import Head from 'next/head';
 
 // Dynamically import MapView with no server-side rendering
 const MapView = dynamic(() => import('../components/MapView'), { ssr: false });
@@ -56,11 +55,12 @@ const HomePage: React.FC = () => {
 
   return (
     <>
-      <Head>
-        <link rel="icon" href="/favicon-16x16.png" sizes="16x16" />
-        <link rel="icon" href="/favicon-32x32.png" sizes="32x32" />
-        <link rel="shortcut icon" href="/favicon.png" />
-      </Head>
+      {/* Favicon section */}
+      <link rel="icon" href="/favicon-16x16.png" sizes="16x16" />
+      <link rel="icon" href="/favicon-32x32.png" sizes="32x32" />
+      <link rel="icon" href="/favicon.png" sizes="any" />
+
+      {/* Background color */}
       <div
         className="flex flex-col min-h-screen"
         style={{ backgroundColor: '#121212' }}
