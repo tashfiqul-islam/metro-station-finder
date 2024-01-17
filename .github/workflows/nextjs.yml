@@ -31,12 +31,10 @@ jobs:
             echo "manager=yarn" >> $GITHUB_OUTPUT
             echo "command=install" >> $GITHUB_OUTPUT
             echo "runner=yarn" >> $GITHUB_OUTPUT
-            exit 0
           elif [ -f "${{ github.workspace }}/package.json" ]; then
             echo "manager=npm" >> $GITHUB_OUTPUT
             echo "command=ci" >> $GITHUB_OUTPUT
             echo "runner=npx --no-install" >> $GITHUB_OUTPUT
-            exit 0
           else
             echo "Unable to determine package manager"
             exit 1
@@ -49,13 +47,17 @@ jobs:
           node-version: '20.11.0'
           cache: ${{ steps.detect-package-manager.outputs.manager }}
 
-      # Restore cache for Next.js (updated to reflect the new build directory)
+      # Generate a unique build ID using the current timestamp
+      - name: Generate Build ID
+        run: echo "BUILD_ID=$(date +%s)" >> $GITHUB_ENV
+
+      # Restore cache with a unique key incorporating the BUILD_ID
       - name: Restore cache
         uses: actions/cache@v3
         with:
           path: |
             .next
-          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json', '**/yarn.lock') }}-${{ hashFiles('**.[jt]s', '**.[jt]sx') }}
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json', '**/yarn.lock') }}-${{ env.BUILD_ID }}
           restore-keys: |
             ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json', '**/yarn.lock') }}-
 
@@ -67,9 +69,9 @@ jobs:
       - name: Set Google Maps API Key
         run: echo "NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY }}" >> $GITHUB_ENV
 
-      # Build the Next.js application (handles static export in Next.js 14)
+      # Build the Next.js application with the BUILD_ID environment variable
       - name: Build with Next.js
-        run: ${{ steps.detect-package-manager.outputs.runner }} next build
+        run: ${{ steps.detect-package-manager.outputs.runner }} next build && echo "BUILD_ID=${{ env.BUILD_ID }}" > .next/BUILD_ID
 
       # Upload the build artifact from 'out' directory
       - name: Upload artifact
