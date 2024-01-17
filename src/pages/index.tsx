@@ -1,11 +1,12 @@
-/* eslint-disable node/no-missing-import */
 import React, { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import SearchBar from '../components/SearchBar';
 import MetroInfoCard from '../components/MetroInfoCard';
 import { findNearestMetro } from '../services/metroServices';
 import { MetroStation } from '../utils/constants';
+import Head from 'next/head';
 import { FaGithub } from 'react-icons/fa';
+import { useRouter } from 'next/router';
 
 // Dynamically import MapView with no server-side rendering
 const MapView = dynamic(() => import('../components/MapView'), { ssr: false });
@@ -21,6 +22,7 @@ const HomePage: React.FC = () => {
   const [distance, setDistance] = useState<number | null>(null);
   const [unit, setUnit] = useState<'km' | 'miles'>('km');
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const router = useRouter();
 
   // Callback to handle distance and unit updates from MapView
   const handleDistanceUpdate = (
@@ -53,13 +55,35 @@ const HomePage: React.FC = () => {
     setIsClient(true);
   }, []);
 
+  // useEffect to handle clickable routes
+  useEffect(() => {
+    const handleReload = () => {
+      router.reload();
+    };
+
+    const h1Element = document.querySelector('.clickable-h1');
+
+    if (h1Element instanceof HTMLElement) {
+      h1Element.style.cursor = 'pointer';
+      h1Element.addEventListener('click', handleReload);
+
+      return () => {
+        h1Element.removeEventListener('click', handleReload);
+      };
+    }
+
+    // Return an empty function when h1Element is not found
+    return () => {};
+  }, [router]); // Include 'router' as a dependency
+
   return (
     <>
       {/* Favicon section */}
-      <link rel="icon" href="/favicon-16x16.png" sizes="16x16" />
-      <link rel="icon" href="/favicon-32x32.png" sizes="32x32" />
-      <link rel="icon" href="/favicon.png" sizes="any" />
-
+      <Head>
+        <link rel="icon" href="/favicon-16x16.png" sizes="16x16" />
+        <link rel="icon" href="/favicon-32x32.png" sizes="32x32" />
+        <link rel="icon" href="/favicon.png" sizes="any" />
+      </Head>
       {/* Background color */}
       <div
         className="flex flex-col min-h-screen"
@@ -67,7 +91,7 @@ const HomePage: React.FC = () => {
       >
         {/* Header Section */}
         <div className="w-full text-center py-10 relative">
-          <h1 className="text-2xl font-bold text-white font-mono">
+          <h1 className="text-2xl font-bold text-white font-mono clickable-h1">
             Metro Station Finder
           </h1>
           <a
