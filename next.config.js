@@ -1,11 +1,8 @@
 /**
- * @ts-check
- */
-
-/**
  * @type {import('next').NextConfig}
  **/
 const nextConfig = {
+  basePath: '/metro-station-finder',
   distDir: 'build',
   env: {
     NEXT_PUBLIC_GOOGLE_MAPS_API_KEY:
