@@ -8,7 +8,7 @@
 
 <!-- GHA, Prettier & Linting Badges -->
 <p align="center">
-  <img src="https://custom-icon-badges.demolab.com/badge/version-v0.0.1-blue?logo=metro-station-finder" alt="Metro Station Version">
+  <img src="https://custom-icon-badges.demolab.com/badge/Version-v0.0.1-blue?logo=metro-station-finder" alt="Metro Station Version">
   <a href="https://github.com/tashfiqul-islam/metro-station-finder/actions/workflows/nextjs.yml">
     <img src="https://img.shields.io/badge/Deployment-Passing-4BC51D?logo=github" alt="Deployment Passing">
   </a>
