@@ -4,7 +4,7 @@ on:
   push:
     branches: ['master']
     paths-ignore:
-      - 'readme.md'  # Ignore changes to readme.md
+      - '**/readme.md'  # Ignore changes to readme.md
   workflow_dispatch:
 
 permissions:
