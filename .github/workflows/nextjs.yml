@@ -5,7 +5,7 @@ on:
     branches: ['master']
     paths:
       - '**'
-      - '!**/readme.md'  # Ignore changes to readme.md
+      - '!**/README.md'  # Ignore changes to readme.md
   workflow_dispatch:
 
 permissions:
