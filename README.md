@@ -100,6 +100,34 @@
 
 <br>
 
+<!-- Project Directory Structure -->
+<h3>Project Directory Structure</h3>
+
+```plaintext
+metro-station-finder/
+├── src/
+│   ├── components/
+│   │   ├── mapview.tsx // Component for displaying the map view.
+│   │   ├── metroInfoCard.tsx // Component for displaying metro station info card.
+│   │   ├── Searchbar.tsx // Component for the search bar.
+│
+├── pages/
+│   ├── _app.tsx // Main Next.js application component.
+│   ├── index.tsx // Homepage of the application.
+│
+├── services/
+│   ├── metroService.ts // Service for fetching metro station data.
+│
+├── styles/
+│   ├── globals.css // Global CSS styles.
+│
+├── utils/
+│   ├── constants.ts // Metro stations map location.
+│   ├── loadGoogleMapScript.ts // Utility for loading Google Maps scripts.
+```
+
+<br>
+
 <!-- Installation -->
 <h3>Installation</h3>
 <ol>
