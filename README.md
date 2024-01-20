@@ -1,6 +1,6 @@
 <!-- Banner -->
 <div align="center">
-  <img src="https://github.com/tashfiqul-islam/metro-station-finder/blob/master/public/assets/metro-station-finder.png" alt="Metro-Banner" />
+  <img src="https://raw.githubusercontent.com/tashfiqul-islam/metro-station-finder/master/public/assets/metro-station-finder.png" alt="Metro-Banner" />
 </div>
 
 <!-- Project Title Section -->
@@ -8,6 +8,7 @@
 
 <!-- GHA, Prettier & Linting Badges -->
 <p align="center">
+  <img src="https://custom-icon-badges.demolab.com/badge/version-v0.0.1-blue?logo=metro-station-finder" alt="Metro Station Version">
   <a href="https://github.com/tashfiqul-islam/metro-station-finder/actions/workflows/nextjs.yml">
     <img src="https://img.shields.io/badge/Deployment-Passing-4BC51D?logo=github" alt="Deployment Passing">
   </a>
@@ -80,7 +81,7 @@
 
 <!-- Demo -->
 <div align="center">
-  <img src="https://github.com/tashfiqul-islam/metro-station-finder/blob/master/public/assets/metro-station-finder.gif" alt="Metro-Banner" />
+  <img src="https://raw.githubusercontent.com/tashfiqul-islam/metro-station-finder/master/public/assets/metro-station-finder.gif" alt="Metro-Banner" />
 </div>
 
 <br>
