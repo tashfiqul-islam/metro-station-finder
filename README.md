@@ -4,7 +4,7 @@
 </div>
 
 <!-- Project Title Section -->
-<h1 align="center">Metro Station Finder</h1>
+<h1 align="center">Metro Station Finder - WIP</h1>
 
 <!-- GHA, Prettier & Linting Badges -->
 <p align="center">
