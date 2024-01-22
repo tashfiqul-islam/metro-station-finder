@@ -1,5 +1,3 @@
-// fareCalculation.ts
-
 // Metro Station names as an array for index mapping
 const stationNames = [
   'Uttara North',

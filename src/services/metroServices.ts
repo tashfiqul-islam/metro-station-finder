@@ -1,4 +1,3 @@
-/* eslint-disable node/no-missing-import */
 import { MetroStation, metroStations } from '../utils/constants'; // Import the MetroStation type and predefined stations
 
 /**
