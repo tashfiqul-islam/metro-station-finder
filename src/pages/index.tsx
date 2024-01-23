@@ -5,7 +5,6 @@ import MetroInfoCard from '../components/MetroInfoCard';
 import Layout from '../components/Layout';
 import { findNearestMetro } from '../services/metroServices';
 import { MetroStation } from '../utils/constants';
-import Head from 'next/head';
 
 // Dynamically import MapView with no server-side rendering
 const MapView = dynamic(() => import('../components/MapView'), { ssr: false });
@@ -55,67 +54,43 @@ const HomePage: React.FC = () => {
 
   return (
     <>
-      {/* Favicon section */}
-      <Head>
-        <link
-          rel="icon"
-          href="https://github.com/tashfiqul-islam/metro-station-finder/raw/master/public/favicon-16x16.png"
-          sizes="16x16"
-        />
-        <link
-          rel="icon"
-          href="https://github.com/tashfiqul-islam/metro-station-finder/raw/master/public/favicon-32x32.png"
-          sizes="32x32"
-        />
-        <link
-          rel="icon"
-          href="https://github.com/tashfiqul-islam/metro-station-finder/raw/master/public/favicon.png"
-          sizes="any"
-        />
-      </Head>
-      {/* Background color */}
-      <div
-        className="flex flex-col min-h-screen"
-        style={{ backgroundColor: '#121212' }}
-      >
-        <Layout>
-          {/* Main Content Section */}
-          <div className="flex-grow">
-            <header className="w-full max-w-lg mx-auto mt-14">
-              <SearchBar onSearch={handleSearch} />
-              {errorMessage && (
-                <p className="text-red-600 text-center mt-2">{errorMessage}</p>
-              )}
-            </header>
+      <Layout>
+        {/* Main Content Section */}
+        <div className="flex-grow">
+          <header className="w-full max-w-lg mx-auto mt-14">
+            <SearchBar onSearch={handleSearch} />
+            {errorMessage && (
+              <p className="text-red-600 text-center mt-2">{errorMessage}</p>
+            )}
+          </header>
 
-            <main className="w-full max-w-lg mx-auto mt-5">
-              {isClient && (
-                <>
-                  {/* MapView Section */}
-                  <div className="mb-4">
-                    <MapView
-                      userLocation={userLocation}
+          <main className="w-full max-w-lg mx-auto mt-5">
+            {isClient && (
+              <>
+                {/* MapView Section */}
+                <div className="mb-4">
+                  <MapView
+                    userLocation={userLocation}
+                    metroStation={nearestMetro}
+                    onDistanceCalculated={handleDistanceUpdate}
+                  />
+                </div>
+
+                {/* MetroInfoCard Section */}
+                {distance !== null && nearestMetro && (
+                  <div className="mt-10">
+                    <MetroInfoCard
                       metroStation={nearestMetro}
-                      onDistanceCalculated={handleDistanceUpdate}
+                      distance={distance}
+                      unit={unit}
                     />
                   </div>
-
-                  {/* MetroInfoCard Section */}
-                  {distance !== null && nearestMetro && (
-                    <div className="mt-10">
-                      <MetroInfoCard
-                        metroStation={nearestMetro}
-                        distance={distance}
-                        unit={unit}
-                      />
-                    </div>
-                  )}
-                </>
-              )}
-            </main>
-          </div>
-        </Layout>
-      </div>
+                )}
+              </>
+            )}
+          </main>
+        </div>
+      </Layout>
     </>
   );
 };

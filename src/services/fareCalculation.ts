@@ -1,5 +1,5 @@
 // Metro Station names as an array for index mapping
-const stationNames = [
+export const stationNames = [
   'Uttara North',
   'Uttara Center',
   'Uttara South',

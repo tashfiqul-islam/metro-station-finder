@@ -1,12 +1,13 @@
-import router from 'next/router';
 import React, { useEffect, useState } from 'react';
 import { FaGithub } from 'react-icons/fa';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 
-// Define the NavBar component
 const NavBar: React.FC = () => {
   // State to toggle the mobile menu
   const [isMenuOpen, setMenuOpen] = useState(false);
+  // Access the Next.js router
+  const router = useRouter();
 
   // Function to toggle the mobile menu
   const toggleMenu = () => {
@@ -15,7 +16,7 @@ const NavBar: React.FC = () => {
 
   // Function to handle clicking on the "Home" link
   const handleHomeClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    e.preventDefault(); // Prevent the default link behavior
+    e.preventDefault();
     if (router.pathname !== '/') {
       // If the current route is not the home page, navigate to it
       router.push('/');
@@ -25,6 +26,7 @@ const NavBar: React.FC = () => {
     }
   };
 
+  // Add a click event listener to the "Metro Station Finder" title for reloading the home page
   useEffect(() => {
     const handleReload = () => {
       router.reload();
@@ -33,17 +35,20 @@ const NavBar: React.FC = () => {
     const h1TextElement = document.querySelector('.clickable-h1-text');
 
     if (h1TextElement instanceof HTMLElement) {
+      // Change the cursor style to indicate clickability
       h1TextElement.style.cursor = 'pointer';
+      // Add a click event listener to reload the home page
       h1TextElement.addEventListener('click', handleReload);
 
       return () => {
+        // Remove the event listener when the component unmounts
         h1TextElement.removeEventListener('click', handleReload);
       };
     }
 
     // Return an empty function when h1TextElement is not found
     return () => {};
-  }, []);
+  }, [router]);
 
   return (
     // Navigation bar container
@@ -95,18 +100,31 @@ const NavBar: React.FC = () => {
           isMenuOpen ? 'block' : 'hidden'
         }`}
       >
+        {/* Home link */}
         <li>
           <Link href="/">
-            <span className="text-sm text-blue-600 font-bold">Home</span>
+            <span
+              className={`text-sm font-bold ${
+                router.pathname === '/' ? 'text-blue-600' : 'text-gray-400'
+              }`}
+            >
+              Home
+            </span>
           </Link>
         </li>
+        {/* Route Fare link */}
         <li>
-          <a
-            className="text-sm text-gray-400 hover:text-gray-500"
-            href="/route-fare"
-          >
-            Route Fare
-          </a>
+          <Link href="/route-fare">
+            <span
+              className={`text-sm ${
+                router.pathname === '/route-fare'
+                  ? 'font-bold text-blue-600'
+                  : 'text-gray-400'
+              }`}
+            >
+              Route Fare
+            </span>
+          </Link>
         </li>
       </ul>
     </nav>
