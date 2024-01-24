@@ -1,119 +1,96 @@
-// pages/route-fare.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { stationNames, calculateFare } from '../services/fareCalculation';
 import Layout from '../components/Layout';
-import { calculateFare, stationNames } from '../services/fareCalculation';
-import image from 'next/image';
+import CustomDropdown from '../components/CustomDropdown';
 
-const RouteFarePage: React.FC = () => {
-  // State variables to track selected start and destination stations, and calculated fare
+const RouteFare: React.FC = () => {
+  // State for selected starting and destination stations with empty strings as defaults
   const [startStation, setStartStation] = useState<string>('');
   const [destinationStation, setDestinationStation] = useState<string>('');
+
+  // State for calculated fare
   const [fare, setFare] = useState<number | null>(null);
 
-  // State variables to manage dropdown visibility
-  const [startDropdownVisible, setStartDropdownVisible] =
-    useState<boolean>(false);
-  const [destinationDropdownVisible, setDestinationDropdownVisible] =
-    useState<boolean>(false);
-
-  // Function to handle the "Calculate Fare" button click
-  const handleCalculateFare = () => {
-    if (startStation && destinationStation) {
-      // Call the calculateFare function from the fareCalculation service
-      const calculatedFare = calculateFare(startStation, destinationStation);
-      setFare(calculatedFare); // Update the state with the calculated fare
-    }
+  // Function to handle starting station selection
+  const handleStartStationChange = (selectedStation: string) => {
+    setStartStation(selectedStation);
   };
+
+  // Function to handle destination station selection
+  const handleDestinationStationChange = (selectedStation: string) => {
+    setDestinationStation(selectedStation);
+  };
+
+  // Filter the options for starting and destination stations
+  const filteredStartStations = stationNames.filter(
+    station => station !== destinationStation,
+  );
+
+  const filteredDestinationStations = stationNames.filter(
+    station => station !== startStation,
+  );
+
+  // Use useEffect to calculate fare when stations change
+  useEffect(() => {
+    const calculateRouteFare = () => {
+      if (startStation && destinationStation) {
+        const fareResult = calculateFare(startStation, destinationStation);
+        setFare(fareResult);
+      } else {
+        setFare(null);
+      }
+    };
+
+    calculateRouteFare(); // Call the function immediately
+  }, [startStation, destinationStation]);
 
   return (
     <Layout>
-      <div className="mt-20 px-4 md:px-5 flex flex-col items-center justify-center">
-        <div
-          className="w-1/2 bg-slate-700 p-5 rounded-xl bg-opacity-60 backdrop-filter backdrop-blur-lg flex flex-col items-center justify-start space-y-4"
-          style={{ height: '450px' }}
-        >
-          {/* Start Station Dropdown */}
-          <div className="w-2/3">
-            <button
-              className="w-full bg-primary hover:bg-primary-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring focus:ring-primary-300"
-              onClick={() => setStartDropdownVisible(!startDropdownVisible)}
-            >
-              {startStation || 'Select Starting Station'}
-            </button>
-            {startDropdownVisible && (
-              <ul className="absolute z-10 mt-1 w-full list-none overflow-hidden rounded-lg border-none bg-white text-left text-base shadow-lg dark:bg-neutral-700">
-                {stationNames.map((option, index) => (
-                  <li key={index} className="whitespace-nowrap">
-                    <a
-                      className="block w-full px-4 py-2 text-sm font-normal text-neutral-700 hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-600"
-                      href="#"
-                      onClick={() => {
-                        setStartStation(option);
-                        setStartDropdownVisible(false);
-                      }}
-                    >
-                      {option}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          {/* Destination Station Dropdown */}
-          <div className="w-2/3">
-            <button
-              className="w-full bg-primary hover:bg-primary-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring focus:ring-primary-300"
-              onClick={() =>
-                setDestinationDropdownVisible(!destinationDropdownVisible)
-              }
-            >
-              {destinationStation || 'Select Destination Station'}
-            </button>
-            {destinationDropdownVisible && (
-              <ul className="absolute z-10 mt-1 w-full list-none overflow-hidden rounded-lg border-none bg-white text-left text-base shadow-lg dark:bg-neutral-700">
-                {stationNames.map((option, index) => (
-                  <li key={index} className="whitespace-nowrap">
-                    <a
-                      className="block w-full px-4 py-2 text-sm font-normal text-neutral-700 hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-600"
-                      href="#"
-                      onClick={() => {
-                        setDestinationStation(option);
-                        setDestinationDropdownVisible(false);
-                      }}
-                    >
-                      {option}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          {/* Fare Calculation Button */}
-          <button
-            className="w-2/3 bg-primary hover:bg-primary-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring focus:ring-primary-300"
-            onClick={handleCalculateFare}
+      <div className="max-w-md mx-auto mt-32 bg-gray-800 bg-opacity-50 backdrop-blur-lg text-white p-5 rounded-lg shadow-md text-center">
+        {/* Header */}
+        <h2 className="text-3xl font-semibold mb-12">Route Fare Calculator</h2>
+        <div className="mb-10">
+          {/* Starting Station Dropdown */}
+          <label
+            htmlFor="startStation"
+            className="block text-gray-300 font-medium mb-2 text-left"
           >
-            Calculate Fare
-          </button>
-
-          {/* Fare Display */}
-          {fare !== null && (
-            <div className="flex flex-col items-center w-2/3">
-              <div className="bg-white/30 dark:bg-slate-800 rounded-lg py-3 ring-1 ring-slate-900/5 shadow-xl backdrop-blur-sm w-full">
-                <div className="flex items-center justify-center">
-                  <p className="text-slate-900 dark:text-white text-base">
-                    <b>Fare:</b> {fare} Taka
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
+            Starting Station:
+          </label>
+          <CustomDropdown
+            label="Choose starting station"
+            options={filteredStartStations}
+            value={startStation}
+            onChange={handleStartStationChange}
+          />
         </div>
+        <div className="mb-10">
+          {/* Destination Station Dropdown */}
+          <label
+            htmlFor="destinationStation"
+            className="block text-gray-300 font-medium mb-2 text-left"
+          >
+            Destination Station:
+          </label>
+          <CustomDropdown
+            label="Choose destination station"
+            options={filteredDestinationStations}
+            value={destinationStation}
+            onChange={handleDestinationStationChange}
+          />
+        </div>
+        {fare !== null && startStation && destinationStation && (
+          <div className="mt-8 text-left">
+            {/* Fare Information */}
+            <h3 className="text-lg font-semibold">Station Route Fare:</h3>
+            <p>
+              Fare from {startStation} to {destinationStation} is BDT {fare}.
+            </p>
+          </div>
+        )}
       </div>
     </Layout>
   );
 };
 
-export default RouteFarePage;
+export default RouteFare;
