@@ -39,7 +39,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
       <div className="fixed bottom-2 left-1/2 transform -translate-x-1/2">
         <div className="w-full text-center py-5 bg-transparent">
           <p className="text-slate-300 text-sm">
-            &copy; 2024 | v0.0.1 | Made with{' '}
+            &copy; 2024 | v0.0.2 | Made with{' '}
             <span className="text-red-500">&hearts;</span> by
             <a
               href="https://github.com/tashfiqul-islam"
