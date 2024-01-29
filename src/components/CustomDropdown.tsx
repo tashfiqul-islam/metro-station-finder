@@ -19,7 +19,8 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
   // Close the dropdown when a click occurs outside of it
   useEffect(() => {
     const handleDocumentClick = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)
+      ) {
         setIsOpen(false);
       }
     };
