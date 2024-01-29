@@ -4,7 +4,7 @@
 </div>
 
 <!-- Project Title Section -->
-<h1 align="center">Metro Station Finder</h1>
+<h1 align="center">Metro Station Finder - WIP</h1>
 
 <!-- GHA, Prettier & Linting Badges -->
 <p align="center">
@@ -32,6 +32,7 @@
   <li>Search functionality to input a location.</li>
   <li>Interactive map view to display user's location and nearest metro station.</li>
   <li>Distance calculation from the user's location to the nearest metro station.</li>
+  <li>Fare calculation between two stations.</li>
 </ul>
 
 <br>
@@ -108,15 +109,20 @@
 metro-station-finder/
 ├── src/
 │   ├── components/
+│   │   ├── CustomDropdown.tsx // Custom component for the dropdown on route fare.
+│   │   ├── Layout.tsx // Header and footer component for the website.
 │   │   ├── mapview.tsx // Component for displaying the map view.
 │   │   ├── metroInfoCard.tsx // Component for displaying metro station info card.
+│   │   ├── NavBar.tsx // Nav bar design for the website.
 │   │   ├── Searchbar.tsx // Component for the search bar.
 │
 ├── pages/
 │   ├── _app.tsx // Main Next.js application component.
 │   ├── index.tsx // Homepage of the application.
+│   ├── route-fare.tsx // Route fare page layout.
 │
 ├── services/
+│   ├── fareCalculation.ts // Service for fetching route fare data.
 │   ├── metroService.ts // Service for fetching metro station data.
 │
 ├── styles/

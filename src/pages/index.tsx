@@ -2,11 +2,9 @@ import React, { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import SearchBar from '../components/SearchBar';
 import MetroInfoCard from '../components/MetroInfoCard';
+import Layout from '../components/Layout';
 import { findNearestMetro } from '../services/metroServices';
 import { MetroStation } from '../utils/constants';
-import Head from 'next/head';
-import { FaGithub } from 'react-icons/fa';
-import { useRouter } from 'next/router';
 
 // Dynamically import MapView with no server-side rendering
 const MapView = dynamic(() => import('../components/MapView'), { ssr: false });
@@ -22,7 +20,6 @@ const HomePage: React.FC = () => {
   const [distance, setDistance] = useState<number | null>(null);
   const [unit, setUnit] = useState<'km' | 'miles'>('km');
   const [errorMessage, setErrorMessage] = useState<string>('');
-  const router = useRouter();
 
   // Callback to handle distance and unit updates from MapView
   const handleDistanceUpdate = (
@@ -55,70 +52,12 @@ const HomePage: React.FC = () => {
     setIsClient(true);
   }, []);
 
-  // useEffect to handle clickable routes
-  useEffect(() => {
-    const handleReload = () => {
-      router.reload();
-    };
-
-    const h1Element = document.querySelector('.clickable-h1');
-
-    if (h1Element instanceof HTMLElement) {
-      h1Element.style.cursor = 'pointer';
-      h1Element.addEventListener('click', handleReload);
-
-      return () => {
-        h1Element.removeEventListener('click', handleReload);
-      };
-    }
-
-    // Return an empty function when h1Element is not found
-    return () => {};
-  }, [router]); // Include 'router' as a dependency
-
   return (
     <>
-      {/* Favicon section */}
-      <Head>
-        <link
-          rel="icon"
-          href="https://github.com/tashfiqul-islam/metro-station-finder/raw/master/public/favicon-16x16.png"
-          sizes="16x16"
-        />
-        <link
-          rel="icon"
-          href="https://github.com/tashfiqul-islam/metro-station-finder/raw/master/public/favicon-32x32.png"
-          sizes="32x32"
-        />
-        <link
-          rel="icon"
-          href="https://github.com/tashfiqul-islam/metro-station-finder/raw/master/public/favicon.png"
-          sizes="any"
-        />
-      </Head>
-      {/* Background color */}
-      <div
-        className="flex flex-col min-h-screen"
-        style={{ backgroundColor: '#121212' }}
-      >
-        {/* Header Section */}
-        <div className="w-full text-center py-10 relative">
-          <h1 className="text-2xl font-bold text-white font-mono clickable-h1">
-            Metro Station Finder
-          </h1>
-          <a
-            href="https://github.com/tashfiqul-islam/metro-station-finder"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hidden md:absolute top-8 right-12 mt-2 text-white hover:text-slate-400 md:block"
-          >
-            <FaGithub size={24} /> {/* GitHub Icon */}
-          </a>
-        </div>
-
+      <Layout>
         {/* Main Content Section */}
         <div className="flex-grow">
-          <header className="w-full max-w-lg mx-auto mt-5">
+          <header className="w-full max-w-lg mx-auto mt-14">
             <SearchBar onSearch={handleSearch} />
             {errorMessage && (
               <p className="text-red-600 text-center mt-2">{errorMessage}</p>
@@ -151,24 +90,7 @@ const HomePage: React.FC = () => {
             )}
           </main>
         </div>
-
-        {/* Footer Section */}
-        <div className="w-full text-center py-5">
-          <p className="text-slate-300 text-sm">
-            &copy; 2024 | v0.0.1 | Made with{' '}
-            <span className="text-red-500">&hearts;</span> by
-            <a
-              href="https://github.com/tashfiqul-islam"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-500 hover:text-blue-700"
-            >
-              {' '}
-              Tashfiq
-            </a>
-          </p>
-        </div>
-      </div>
+      </Layout>
     </>
   );
 };
