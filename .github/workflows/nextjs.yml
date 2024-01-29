@@ -2,10 +2,8 @@ name: Deploy metro-station-finder
 
 on:
   push:
-    branches: ['master']
-    paths:
-      - '**'
-      - '!**/README.md'  # Ignore changes to readme.md
+    tags:
+      - '*'
   workflow_dispatch:
 
 permissions:
