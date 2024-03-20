@@ -107,27 +107,33 @@
 
 ```plaintext
 metro-station-finder/
+metro-station-finder/
+├── prisma/
 ├── src/
 │   ├── components/
-│   │   ├── CustomDropdown.tsx // Custom component for the dropdown on route fare.
-│   │   ├── Layout.tsx // Header and footer component for the website.
-│   │   ├── mapview.tsx // Component for displaying the map view.
-│   │   ├── metroInfoCard.tsx // Component for displaying metro station info card.
-│   │   ├── NavBar.tsx // Nav bar design for the website.
-│   │   ├── Searchbar.tsx // Component for the search bar.
-│
+│   │   ├── Auth/
+│   │   │   ├── LoginModal.tsx      // Component for login modal
+│   │   │   ├── RegisterModal.tsx   // Component for register modal
+│   │   ├── CustomDropdown.tsx      // Custom component for the dropdown on route fare.
+│   │   ├── Layout.tsx              // Header and footer component for the website.
+│   │   ├── mapview.tsx             // Component for displaying the map view.
+│   │   ├── metroInfoCard.tsx       // Component for displaying metro station info card.
+│   │   ├── NavBar.tsx              // Nav bar design for the website.
+│   │   ├── Searchbar.tsx           // Component for the search bar.
+├── lib/
+│   ├── prisma.ts // Handles the database connection
 ├── pages/
 │   ├── _app.tsx // Main Next.js application component.
 │   ├── index.tsx // Homepage of the application.
+│   ├── api/
+│   │   ├── auth/
+│   │   │   ├── [...nextauth].ts // Authentication API route
 │   ├── route-fare.tsx // Route fare page layout.
-│
 ├── services/
 │   ├── fareCalculation.ts // Service for fetching route fare data.
 │   ├── metroService.ts // Service for fetching metro station data.
-│
 ├── styles/
 │   ├── globals.css // Global CSS styles.
-│
 ├── utils/
 │   ├── constants.ts // Metro stations map location.
 │   ├── loadGoogleMapScript.ts // Utility for loading Google Maps scripts.

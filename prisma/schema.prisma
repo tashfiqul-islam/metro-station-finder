@@ -1,0 +1,65 @@
+// Define the User model corresponding to the users table
+model users {
+  id             Int        @id @default(autoincrement())
+  name           String?
+  email          String?    @unique
+  email_verified DateTime?
+  password       String
+  image          String?
+  created_at     DateTime   @default(now())
+  updated_at     DateTime   @updatedAt
+  sessions       sessions[]
+  accounts       accounts[]
+}
+
+// Define the Session model corresponding to the sessions table
+model sessions {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  expires      DateTime
+  sessionToken String   @unique
+  accessToken  String   @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Define the relationship with User
+  user users @relation(fields: [userId], references: [id])
+}
+
+// Define the Account model corresponding to the accounts table
+model accounts {
+  id                 Int       @id @default(autoincrement())
+  compoundId         String
+  userId             Int
+  providerType       String
+  providerId         String
+  providerAccountId  String
+  refreshToken       String?
+  accessToken        String?
+  accessTokenExpires DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  // Define the relationship with User
+  user users @relation(fields: [userId], references: [id])
+}
+
+// Define the VerificationRequest model corresponding to the verification_requests table
+model verification_requests {
+  id         Int      @id @default(autoincrement())
+  identifier String
+  token      String
+  expires    DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// Specify the generator and datasource configuration
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("POSTGRESQL_URI_TEST")
+}
