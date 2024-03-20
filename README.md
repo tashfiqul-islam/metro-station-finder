@@ -108,7 +108,7 @@
 ```plaintext
 metro-station-finder/
 metro-station-finder/
-├── prisma/
+├── prisma/ // Database model for Prisma
 ├── src/
 │   ├── components/
 │   │   ├── Auth/
