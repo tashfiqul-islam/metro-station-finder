@@ -1,32 +1,41 @@
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useState } from 'react';
 import LeftModalContent from './Sign In/LeftModalContent';
+import RegisterSplashRight from './Register/RegisterSplashRight';
 import RightModalContent from './Register/RightModalContent';
+import SignInSplashLeft from './Sign In/SignInSplashLeft';
 
 interface ModalProps {
-  isOpen: boolean; // Flag indicating whether the modal is open
-  onClose: () => void; // Function to handle modal close event
-  children: ReactNode; // Content to be rendered inside the modal
-  maxWidth?: string; // Customizable maximum width for the modal
+  isOpen: boolean;
+  onClose: () => void;
+  children: ReactNode;
+  maxWidth?: string;
 }
 
-const AuthModal: React.FC<ModalProps> = ({ isOpen, onClose, children, maxWidth = 'md:max-w-screen-lg' }) => {
-  // Render the modal content only if it's open
+/**
+ * The `AuthModal` component serves as a dynamic modal window that toggles
+ * between sign-in and registration views based on user interaction.
+ * It employs conditional rendering to manage which content is displayed.
+ */
+const AuthModal: React.FC<ModalProps> = ({
+  isOpen,
+  onClose,
+  children,
+  maxWidth = 'md:max-w-screen-lg',
+}) => {
+  const [showSignIn, setShowSignIn] = useState(true);
+
+  const toggleScreen = () => setShowSignIn(!showSignIn);
+
   if (!isOpen) return null;
 
   return (
-    // Background overlay for the modal
     <div className="fixed top-0 left-0 flex items-center justify-center w-full h-full bg-black bg-opacity-50 z-50">
-      {/* Modal container */}
       <div className={`bg-white w-full ${maxWidth} min-h-[500px] flex rounded-lg`}>
-        {/* Left section containing authentication content */}
-        <div className="w-1/2 flex flex-col justify-center items-center">
-          {/* Render left section content */}
-          <LeftModalContent />
+        <div className={`w-1/2 flex flex-col justify-center items-center rounded-lg ${showSignIn ? 'bg-white' : 'bg-gradient-to-r from-cyan-500 to-blue-500'}`} style={{ borderTopRightRadius: showSignIn ? '0' : '8rem', borderBottomRightRadius: showSignIn ? '0' : '8rem' }}>
+          {showSignIn ? <LeftModalContent /> : <SignInSplashLeft onSignInClick={toggleScreen} show={false} />}
         </div>
-        {/* Right section containing additional content */}
-        <div className="w-1/2 bg-blue-500 flex flex-col justify-center items-center rounded-lg" style={{ borderTopLeftRadius: '10rem', borderBottomLeftRadius: '10rem' }}>
-          {/* Render right section content here */}
-          <RightModalContent />
+        <div className={`w-1/2 flex flex-col justify-center items-center rounded-lg ${showSignIn ? 'bg-gradient-to-r from-cyan-500 to-blue-500' : 'bg-white'}`} style={{ borderTopLeftRadius: showSignIn ? '8rem' : '0', borderBottomLeftRadius: showSignIn ? '8rem' : '0' }}>
+          {showSignIn ? <RegisterSplashRight onRegisterClick={toggleScreen} /> : <RightModalContent />}
         </div>
       </div>
     </div>

@@ -1,0 +1,21 @@
+/* AuthModal.css */
+
+.auth-panel {
+  transition: transform 0.6s ease-in-out;
+}
+
+.sign-in-panel {
+  transform: translateX(0);
+}
+
+.register-panel {
+  transform: translateX(100%);
+}
+
+.bg-gradient-to-r {
+  background: linear-gradient(to right, #5c6bc0, #00bcd4);
+}
+
+.bg-white {
+  background-color: #ffffff;
+}
