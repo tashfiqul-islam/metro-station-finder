@@ -1,0 +1,39 @@
+/* AuthModal.module.css */
+
+.LeftModalContent {
+  background-color: #ffffff; /* White background */
+  animation: slideFromRight 0.3s ease forwards; /* Slide animation */
+}
+
+.RightModalContent {
+  background-color: #ffffff; /* White background */
+  animation: slideFromLeft 0.3s ease forwards; /* Slide animation */
+}
+
+.RegisterSplashRight {
+  background: linear-gradient(to right, #00BCD4, #2196F3); /* Gradient from cyan to blue */
+  animation: slideFromRight 0.3s ease forwards; /* Slide animation */
+}
+
+.SignInSplashLeft {
+  background: linear-gradient(to right, #00BCD4, #2196F3); /* Gradient from cyan to blue */
+  animation: slideFromLeft 0.3s ease forwards; /* Slide animation */
+}
+
+@keyframes slideFromRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideFromLeft {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}

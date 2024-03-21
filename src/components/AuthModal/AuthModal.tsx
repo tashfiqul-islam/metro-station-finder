@@ -3,38 +3,44 @@ import LeftModalContent from './Sign In/LeftModalContent';
 import RegisterSplashRight from './Register/RegisterSplashRight';
 import RightModalContent from './Register/RightModalContent';
 import SignInSplashLeft from './Sign In/SignInSplashLeft';
+import styles from './AuthModal.module.css';
 
+// Define the props for the AuthModal component
 interface ModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  children: ReactNode;
-  maxWidth?: string;
+  isOpen: boolean; // Indicates whether the modal is open or not
+  onClose: () => void; // Function to close the modal
+  children: ReactNode; // Children components
+  maxWidth?: string; // Maximum width of the modal (default value is 'md:max-w-screen-lg')
 }
 
-/**
- * The `AuthModal` component serves as a dynamic modal window that toggles
- * between sign-in and registration views based on user interaction.
- * It employs conditional rendering to manage which content is displayed.
- */
+// AuthModal component
 const AuthModal: React.FC<ModalProps> = ({
   isOpen,
   onClose,
   children,
-  maxWidth = 'md:max-w-screen-lg',
+  maxWidth = 'md:max-w-screen-lg', // Default max width for the modal
 }) => {
-  const [showSignIn, setShowSignIn] = useState(true);
+  const [showSignIn, setShowSignIn] = useState(true); // State to manage whether to show sign-in or registration screen
 
+  // Function to toggle between sign-in and registration screens
   const toggleScreen = () => setShowSignIn(!showSignIn);
 
+  // If modal is not open, return null (modal is hidden)
   if (!isOpen) return null;
 
   return (
+    // Modal overlay with backdrop
     <div className="fixed top-0 left-0 flex items-center justify-center w-full h-full bg-black bg-opacity-50 z-50">
+      {/* Modal content container */}
       <div className={`bg-white w-full ${maxWidth} min-h-[500px] flex rounded-lg`}>
-        <div className={`w-1/2 flex flex-col justify-center items-center rounded-lg ${showSignIn ? 'bg-white' : 'bg-gradient-to-r from-cyan-500 to-blue-500'}`} style={{ borderTopRightRadius: showSignIn ? '0' : '8rem', borderBottomRightRadius: showSignIn ? '0' : '8rem' }}>
+        {/* Left side container */}
+        <div className={`${styles.modalContainer} w-1/2 flex flex-col justify-center items-center rounded-lg ${showSignIn ? styles.LeftModalContent : styles.RegisterSplashRight}`} style={{ borderTopRightRadius: showSignIn ? '0' : '8rem', borderBottomRightRadius: showSignIn ? '0' : '8rem' }}>
+          {/* Render left content based on showSignIn state */}
           {showSignIn ? <LeftModalContent /> : <SignInSplashLeft onSignInClick={toggleScreen} show={false} />}
         </div>
-        <div className={`w-1/2 flex flex-col justify-center items-center rounded-lg ${showSignIn ? 'bg-gradient-to-r from-cyan-500 to-blue-500' : 'bg-white'}`} style={{ borderTopLeftRadius: showSignIn ? '8rem' : '0', borderBottomLeftRadius: showSignIn ? '8rem' : '0' }}>
+        {/* Right side container */}
+        <div className={`${styles.modalContainer} w-1/2 flex flex-col justify-center items-center rounded-lg ${showSignIn ? styles.RegisterSplashRight : styles.RightModalContent}`} style={{ borderTopLeftRadius: showSignIn ? '8rem' : '0', borderBottomLeftRadius: showSignIn ? '8rem' : '0' }}>
+          {/* Render right content based on showSignIn state */}
           {showSignIn ? <RegisterSplashRight onRegisterClick={toggleScreen} /> : <RightModalContent />}
         </div>
       </div>
@@ -42,4 +48,4 @@ const AuthModal: React.FC<ModalProps> = ({
   );
 };
 
-export default AuthModal;
+export default AuthModal; // Export the AuthModal component
