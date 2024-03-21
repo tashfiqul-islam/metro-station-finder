@@ -3,6 +3,12 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../../../lib/prisma';
 
+// Define a response type that includes the token property (even though it's not used)
+interface ErrorResponse {
+  token: string;
+  error: string;
+}
+
 // Initialize Prisma
 const initializePrisma = async () => {
   try {
@@ -24,7 +30,10 @@ initializePrisma();
  * @param password User's password.
  * @returns JWT token on successful authentication.
  */
-const authenticateUser = async (email: string, password: string) => {
+const authenticateUser = async (
+  email: string,
+  password: string,
+): Promise<string> => {
   try {
     // Find the user in the database
     const user = await prisma.users.findUnique({ where: { email } });
@@ -51,8 +60,9 @@ const authenticateUser = async (email: string, password: string) => {
     return token;
   } catch (error) {
     throw new Error(
-      'Authentication failed: ' +
-        (error instanceof Error ? error.message : 'Unknown error'),
+      `Authentication failed: ${
+        error instanceof Error ? error.message : 'Unknown error'
+      }`,
     );
   }
 };
@@ -64,7 +74,7 @@ const authenticateUser = async (email: string, password: string) => {
  */
 const handleAuthentication = async (
   req: NextApiRequest,
-  res: NextApiResponse<any>,
+  res: NextApiResponse<{ token: string }>,
 ) => {
   try {
     // Check if the request method is POST
@@ -87,11 +97,15 @@ const handleAuthentication = async (
       res.status(405).end(`Method ${req.method} Not Allowed`);
     }
   } catch (error) {
-    // Handle any errors and send a 500 Internal Server Error response
-    res.status(500).json({
+    // Create a response object
+    const response: ErrorResponse = {
+      token: '', // Provide a placeholder value for token
       error:
         error instanceof Error ? error.message : 'An unknown error occurred',
-    });
+    };
+
+    // Send the response
+    res.status(500).json(response);
   }
 };
 
@@ -102,17 +116,21 @@ const handleAuthentication = async (
  */
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<any>,
+  res: NextApiResponse<{ token: string }>,
 ) {
   try {
     // Handle authentication logic
     await handleAuthentication(req, res);
   } catch (error) {
-    // Handle any errors during Prisma connection or authentication
-    res.status(500).json({
+    /// Create a response object
+    const response: ErrorResponse = {
+      token: '', // Provide a placeholder value for token
       error:
         error instanceof Error ? error.message : 'An unknown error occurred',
-    });
+    };
+
+    // Send the response
+    res.status(500).json(response);
   } finally {
     // Ensure that the Prisma client is disconnected from the database
     await prisma.$disconnect();

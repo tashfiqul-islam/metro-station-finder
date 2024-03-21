@@ -5,7 +5,7 @@ import MetroInfoCard from '../components/MetroInfoCard';
 import Layout from '../components/Layout';
 import { findNearestMetro } from '../services/metroServices';
 import { MetroStation } from '../utils/constants';
-import AuthModal from '@/components/AuthModal/AuthModal';
+import AuthModal from '../components/AuthModal/AuthModal';
 
 // Dynamically import MapView with no server-side rendering
 const MapView = dynamic(() => import('../components/MapView'), { ssr: false });
@@ -107,8 +107,13 @@ const HomePage: React.FC = () => {
           </main>
         </div>
         {/* Render the modal only if showModal state is true */}
-      {showModal && <AuthModal isOpen={true} onClose={toggleModal}>
-        </AuthModal>}
+        {showModal && (
+          <AuthModal
+            isOpen={true}
+            onClose={toggleModal}
+            children={undefined}
+          ></AuthModal>
+        )}
       </Layout>
     </>
   );
