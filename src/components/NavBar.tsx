@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { FaGithub } from 'react-icons/fa';
 import Link from 'next/link';
+import Avatar from './Avatar'; // Import the Avatar component
 import { useRouter } from 'next/router';
 
 const NavBar: React.FC = () => {
@@ -52,7 +53,7 @@ const NavBar: React.FC = () => {
 
   return (
     // Navigation bar container
-    <nav className="relative px-4 sm:px-10 py-4 flex justify-between items-center bg-transparent">
+    <nav className="relative px-4 sm:px-10 py-6 flex justify-between items-center bg-transparent">
       {/* Name (Metro Station Finder) */}
       <div className="flex items-center">
         <Link
@@ -63,7 +64,6 @@ const NavBar: React.FC = () => {
           Metro Station Finder
         </Link>
       </div>
-
       {/* Mobile menu button */}
       <div className="sm:hidden">
         <button
@@ -82,7 +82,6 @@ const NavBar: React.FC = () => {
           </svg>
         </button>
       </div>
-
       {/* Menu Items (Home, Route Fare) */}
       <ul
         className={`${
@@ -116,31 +115,21 @@ const NavBar: React.FC = () => {
           </Link>
         </li>
       </ul>
-
-      {/* GitHub button & Avatar */}
-      <div className="hidden sm:flex items-center">
-        {/* GitHub button */}
-        <div className="github-button inline-block">
-          <a
-            className="border border-slate-500 text-white text-sm font-bold rounded-md px-2 py-1 inline-flex items-center justify-center hover:bg-slate-500 hover:text-white"
-            href="https://github.com/tashfiqul-islam/metro-station-finder"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <FaGithub className="text-white mr-2" />
-            <span>GitHub</span>
-          </a>
-        </div>
-
-        {/* Avatar */}
-        <div className="avatar ml-4">
-          <img
-            className="w-8 h-8 rounded-full"
-            src="https://via.placeholder.com/50"
-            alt="Avatar"
-          />
-        </div>
+      {/* GitHub button */}
+      <div className="github-button inline-block">
+        <a
+          className="border border-slate-500 text-white text-sm font-bold rounded-md px-2 py-1 inline-flex items-center justify-center hover:bg-slate-500 hover:text-white"
+          href="https://github.com/tashfiqul-islam/metro-station-finder"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <FaGithub className="text-white mr-2" />
+          <span>GitHub</span>
+        </a>
       </div>
+      {/* Avatar section */}
+      <Avatar isAuthenticated={false} />{' '}
+      {/* Pass isAuthenticated state as props */}
     </nav>
   );
 };

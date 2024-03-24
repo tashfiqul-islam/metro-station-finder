@@ -1,10 +1,10 @@
-import React, { ReactNode, useState } from 'react';
+import React, { ReactNode, useState, useEffect } from 'react';
 import LeftModalContent from './Sign In/LeftModalContent';
 import RegisterSplashRight from './Register/RegisterSplashRight';
 import RightModalContent from './Register/RightModalContent';
-import SignInSplashLeft from './Sign In/SignInSplashLeft';
 import { FaRegWindowClose } from 'react-icons/fa';
 import styles from './AuthModal.module.css';
+import SignInSplashLeft from './Sign In/SignInSplashLeft';
 
 // Define the props for the AuthModal component
 interface ModalProps {
@@ -12,6 +12,7 @@ interface ModalProps {
   onClose: () => void; // Function to close the modal
   children: ReactNode; // Children components
   maxWidth?: string; // Maximum width of the modal (default value is 'md:max-w-screen-lg')
+  initialShowSignIn: boolean; // Whether to initially show the sign-in screen or the registration screen
 }
 
 // AuthModal component
@@ -19,8 +20,14 @@ const AuthModal: React.FC<ModalProps> = ({
   isOpen,
   onClose,
   maxWidth = 'md:max-w-screen-lg', // Default max width for the modal
+  initialShowSignIn, // Prop to specify initial state of showSignIn
 }) => {
-  const [showSignIn, setShowSignIn] = useState(true); // State to manage whether to show sign-in or registration screen
+  const [showSignIn, setShowSignIn] = useState(initialShowSignIn); // State to manage whether to show sign-in or registration screen
+
+  useEffect(() => {
+    // Update showSignIn state when initialShowSignIn prop changes
+    setShowSignIn(initialShowSignIn);
+  }, [initialShowSignIn]);
 
   // Function to toggle between sign-in and registration screens
   const toggleScreen = () => setShowSignIn(!showSignIn);
@@ -81,4 +88,4 @@ const AuthModal: React.FC<ModalProps> = ({
   );
 };
 
-export default AuthModal; // Export the AuthModal component
+export default AuthModal;
