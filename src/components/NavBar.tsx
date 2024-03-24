@@ -52,18 +52,20 @@ const NavBar: React.FC = () => {
 
   return (
     // Navigation bar container
-    <nav className="relative px-10 py-8 flex justify-between items-center bg-transparent">
-      {/* Metro Station Finder title */}
-      <Link
-        href="/"
-        className="text-2xl font-bold leading-none text-blue-500 clickable-h1-text"
-        onClick={handleHomeClick}
-      >
-        Metro Station Finder
-      </Link>
+    <nav className="relative px-4 sm:px-10 py-4 flex justify-between items-center bg-transparent">
+      {/* Name (Metro Station Finder) */}
+      <div className="flex items-center">
+        <Link
+          href="/"
+          className="text-2xl font-bold leading-none text-blue-500 clickable-h1-text"
+          onClick={handleHomeClick}
+        >
+          Metro Station Finder
+        </Link>
+      </div>
 
       {/* Mobile menu button */}
-      <div className="lg:hidden">
+      <div className="sm:hidden">
         <button
           className="navbar-burger flex items-center text-blue-600 p-3"
           onClick={toggleMenu}
@@ -81,24 +83,11 @@ const NavBar: React.FC = () => {
         </button>
       </div>
 
-      {/* GitHub button */}
-      <div className="github-button inline-block">
-        <a
-          className="border border-slate-500 text-white text-sm font-bold rounded-md px-2 py-1 inline-flex items-center justify-center hover:bg-slate-500 hover:text-white"
-          href="https://github.com/tashfiqul-islam/metro-station-finder"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <FaGithub className="text-white mr-2" />
-          <span>GitHub</span>
-        </a>
-      </div>
-
-      {/* Navigation links */}
+      {/* Menu Items (Home, Route Fare) */}
       <ul
-        className={`hidden absolute top-1/2 left-1/2 transform -translate-y-1/2 -translate-x-1/2 lg:flex lg:mx-auto lg:flex lg:items-center lg:w-auto lg:space-x-6 ${
+        className={`${
           isMenuOpen ? 'block' : 'hidden'
-        }`}
+        } sm:flex sm:mx-auto sm:flex sm:items-center sm:w-auto sm:space-x-6`}
       >
         {/* Home link */}
         <li>
@@ -127,6 +116,31 @@ const NavBar: React.FC = () => {
           </Link>
         </li>
       </ul>
+
+      {/* GitHub button & Avatar */}
+      <div className="hidden sm:flex items-center">
+        {/* GitHub button */}
+        <div className="github-button inline-block">
+          <a
+            className="border border-slate-500 text-white text-sm font-bold rounded-md px-2 py-1 inline-flex items-center justify-center hover:bg-slate-500 hover:text-white"
+            href="https://github.com/tashfiqul-islam/metro-station-finder"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <FaGithub className="text-white mr-2" />
+            <span>GitHub</span>
+          </a>
+        </div>
+
+        {/* Avatar */}
+        <div className="avatar ml-4">
+          <img
+            className="w-8 h-8 rounded-full"
+            src="https://via.placeholder.com/50"
+            alt="Avatar"
+          />
+        </div>
+      </div>
     </nav>
   );
 };

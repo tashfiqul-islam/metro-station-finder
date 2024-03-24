@@ -11,12 +11,12 @@
 }
 
 .RegisterSplashRight {
-  background: linear-gradient(to right, #00BCD4, #2196F3); /* Gradient from cyan to blue */
+  background: linear-gradient(to top left, #2196F3, #1565C0); /* Diagonal gradient from bottom right to top left */
   animation: slideFromRight 0.3s ease forwards; /* Slide animation */
 }
 
 .SignInSplashLeft {
-  background: linear-gradient(to right, #00BCD4, #2196F3); /* Gradient from cyan to blue */
+  background: linear-gradient(to top right, #2196F3, #1565C0); /* Diagonal gradient from bottom left to top right */
   animation: slideFromLeft 0.3s ease forwards; /* Slide animation */
 }
 

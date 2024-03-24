@@ -5,7 +5,6 @@ import MetroInfoCard from '../components/MetroInfoCard';
 import Layout from '../components/Layout';
 import { findNearestMetro } from '../services/metroServices';
 import { MetroStation } from '../utils/constants';
-import AuthModal from '../components/AuthModal/AuthModal';
 
 // Dynamically import MapView with no server-side rendering
 const MapView = dynamic(() => import('../components/MapView'), { ssr: false });
@@ -53,27 +52,12 @@ const HomePage: React.FC = () => {
     setIsClient(true);
   }, []);
 
-  // State to control the visibility of the modal
-  const [showModal, setShowModal] = useState(false);
-
-  // Function to toggle the modal visibility
-  const toggleModal = () => {
-    setShowModal(!showModal);
-  };
-
   return (
     <>
       <Layout>
         {/* Main Content Section */}
         <div className="flex-grow">
           <header className="w-full max-w-lg mx-auto mt-14">
-            {/* Button to open the modal */}
-            <button
-              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-              onClick={toggleModal}
-            >
-              Modal
-            </button>
             <SearchBar onSearch={handleSearch} />
             {errorMessage && (
               <p className="text-red-600 text-center mt-2">{errorMessage}</p>
@@ -106,14 +90,6 @@ const HomePage: React.FC = () => {
             )}
           </main>
         </div>
-        {/* Render the modal only if showModal state is true */}
-        {showModal && (
-          <AuthModal
-            isOpen={true}
-            onClose={toggleModal}
-            children={undefined}
-          ></AuthModal>
-        )}
       </Layout>
     </>
   );

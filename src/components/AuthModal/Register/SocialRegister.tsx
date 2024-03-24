@@ -9,7 +9,7 @@ const SocialRegister: React.FC = () => (
     {/* Divider */}
     <div className="flex items-center w-full my-4">
       <hr className="flex-grow border-gray-300" />
-      <span className="text-sm text-gray-500 mx-2">Or Sign In with</span>
+      <span className="text-sm text-gray-500 mx-2">Or Register with</span>
       <hr className="flex-grow border-gray-300" />
     </div>
     {/* Container for social registration icons */}
