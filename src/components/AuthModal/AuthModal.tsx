@@ -3,10 +3,9 @@ import LeftModalContent from './Sign In/LeftModalContent';
 import RegisterSplashRight from './Register/RegisterSplashRight';
 import RightModalContent from './Register/RightModalContent';
 import { FaRegWindowClose } from 'react-icons/fa';
-import styles from './AuthModal.module.css';
+import styles from '../Animations/AuthModal.module.css';
 import SignInSplashLeft from './Sign In/SignInSplashLeft';
 
-// Define the props for the AuthModal component
 interface ModalProps {
   isOpen: boolean; // Indicates whether the modal is open or not
   onClose: () => void; // Function to close the modal
@@ -15,7 +14,6 @@ interface ModalProps {
   initialShowSignIn: boolean; // Whether to initially show the sign-in screen or the registration screen
 }
 
-// AuthModal component
 const AuthModal: React.FC<ModalProps> = ({
   isOpen,
   onClose,
@@ -32,6 +30,12 @@ const AuthModal: React.FC<ModalProps> = ({
   // Function to toggle between sign-in and registration screens
   const toggleScreen = () => setShowSignIn(!showSignIn);
 
+  // Reset the modal state when closing
+  const handleClose = () => {
+    onClose();
+    setShowSignIn(initialShowSignIn); // Reset to initial state
+  };
+
   // If modal is not open, return null (modal is hidden)
   if (!isOpen) return null;
 
@@ -44,7 +48,7 @@ const AuthModal: React.FC<ModalProps> = ({
       >
         {/* Close button */}
         <button
-          onClick={onClose}
+          onClick={handleClose}
           className="absolute top-4 right-4 z-10 text-grey-500 hover:text-grey-700 focus:outline-none"
         >
           <FaRegWindowClose className="h-6 w-6" />

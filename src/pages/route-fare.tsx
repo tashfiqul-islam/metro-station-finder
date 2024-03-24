@@ -46,7 +46,7 @@ const RouteFare: React.FC = () => {
 
   return (
     <Layout>
-      <div className="max-w-md mx-auto mt-32 bg-gray-800 bg-opacity-50 backdrop-blur-lg text-white p-5 rounded-lg shadow-md text-center">
+      <div className="max-w-md mx-auto mt-60 bg-gray-800 bg-opacity-50 backdrop-blur-lg text-white p-5 rounded-lg shadow-md text-center">
         {/* Header */}
         <h2 className="text-3xl font-semibold mb-12">Route Fare Calculator</h2>
         <div className="mb-10">

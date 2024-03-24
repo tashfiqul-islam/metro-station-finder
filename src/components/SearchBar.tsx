@@ -84,7 +84,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
     <div className="flex justify-center w-full">
       <form onSubmit={handleSearchSubmit} className="w-full">
         <div
-          className="flex items-center w-full search-bar-container"
+          className="flex items-center w-full search-bar-container mt-20"
           style={{ padding: '0 15px' }}
         >
           {/* Bangladesh abbreviation (non-dropdown) */}
