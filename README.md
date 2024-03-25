@@ -107,35 +107,50 @@
 
 ```plaintext
 metro-station-finder/
-metro-station-finder/
-├── prisma/ // Database model for Prisma
+├── prisma/
+│   ├── schema.prisma // Database model file for Prisma.
 ├── src/
 │   ├── components/
-│   │   ├── Auth/
-│   │   │   ├── LoginModal.tsx      // Component for login modal
-│   │   │   ├── RegisterModal.tsx   // Component for register modal
-│   │   ├── CustomDropdown.tsx      // Custom component for the dropdown on route fare.
-│   │   ├── Layout.tsx              // Header and footer component for the website.
-│   │   ├── mapview.tsx             // Component for displaying the map view.
-│   │   ├── metroInfoCard.tsx       // Component for displaying metro station info card.
-│   │   ├── NavBar.tsx              // Nav bar design for the website.
-│   │   ├── Searchbar.tsx           // Component for the search bar.
+│   │   ├── Animations/
+│   │   │   ├── AuthModal.module.css // Styles for the AuthModal animation.
+│   │   │   ├── Avatar.module.css    // Styles for the Avatar dropdown animation.
+│   │   ├── AuthModal/
+│   │   │   ├── Register/
+│   │   │   │   ├── EmailRegister.tsx         // Component for user email registration.
+│   │   │   │   ├── RegisterSplashRight.tsx   // Component for the right splash screen during registration.
+│   │   │   │   ├── RightModalContent.tsx     // Component for the content of the right modal during registration.
+│   │   │   │   ├── SocialRegister.tsx        // Component for social media registration.
+│   │   │   ├── Sign In/
+│   │   │   │   ├── EmailLogin.tsx            // Component for user email login.
+│   │   │   │   ├── LeftModalContent.tsx      // Component for the content of the left modal during login.
+│   │   │   │   ├── SignInSplashLeft.tsx      // Component for the left splash screen during login.
+│   │   │   │   ├── SocialLogins.tsx          // Component for social media logins.
+│   │   │   ├── AuthModal.tsx                 // Main modal component containing all authentication components.
+│   │   ├── CustomDropdown.tsx                // Custom dropdown component for route fare.
+│   │   ├── Layout.tsx                        // Header and footer component for the website layout.
+│   │   ├── mapview.tsx                       // Component for displaying the map view.
+│   │   ├── metroInfoCard.tsx                 // Component for displaying metro station information card.
+│   │   ├── NavBar.tsx                        // Navigation bar component for the website.
+│   │   ├── Searchbar.tsx                     // Component for the search bar.
+├── __tests__/
+│   ├── components/
+│   │   ├── (Test files for components.)
 ├── lib/
-│   ├── prisma.ts // Handles the database connection
+│   ├── prisma.ts // Handles the database connection.
 ├── pages/
-│   ├── _app.tsx // Main Next.js application component.
-│   ├── index.tsx // Homepage of the application.
+│   ├── _app.tsx         // Main Next.js application component.
+│   ├── index.tsx        // Homepage of the application.
 │   ├── api/
 │   │   ├── auth/
-│   │   │   ├── [...nextauth].ts // Authentication API route
-│   ├── route-fare.tsx // Route fare page layout.
+│   │   │   ├── [...nextauth].ts // Authentication API route.
+│   ├── route-fare.tsx   // Route fare page layout.
 ├── services/
 │   ├── fareCalculation.ts // Service for fetching route fare data.
-│   ├── metroService.ts // Service for fetching metro station data.
+│   ├── metroService.ts    // Service for fetching metro station data.
 ├── styles/
 │   ├── globals.css // Global CSS styles.
 ├── utils/
-│   ├── constants.ts // Metro stations map location.
+│   ├── constants.ts         // Constants for metro stations map location.
 │   ├── loadGoogleMapScript.ts // Utility for loading Google Maps scripts.
 ```
 

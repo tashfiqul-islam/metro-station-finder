@@ -50,8 +50,8 @@ const Avatar: React.FC<AvatarProps> = ({ isAuthenticated }) => {
         className="w-10 h-10 rounded-full cursor-pointer"
         src="/assets/avatar.jpg"
         alt="Avatar"
-        width={500}
-        height={500}
+        width={100}
+        height={100}
         onClick={toggleDropdown}
       />
       {/* Dropdown menu */}

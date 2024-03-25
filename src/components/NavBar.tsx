@@ -16,9 +16,21 @@ const NavBar: React.FC = () => {
     <nav className="fixed top-0 left-0 right-0 z-10 px-4 sm:px-5 py-1 flex justify-between items-center bg-gradient-to-r from-blue-800 to-blue-500 shadow-lg rounded-md mx-5 my-5">
       {/* Logo and Title (Metro Station Finder) - Clickable */}
       <div className="flex items-center">
-        <Link href="/" onClick={(e) => { e.preventDefault(); router.push('/'); }} className="flex items-center">
+        <Link
+          href="/"
+          onClick={e => {
+            e.preventDefault();
+            router.push('/');
+          }}
+          className="flex items-center"
+        >
           <div className="flex items-center">
-            <Image src="/assets/metro-station-finder-logo.png" alt="Metro Station Finder Logo" width={45} height={45} />
+            <Image
+              src="/assets/metro-station-finder-logo.png"
+              alt="Metro Station Finder Logo"
+              width={45}
+              height={45}
+            />
           </div>
           <div className="flex items-center">
             <span className="text-xl font-bold leading-none text-white clickable-h1-text">
@@ -93,7 +105,9 @@ const NavBar: React.FC = () => {
               strokeLinecap="round"
               strokeLinejoin="round"
               strokeWidth="2"
-              d={isMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"}
+              d={
+                isMenuOpen ? 'M6 18L18 6M6 6l12 12' : 'M4 6h16M4 12h16M4 18h16'
+              }
             ></path>
           </svg>
         </button>
