@@ -58,7 +58,7 @@
   </a>
   <!-- Prisma Badge -->
   <a href="https://www.prisma.io/" target="_blank">
-    <img src="https://img.shields.io/badge/Prisma-Latest-39445a?style=for-the-badge&logo=prisma&logoColor=white" alt="Prisma">
+    <img src="https://img.shields.io/badge/Prisma-5.11.0-39445a?style=for-the-badge&logo=prisma&logoColor=white" alt="Prisma">
   </a>
   <!-- TypeScript Badge -->
   <a href="https://www.typescriptlang.org/" target="_blank">
