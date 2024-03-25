@@ -56,6 +56,10 @@
   <a href="https://developers.google.com/maps/documentation/javascript/overview" target="_blank">
     <img src="https://img.shields.io/badge/Google Maps API-Latest-4285F4?style=for-the-badge&logo=google-maps&logoColor=white" alt="Google Maps API">
   </a>
+  <!-- Prisma Badge -->
+  <a href="https://www.prisma.io/" target="_blank">
+    <img src="https://img.shields.io/badge/Prisma-Latest-39445a?style=for-the-badge&logo=prisma&logoColor=white" alt="Prisma">
+  </a>
   <!-- TypeScript Badge -->
   <a href="https://www.typescriptlang.org/" target="_blank">
     <img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript">
