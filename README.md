@@ -6,7 +6,7 @@
 <!-- Project Title Section -->
 <h1 align="center">Metro Station Finder - WIP</h1>
 
-<!-- GHA, Prettier & Linting Badges -->
+<!-- GHA, Prettier, Linting & WakaTime Badges -->
 <p align="center">
   <img src="https://custom-icon-badges.demolab.com/badge/Version-v0.0.2-blue?logo=metro-station-finder" alt="Metro Station Version">
   <a href="https://github.com/tashfiqul-islam/metro-station-finder/actions/workflows/nextjs.yml">
@@ -14,6 +14,9 @@
   </a>
   <img src="https://img.shields.io/badge/Lint-Passing-00aa00?logo=eslint&logoColor=white" alt="Lint Passing">
   <img src="https://img.shields.io/badge/Code Style-Prettier-ff69b4?logo=prettier&logoColor=white" alt="Code Style Prettier">
+  <a href="https://wakatime.com/badge/github/tashfiqul-islam/metro-station-finder">
+    <img src="https://wakatime.com/badge/github/tashfiqul-islam/metro-station-finder.svg" alt="wakatime">
+</a>
 </p>
 
 <br>
