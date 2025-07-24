@@ -1,0 +1,579 @@
+# Metro Station Finder 2025 - Cursor Rules
+# Modern, Blazing Fast, Type-Safe Development Standards
+
+## 🎯 Project Goals
+- Blazing fast performance (sub-second page loads)
+- Modern, accessible UI with dark mode
+- Type-safe throughout
+- Zero runtime errors
+- Exceptional developer experience
+
+## 🏗️ Architecture Standards
+
+### Next.js 15 App Router
+- ALWAYS use App Router, never Pages Router
+- Prefer Server Components over Client Components
+- Use "use client" directive sparingly and at the lowest possible level
+- Leverage React 19 Server Actions for mutations
+- Use Suspense boundaries for loading states
+- Implement streaming for better UX
+
+### File Structure & Organization
+```
+src/
+├── app/                    # App Router pages
+│   ├── (auth)/            # Route groups for auth pages
+│   ├── (dashboard)/       # Route groups for dashboard
+│   ├── globals.css        # Global styles
+│   ├── layout.tsx         # Root layout
+│   └── page.tsx           # Home page
+├── components/            # Reusable components
+│   ├── ui/               # Shadcn/ui base components
+│   ├── custom/           # Custom components
+│   └── layout/           # Layout components
+├── lib/                  # Utilities and configurations
+│   ├── auth.ts          # BetterAuth configuration
+│   ├── db.ts            # Drizzle database setup
+│   ├── utils.ts         # Utility functions
+│   └── validations.ts   # Zod schemas
+├── hooks/               # Custom React hooks
+├── store/              # Zustand stores
+├── types/              # TypeScript type definitions
+└── data/              # Static data and constants
+```
+
+## 🔧 TypeScript Standards (5.8)
+
+### Configuration
+- Use strictest possible TypeScript config
+- Enable all strict flags
+- Use `--erasableSyntaxOnly` for performance
+- Prefer `satisfies` operator over type assertions
+- Always define return types for functions
+
+### Type Safety Rules
+```typescript
+// ✅ GOOD: Explicit return types
+function calculateFare(distance: number): Promise<FareResult> {
+  return fareService.calculate(distance)
+}
+
+// ❌ BAD: Implicit any
+function calculateFare(distance) {
+  return fareService.calculate(distance)
+}
+
+// ✅ GOOD: Use satisfies operator
+const config = {
+  apiUrl: process.env.API_URL,
+  timeout: 5000
+} satisfies ApiConfig
+
+// ✅ GOOD: Branded types for IDs
+type StationId = string & { readonly brand: unique symbol }
+type UserId = string & { readonly brand: unique symbol }
+```
+
+### Import/Export Standards
+- Use named exports, avoid default exports except for pages/layouts
+- Group imports: external → internal → relative
+- Use type-only imports when possible
+
+```typescript
+// ✅ GOOD: Organized imports
+import type { NextPage } from 'next'
+import { Suspense } from 'react'
+
+import type { Station } from '@/types/station'
+import { StationCard } from '@/components/custom/station-card'
+import { cn } from '@/lib/utils'
+
+import './styles.css'
+```
+
+## ⚛️ React 19 & Component Standards
+
+### Component Architecture
+- Prefer function components with hooks
+- Use React.memo() sparingly, only for expensive renders
+- Leverage React 19 Compiler optimizations
+- Use Server Components by default, Client Components when needed
+
+### Component Patterns
+```typescript
+// ✅ GOOD: Server Component with proper typing
+interface StationListProps {
+  stations: Station[]
+  searchQuery?: string
+}
+
+export async function StationList({ stations, searchQuery }: StationListProps) {
+  const filteredStations = stations.filter(/* filtering logic */)
+  
+  return (
+    <div className="grid gap-4">
+      {filteredStations.map(station => (
+        <StationCard key={station.id} station={station} />
+      ))}
+    </div>
+  )
+}
+
+// ✅ GOOD: Client Component with hooks
+'use client'
+
+interface SearchBarProps {
+  onSearch: (query: string) => void
+  placeholder?: string
+}
+
+export function SearchBar({ onSearch, placeholder = "Search stations..." }: SearchBarProps) {
+  const [query, setQuery] = useState('')
+  
+  return (
+    <input
+      type="text"
+      value={query}
+      onChange={(e) => setQuery(e.target.value)}
+      onKeyDown={(e) => e.key === 'Enter' && onSearch(query)}
+      placeholder={placeholder}
+      className="w-full px-4 py-2 border rounded-lg"
+    />
+  )
+}
+```
+
+### Hooks Standards
+- Custom hooks must start with 'use'
+- Keep hooks focused and single-purpose
+- Use Zustand for client state, TanStack Query for server state
+- Prefer useShallow from Zustand for performance
+
+```typescript
+// ✅ GOOD: Focused custom hook
+function useStationSearch(initialQuery = '') {
+  const [query, setQuery] = useState(initialQuery)
+  const [isLoading, setIsLoading] = useState(false)
+  
+  const { data: stations } = useQuery({
+    queryKey: ['stations', query],
+    queryFn: () => searchStations(query),
+    enabled: query.length > 2
+  })
+  
+  return { query, setQuery, stations, isLoading }
+}
+```
+
+## 🎨 UI & Styling Standards
+
+### Tailwind CSS v4 (Oxide Engine)
+- Use CSS-first approach, avoid configuration
+- Prefer utility classes over custom CSS
+- Use design tokens consistently
+- Implement proper responsive design
+
+```typescript
+// ✅ GOOD: Semantic utility classes
+<div className="container mx-auto px-4 py-8">
+  <h1 className="text-3xl font-bold text-foreground mb-6">
+    Find Your Metro Station
+  </h1>
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {/* Content */}
+  </div>
+</div>
+
+// ❌ BAD: Inline styles or complex custom CSS
+<div style={{ padding: '32px', margin: '16px auto' }}>
+```
+
+### Shadcn/ui & OriginUI Integration
+- Always extend Shadcn components, don't modify source
+- Use OriginUI for advanced patterns
+- Maintain consistent design tokens
+- Follow accessibility guidelines (WCAG 2.1 AA)
+
+```typescript
+// ✅ GOOD: Extending Shadcn components
+import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
+
+interface StationButtonProps extends React.ComponentProps<typeof Button> {
+  station: Station
+  isSelected?: boolean
+}
+
+export function StationButton({ 
+  station, 
+  isSelected, 
+  className, 
+  ...props 
+}: StationButtonProps) {
+  return (
+    <Button
+      variant={isSelected ? 'default' : 'outline'}
+      className={cn(
+        'w-full justify-start text-left',
+        isSelected && 'ring-2 ring-primary',
+        className
+      )}
+      {...props}
+    >
+      <MapPin className="mr-2 h-4 w-4" />
+      {station.name}
+    </Button>
+  )
+}
+```
+
+### Animation Standards
+- Use Framer Motion for complex animations
+- Prefer CSS animations for simple transitions
+- Respect user's motion preferences
+- Keep animations under 300ms for micro-interactions
+
+```typescript
+// ✅ GOOD: Framer Motion with accessibility
+import { motion } from 'framer-motion'
+
+export function StationCard({ station }: { station: Station }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2 }}
+      className="p-4 border rounded-lg hover:shadow-md transition-shadow"
+    >
+      {/* Content */}
+    </motion.div>
+  )
+}
+```
+
+## 🗃️ Data & State Management
+
+### Drizzle ORM Standards
+- Define schemas in separate files
+- Use proper TypeScript types
+- Implement proper relationships
+- Use prepared statements for performance
+
+```typescript
+// ✅ GOOD: Drizzle schema definition
+import { pgTable, text, timestamp, decimal, boolean } from 'drizzle-orm/pg-core'
+
+export const stations = pgTable('stations', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  line: text('line').notNull(),
+  latitude: decimal('latitude', { precision: 10, scale: 7 }).notNull(),
+  longitude: decimal('longitude', { precision: 10, scale: 7 }).notNull(),
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow()
+})
+
+export type Station = typeof stations.$inferSelect
+export type NewStation = typeof stations.$inferInsert
+```
+
+### Zod v4 Validation
+- Create reusable schemas
+- Use proper error messages
+- Implement client and server validation
+- Leverage JSON Schema generation
+
+```typescript
+// ✅ GOOD: Zod validation schemas
+import { z } from 'zod'
+
+export const StationSchema = z.object({
+  id: z.string().min(1, 'Station ID is required'),
+  name: z.string().min(2, 'Station name must be at least 2 characters'),
+  line: z.enum(['RED', 'GREEN', 'BLUE'], {
+    errorMap: () => ({ message: 'Invalid metro line' })
+  }),
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+  isActive: z.boolean().default(true)
+})
+
+export const SearchParamsSchema = z.object({
+  query: z.string().optional(),
+  line: z.string().optional(),
+  page: z.coerce.number().min(1).default(1)
+})
+
+export type StationInput = z.infer<typeof StationSchema>
+export type SearchParams = z.infer<typeof SearchParamsSchema>
+```
+
+### Zustand v5 Store Standards
+- Keep stores focused and domain-specific
+- Use useShallow for performance
+- Implement proper TypeScript types
+- Use immer for complex state updates
+
+```typescript
+// ✅ GOOD: Zustand store with TypeScript
+import { create } from 'zustand'
+import { immer } from 'zustand/middleware/immer'
+
+interface UserPreferencesState {
+  favoriteStations: string[]
+  searchHistory: SearchHistoryItem[]
+  darkMode: boolean
+  actions: {
+    addFavorite: (stationId: string) => void
+    removeFavorite: (stationId: string) => void
+    addToHistory: (search: SearchHistoryItem) => void
+    toggleDarkMode: () => void
+  }
+}
+
+export const useUserPreferences = create<UserPreferencesState>()(
+  immer((set) => ({
+    favoriteStations: [],
+    searchHistory: [],
+    darkMode: false,
+    actions: {
+      addFavorite: (stationId) =>
+        set((state) => {
+          if (!state.favoriteStations.includes(stationId)) {
+            state.favoriteStations.push(stationId)
+          }
+        }),
+      // ... other actions
+    }
+  }))
+)
+```
+
+### TanStack Query Standards
+- Use proper query keys
+- Implement error boundaries
+- Use optimistic updates for mutations
+- Leverage Suspense for loading states
+
+```typescript
+// ✅ GOOD: TanStack Query with proper patterns
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+
+export function useStations(searchParams: SearchParams) {
+  return useQuery({
+    queryKey: ['stations', searchParams],
+    queryFn: () => fetchStations(searchParams),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+  })
+}
+
+export function useAddToFavorites() {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: addStationToFavorites,
+    onMutate: async (stationId) => {
+      await queryClient.cancelQueries({ queryKey: ['favorites'] })
+      
+      const previousFavorites = queryClient.getQueryData(['favorites'])
+      
+      queryClient.setQueryData(['favorites'], (old: string[]) => [
+        ...(old || []),
+        stationId
+      ])
+      
+      return { previousFavorites }
+    },
+    onError: (err, stationId, context) => {
+      queryClient.setQueryData(['favorites'], context?.previousFavorites)
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['favorites'] })
+    }
+  })
+}
+```
+
+## 🔐 Authentication & Security
+
+### BetterAuth Integration
+- Use proper session management
+- Implement CSRF protection
+- Use secure cookie settings
+- Follow OAuth best practices
+
+```typescript
+// ✅ GOOD: BetterAuth configuration
+import { betterAuth } from 'better-auth'
+import { drizzleAdapter } from 'better-auth/adapters/drizzle'
+
+export const auth = betterAuth({
+  database: drizzleAdapter(db, {
+    provider: 'pg'
+  }),
+  emailAndPassword: {
+    enabled: true,
+    requireEmailVerification: true
+  },
+  socialProviders: {
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!
+    }
+  },
+  session: {
+    expiresIn: 60 * 60 * 24 * 7, // 1 week
+    updateAge: 60 * 60 * 24 // 1 day
+  }
+})
+```
+
+## 🗺️ Maps & Location Standards
+
+### MapLibre GL JS
+- Use vector tiles for performance
+- Implement proper error handling
+- Use Web Workers for heavy computations
+- Optimize for mobile devices
+
+```typescript
+// ✅ GOOD: MapLibre implementation
+import maplibregl from 'maplibre-gl'
+import 'maplibre-gl/dist/maplibre-gl.css'
+
+export function useMapLibre(containerRef: RefObject<HTMLDivElement>) {
+  const [map, setMap] = useState<maplibregl.Map | null>(null)
+  
+  useEffect(() => {
+    if (!containerRef.current) return
+    
+    const mapInstance = new maplibregl.Map({
+      container: containerRef.current,
+      style: 'https://api.maptiler.com/maps/streets/style.json?key=' + process.env.NEXT_PUBLIC_MAPTILER_KEY,
+      center: [90.4125, 23.8103], // Dhaka coordinates
+      zoom: 12,
+      attributionControl: false
+    })
+    
+    mapInstance.on('load', () => {
+      setMap(mapInstance)
+    })
+    
+    return () => mapInstance.remove()
+  }, [])
+  
+  return map
+}
+```
+
+## 📊 Performance & Monitoring
+
+### Bundle Optimization
+- Use Next.js built-in optimizations
+- Implement proper code splitting
+- Use dynamic imports for heavy components
+- Monitor bundle size with @next/bundle-analyzer
+
+### Error Monitoring
+- Implement Sentry for error tracking
+- Use proper error boundaries
+- Log meaningful error messages
+- Set up performance monitoring
+
+### Analytics
+- Use Vercel Analytics for performance metrics
+- Track user interactions meaningfully
+- Respect user privacy
+- Implement proper consent management
+
+## 🧪 Testing Standards
+
+### Testing Pyramid
+- Unit tests for utilities and pure functions
+- Integration tests for API routes
+- E2E tests for critical user flows
+- Visual regression tests for UI components
+
+```typescript
+// ✅ GOOD: Test structure
+describe('StationCard', () => {
+  it('renders station information correctly', () => {
+    const station = createMockStation()
+    render(<StationCard station={station} />)
+    
+    expect(screen.getByText(station.name)).toBeInTheDocument()
+    expect(screen.getByText(station.line)).toBeInTheDocument()
+  })
+  
+  it('handles favorite toggle interaction', async () => {
+    const station = createMockStation()
+    const onToggleFavorite = vi.fn()
+    
+    render(<StationCard station={station} onToggleFavorite={onToggleFavorite} />)
+    
+    await user.click(screen.getByRole('button', { name: /add to favorites/i }))
+    
+    expect(onToggleFavorite).toHaveBeenCalledWith(station.id)
+  })
+})
+```
+
+## 📝 Code Quality Standards
+
+### ESLint & Prettier (via Ultracite.ai)
+- Use Ultracite.ai for unified linting and formatting
+- Enforce consistent code style
+- Use strict rules for type safety
+- Implement pre-commit hooks
+
+### Git Workflow
+- Use conventional commits
+- Squash feature branches
+- Write meaningful commit messages
+- Use semantic versioning
+
+### Documentation
+- Document complex algorithms
+- Use JSDoc for public APIs
+- Keep README up to date
+- Document environment variables
+
+## 🚫 Things to Avoid
+
+### Performance Killers
+- ❌ Large bundle sizes (keep chunks under 50KB)
+- ❌ Blocking operations in main thread
+- ❌ Memory leaks from event listeners
+- ❌ Excessive re-renders
+
+### Anti-Patterns
+- ❌ Prop drilling (use context or state management)
+- ❌ Inline object/function creation in render
+- ❌ Direct DOM manipulation
+- ❌ Ignoring accessibility
+
+### Security Issues
+- ❌ Client-side secrets
+- ❌ Unvalidated user input
+- ❌ Insecure authentication flows
+- ❌ XSS vulnerabilities
+
+## 🎯 Success Metrics
+
+### Performance Targets
+- First Contentful Paint: < 1.2s
+- Largest Contentful Paint: < 2.5s
+- Cumulative Layout Shift: < 0.1
+- First Input Delay: < 100ms
+
+### Quality Targets
+- TypeScript strict mode: 100%
+- Test coverage: > 80%
+- Accessibility score: 100 (Lighthouse)
+- Bundle size: < 200KB initial load
+
+---
+
+**Remember**: These rules are guidelines to achieve blazing fast, modern, and maintainable code. Always prioritize user experience and code clarity over premature optimization.
