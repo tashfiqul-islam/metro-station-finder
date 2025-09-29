@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "./tsconfig.json",
+  "display": "Metro Station Finder — Scripts (Node LTS)",
+  "compilerOptions": {
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "target": "ES2024",
+    "lib": ["ES2024"],
+    "noEmit": false,
+    "outDir": "dist-scripts",
+    "isolatedModules": false,
+    "verbatimModuleSyntax": true,
+    "allowJs": true,
+    "types": ["node"]
+  },
+  "include": ["scripts/**/*.mjs"],
+  "exclude": ["node_modules", "dist-scripts", "**/*.test.ts", "**/*.spec.ts"]
+}

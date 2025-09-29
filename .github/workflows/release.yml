@@ -1,0 +1,107 @@
+name: 🚀 Release
+
+on:
+  push:
+    branches:
+      - main
+      - beta
+      - alpha
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: "Release type"
+        required: true
+        default: "auto"
+        type: choice
+        options:
+          - auto
+          - patch
+          - minor
+          - major
+          - prerelease
+
+env:
+  NODE_VERSION: "24"
+  BUN_VERSION: "1.2.22"
+
+jobs:
+  release:
+    name: 🚀 Create Release
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      packages: write
+      security-events: write
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: 🏗️ Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: 📦 Install Dependencies
+        run: |
+          bun install --frozen-lockfile
+          bun run validate
+
+      - name: 🧪 Run Tests
+        run: |
+          bun run test:run
+          bun run type-check
+          bun run lint
+
+      - name: 🏗️ Build Project
+        run: |
+          bun run build
+          bun run analyze
+
+      - name: 🔍 Security Audit
+        run: |
+          bun run deps:audit
+
+      - name: 📊 Performance Check
+        run: |
+          bun run perf:lighthouse
+
+      - name: 🚀 Semantic Release
+        run: |
+          bun run semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+
+      - name: 📋 Update Release Notes
+        if: success()
+        run: |
+          echo "✅ Release completed successfully!"
+          echo "📋 Check the generated release notes in the GitHub release"
+
+      - name: 🎉 Release Summary
+        if: success()
+        run: |
+          echo "🎉 Release workflow completed successfully!"
+          echo "📦 New version published"
+          echo "📋 Changelog updated"
+          echo "🏷️ Git tag created"
+          echo "📝 Release notes generated"
+
+  notify:
+    name: 📢 Notify Release
+    runs-on: ubuntu-latest
+    needs: release
+    if: success()
+
+    steps:
+      - name: 📢 Release Notification
+        run: |
+          echo "🎉 New release has been published!"
+          echo "📋 Check the releases page for details"

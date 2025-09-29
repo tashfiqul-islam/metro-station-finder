@@ -1,0 +1,143 @@
+# Metro Station Finder - Cursor AI Rules
+
+## Project Context
+
+This is a modern metro station finder app for Dhaka built with Next.js 15, React 19, TypeScript, and shadcn/ui.
+
+## Tech Stack
+
+- **Framework**: Next.js 15 (App Router)
+- **React**: React 19 with Concurrent Features
+- **Language**: TypeScript 5.9 (Strict Mode)
+- **Styling**: Tailwind CSS v4 + shadcn/ui
+- **Icons**: Lucide React
+- **Maps**: Google Maps JavaScript API
+- **Package Manager**: Bun
+- **Linting**: Ultracite (Biome-based)
+
+## Code Standards
+
+### TypeScript
+
+- Use strict TypeScript with no `any` types
+- Prefer branded types for domain objects (StationId, TakaAmount)
+- Use `readonly` modifiers for immutability
+- Implement proper error handling with Result patterns
+- Use const assertions (`as const`) for literal types
+
+### React Patterns
+
+- Use React 19 features: `use()`, Actions API, `useOptimistic`
+- Prefer Server Components when possible
+- Use proper Suspense boundaries
+- Implement proper error boundaries
+- Use React Hook Form for form handling
+
+### Styling
+
+- Use Tailwind CSS v4 with CSS variables
+- Follow shadcn/ui component patterns
+- Use `cn()` utility for conditional classes
+- Implement proper dark mode support
+- Follow WCAG 2.2 AA accessibility standards
+
+### File Organization
+
+- Components in `components/` directory
+- UI components in `components/ui/`
+- Utilities in `lib/` directory
+- Types in `types/` directory
+- Hooks in `hooks/` directory
+
+### Import Aliases
+
+- `@/components` - General components
+- `@/lib/utils` - Utility functions
+- `@/components/ui` - shadcn/ui components
+- `@/lib` - Library functions
+- `@/hooks` - Custom React hooks
+- `@/types` - TypeScript types
+- `@/styles` - Style utilities
+
+## Development Guidelines
+
+### Performance
+
+- Optimize for Core Web Vitals (LCP, INP, CLS)
+- Use proper image optimization
+- Implement proper caching strategies
+- Minimize bundle size
+
+### Accessibility
+
+- Use semantic HTML elements
+- Implement proper ARIA attributes
+- Ensure keyboard navigation
+- Test with screen readers
+- Follow WCAG 2.2 AA guidelines
+
+### Error Handling
+
+- Use proper error boundaries
+- Implement graceful fallbacks
+- Provide meaningful error messages
+- Log errors appropriately
+
+### Testing
+
+- Write unit tests for utilities
+- Test components with React Testing Library
+- Implement E2E tests with Playwright
+- Test accessibility with axe-core
+
+## AI Assistant Guidelines
+
+### Code Generation
+
+- Always use TypeScript with strict types
+- Follow the established patterns in the codebase
+- Use proper error handling
+- Implement proper accessibility
+- Optimize for performance
+
+### Component Creation
+
+- Use shadcn/ui patterns
+- Implement proper variants with CVA
+- Use proper TypeScript types
+- Follow accessibility guidelines
+- Optimize for performance
+
+### File Modifications
+
+- Maintain existing code style
+- Use proper imports and aliases
+- Follow the established patterns
+- Ensure type safety
+- Test changes thoroughly
+
+## Project-Specific Rules
+
+### Metro Station Finder
+
+- Focus on Dhaka metro system
+- Implement proper fare calculation
+- Use Google Maps for location services
+- Ensure offline capability
+- Optimize for mobile devices
+
+### Data Handling
+
+- Use static data for Phase 1
+- Implement proper validation with Zod
+- Use proper error handling
+- Ensure data consistency
+
+### Maps Integration
+
+- Use Google Maps JavaScript API
+- Implement proper geolocation
+- Handle API quota limits
+- Provide fallback mechanisms
+
+Remember: This is a production-quality app that needs to be fast, accessible, and reliable for commuters in Dhaka.
