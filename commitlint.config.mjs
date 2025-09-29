@@ -108,6 +108,7 @@ const COMMIT_SCOPES = [
   "docs", // Documentation
   "ci", // CI/CD
   "release", // Release process
+  "utils", // Utility functions
 ];
 
 // ============================================================================
