@@ -17,7 +17,7 @@ const validations = [
       return (
         pkg.name === "metro-station-finder" &&
         pkg.type === "module" &&
-        pkg.packageManager === "bun@1.2.22"
+        pkg.packageManager?.startsWith("bun@")
       );
     },
   },

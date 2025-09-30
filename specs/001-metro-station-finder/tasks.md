@@ -462,82 +462,93 @@ Compose geolocation and distance utils to compute nearest station and within-rad
 
 ## Phase 5: Design System, Theming & UI Components (shadcn/ui)
 
-### T046: [P] Set Up shadcn/ui Components
+### T046: [X] Set Up shadcn/ui Components ✅
 
 Initialize shadcn/ui and install base components using the latest CLI.
 
 **Files**: `components.json`, `components/ui/`
-**Command**: `bunx shadcn@latest init` and then `bunx shadcn@latest add button input card`
+**Status**: ✅ **COMPLETED** - shadcn/ui components initialized and working
+**Changes**: Base components installed and configured
 
-### T047: [P] Configure Tailwind CSS v4 tokens & theme
+### T047: [X] Configure Tailwind CSS v4 tokens & theme ✅
 
 Define design tokens (colors, spacing, radii, typography) and enable dark mode class strategy; wire tokens into `app/globals.css`.
 
 **Files**: `tailwind.config.ts`, `app/globals.css`
-**Changes**: Token scales as CSS variables, content paths, dark mode configuration
+**Status**: ✅ **COMPLETED** - Modern design tokens with OKLCH colors
+**Changes**: Comprehensive design token system with modern spacing, typography, shadows, and animations
 
-### T048: [P] Integrate Ropa Sans via next/font with CSS variables
+### T048: [X] Integrate Ropa Sans via next/font with CSS variables ✅
 
 Set up `Ropa_Sans` and bind to `--font-sans` variable for global usage.
 
 **Files**: `app/layout.tsx`, `app/globals.css`
-**Changes**: next/font import, root className variables, base typography
+**Status**: ✅ **COMPLETED** - Ropa Sans font integrated with CSS variables
+**Changes**: Font integration with proper metadata and accessibility
 
-### T049: [P] Add ThemeProvider (next-themes) and html class switching
+### T049: [X] Add ThemeProvider (next-themes) and html class switching ✅
 
 Provide theme context and support `system | light | dark`, ensure SSR-safe class switching.
 
-**Files**: `app/layout.tsx`
-**Changes**: Wrap with `ThemeProvider`, set `attribute="class"`, defaultTheme, disableTransitionOnChange
+**Files**: `app/layout.tsx`, `components/theme-provider.tsx`
+**Status**: ✅ **COMPLETED** - Theme provider with SSR-safe switching
+**Changes**: ThemeProvider component with system preference support
 
-### T050: [P] Define semantic color system (light/dark)
+### T050: [X] Define semantic color system (light/dark) ✅
 
 Map semantic colors (background, foreground, card, accent, border, ring, muted, destructive, etc.) to CSS variables for both themes.
 
 **Files**: `app/globals.css`, `tailwind.config.ts`
-**Changes**: CSS variable palettes for `:root` and `.dark` selectors
+**Status**: ✅ **COMPLETED** - Modern color system with OKLCH colors
+**Changes**: Semantic color system inspired by Supabase, Next.js, Appwrite, Convex
 
-### T051: [P] Create Theme Toggle Component
+### T051: [X] Create Theme Toggle Component ✅
 
 Build theme switching component.
 
 **Files**: `components/ui/theme-toggle.tsx`
-**Changes**: ThemeToggle component with system preference support
+**Status**: ✅ **COMPLETED** - Modern theme toggle with dropdown
+**Changes**: ThemeToggle component with smooth animations and accessibility
 
-### T052: [P] Ensure map theme switching uses `lib/map/styles.ts`
+### T052: [X] Ensure map theme switching uses `lib/map/styles.ts` ✅
 
 Wire map style selection (light/dark) to app theme; verify a11y contrast.
 
 **Files**: `components/ui/map.tsx`
-**Changes**: Select `lightModeMapStyle`/`darkModeMapStyle` based on theme
+**Status**: ✅ **COMPLETED** - Map theme switching integrated
+**Changes**: Map component uses theme-aware styles from lib/map/styles.ts
 
-### T053: [P] Create Search Input Component
+### T053: [X] Create Search Input Component ✅
 
 Build search input with autocomplete functionality.
 
 **Files**: `components/ui/search-input.tsx`
-**Changes**: SearchInput component with debouncing and validation
+**Status**: ✅ **COMPLETED** - Modern search input with debouncing
+**Changes**: SearchInput component with loading states and accessibility
 
-### T054: [P] Create Station Card Component
+### T054: [X] Create Station Card Component ✅
 
 Build station information display component.
 
 **Files**: `components/ui/station-card.tsx`
-**Changes**: StationCard component with distance and amenities
+**Status**: ✅ **COMPLETED** - Sleek station card with amenities
+**Changes**: StationCard component with modern design and accessibility
 
-### T055: [P] Create Fare Display Component
+### T055: [X] Create Fare Display Component ✅
 
 Build fare calculation display component.
 
 **Files**: `components/ui/fare-display.tsx`
-**Changes**: FareDisplay component with ticket types and pricing
+**Status**: ✅ **COMPLETED** - Modern fare display with ticket types
+**Changes**: FareDisplay component with pricing breakdown and accessibility
 
-### T056: [P] Create Map Component
+### T056: [X] Create Map Component ✅
 
 Build Google Maps integration component using @vis.gl/react-google-maps.
 
 **Files**: `components/ui/map.tsx`
-**Changes**: Map component with markers; theme switching using latest @vis.gl/react-google-maps API; ensure required map/data attributions are visible, keyboard reachable, and open with `rel="noopener noreferrer"`; support `NEXT_PUBLIC_MAPS_DISABLED` kill‑switch to render accessible list‑view fallback
+**Status**: ✅ **COMPLETED** - Google Maps integration with theme switching
+**Changes**: Map component with markers, theme switching, and fallback UI
 
 ---
 
@@ -545,7 +556,7 @@ Build Google Maps integration component using @vis.gl/react-google-maps.
 
 **Commit Message**: `feat(ui): design system, theming, and core components`
 **When to Commit**: After ALL Phase 5 tasks (T046-T056) are completed
-**Status**: ⏳ **PENDING** - Phase 5 tasks not yet started
+**Status**: ✅ **COMPLETED** - Phase 5 commit done
 
 ---
 

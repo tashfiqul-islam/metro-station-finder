@@ -89,7 +89,7 @@ const COMMIT_SCOPES = [
   "hooks", // React hooks
   "types", // TypeScript types
   "data", // Data files
-  "init", // Project initialization
+  "ui", // UI components
 
   // Metro app specific
   "stations", // Station data and logic
@@ -109,6 +109,7 @@ const COMMIT_SCOPES = [
   "ci", // CI/CD
   "release", // Release process
   "utils", // Utility functions
+  "init", // Project initialization
 ];
 
 // ============================================================================

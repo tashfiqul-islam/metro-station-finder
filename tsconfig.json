@@ -18,7 +18,6 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "moduleDetection": "auto",
-
     "strict": true,
     "exactOptionalPropertyTypes": true,
     "noUncheckedIndexedAccess": true,
@@ -31,30 +30,23 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "useUnknownInCatchVariables": true,
-
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "allowJs": false,
-
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
-
     "noEmit": true,
     "noEmitOnError": true,
     "newLine": "lf",
-
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
     "incremental": true,
     "tsBuildInfoFile": ".tsbuildinfo",
-
     "forceConsistentCasingInFileNames": true,
     "useDefineForClassFields": true,
-
     "jsx": "preserve",
     "jsxImportSource": "react",
-
     "baseUrl": ".",
     "paths": {
       "@/*": ["./*"],
@@ -68,21 +60,25 @@
     },
     "typeRoots": ["./node_modules/@types", "./types"],
     "types": ["node"],
-
-    "plugins": [{ "name": "next" }]
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ]
   },
   "include": [
-    "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
     "app/**/*",
     "components/**/*",
+    "hooks/**/*",
     "lib/**/*",
+    "next-env.d.ts",
+    "styles/**/*",
     "types/**/*",
     "utils/**/*",
-    "hooks/**/*",
-    "styles/**/*"
+    "out/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",
