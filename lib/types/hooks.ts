@@ -1,422 +1,251 @@
 /**
  * Metro Station Finder Hook Types
  *
- * Custom React hooks for metro station finder functionality.
- * Focused on practical hooks without overengineering.
+ * Type definitions for implemented React hooks in lib/hooks/
+ * Aligned with MRT-6 Phase 1 production scope (17 stations).
  *
- * @fileoverview Metro-specific hook type definitions
+ * @fileoverview Hook type definitions matching actual implementations
  * @version 1.0.0
- * @since 2025-09-28
+ * @since 2025-09-30
  */
 
-import type { MapTheme } from "@/lib/constants";
-import type {
-  Coordinates,
-  Meters,
-  Milliseconds,
-  Minutes,
-  StationId,
-} from "@/lib/types";
-import type { SearchOptions, SearchResult } from "@/lib/types/search";
+import type { FareInput } from "@/lib/schemas";
+import type { Coordinates, Meters, StationId } from "@/lib/types";
 import type { Station } from "@/lib/types/station";
 
 /**
- * Hook return types for metro-specific functionality
+ * Geolocation permission states from Permissions API
  */
+export type GeolocationPermissionState =
+  | "prompt"
+  | "granted"
+  | "denied"
+  | "unsupported";
 
 /**
- * Station search hook return type
+ * Geolocation state discriminated union
  */
-export type UseStationSearchReturn = {
-  readonly results: readonly SearchResult[];
-  readonly isLoading: boolean;
-  readonly error: string | null;
-  readonly search: (query: string, options?: SearchOptions) => Promise<void>;
-  readonly clearResults: () => void;
-  readonly selectedStation: Station | null;
-  readonly selectStation: (station: Station) => void;
+export type GeolocationState =
+  | { readonly status: "idle" }
+  | { readonly status: "loading" }
+  | {
+      readonly status: "success";
+      readonly coords: Coordinates;
+      readonly accuracy: number;
+    }
+  | { readonly status: "error"; readonly message: string };
+
+/**
+ * Google Places prediction result
+ */
+export type PlacePrediction = {
+  readonly description: string;
+  readonly placeId: string;
+};
+
+/**
+ * Google Places API state
+ */
+export type PlacesState =
+  | { readonly status: "idle" }
+  | { readonly status: "loading" }
+  | {
+      readonly status: "success";
+      readonly predictions: readonly PlacePrediction[];
+    }
+  | { readonly status: "error"; readonly message: string };
+
+/**
+ * Map availability reasons for fallback UI
+ */
+export type MapUnavailableReason =
+  | "disabled-by-env"
+  | "missing-api-key"
+  | "offline"
+  | "ok";
+
+/**
+ * Map availability result
+ */
+export type MapAvailability = {
+  readonly available: boolean;
+  readonly reason: MapUnavailableReason;
+};
+
+/**
+ * Nearest station calculation result
+ */
+export type NearestStation = {
+  readonly stationId: string;
+  readonly distanceMeters: Meters;
+  readonly coordinates: Coordinates;
+};
+
+/**
+ * Theme preference type
+ */
+export type ThemePreference = "light" | "dark" | "system";
+
+/**
+ * Theme hook return type
+ */
+export type UseThemeReturn = {
+  readonly theme: ThemePreference;
+  readonly setTheme: (theme: ThemePreference) => void;
 };
 
 /**
  * Geolocation hook return type
  */
 export type UseGeolocationReturn = {
-  readonly position: Coordinates | null;
-  readonly error: GeolocationPositionError | null;
-  readonly isLoading: boolean;
-  readonly requestLocation: () => void;
-  readonly clearLocation: () => void;
-  readonly accuracy: number | null;
-  readonly lastUpdated: Milliseconds | null;
+  readonly state: GeolocationState;
+  readonly isCloseTo: (target: Coordinates, radiusMeters: number) => boolean;
 };
 
 /**
- * Map hook return type
+ * Google Places hook return type
  */
-export type UseMapReturn = {
-  readonly center: Coordinates;
-  readonly zoom: number;
-  readonly theme: MapTheme;
-  readonly markers: readonly Station[];
-  readonly selectedStation: Station | null;
-  readonly setCenter: (coordinates: Coordinates) => void;
-  readonly setZoom: (zoom: number) => void;
-  readonly setTheme: (theme: MapTheme) => void;
-  readonly selectStation: (station: Station | null) => void;
-  readonly addMarker: (station: Station) => void;
-  readonly removeMarker: (stationId: StationId) => void;
-  readonly clearMarkers: () => void;
+export type UseGooglePlacesReturn = {
+  readonly state: PlacesState;
+  readonly search: (query: string) => void;
 };
 
 /**
- * Favorites hook return type
+ * Live region politeness levels for screen readers
  */
-export type UseFavoritesReturn = {
-  readonly favorites: readonly Station[];
-  readonly addFavorite: (station: Station) => void;
-  readonly removeFavorite: (stationId: StationId) => void;
-  readonly isFavorite: (stationId: StationId) => boolean;
-  readonly clearFavorites: () => void;
-  readonly toggleFavorite: (station: Station) => void;
+export type AriaPoliteness = "polite" | "assertive";
+
+/**
+ * Live region hook return type
+ */
+export type UseLiveRegionReturn = {
+  readonly announce: (message: string) => void;
 };
 
 /**
- * Search history hook return type
+ * Query params state hook return type (generic)
  */
-export type UseSearchHistoryReturn = {
-  readonly history: readonly string[];
-  readonly addToHistory: (query: string) => void;
-  readonly removeFromHistory: (query: string) => void;
-  readonly clearHistory: () => void;
-  readonly getRecentSearches: (limit?: number) => readonly string[];
+export type UseQueryParamsStateReturn<T> = {
+  readonly parse: () => T;
+  readonly set: (values: unknown, options?: { replace?: boolean }) => void;
+  readonly stringify: (values: unknown) => string;
 };
 
 /**
- * Theme hook return type
+ * Station search options
  */
-export type UseThemeReturn = {
-  readonly theme: "light" | "dark" | "system";
-  readonly setTheme: (theme: "light" | "dark" | "system") => void;
-  readonly toggleTheme: () => void;
-  readonly isDark: boolean;
-  readonly isSystem: boolean;
+export type StationSearchOptions = {
+  readonly query: string;
+  readonly limit?: number;
 };
 
 /**
- * Local storage hook return type
+ * Map availability options
  */
-export type UseLocalStorageReturn<T> = {
-  readonly value: T | null;
-  readonly setValue: (value: T | null) => void;
-  readonly removeValue: () => void;
-  readonly isLoading: boolean;
+export type MapAvailabilityOptions = {
+  readonly isOnline?: boolean;
+  readonly quotaExceeded?: boolean;
 };
 
 /**
- * Debounced value hook return type
+ * Fare calculator options
  */
-export type UseDebouncedValueReturn<T> = {
-  readonly value: T;
-  readonly debouncedValue: T;
-  readonly isPending: boolean;
-  readonly setValue: (value: T) => void;
-};
-
-/**
- * Async operation hook return type
- */
-export type UseAsyncReturn<T, E = Error> = {
-  readonly data: T | null;
-  readonly error: E | null;
-  readonly isLoading: boolean;
-  readonly isSuccess: boolean;
-  readonly isError: boolean;
-  readonly execute: () => Promise<void>;
-  readonly reset: () => void;
-};
-
-/**
- * Station details hook return type
- */
-export type UseStationDetailsReturn = {
-  readonly station: Station | null;
-  readonly isLoading: boolean;
-  readonly error: string | null;
-  readonly loadStation: (stationId: StationId) => Promise<void>;
-  readonly clearStation: () => void;
-  readonly amenities: Station["amenities"] | null;
-  readonly nearbyStations: readonly Station[];
-};
-
-/**
- * Route planning hook return type
- */
-export type UseRoutePlanningReturn = {
-  readonly origin: Station | null;
-  readonly destination: Station | null;
-  readonly route: readonly Station[];
-  readonly fare: number | null;
-  readonly duration: Minutes | null;
-  readonly setOrigin: (station: Station | null) => void;
-  readonly setDestination: (station: Station | null) => void;
-  readonly calculateRoute: () => Promise<void>;
-  readonly clearRoute: () => void;
-  readonly swapStations: () => void;
-  readonly isLoading: boolean;
-  readonly error: string | null;
-};
-
-/**
- * Hook configuration types
- */
-
-/**
- * Station search hook configuration
- */
-export type UseStationSearchConfig = {
-  readonly maxResults?: number;
-  readonly includePlanned?: boolean;
-  readonly sortByRelevance?: boolean;
-  readonly debounceMs?: Milliseconds;
-};
-
-/**
- * Geolocation hook configuration
- */
-export type UseGeolocationConfig = {
-  readonly enableHighAccuracy?: boolean;
-  readonly timeout?: Milliseconds;
-  readonly maximumAge?: Milliseconds;
-  readonly watchPosition?: boolean;
-};
-
-/**
- * Map hook configuration
- */
-export type UseMapConfig = {
-  readonly defaultCenter?: Coordinates;
-  readonly defaultZoom?: number;
-  readonly defaultTheme?: MapTheme;
-  readonly maxZoom?: number;
-  readonly minZoom?: number;
-};
-
-/**
- * Favorites hook configuration
- */
-export type UseFavoritesConfig = {
-  readonly maxFavorites?: number;
-  readonly storageKey?: string;
-  readonly persistToStorage?: boolean;
-};
-
-/**
- * Search history hook configuration
- */
-export type UseSearchHistoryConfig = {
-  readonly maxHistoryItems?: number;
-  readonly storageKey?: string;
-  readonly persistToStorage?: boolean;
-  readonly debounceMs?: Milliseconds;
-};
-
-/**
- * Local storage hook configuration
- */
-export type UseLocalStorageConfig<T> = {
-  readonly defaultValue?: T;
-  readonly serialize?: (value: T) => string;
-  readonly deserialize?: (value: string) => T;
-  readonly storageKey: string;
-};
-
-/**
- * Debounced value hook configuration
- */
-export type UseDebouncedValueConfig = {
-  readonly delay?: Milliseconds;
-  readonly leading?: boolean;
-  readonly trailing?: boolean;
-};
-
-/**
- * Async operation hook configuration
- */
-export type UseAsyncConfig<T> = {
-  readonly immediate?: boolean;
-  readonly onSuccess?: (data: T) => void;
-  readonly onError?: (error: Error) => void;
-  readonly retryCount?: number;
-  readonly retryDelay?: Milliseconds;
-};
-
-/**
- * Station details hook configuration
- */
-export type UseStationDetailsConfig = {
-  readonly includeAmenities?: boolean;
-  readonly includeNearbyStations?: boolean;
-  readonly nearbyRadius?: Meters;
-  readonly maxNearbyStations?: number;
-};
-
-/**
- * Route planning hook configuration
- */
-export type UseRoutePlanningConfig = {
-  readonly includeFare?: boolean;
-  readonly includeDuration?: boolean;
-  readonly preferredLines?: readonly string[];
-  readonly avoidTransfers?: boolean;
-  readonly maxTransfers?: number;
-};
-
-/**
- * Hook error types
- */
-export type HookError = {
-  readonly code: string;
-  readonly message: string;
-  readonly details?: unknown;
-  readonly timestamp: Milliseconds;
-};
-
-/**
- * Hook state types
- */
-export type HookState<T> =
-  | { status: "idle" }
-  | { status: "loading" }
-  | { status: "success"; data: T }
-  | { status: "error"; error: HookError };
-
-/**
- * Hook event types
- */
-export type HookEvent<T = unknown> = {
-  readonly type: string;
-  readonly payload: T;
-  readonly timestamp: Milliseconds;
-};
-
-/**
- * Hook subscription types
- */
-export type HookSubscription<T> = {
-  readonly unsubscribe: () => void;
-  readonly getValue: () => T;
-  readonly subscribe: (callback: (value: T) => void) => void;
-};
-
-/**
- * Utility types for hooks
- */
-
-/**
- * Extract return type from hook function
- */
-export type HookReturnType<T extends (...args: unknown[]) => unknown> =
-  ReturnType<T> extends Promise<infer U> ? U : ReturnType<T>;
-
-/**
- * Extract configuration type from hook function
- */
-export type HookConfigType<T extends (config?: unknown) => unknown> =
-  T extends (config: infer C) => unknown ? C : never;
-
-/**
- * Create hook with default configuration
- */
-export type HookWithDefaults<T, C> = T & {
-  readonly withDefaults: (config: Partial<C>) => T;
+export type FareCalculatorOptions = {
+  readonly origin?: StationId;
+  readonly destination?: StationId;
 };
 
 /**
  * Type guards for hook types
  */
-export function isHookError(value: unknown): value is HookError {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "code" in value &&
-    "message" in value &&
-    "timestamp" in value &&
-    typeof (value as HookError).code === "string" &&
-    typeof (value as HookError).message === "string" &&
-    typeof (value as HookError).timestamp === "number"
-  );
-}
 
-export function isHookState<T>(value: unknown): value is HookState<T> {
+export function isGeolocationState(value: unknown): value is GeolocationState {
   return (
     typeof value === "object" &&
     value !== null &&
     "status" in value &&
-    typeof (value as HookState<T>).status === "string" &&
+    typeof (value as GeolocationState).status === "string" &&
     ["idle", "loading", "success", "error"].includes(
-      (value as HookState<T>).status
+      (value as GeolocationState).status
     )
   );
 }
 
-export function isHookEvent<T>(value: unknown): value is HookEvent<T> {
+export function isPlacesState(value: unknown): value is PlacesState {
   return (
     typeof value === "object" &&
     value !== null &&
-    "type" in value &&
-    "payload" in value &&
-    "timestamp" in value &&
-    typeof (value as HookEvent<T>).type === "string" &&
-    typeof (value as HookEvent<T>).timestamp === "number"
+    "status" in value &&
+    typeof (value as PlacesState).status === "string" &&
+    ["idle", "loading", "success", "error"].includes(
+      (value as PlacesState).status
+    )
+  );
+}
+
+export function isMapAvailability(value: unknown): value is MapAvailability {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "available" in value &&
+    "reason" in value &&
+    typeof (value as MapAvailability).available === "boolean" &&
+    typeof (value as MapAvailability).reason === "string"
+  );
+}
+
+export function isNearestStation(value: unknown): value is NearestStation {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "stationId" in value &&
+    "distanceMeters" in value &&
+    "coordinates" in value &&
+    typeof (value as NearestStation).stationId === "string" &&
+    typeof (value as NearestStation).distanceMeters === "number"
   );
 }
 
 /**
- * Hook factory types
+ * Exported hook function signatures for reference
  */
-export type HookFactory<T, C = unknown> = (config?: C) => T;
 
-export type HookFactoryWithDefaults<T, C> = HookFactory<T, C> & {
-  readonly withDefaults: (config: Partial<C>) => HookFactory<T, C>;
-};
+export type UseDebouncedValue = <T>(value: T, delayMs: number) => T;
 
-/**
- * Hook composition types
- */
-export type ComposedHook<T1, T2, R> = (hook1: T1, hook2: T2) => R;
+export type UseThrottledCallback = <Args extends readonly unknown[]>(
+  callback: (...args: Args) => void,
+  intervalMs: number
+) => (...args: Args) => void;
 
-export type HookComposer<T extends readonly unknown[], R> = (...hooks: T) => R;
+export type UseDebouncedCallback = <Args extends readonly unknown[]>(
+  callback: (...args: Args) => void,
+  delayMs: number
+) => (...args: Args) => void;
 
-/**
- * Hook middleware types
- */
-export type HookMiddleware<T> = (hook: T) => T;
+export type UseStationSearch = (
+  options: StationSearchOptions
+) => readonly Station[];
 
-export type HookMiddlewareChain<T> = readonly HookMiddleware<T>[];
+export type UseFareCalculator = (
+  options: FareCalculatorOptions
+) => FareInput | undefined;
 
-/**
- * Hook validation types
- */
-export type HookValidator<T> = (value: T) => boolean;
+export type UseGeolocation = () => UseGeolocationReturn;
 
-export type HookValidationResult = {
-  readonly isValid: boolean;
-  readonly errors: readonly string[];
-};
+export type UseGeolocationPermission = () => GeolocationPermissionState;
 
-/**
- * Hook performance types
- */
-export type HookPerformanceMetrics = {
-  readonly renderCount: number;
-  readonly lastRenderTime: Milliseconds;
-  readonly averageRenderTime: Milliseconds;
-  readonly memoryUsage: number;
-};
+export type UseGooglePlaces = () => UseGooglePlacesReturn;
 
-export type HookPerformanceTracker = {
-  readonly startTracking: () => void;
-  readonly stopTracking: () => void;
-  readonly getMetrics: () => HookPerformanceMetrics;
-  readonly resetMetrics: () => void;
-};
+export type UseTheme = () => UseThemeReturn;
+
+export type UseOnlineStatus = () => boolean;
+
+export type UseLiveRegion = (polite?: AriaPoliteness) => UseLiveRegionReturn;
+
+export type UseMapAvailability = (
+  options?: MapAvailabilityOptions
+) => MapAvailability;
+
+export type UseNearestStation = (
+  origin?: Coordinates
+) => NearestStation | undefined;

@@ -8,6 +8,15 @@
 
 This quickstart guide provides step-by-step instructions to validate the Metro Station Finder application functionality. Follow these steps to ensure all features work correctly.
 
+### Using hooks
+
+- Station search:
+  - Use `useStationSearch` to get filtered stations from local static data.
+- Nearest station:
+  - Use `useNearestStation` to compute nearest station from current coordinates.
+- Map availability:
+  - Use `useMapAvailability` to decide between map vs list fallback (env/key/quota-aware).
+
 ## Prerequisites
 
 - Modern web browser (Chrome, Safari, Firefox, Edge)

@@ -71,147 +71,147 @@ All commits must follow the simple conventional commit format:
 
 ## Phase 1: Project Setup & Configuration
 
-### T001: [X] Install Core Dependencies
+### T001: [X] Install Core Dependencies ✅
 
 Install Next.js, React, TypeScript, and essential development dependencies using latest versions.
 
 **Files**: `package.json`
 **Command**: `bun add next@latest react@latest react-dom@latest typescript@latest @types/node@latest @types/react@latest @types/react-dom@latest`
 
-### T002: [X] Install UI & Styling Dependencies
+### T002: [X] Install UI & Styling Dependencies ✅
 
 Install Tailwind CSS, Framer Motion, and icon libraries. shadcn/ui will be initialized separately.
 
 **Files**: `package.json`
 **Command**: `bun add -D tailwindcss@latest postcss@latest autoprefixer@latest lucide-react@latest framer-motion@latest next-themes@latest`
 
-### T003: [X] Install Google Maps & Geolocation Dependencies
+### T003: [X] Install Google Maps & Geolocation Dependencies ✅
 
 Install Google Maps API integration using the latest @vis.gl/react-google-maps library.
 
 **Files**: `package.json`
 **Command**: `bun add @vis.gl/react-google-maps@latest`
 
-### T004: [X] Install Development & Testing Dependencies
+### T004: [X] Install Development & Testing Dependencies ✅
 
 Install testing frameworks, linting tools, and development utilities.
 
 **Files**: `package.json`
 **Command**: `bun add -D vitest@latest @testing-library/react@latest @testing-library/jest-dom@latest @playwright/test@latest @vitejs/plugin-react@latest jsdom@latest`
 
-### T005: [X] Install Validation & Type Safety Dependencies
+### T005: [X] Install Validation & Type Safety Dependencies ✅
 
 Install Zod for runtime validation and type safety utilities.
 
 **Files**: `package.json`
 **Command**: `bun add zod@latest @hookform/resolvers@latest react-hook-form@latest`
 
-### T006: [X] [P] Update TypeScript Configuration
+### T006: [X] [P] Update TypeScript Configuration ✅
 
 Configure strictest TypeScript settings in `tsconfig.json` following latest documentation.
 
 **Files**: `tsconfig.json`
 **Changes**: Enable all strict flags, update target to ES2024, configure module resolution for Node.js latest
 
-### T007: [X] [P] Configure Ultracite Linting
+### T007: [X] [P] Configure Ultracite Linting ✅
 
 Set up Ultracite with strictest rules for TypeScript and React following latest documentation.
 
 **Files**: `biome.jsonc`, `.vscode/settings.json`
 **Changes**: Configure linter rules, formatter settings, and TypeScript integration with latest Ultracite features
 
-### T008: [X] [P] Configure Next.js Settings
+### T008: [X] [P] Configure Next.js Settings ✅
 
 Update Next.js configuration for optimal performance and security following latest documentation.
 
 **Files**: `next.config.ts`
 **Changes**: Enable strict mode, configure image domains, set up experimental features for Next.js 15
 
-### T009: [X] [P] Set Up Environment Variables
+### T009: [X] [P] Set Up Environment Variables ✅
 
 Create environment variable templates and validation following latest patterns.
 
 **Files**: `.env.example`, `.env.local`, `lib/env.ts`
 **Changes**: Define Google Maps API key variables, create Zod schema for validation
 
-### T010: [X] [P] Install Advanced Development Dependencies
+### T010: [X] [P] Install Advanced Development Dependencies ✅
 
 Install performance monitoring, analytics, and advanced development tools.
 
 **Files**: `package.json`
 **Command**: `bun add -D @next/bundle-analyzer@latest @vercel/analytics@latest @vercel/speed-insights@latest babel-plugin-react-compiler@latest`
 
-### T011: [X] [P] Install shadcn/ui and UI Dependencies
+### T011: [X] [P] Install shadcn/ui and UI Dependencies ✅
 
 Install shadcn/ui CLI and essential UI component dependencies.
 
 **Files**: `package.json`
 **Command**: `bun add -D shadcn@latest class-variance-authority@latest clsx@latest tailwind-merge@latest`
 
-### T012: [X] [P] Install Git Hooks and Development Tools
+### T012: [X] [P] Install Git Hooks and Development Tools ✅
 
 Install Lefthook for Git hooks and advanced development utilities.
 
 **Files**: `package.json`
 **Command**: `bun add -D lefthook@latest`
 
-### T013: [X] [P] Configure VS Code Settings
+### T013: [X] [P] Configure VS Code Settings ✅
 
 Set up VS Code workspace settings for optimal development experience.
 
 **Files**: `.vscode/settings.json`, `.vscode/extensions.json`, `.vscode/launch.json`
 **Changes**: Configure Biome formatter, recommended extensions, debug configurations
 
-### T014: [X] [P] Create Development Scripts
+### T014: [X] [P] Create Development Scripts ✅
 
 Create comprehensive development and utility scripts for project management.
 
 **Files**: `scripts/health-check.mjs`, `scripts/validate-project.mjs`, `scripts/setup-dev.mjs`, `scripts/cleanup.mjs`, `scripts/dev-tools.mjs`, `scripts/ai-dev-tools.mjs`, `scripts/pre-build.mjs`, `scripts/post-build.mjs`, `scripts/prepare.mjs`, `scripts/post-install.mjs`
 **Changes**: Health checks, project validation, development tools, AI assistance scripts
 
-### T015: [X] [P] Configure Lefthook Git Hooks
+### T015: [X] [P] Configure Lefthook Git Hooks ✅
 
 Set up comprehensive Git hooks for code quality and automated checks.
 
 **Files**: `lefthook.yml`, `.lefthook/pre-commit/`, `.lefthook/pre-push/`, `.lefthook/commit-msg/`, `.lefthook/post-commit/`
 **Changes**: Pre-commit, pre-push, commit message validation, post-commit cleanup
 
-### T016: [X] [P] Initialize shadcn/ui Components
+### T016: [X] [P] Initialize shadcn/ui Components ✅
 
 Initialize shadcn/ui with optimal configuration and add essential components.
 
 **Files**: `components.json`, `lib/utils.ts`, `components/ui/button.tsx`, `components/ui/card.tsx`, `components/ui/input.tsx`, `components/ui/dialog.tsx`
 **Changes**: Configure shadcn/ui, add utility functions, install core UI components
 
-### T017: [X] [P] Create TypeScript Type Declarations
+### T017: [X] [P] Create TypeScript Type Declarations ✅
 
 Create custom type declarations for CSS modules and Google Maps API.
 
 **Files**: `types/css.d.ts`, `types/google-maps.d.ts`
 **Changes**: CSS module types, Google Maps API type extensions
 
-### T018: [X] [P] Create Project Documentation
+### T018: [X] [P] Create Project Documentation ✅
 
 Create comprehensive project documentation and development guides.
 
 **Files**: `DEV-COMMANDS.md`, `.cursorrules`
 **Changes**: Development command reference, AI assistant guidelines
 
-### T019: [X] [P] Configure Advanced Package.json Scripts
+### T019: [X] [P] Configure Advanced Package.json Scripts ✅
 
 Set up comprehensive npm scripts for development, testing, analysis, and deployment.
 
 **Files**: `package.json`
 **Changes**: Add 50+ scripts for development, testing, analysis, monitoring, deployment
 
-### T020: [X] [P] Set Up TypeScript Scripts Configuration
+### T020: [X] [P] Set Up TypeScript Scripts Configuration ✅
 
 Configure separate TypeScript configuration for utility scripts.
 
 **Files**: `tsconfig.scripts.json`
 **Changes**: Configure TypeScript for Node.js scripts with proper module resolution
 
-### T021: [X] [P] Implement Semantic-Release Workflow
+### T021: [X] [P] Implement Semantic-Release Workflow ✅
 
 Set up a comprehensive semantic-release workflow with 2025 best practices for automated versioning, changelog generation, and release management.
 
@@ -307,28 +307,28 @@ Implement static station data, fare rules, and centralized constants.
 
 ## Phase 3: Core Utilities & Validation
 
-### T029: [P] Create Distance Calculation Utilities
+### T029: [P] Create Distance Calculation Utilities ✅
 
 Implement Haversine formula and distance utilities.
 
 **Files**: `lib/utils/distance.ts`
 **Changes**: calculateDistance, formatDistance, distance validation
 
-### T030: [P] Fare Calculation Utilities (reference existing)
+### T030: [P] Fare Calculation Utilities (reference existing) ✅
 
 Leverage existing fare calculation implemented in `lib/data/fares.ts`; do not duplicate utilities. Confirm exports and types are consumable by API layer in Phase 7.
 
 **Files**: `lib/data/fares.ts`
 **Changes**: Ensure exported functions (`calculateFare`, `getFareRules`, helpers) are used as the single source of truth; adapters (if needed) will be added in Phase 7 `lib/api/fares.ts`.
 
-### T031: [P] Geolocation Utilities (reference existing)
+### T031: [P] Geolocation Utilities (reference existing) ✅
 
 Use existing geolocation types/utilities in `lib/types/geolocation.ts`; avoid duplicate wrappers. Phase 7 will expose API functions as needed.
 
 **Files**: `lib/types/geolocation.ts`
 **Changes**: Confirm existing helpers (error mapping, capability checks, creation functions) cover use cases; API wrappers will be added in Phase 7 `lib/api/geolocation.ts`.
 
-### T032: [P] Type Guards (confirm & extend if needed)
+### T032: [P] Type Guards (confirm & extend if needed) ✅
 
 Confirm existing type guards across `lib/types/*` are sufficient; add any missing guards only if gaps are found (co-locate with the relevant type module).
 
@@ -354,124 +354,185 @@ Implement Zod schemas for all data validation.
 
 ## Phase 4: React Hooks & State Management
 
-### T034: [P] Create Station Search Hook
+### T034: [P] Create Station Search Hook ✅
 
 Implement custom hook for station search functionality.
 
-**Files**: `lib/hooks/useStationSearch.ts`
+**Files**: `lib/hooks/use-station-search.ts`
+**Status**: ✅ **COMPLETED** - Station search hook with debouncing and filtering
 **Changes**: useStationSearch hook with local autocomplete
 
-### T035: [P] Create Fare Calculator Hook
+### T035: [P] Create Fare Calculator Hook ✅
 
 Implement custom hook for fare calculation.
 
-**Files**: `lib/hooks/useFareCalculator.ts`
+**Files**: `lib/hooks/use-fare-calculator.ts`
+**Status**: ✅ **COMPLETED** - Fare calculator hook with memoization
 **Changes**: useFareCalculator hook with station selection
 
-### T036: [P] Create Geolocation Hook
+### T036: [P] Create Geolocation Hook ✅
 
 Implement custom hook for geolocation functionality.
 
-**Files**: `lib/hooks/useGeolocation.ts`
+**Files**: `lib/hooks/use-geolocation.ts`
+**Status**: ✅ **COMPLETED** - Geolocation hook with permission handling
 **Changes**: useGeolocation hook with error handling
 
-### T037: [P] Create Google Places Hook
+### T037: [P] Create Google Places Hook ✅
 
 Implement custom hook for Google Places autocomplete.
 
-**Files**: `lib/hooks/useGooglePlaces.ts`
+**Files**: `lib/hooks/use-google-places.ts`
+**Status**: ✅ **COMPLETED** - Google Places hook with quota management
 **Changes**: useGooglePlaces hook with quota management
 
-### T038: [P] Create Theme Hook
+### T038: [P] Create Theme Hook ✅
 
 Implement custom hook for theme management.
 
-**Files**: `lib/hooks/useTheme.ts`
+**Files**: `lib/hooks/use-theme.ts`
+**Status**: ✅ **COMPLETED** - Theme hook with system preference detection
 **Changes**: useTheme hook with system preference detection
+
+### T039: [P] Create Query Params State Hook ✅
+
+Sync search filters/sort/pagination with URL (back/forward-safe, shareable) using Zod-validated schemas.
+
+**Files**: `lib/hooks/use-query-params-state.ts`
+**Status**: ✅ **COMPLETED** - URL query params state synchronization
+**Changes**: URL state sync, parse/stringify helpers, guarded updates
+
+### T040: [P] Create Debounced Value Hook ✅
+
+Provide stable debounced values/callbacks for inputs and request cadence.
+
+**Files**: `lib/hooks/use-debounced-value.ts`
+**Status**: ✅ **COMPLETED** - Debounced value and callback hooks
+**Changes**: debounced value + callback utilities with teardown
+
+### T041: [P] Create Online Status Hook ✅
+
+Detect and expose online/offline status to drive fallbacks (e.g., disable Places, switch to local search).
+
+**Files**: `lib/hooks/use-online-status.ts`
+**Status**: ✅ **COMPLETED** - Online/offline status detection
+**Changes**: online/offline state, event listeners, SSR-safe defaults
+
+### T042: [P] Create Live Region Hook ✅
+
+Accessible announcements for results count, errors, and geolocation events.
+
+**Files**: `lib/hooks/use-live-region.ts`
+**Status**: ✅ **COMPLETED** - Accessible announcements with aria-live
+**Changes**: polite/assertive announce API, aria-live region management
+
+### T043: [P] Create Geolocation Permission Hook ✅
+
+Manage permission lifecycle (prompted/denied/granted) and UI hints.
+
+**Files**: `lib/hooks/use-geolocation-permission.ts`
+**Status**: ✅ **COMPLETED** - Geolocation permission state management
+**Changes**: permission state machine, request gating, fallbacks
+
+### T044: [P] Create Map Availability Hook ✅
+
+Feature flag + env kill-switch + API key presence + quota status to decide map vs list fallback.
+
+**Files**: `lib/hooks/use-map-availability.ts`
+**Status**: ✅ **COMPLETED** - Map availability check with fallback logic
+**Changes**: availability boolean + reason enum, integrates with constants/env
+
+### T045: [P] Create Nearest Station Hook ✅
+
+Compose geolocation and distance utils to compute nearest station and within-radius checks.
+
+**Files**: `lib/hooks/use-nearest-station.ts`
+**Status**: ✅ **COMPLETED** - Nearest station calculation with memoization
+**Changes**: nearest station, distance, radius checks with memoization
 
 ---
 
 ## 📝 **COMMIT NOTE - Phase 4 Complete**
 
 **Commit Message**: `feat(hooks): react hooks & state management`
-**When to Commit**: After ALL Phase 4 tasks (T034-T038) are completed
-**Status**: ⏳ **PENDING** - Phase 4 tasks not yet started
+**When to Commit**: After ALL Phase 4 tasks (T034-T045) are completed
+**Status**: ✅ **COMPLETED** - Phase 4 commit done
 
 ---
 
 ## Phase 5: Design System, Theming & UI Components (shadcn/ui)
 
-### T039: [P] Set Up shadcn/ui Components
+### T046: [P] Set Up shadcn/ui Components
 
 Initialize shadcn/ui and install base components using the latest CLI.
 
 **Files**: `components.json`, `components/ui/`
 **Command**: `bunx shadcn@latest init` and then `bunx shadcn@latest add button input card`
 
-### T040: [P] Configure Tailwind CSS v4 tokens & theme
+### T047: [P] Configure Tailwind CSS v4 tokens & theme
 
 Define design tokens (colors, spacing, radii, typography) and enable dark mode class strategy; wire tokens into `app/globals.css`.
 
 **Files**: `tailwind.config.ts`, `app/globals.css`
 **Changes**: Token scales as CSS variables, content paths, dark mode configuration
 
-### T041: [P] Integrate Ropa Sans via next/font with CSS variables
+### T048: [P] Integrate Ropa Sans via next/font with CSS variables
 
 Set up `Ropa_Sans` and bind to `--font-sans` variable for global usage.
 
 **Files**: `app/layout.tsx`, `app/globals.css`
 **Changes**: next/font import, root className variables, base typography
 
-### T042: [P] Add ThemeProvider (next-themes) and html class switching
+### T049: [P] Add ThemeProvider (next-themes) and html class switching
 
 Provide theme context and support `system | light | dark`, ensure SSR-safe class switching.
 
 **Files**: `app/layout.tsx`
 **Changes**: Wrap with `ThemeProvider`, set `attribute="class"`, defaultTheme, disableTransitionOnChange
 
-### T043: [P] Define semantic color system (light/dark)
+### T050: [P] Define semantic color system (light/dark)
 
 Map semantic colors (background, foreground, card, accent, border, ring, muted, destructive, etc.) to CSS variables for both themes.
 
 **Files**: `app/globals.css`, `tailwind.config.ts`
 **Changes**: CSS variable palettes for `:root` and `.dark` selectors
 
-### T044: [P] Create Theme Toggle Component
+### T051: [P] Create Theme Toggle Component
 
 Build theme switching component.
 
 **Files**: `components/ui/theme-toggle.tsx`
 **Changes**: ThemeToggle component with system preference support
 
-### T045: [P] Ensure map theme switching uses `lib/map/styles.ts`
+### T052: [P] Ensure map theme switching uses `lib/map/styles.ts`
 
 Wire map style selection (light/dark) to app theme; verify a11y contrast.
 
 **Files**: `components/ui/map.tsx`
 **Changes**: Select `lightModeMapStyle`/`darkModeMapStyle` based on theme
 
-### T046: [P] Create Search Input Component
+### T053: [P] Create Search Input Component
 
 Build search input with autocomplete functionality.
 
 **Files**: `components/ui/search-input.tsx`
 **Changes**: SearchInput component with debouncing and validation
 
-### T047: [P] Create Station Card Component
+### T054: [P] Create Station Card Component
 
 Build station information display component.
 
 **Files**: `components/ui/station-card.tsx`
 **Changes**: StationCard component with distance and amenities
 
-### T048: [P] Create Fare Display Component
+### T055: [P] Create Fare Display Component
 
 Build fare calculation display component.
 
 **Files**: `components/ui/fare-display.tsx`
 **Changes**: FareDisplay component with ticket types and pricing
 
-### T049: [P] Create Map Component
+### T056: [P] Create Map Component
 
 Build Google Maps integration component using @vis.gl/react-google-maps.
 
@@ -483,35 +544,35 @@ Build Google Maps integration component using @vis.gl/react-google-maps.
 ## 📝 **COMMIT NOTE - Phase 5 Complete**
 
 **Commit Message**: `feat(ui): design system, theming, and core components`
-**When to Commit**: After ALL Phase 5 tasks (T039-T049) are completed
+**When to Commit**: After ALL Phase 5 tasks (T046-T056) are completed
 **Status**: ⏳ **PENDING** - Phase 5 tasks not yet started
 
 ---
 
 ## Phase 6: Page Components
 
-### T050: [P] Create Homepage Component
+### T057: [P] Create Homepage Component
 
 Build main landing page with search and featured stations.
 
 **Files**: `app/page.tsx`
 **Changes**: Homepage with hero section, search input, featured stations
 
-### T051: [P] Create Station Finder Page
+### T058: [P] Create Station Finder Page
 
 Build station search and results page.
 
 **Files**: `app/station-finder/page.tsx`
 **Changes**: StationFinder page with map and results list; includes visible on-focus "Skip to results" link, keyboard navigation, and list‑view fallback when map is disabled/unavailable
 
-### T052: [P] Create Fare Calculator Page
+### T059: [P] Create Fare Calculator Page
 
 Build fare calculation page with station selection.
 
 **Files**: `app/fare-calculator/page.tsx`
 **Changes**: FareCalculator page with origin/destination selection
 
-### T053: [P] Create About Page
+### T060: [P] Create About Page
 
 Build information and attribution page.
 
@@ -523,35 +584,35 @@ Build information and attribution page.
 ## 📝 **COMMIT NOTE - Phase 6 Complete**
 
 **Commit Message**: `feat(pages): page components setup`
-**When to Commit**: After ALL Phase 6 tasks (T050-T053) are completed
+**When to Commit**: After ALL Phase 6 tasks (T057-T060) are completed
 **Status**: ⏳ **PENDING** - Phase 6 tasks not yet started
 
 ---
 
 ## Phase 7: API Integration & Client Functions
 
-### T054: [P] Implement Station Search Functions
+### T061: [P] Implement Station Search Functions
 
 Implement client-side station search functions from contracts.
 
 **Files**: `lib/api/stations.ts`
 **Changes**: searchStations, getAllStations, getStationById functions importing static data from `lib/data/stations.ts` and types/utilities from `lib/types/*`; no network calls
 
-### T055: [P] Implement Fare Calculation Functions
+### T062: [P] Implement Fare Calculation Functions
 
 Implement client-side fare calculation functions from contracts.
 
 **Files**: `lib/api/fares.ts`
 **Changes**: calculateFare, getFareRules, getTicketTypes functions importing from `lib/data/fares.ts` and `lib/types/*`; thin adapter only (no network)
 
-### T056: [P] Implement Geolocation Functions
+### T063: [P] Implement Geolocation Functions
 
 Implement client-side geolocation functions from contracts.
 
 **Files**: `lib/api/geolocation.ts`
 **Changes**: getCurrentLocation, getNearestStation, validateLocation functions using browser APIs and `lib/types/geolocation.ts`; no server endpoints
 
-### T057: [P] Implement Google Places Functions
+### T064: [P] Implement Google Places Functions
 
 Implement Google Places autocomplete functions with quota management using @vis.gl/react-google-maps.
 
@@ -563,42 +624,42 @@ Implement Google Places autocomplete functions with quota management using @vis.
 ## 📝 **COMMIT NOTE - Phase 7 Complete**
 
 **Commit Message**: `feat(api): api integration & client functions`
-**When to Commit**: After ALL Phase 7 tasks (T054-T057) are completed
+**When to Commit**: After ALL Phase 7 tasks (T061-T064) are completed
 **Status**: ⏳ **PENDING** - Phase 7 tasks not yet started
 
 ---
 
 ## Phase 8: Testing Implementation
 
-### T058: [P] Set Up Test Configuration
+### T065: [P] Set Up Test Configuration
 
 Configure Vitest and React Testing Library.
 
 **Files**: `vitest.config.ts`, `test-setup.ts`
 **Changes**: Test configuration, setup files, mock implementations
 
-### T059: [P] Create Unit Tests for Utilities
+### T066: [P] Create Unit Tests for Utilities
 
 Write unit tests for all utility functions.
 
 **Files**: `__tests__/utils/`
 **Changes**: Tests for distance, fare, geolocation, and validation utilities
 
-### T060: [P] Create Component Tests
+### T067: [P] Create Component Tests
 
 Write tests for all UI components.
 
 **Files**: `__tests__/components/`
 **Changes**: Tests for SearchInput, StationCard, FareDisplay, Map components
 
-### T061: [P] Create Hook Tests
+### T068: [P] Create Hook Tests
 
 Write tests for all custom hooks.
 
 **Files**: `__tests__/hooks/`
 **Changes**: Tests for useStationSearch, useFareCalculator, useGeolocation hooks
 
-### T062: [P] Create Integration Tests
+### T069: [P] Create Integration Tests
 
 Write integration tests for complete user flows.
 
@@ -610,35 +671,35 @@ Write integration tests for complete user flows.
 ## 📝 **COMMIT NOTE - Phase 8 Complete**
 
 **Commit Message**: `feat(testing): testing implementation`
-**When to Commit**: After ALL Phase 8 tasks (T058-T062) are completed
+**When to Commit**: After ALL Phase 8 tasks (T065-T069) are completed
 **Status**: ⏳ **PENDING** - Phase 8 tasks not yet started
 
 ---
 
 ## Phase 9: Performance & Optimization
 
-### T063: [P] Implement Code Splitting
+### T070: [P] Implement Code Splitting
 
 Add dynamic imports and code splitting for optimal loading.
 
 **Files**: `components/`, `app/`
 **Changes**: Lazy load map component, dynamic imports for heavy components
 
-### T064: [P] Optimize Bundle Size
+### T071: [P] Optimize Bundle Size
 
 Implement tree shaking and bundle optimization.
 
 **Files**: `next.config.ts`, `package.json`
 **Changes**: Bundle analyzer, tree shaking configuration
 
-### T065: [P] Implement Caching Strategy
+### T072: [P] Implement Caching Strategy
 
 Add client-side caching for API responses and static data.
 
 **Files**: `lib/utils/cache.ts`
 **Changes**: Cache utilities, TTL management, quota-aware caching
 
-### T066: [P] Add Performance Monitoring
+### T073: [P] Add Performance Monitoring
 
 Implement Core Web Vitals monitoring and performance budgets.
 
@@ -650,49 +711,49 @@ Implement Core Web Vitals monitoring and performance budgets.
 ## 📝 **COMMIT NOTE - Phase 9 Complete**
 
 **Commit Message**: `feat(perf): performance & optimization`
-**When to Commit**: After ALL Phase 9 tasks (T063-T066) are completed
+**When to Commit**: After ALL Phase 9 tasks (T070-T073) are completed
 **Status**: ⏳ **PENDING** - Phase 9 tasks not yet started
 
 ---
 
 ## Phase 10: Final Integration & Polish
 
-### T067: [P] Update Global Styles
+### T074: [P] Update Global Styles
 
 Configure Tailwind CSS and global styles.
 
 **Files**: `app/globals.css`, `tailwind.config.ts`
 **Changes**: Custom design tokens, Ropa Sans font integration
 
-### T068: [P] Add Error Boundaries
+### T075: [P] Add Error Boundaries
 
 Implement comprehensive error boundaries for all major components.
 
 **Files**: `components/error-boundary.tsx`
 **Changes**: Error boundaries for map, search, and fare calculation
 
-### T069: [P] Implement Accessibility Features
+### T076: [P] Implement Accessibility Features
 
 Add ARIA labels, keyboard navigation, and screen reader support.
 
 **Files**: `components/`, `app/`
 **Changes**: ARIA attributes, focus management, keyboard shortcuts
 
-### T070: [P] Add Loading States
+### T077: [P] Add Loading States
 
 Implement skeleton screens and loading indicators.
 
 **Files**: `components/ui/loading.tsx`
 **Changes**: Loading components, skeleton screens, progress indicators
 
-### T071: [P] Create Documentation
+### T078: [P] Create Documentation
 
 Generate API documentation and usage guides.
 
 **Files**: `docs/`, `README.md`
 **Changes**: API docs, setup instructions, troubleshooting guide
 
-### T072: [P] Final Testing & Validation
+### T079: [P] Final Testing & Validation
 
 Run complete test suite and validate all functionality.
 
@@ -704,7 +765,7 @@ Run complete test suite and validate all functionality.
 ## 📝 **COMMIT NOTE - Phase 10 Complete**
 
 **Commit Message**: `feat(final): final integration & polish`
-**When to Commit**: After ALL Phase 10 tasks (T067-T072) are completed
+**When to Commit**: After ALL Phase 10 tasks (T074-T079) are completed
 **Status**: ⏳ **PENDING** - Phase 10 tasks not yet started
 
 ---
@@ -722,13 +783,13 @@ Run complete test suite and validate all functionality.
 - Setup (T001-T021) before everything
 - Data & Types (T022-T028) before utilities
 - Utilities (T029-T033) before hooks
-- Hooks (T034-T038) before components
-- Components (T039-T049) before pages
-- Pages (T050-T053) before API integration
-- API Integration (T054-T057) before testing
-- Testing (T058-T062) before optimization
-- Optimization (T063-T066) before final integration
-- Final Integration (T067-T072) last
+- Hooks (T034-T045) before components
+- Components (T046-T056) before pages
+- Pages (T057-T060) before API integration
+- API Integration (T061-T064) before testing
+- Testing (T065-T069) before optimization
+- Optimization (T070-T073) before final integration
+- Final Integration (T074-T079) last
 
 ## Parallel Execution Examples
 

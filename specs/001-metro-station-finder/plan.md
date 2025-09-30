@@ -94,6 +94,23 @@ If the plan and spec/ADRs diverge, **spec + ADRs win**; update this plan to matc
 - **Scale/Scope**: 16 metro stations, static fare data, mobile-first responsive design
 - **Accessibility**: WCAG 2.2 AA compliance
 
+### Client hooks layer
+
+Purpose: Encapsulate UI state, a11y behaviors, and availability logic without introducing new domain entities or APIs. Hooks compose static data and existing utilities.
+
+- useStationSearch: local autocomplete over `lib/data/stations.ts`
+- useFareCalculator: fare helpers over `lib/data/fares.ts`
+- useGeolocation: permissioned browser location + Result handling
+- useGooglePlaces: guarded Places calls with input gating
+- useTheme: theme switching and system preference
+- useQueryParamsState: sync filters/sort/pagination to URL (Zod-validated)
+- useDebouncedValue: debounce inputs and requests
+- useOnlineStatus: online/offline-aware UI fallbacks
+- useLiveRegion: polite/assertive screen reader announcements
+- useGeolocationPermission: permission lifecycle state
+- useMapAvailability: feature flag + env/key/quota checks → map/list fallback
+- useNearestStation: composes geolocation + distance utils
+
 ### Code Style Rules (enforced)
 
 - Node built-ins imported via `node:` protocol (e.g., `import * as fs from 'node:fs/promises'`)

@@ -12,6 +12,8 @@ type ProcessEnv = {
   NEXT_PUBLIC_APP_VERSION?: string;
   // biome-ignore lint/style/useNamingConvention: Environment variable names must match external API exactly
   NEXT_PUBLIC_GA_ID?: string;
+  // biome-ignore lint/style/useNamingConvention: Environment variable names must match external API exactly
+  NEXT_PUBLIC_MAPS_DISABLED?: string;
 };
 
 // Environment variable schema
@@ -32,6 +34,9 @@ const envSchema = z.object({
 
   // Optional analytics
   nextPublicGaId: z.string().optional(),
+
+  // Feature flags
+  nextPublicMapsDisabled: z.boolean().default(false),
 });
 
 // Validate environment variables
@@ -45,6 +50,7 @@ const parseEnv = () => {
       nextPublicAppName: env.NEXT_PUBLIC_APP_NAME,
       nextPublicAppVersion: env.NEXT_PUBLIC_APP_VERSION,
       nextPublicGaId: env.NEXT_PUBLIC_GA_ID,
+      nextPublicMapsDisabled: env.NEXT_PUBLIC_MAPS_DISABLED === "true",
     };
 
     return envSchema.parse(envData);
