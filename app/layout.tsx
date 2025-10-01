@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Geist_Mono, Ropa_Sans } from "next/font/google";
-import { ThemeProvider } from "@/components/theme-provider";
+import { Providers } from "@/components/providers";
 import "./globals.css";
 
 const ropaSans = Ropa_Sans({
@@ -9,12 +9,15 @@ const ropaSans = Ropa_Sans({
   weight: ["400"],
   display: "swap",
   preload: true,
+  adjustFontFallback: true,
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
   display: "swap",
+  preload: true,
+  adjustFontFallback: true,
 });
 
 export const metadata: Metadata = {
@@ -74,10 +77,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html data-scroll-behavior="smooth" lang="en" suppressHydrationWarning>
       <head>
         <link href="/favicon.ico" rel="icon" />
         <link href="/apple-touch-icon.png" rel="apple-touch-icon" />
+        <link
+          as="style"
+          href="https://fonts.googleapis.com/css2?family=Ropa+Sans:ital,wght@0,400;1,400&display=swap"
+          rel="preload"
+        />
         <meta
           content="#3b82f6"
           media="(prefers-color-scheme: light)"
@@ -93,7 +101,7 @@ export default function RootLayout({
       <body
         className={`${ropaSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ThemeProvider>{children}</ThemeProvider>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

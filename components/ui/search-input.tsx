@@ -48,9 +48,11 @@ export function SearchInput({
   showClearButton = true,
   debounceMs = 300,
   ref,
+  value: controlledValue,
+  onChange: controlledOnChange,
   ...props
 }: SearchInputProps & { ref?: React.Ref<HTMLInputElement> }) {
-  const [query, setQuery] = useState(props.value?.toString() || "");
+  const [internalValue, setInternalValue] = useState("");
   const [isFocused, setIsFocused] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(
     undefined
@@ -58,15 +60,19 @@ export function SearchInput({
   const inputRef = useRef<HTMLInputElement>(null);
   const id = useId();
 
+  // Determine if component is controlled or uncontrolled
+  const isControlled = controlledValue !== undefined;
+  const value = isControlled ? String(controlledValue) : internalValue;
+
   // Debounce search to avoid excessive calls while user is typing
   useEffect(() => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
 
-    if (onSearch && query.trim()) {
+    if (onSearch && value.trim()) {
       timeoutRef.current = setTimeout(() => {
-        onSearch(query.trim());
+        onSearch(value.trim());
       }, debounceMs);
     }
 
@@ -75,7 +81,7 @@ export function SearchInput({
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [query, onSearch, debounceMs]);
+  }, [value, onSearch, debounceMs]);
 
   // Forward ref to allow parent components to access the input element
   useEffect(() => {
@@ -90,22 +96,29 @@ export function SearchInput({
   }, [ref]);
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const value = event.target.value;
-    setQuery(value);
-    props.onChange?.(event);
+    const newValue = event.target.value;
+
+    if (!isControlled) {
+      setInternalValue(newValue);
+    }
+
+    controlledOnChange?.(event);
   };
 
   const handleClear = () => {
-    setQuery("");
+    if (!isControlled) {
+      setInternalValue("");
+    }
+
     onClear?.();
     inputRef.current?.focus();
 
-    if (props.onChange) {
+    if (controlledOnChange) {
       const syntheticEvent = {
         target: { value: "" },
         currentTarget: { value: "" },
       } as React.ChangeEvent<HTMLInputElement>;
-      props.onChange(syntheticEvent);
+      controlledOnChange(syntheticEvent);
     }
   };
 
@@ -117,7 +130,7 @@ export function SearchInput({
     props.onKeyDown?.(event);
   };
 
-  const hasValue = query.length > 0;
+  const hasValue = value.length > 0;
 
   return (
     <div className="relative w-full" data-slot="search-input">
@@ -175,8 +188,7 @@ export function SearchInput({
           placeholder={props.placeholder || "Search stations..."}
           ref={inputRef}
           type={type}
-          value={query}
-          {...props}
+          value={value}
         />
 
         {/* Loading indicator and clear button */}
@@ -226,7 +238,7 @@ export function SearchInput({
       {!loading && (
         <output aria-live="polite" className="sr-only" id={`${id}-status`}>
           {hasValue
-            ? `Showing results for: ${query}`
+            ? `Showing results for: ${value}`
             : "Enter search terms to find stations"}
         </output>
       )}

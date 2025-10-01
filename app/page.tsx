@@ -1,102 +1,451 @@
-import Image from "next/image";
+import {
+  ArrowRight,
+  Calculator,
+  MapPin,
+  Navigation,
+  Search,
+  Train,
+} from "lucide-react";
+import type { Metadata } from "next";
+import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { getOperationalStations } from "@/lib/data/stations";
+import { cn } from "@/lib/utils";
 
-export default function Home() {
+/**
+ * Metadata for the homepage.
+ * Optimized for SEO and social sharing.
+ */
+export const metadata: Metadata = {
+  title: "Metro Station Finder | Find Dhaka Metro Stations & Calculate Fares",
+  description:
+    "Discover the nearest Dhaka metro station from your location and calculate fares between stations. Fast, accessible, and easy to use.",
+  keywords: [
+    "Dhaka metro",
+    "metro station",
+    "MRT-6",
+    "fare calculator",
+    "public transport",
+    "Bangladesh metro",
+  ],
+  openGraph: {
+    title: "Metro Station Finder - Dhaka Metro Navigation Made Easy",
+    description: "Find stations and calculate fares for Dhaka's metro system",
+    type: "website",
+  },
+};
+
+/**
+ * Homepage component showcasing the Metro Station Finder application.
+ * Features hero section, quick actions, and featured stations.
+ */
+export default function HomePage() {
+  // Get featured stations (popular locations)
+  const allStations = getOperationalStations();
+  const featuredStations = allStations.filter((station) =>
+    ["farmgate", "mirpur-10", "motijheel"].includes(station.id)
+  );
+
   return (
-    <div className="grid min-h-screen grid-rows-[20px_1fr_20px] items-center justify-items-center gap-16 p-8 pb-20 font-sans sm:p-20">
-      <main className="row-start-2 flex flex-col items-center gap-[32px] sm:items-start">
-        <Image
-          alt="Next.js logo"
-          className="dark:invert"
-          height={38}
-          priority
-          src="/next.svg"
-          width={180}
-        />
-        <ol className="list-inside list-decimal text-center font-mono text-sm/6 sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="rounded bg-black/[.05] px-1 py-0.5 font-mono font-semibold dark:bg-white/[.06]">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div className="flex min-h-screen flex-col">
+      {/* Header */}
+      <header className="sticky top-0 z-50 w-full border-border/40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+          <Link
+            className="flex items-center gap-2 font-semibold text-foreground text-lg transition-colors hover:text-primary"
+            href="/"
+          >
+            <Train aria-hidden="true" className="h-6 w-6 text-primary" />
+            <span className="hidden sm:inline">Metro Station Finder</span>
+            <span className="sm:hidden">MSF</span>
+          </Link>
 
-        <div className="flex flex-col items-center gap-4 sm:flex-row">
-          <a
-            className="flex h-10 items-center justify-center gap-2 rounded-full border border-transparent border-solid bg-foreground px-4 font-medium text-background text-sm transition-colors hover:bg-[#383838] sm:h-12 sm:w-auto sm:px-5 sm:text-base dark:hover:bg-[#ccc]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            <Image
-              alt="Vercel logomark"
-              className="dark:invert"
-              height={20}
-              src="/vercel.svg"
-              width={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="flex h-10 w-full items-center justify-center rounded-full border border-black/[.08] border-solid px-4 font-medium text-sm transition-colors hover:border-transparent hover:bg-[#f2f2f2] sm:h-12 sm:w-auto sm:px-5 sm:text-base md:w-[158px] dark:border-white/[.145] dark:hover:bg-[#1a1a1a]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            Read our docs
-          </a>
+          <nav aria-label="Main navigation" className="flex items-center gap-2">
+            <Link
+              className="rounded-lg px-3 py-2 text-muted-foreground text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+              href="/station-finder"
+            >
+              Stations
+            </Link>
+            <Link
+              className="rounded-lg px-3 py-2 text-muted-foreground text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+              href="/fare-calculator"
+            >
+              Fares
+            </Link>
+            <Link
+              className="rounded-lg px-3 py-2 text-muted-foreground text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+              href="/about"
+            >
+              About
+            </Link>
+            <ThemeToggle />
+          </nav>
         </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="flex-1">
+        {/* Hero Section */}
+        <section
+          aria-labelledby="hero-title"
+          className="relative overflow-hidden border-border/40 border-b bg-gradient-to-br from-background via-background to-accent/5"
+        >
+          <div className="container mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8 lg:py-32">
+            <div className="mx-auto max-w-3xl text-center">
+              {/* Badge */}
+              <Badge
+                className="mb-4 bg-primary/10 text-primary text-xs hover:bg-primary/20"
+                variant="secondary"
+              >
+                <Train aria-hidden="true" className="mr-1 h-3 w-3" />
+                MRT-6 Line - 16 Operational Stations
+              </Badge>
+
+              {/* Hero Title */}
+              <h1
+                className="mb-6 font-bold text-4xl text-foreground tracking-tight sm:text-5xl md:text-6xl"
+                id="hero-title"
+              >
+                Find Your Nearest{" "}
+                <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+                  Metro Station
+                </span>
+              </h1>
+
+              {/* Hero Description */}
+              <p className="mb-8 text-balance text-lg text-muted-foreground sm:text-xl">
+                Navigate Dhaka's metro system with ease. Find nearby stations,
+                calculate fares, and plan your journey—all in one place.
+              </p>
+
+              {/* CTA Buttons */}
+              <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
+                <Button asChild className="w-full sm:w-auto" size="lg">
+                  <Link href="/station-finder">
+                    <Search aria-hidden="true" className="mr-2 h-5 w-5" />
+                    Find Stations
+                    <ArrowRight
+                      aria-hidden="true"
+                      className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1"
+                    />
+                  </Link>
+                </Button>
+
+                <Button
+                  asChild
+                  className="w-full sm:w-auto"
+                  size="lg"
+                  variant="outline"
+                >
+                  <Link href="/fare-calculator">
+                    <Calculator aria-hidden="true" className="mr-2 h-5 w-5" />
+                    Calculate Fare
+                  </Link>
+                </Button>
+              </div>
+
+              {/* Quick Stats */}
+              <div className="mt-12 grid grid-cols-3 gap-4 sm:gap-8">
+                <div className="rounded-xl border border-border/50 bg-card/50 p-4 backdrop-blur-sm">
+                  <div className="font-bold text-2xl text-primary sm:text-3xl">
+                    16
+                  </div>
+                  <div className="text-muted-foreground text-sm">
+                    Active Stations
+                  </div>
+                </div>
+                <div className="rounded-xl border border-border/50 bg-card/50 p-4 backdrop-blur-sm">
+                  <div className="font-bold text-2xl text-primary sm:text-3xl">
+                    ৳20-100
+                  </div>
+                  <div className="text-muted-foreground text-sm">
+                    Fare Range
+                  </div>
+                </div>
+                <div className="rounded-xl border border-border/50 bg-card/50 p-4 backdrop-blur-sm">
+                  <div className="font-bold text-2xl text-primary sm:text-3xl">
+                    40min
+                  </div>
+                  <div className="text-muted-foreground text-sm">
+                    Full Line Time
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Decorative Background Elements */}
+          <div
+            aria-hidden="true"
+            className="-z-10 pointer-events-none absolute top-0 left-0 h-full w-full overflow-hidden opacity-30"
+          >
+            <div className="-top-1/2 -right-1/4 absolute h-96 w-96 rounded-full bg-primary/20 blur-3xl" />
+            <div className="-bottom-1/2 -left-1/4 absolute h-96 w-96 rounded-full bg-primary/20 blur-3xl" />
+          </div>
+        </section>
+
+        {/* Quick Actions */}
+        <section
+          aria-labelledby="quick-actions-title"
+          className="border-border/40 border-b bg-background py-16 sm:py-24"
+        >
+          <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="mb-12 text-center">
+              <h2
+                className="mb-4 font-bold text-3xl text-foreground sm:text-4xl"
+                id="quick-actions-title"
+              >
+                Quick Actions
+              </h2>
+              <p className="text-balance text-muted-foreground">
+                Choose what you'd like to do
+              </p>
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2 lg:gap-8">
+              {/* Station Finder Card */}
+              <Card
+                className={cn(
+                  "group relative overflow-hidden rounded-xl border-border/50 bg-card/50 backdrop-blur-sm",
+                  "hover:-translate-y-1 transition-all duration-300 hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5"
+                )}
+              >
+                <CardHeader>
+                  <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
+                    <MapPin
+                      aria-hidden="true"
+                      className="h-6 w-6 text-primary"
+                    />
+                  </div>
+                  <CardTitle className="text-xl">
+                    Find Nearest Station
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="mb-4 text-muted-foreground">
+                    Use your current location or search for an address to find
+                    the closest metro station with walking directions.
+                  </p>
+                  <Button asChild className="w-full" variant="default">
+                    <Link href="/station-finder">
+                      <Navigation aria-hidden="true" className="mr-2 h-4 w-4" />
+                      Find Stations
+                      <ArrowRight
+                        aria-hidden="true"
+                        className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1"
+                      />
+                    </Link>
+                  </Button>
+                </CardContent>
+
+                {/* Hover Effect Overlay */}
+                <div
+                  aria-hidden="true"
+                  className={cn(
+                    "pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-br from-primary/5 via-transparent to-transparent",
+                    "opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                  )}
+                />
+              </Card>
+
+              {/* Fare Calculator Card */}
+              <Card
+                className={cn(
+                  "group relative overflow-hidden rounded-xl border-border/50 bg-card/50 backdrop-blur-sm",
+                  "hover:-translate-y-1 transition-all duration-300 hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5"
+                )}
+              >
+                <CardHeader>
+                  <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
+                    <Calculator
+                      aria-hidden="true"
+                      className="h-6 w-6 text-primary"
+                    />
+                  </div>
+                  <CardTitle className="text-xl">Calculate Fare</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="mb-4 text-muted-foreground">
+                    Select origin and destination stations to calculate your
+                    fare, view route details, and see travel time estimates.
+                  </p>
+                  <Button asChild className="w-full" variant="default">
+                    <Link href="/fare-calculator">
+                      <Calculator aria-hidden="true" className="mr-2 h-4 w-4" />
+                      Calculate Fare
+                      <ArrowRight
+                        aria-hidden="true"
+                        className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1"
+                      />
+                    </Link>
+                  </Button>
+                </CardContent>
+
+                {/* Hover Effect Overlay */}
+                <div
+                  aria-hidden="true"
+                  className={cn(
+                    "pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-br from-primary/5 via-transparent to-transparent",
+                    "opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                  )}
+                />
+              </Card>
+            </div>
+          </div>
+        </section>
+
+        {/* Featured Stations */}
+        {featuredStations.length > 0 && (
+          <section
+            aria-labelledby="featured-stations-title"
+            className="bg-background py-16 sm:py-24"
+          >
+            <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+              <div className="mb-12 text-center">
+                <h2
+                  className="mb-4 font-bold text-3xl text-foreground sm:text-4xl"
+                  id="featured-stations-title"
+                >
+                  Popular Stations
+                </h2>
+                <p className="text-balance text-muted-foreground">
+                  Explore some of the busiest stations on the MRT-6 line
+                </p>
+              </div>
+
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {featuredStations.map((station) => (
+                  <Link
+                    className="group focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                    href={`/station-finder?station=${station.id}`}
+                    key={station.id}
+                  >
+                    <Card
+                      className={cn(
+                        "h-full overflow-hidden rounded-xl border-border/50 bg-card/50 backdrop-blur-sm",
+                        "hover:-translate-y-1 transition-all duration-300 hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5"
+                      )}
+                    >
+                      <CardHeader>
+                        <CardTitle className="flex items-center justify-between">
+                          <span className="text-lg">{station.name}</span>
+                          <Badge
+                            className="ml-2 bg-primary/10 text-primary text-xs"
+                            variant="secondary"
+                          >
+                            MRT-6
+                          </Badge>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                            <MapPin
+                              aria-hidden="true"
+                              className="h-4 w-4 shrink-0"
+                            />
+                            <span className="truncate">
+                              Station #{station.order}
+                            </span>
+                          </div>
+
+                          <div className="flex flex-wrap gap-2">
+                            {station.amenities.elevator && (
+                              <Badge className="text-xs" variant="outline">
+                                Elevator
+                              </Badge>
+                            )}
+                            {station.amenities.wheelchair && (
+                              <Badge className="text-xs" variant="outline">
+                                Accessible
+                              </Badge>
+                            )}
+                            {station.amenities.parking && (
+                              <Badge className="text-xs" variant="outline">
+                                Parking
+                              </Badge>
+                            )}
+                          </div>
+
+                          <div className="flex items-center text-primary text-sm">
+                            <span className="transition-transform group-hover:translate-x-1">
+                              View Details →
+                            </span>
+                          </div>
+                        </div>
+                      </CardContent>
+
+                      {/* Hover Effect Overlay */}
+                      <div
+                        aria-hidden="true"
+                        className={cn(
+                          "pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-br from-primary/5 via-transparent to-transparent",
+                          "opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                        )}
+                      />
+                    </Card>
+                  </Link>
+                ))}
+              </div>
+
+              <div className="mt-12 text-center">
+                <Button asChild size="lg" variant="outline">
+                  <Link href="/station-finder">
+                    View All Stations
+                    <ArrowRight aria-hidden="true" className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          </section>
+        )}
       </main>
-      <footer className="row-start-3 flex flex-wrap items-center justify-center gap-[24px]">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          rel="noopener noreferrer"
-          target="_blank"
-        >
-          <Image
-            alt="File icon"
-            aria-hidden
-            height={16}
-            src="/file.svg"
-            width={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          rel="noopener noreferrer"
-          target="_blank"
-        >
-          <Image
-            alt="Window icon"
-            aria-hidden
-            height={16}
-            src="/window.svg"
-            width={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          rel="noopener noreferrer"
-          target="_blank"
-        >
-          <Image
-            alt="Globe icon"
-            aria-hidden
-            height={16}
-            src="/globe.svg"
-            width={16}
-          />
-          Go to nextjs.org →
-        </a>
+
+      {/* Footer */}
+      <footer className="border-border/40 border-t bg-background py-8">
+        <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
+            <div className="flex items-center gap-2 text-muted-foreground text-sm">
+              <Train aria-hidden="true" className="h-4 w-4 text-primary" />
+              <span>Metro Station Finder</span>
+              <span>•</span>
+              <span>Dhaka MRT-6</span>
+            </div>
+
+            <nav aria-label="Footer navigation">
+              <ul className="flex gap-6 text-muted-foreground text-sm">
+                <li>
+                  <Link
+                    className="transition-colors hover:text-foreground"
+                    href="/about"
+                  >
+                    About
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    className="transition-colors hover:text-foreground"
+                    href="/about#privacy"
+                  >
+                    Privacy
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    className="transition-colors hover:text-foreground"
+                    href="/about#attribution"
+                  >
+                    Attribution
+                  </Link>
+                </li>
+              </ul>
+            </nav>
+          </div>
+        </div>
       </footer>
     </div>
   );

@@ -700,6 +700,33 @@
           }
         }
       }
+    },
+    {
+      "includes": ["**/lib/env.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": "off"
+          },
+          "suspicious": {
+            "noConsole": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["**/types/env.d.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNamespace": "off",
+            "useNamingConvention": "off"
+          },
+          "nursery": {
+            "useConsistentTypeDefinitions": "off"
+          }
+        }
+      }
     }
   ]
 }

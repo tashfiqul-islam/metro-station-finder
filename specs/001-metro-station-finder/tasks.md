@@ -562,28 +562,28 @@ Build Google Maps integration component using @vis.gl/react-google-maps.
 
 ## Phase 6: Page Components
 
-### T057: [P] Create Homepage Component
+### T057: [P] Create Homepage Component ✅
 
 Build main landing page with search and featured stations.
 
 **Files**: `app/page.tsx`
 **Changes**: Homepage with hero section, search input, featured stations
 
-### T058: [P] Create Station Finder Page
+### T058: [P] Create Station Finder Page ✅
 
 Build station search and results page.
 
 **Files**: `app/station-finder/page.tsx`
 **Changes**: StationFinder page with map and results list; includes visible on-focus "Skip to results" link, keyboard navigation, and list‑view fallback when map is disabled/unavailable
 
-### T059: [P] Create Fare Calculator Page
+### T059: [P] Create Fare Calculator Page ✅
 
 Build fare calculation page with station selection.
 
 **Files**: `app/fare-calculator/page.tsx`
 **Changes**: FareCalculator page with origin/destination selection
 
-### T060: [P] Create About Page
+### T060: [P] Create About Page ✅
 
 Build information and attribution page.
 
@@ -596,7 +596,7 @@ Build information and attribution page.
 
 **Commit Message**: `feat(pages): page components setup`
 **When to Commit**: After ALL Phase 6 tasks (T057-T060) are completed
-**Status**: ⏳ **PENDING** - Phase 6 tasks not yet started
+**Status**: ✅ **COMPLETED** - Phase 6 commit done
 
 ---
 

@@ -14,31 +14,23 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: false,
   },
 
-  // ESLint configuration
-  eslint: {
-    // Fail build on ESLint errors
-    ignoreDuringBuilds: false,
-  },
-
-  // Image optimization with latest Next.js 15.5 features
+  // Image optimization for static export
   images: {
-    // Allow images from Google Maps and other external sources
-    domains: [
-      "maps.googleapis.com",
-      "maps.gstatic.com",
-      "streetviewpixels-pa.googleapis.com",
-    ],
-    // Enable modern image formats
-    formats: ["image/webp", "image/avif"],
-    // Optimize images
-    minimumCacheTTL: 60,
-    // For static export
+    // Required for static export (no optimization server)
     unoptimized: true,
-    // Enable local patterns for better security
-    localPatterns: [
+    // Allow images from Google Maps (using modern remotePatterns)
+    remotePatterns: [
       {
-        pathname: "/public/**",
-        search: "",
+        protocol: "https",
+        hostname: "maps.googleapis.com",
+      },
+      {
+        protocol: "https",
+        hostname: "maps.gstatic.com",
+      },
+      {
+        protocol: "https",
+        hostname: "streetviewpixels-pa.googleapis.com",
       },
     ],
   },
@@ -73,19 +65,7 @@ const nextConfig: NextConfig = {
 
   // Turbopack configuration (Next.js 15.5)
   turbopack: {
-    // Module resolution aliases
-    resolveAlias: {
-      "@": "./",
-      "@/components": "./components",
-      "@/lib": "./lib",
-      "@/types": "./types",
-      "@/utils": "./utils",
-      "@/hooks": "./hooks",
-      "@/styles": "./styles",
-    },
-    // Custom file extensions
-    resolveExtensions: [".tsx", ".ts", ".jsx", ".js", ".json", ".css"],
-    // Custom rules for file processing
+    // Custom rules for SVG imports as React components
     rules: {
       "*.svg": {
         loaders: ["@svgr/webpack"],
@@ -96,15 +76,9 @@ const nextConfig: NextConfig = {
 
   // Compiler options for better performance
   compiler: {
-    // Remove console.log in production
+    // Remove console.log in production (keep error logs)
     removeConsole: {
       exclude: ["error"],
-    },
-    // Enable emotion support if needed
-    emotion: {
-      sourceMap: true,
-      autoLabel: "dev-only",
-      labelFormat: "[local]",
     },
   },
 
@@ -139,21 +113,6 @@ const nextConfig: NextConfig = {
   // Output configuration for static export
   output: "export",
   trailingSlash: true,
-
-  // Fix for static export build issues
-  distDir: "out",
-  generateBuildId: async () => `build-${Date.now()}`,
-
-  // Bundle pages router dependencies (promoted from experimental)
-  bundlePagesRouterDependencies: true,
-
-  // Environment variables
-  env: {
-    customKey: "metro-station-finder",
-  },
-
-  // Allowed development origins
-  allowedDevOrigins: ["localhost", "127.0.0.1"],
 };
 
 export default nextConfig;

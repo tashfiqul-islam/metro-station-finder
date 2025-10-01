@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import { env } from "@/lib/env";
 
 /**
  * Determines whether Google Maps can be rendered based on:
@@ -9,6 +8,8 @@ import { env } from "@/lib/env";
  * - Quota status
  *
  * Returns availability boolean and reason for debugging/fallback UI.
+ *
+ * Note: Directly accesses process.env for client-side compatibility with static export.
  */
 
 export type MapUnavailableReason =
@@ -27,11 +28,14 @@ export function useMapAvailability({
   quotaExceeded = false,
 }: Options = {}) {
   return useMemo(() => {
-    // Check conditions in priority order (most critical first)
-    if (env.nextPublicGoogleMapsApiKey.length === 0) {
+    // Access process.env directly for Next.js to inline during build
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    const mapsDisabled = process.env.NEXT_PUBLIC_MAPS_DISABLED === "true";
+
+    if (!apiKey || apiKey.length === 0) {
       return { available: false, reason: "missing-api-key" as const };
     }
-    if (env.nextPublicMapsDisabled) {
+    if (mapsDisabled) {
       return { available: false, reason: "disabled-by-env" as const };
     }
     if (!isOnline || quotaExceeded) {

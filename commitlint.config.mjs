@@ -89,6 +89,7 @@ const COMMIT_SCOPES = [
   "hooks", // React hooks
   "types", // TypeScript types
   "data", // Data files
+  "pages", // Page components
   "ui", // UI components
 
   // Metro app specific
