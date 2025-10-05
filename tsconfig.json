@@ -47,7 +47,6 @@
     "useDefineForClassFields": true,
     "jsx": "preserve",
     "jsxImportSource": "react",
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./*"],
       "@/components/*": ["./components/*"],

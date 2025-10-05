@@ -49,10 +49,11 @@ export function useGooglePlaces() {
   );
 
   const debounceMs = 200;
-  const debounced = useDebouncedCallback(
-    (q: string) => fetchPredictions(q),
-    debounceMs
-  );
+  const debounced = useDebouncedCallback((q: string) => {
+    // Fire-and-forget; intentionally not awaited
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
+    fetchPredictions(q);
+  }, debounceMs);
 
   return useMemo(
     () => ({ state, search: debounced }) as const,

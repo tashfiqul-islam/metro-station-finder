@@ -602,28 +602,28 @@ Build information and attribution page.
 
 ## Phase 7: API Integration & Client Functions
 
-### T061: [P] Implement Station Search Functions
+### T061: [P] Implement Station Search Functions ✅
 
 Implement client-side station search functions from contracts.
 
 **Files**: `lib/api/stations.ts`
 **Changes**: searchStations, getAllStations, getStationById functions importing static data from `lib/data/stations.ts` and types/utilities from `lib/types/*`; no network calls
 
-### T062: [P] Implement Fare Calculation Functions
+### T062: [P] Implement Fare Calculation Functions ✅
 
 Implement client-side fare calculation functions from contracts.
 
 **Files**: `lib/api/fares.ts`
 **Changes**: calculateFare, getFareRules, getTicketTypes functions importing from `lib/data/fares.ts` and `lib/types/*`; thin adapter only (no network)
 
-### T063: [P] Implement Geolocation Functions
+### T063: [P] Implement Geolocation Functions ✅
 
 Implement client-side geolocation functions from contracts.
 
 **Files**: `lib/api/geolocation.ts`
 **Changes**: getCurrentLocation, getNearestStation, validateLocation functions using browser APIs and `lib/types/geolocation.ts`; no server endpoints
 
-### T064: [P] Implement Google Places Functions
+### T064: [P] Implement Google Places Functions ✅
 
 Implement Google Places autocomplete functions with quota management using @vis.gl/react-google-maps.
 
@@ -636,41 +636,145 @@ Implement Google Places autocomplete functions with quota management using @vis.
 
 **Commit Message**: `feat(api): api integration & client functions`
 **When to Commit**: After ALL Phase 7 tasks (T061-T064) are completed
-**Status**: ⏳ **PENDING** - Phase 7 tasks not yet started
+**Status**: ✅ **COMPLETED** - Phase 7 commit done
 
 ---
 
-## Phase 8: Testing Implementation
+## Phase 8: Autocomplete & Station Finder UX Implementation
 
-### T065: [P] Set Up Test Configuration
+### T065: Implement Autocomplete UX (debounce, quotas, caching)
+
+Build debounced Places Autocomplete with client rate limiting (10 req/min), daily quota awareness, and TTL cache. Fallback to manual lat/lng + local station search when disabled.
+
+**Files**: `components/ui/search-input.tsx`, `lib/hooks/use-google-places.ts`, `lib/api/places.ts`
+**Changes**: Debounce (300ms), min 3 chars, session tokens, cache, copy IDs for errors, DNT diagnostics off respected
+**Reference**: `specs/001-metro-station-finder/research-ux.md`
+
+### T066: Implement Geolocation UX & Service Area Guards
+
+Rationale string before prompt; handle denied/timeout/unavailable; validate 25 km service area; compute nearest station and announce results.
+
+**Files**: `lib/hooks/use-geolocation.ts`, `lib/hooks/use-nearest-station.ts`, `app/station-finder/page.tsx`
+**Changes**: Copy ID usage, aria-live announcements, problem codes, pills for active filters
+
+### T067: Station Finder Page E2E UX
+
+Compose Map/List views, view toggle (radiogroup), skip link, Retry Map CTA, directions link formatting (walking, precise lat/lng).
+
+**Files**: `app/station-finder/page.tsx`, `components/ui/station-card.tsx`, `components/ui/fare-display.tsx`
+**Changes**: Suspense boundaries, aria-busy, keyboard order, actions parity in list view
+
+---
+
+## 📝 **COMMIT NOTE - Phase 8 Complete**
+
+**Commit Message**: `feat(ux): autocomplete & station-finder experience`
+**When to Commit**: After ALL Phase 8 tasks (T065-T067) are completed
+**Status**: ⏳ **PENDING**
+
+---
+
+## Phase 9: API Layer Integration into UX
+
+### T068: Wire Station Finder to API layer
+
+Use `lib/api/stations.ts` and `lib/api/places.ts` as the single source for station search and Places predictions per contracts and research. Remove direct data access from UI.
+
+**Files**: `app/station-finder/page.tsx`, `lib/hooks/use-station-search.ts`, `lib/hooks/use-google-places.ts`
+**Changes**: Replace local lookups with API adapters, ensure Result pattern handling, map problem codes to copy IDs
+**Reference**: `specs/001-metro-station-finder/research-ux.md`, `specs/001-metro-station-finder/contracts/stations.md`
+
+### T069: Wire Geolocation & Nearest Station to API layer
+
+Use `lib/api/geolocation.ts` to request location and compute nearest station; ensure service area validation and copy IDs.
+
+**Files**: `lib/hooks/use-geolocation.ts`, `lib/hooks/use-nearest-station.ts`, `app/station-finder/page.tsx`
+**Changes**: Result pattern integration, OUT_OF_AREA handling, denied/timeout fallbacks
+**Reference**: `specs/001-metro-station-finder/research-ux.md`, `specs/001-metro-station-finder/contracts/geolocation.md`
+
+### T070: Wire Fare Calculator to API layer
+
+Use `lib/api/fares.ts` for fare matrix lookup and formatting; enforce ceilings and display rules.
+
+**Files**: `app/fare-calculator/page.tsx`, `lib/hooks/use-fare-calculator.ts`
+**Changes**: Replace direct calculations with API adapter calls; ensure ৳1,234 formatting and time (est.)
+**Reference**: `specs/001-metro-station-finder/research-ux.md`, `specs/001-metro-station-finder/contracts/fares.md`
+
+---
+
+## 📝 **COMMIT NOTE - Phase 9 Complete**
+
+**Commit Message**: `feat(ux-api): wire ui to api layer`
+**When to Commit**: After ALL Phase 9 tasks (T068-T070) are completed
+**Status**: ⏳ **PENDING**
+
+---
+
+## Phase 10: Map Loading, Theme Sync & UX Polish
+
+### T071: Lazy Map Loading with Failure Fallback
+
+Lazy load map; if load >3s or error, surface PROVIDER_FAIL and show Retry Map; ensure feature parity with list view.
+
+**Files**: `components/ui/map.tsx`, `lib/hooks/use-map-availability.ts`
+**Changes**: Lazy init, kill-switch/env checks, error handling, retry mechanics
+**Reference**: `specs/001-metro-station-finder/research-ux.md`
+
+### T072: Theme Sync ≤200ms and A11y Controls
+
+Ensure theme switch updates map styles in ≤200ms; map controls keyboardable with labels and visible focus; attributions accessible.
+
+**Files**: `components/ui/map.tsx`, `lib/map/styles.ts`
+**Changes**: Imperative style swap, focus management, attribution links `rel="noopener noreferrer"`
+
+### T073: Quota Status UI & Rate Limit Enforcement
+
+Expose quota status badge and disable autocomplete when nearing/exceeded; enforce sliding-window client limiter.
+
+**Files**: `lib/api/places.ts`, `lib/hooks/use-google-places.ts`, `app/station-finder/page.tsx`
+**Changes**: Status exposure, gating, neutral copy deck messages
+
+---
+
+## 📝 **COMMIT NOTE - Phase 10 Complete**
+
+**Commit Message**: `feat(map): lazy load, theme sync, quotas & ux polish`
+**When to Commit**: After ALL Phase 10 tasks (T071-T073) are completed
+**Status**: ⏳ **PENDING**
+
+---
+
+## Phase 11: Testing Implementation
+
+### T074: [P] Set Up Test Configuration
 
 Configure Vitest and React Testing Library.
 
 **Files**: `vitest.config.ts`, `test-setup.ts`
 **Changes**: Test configuration, setup files, mock implementations
 
-### T066: [P] Create Unit Tests for Utilities
+### T075: [P] Create Unit Tests for Utilities
 
 Write unit tests for all utility functions.
 
 **Files**: `__tests__/utils/`
 **Changes**: Tests for distance, fare, geolocation, and validation utilities
 
-### T067: [P] Create Component Tests
+### T076: [P] Create Component Tests
 
 Write tests for all UI components.
 
 **Files**: `__tests__/components/`
 **Changes**: Tests for SearchInput, StationCard, FareDisplay, Map components
 
-### T068: [P] Create Hook Tests
+### T077: [P] Create Hook Tests
 
 Write tests for all custom hooks.
 
 **Files**: `__tests__/hooks/`
 **Changes**: Tests for useStationSearch, useFareCalculator, useGeolocation hooks
 
-### T069: [P] Create Integration Tests
+### T078: [P] Create Integration Tests
 
 Write integration tests for complete user flows.
 
@@ -682,35 +786,35 @@ Write integration tests for complete user flows.
 ## 📝 **COMMIT NOTE - Phase 8 Complete**
 
 **Commit Message**: `feat(testing): testing implementation`
-**When to Commit**: After ALL Phase 8 tasks (T065-T069) are completed
+**When to Commit**: After ALL Phase 11 tasks (T074-T078) are completed
 **Status**: ⏳ **PENDING** - Phase 8 tasks not yet started
 
 ---
 
-## Phase 9: Performance & Optimization
+## Phase 12: Performance & Optimization
 
-### T070: [P] Implement Code Splitting
+### T079: [P] Implement Code Splitting
 
 Add dynamic imports and code splitting for optimal loading.
 
 **Files**: `components/`, `app/`
 **Changes**: Lazy load map component, dynamic imports for heavy components
 
-### T071: [P] Optimize Bundle Size
+### T080: [P] Optimize Bundle Size
 
 Implement tree shaking and bundle optimization.
 
 **Files**: `next.config.ts`, `package.json`
 **Changes**: Bundle analyzer, tree shaking configuration
 
-### T072: [P] Implement Caching Strategy
+### T081: [P] Implement Caching Strategy
 
 Add client-side caching for API responses and static data.
 
 **Files**: `lib/utils/cache.ts`
 **Changes**: Cache utilities, TTL management, quota-aware caching
 
-### T073: [P] Add Performance Monitoring
+### T082: [P] Add Performance Monitoring
 
 Implement Core Web Vitals monitoring and performance budgets.
 
@@ -722,49 +826,49 @@ Implement Core Web Vitals monitoring and performance budgets.
 ## 📝 **COMMIT NOTE - Phase 9 Complete**
 
 **Commit Message**: `feat(perf): performance & optimization`
-**When to Commit**: After ALL Phase 9 tasks (T070-T073) are completed
+**When to Commit**: After ALL Phase 12 tasks (T079-T082) are completed
 **Status**: ⏳ **PENDING** - Phase 9 tasks not yet started
 
 ---
 
-## Phase 10: Final Integration & Polish
+## Phase 13: Final Integration & Polish
 
-### T074: [P] Update Global Styles
+### T083: [P] Update Global Styles
 
 Configure Tailwind CSS and global styles.
 
 **Files**: `app/globals.css`, `tailwind.config.ts`
 **Changes**: Custom design tokens, Ropa Sans font integration
 
-### T075: [P] Add Error Boundaries
+### T084: [P] Add Error Boundaries
 
 Implement comprehensive error boundaries for all major components.
 
 **Files**: `components/error-boundary.tsx`
 **Changes**: Error boundaries for map, search, and fare calculation
 
-### T076: [P] Implement Accessibility Features
+### T085: [P] Implement Accessibility Features
 
 Add ARIA labels, keyboard navigation, and screen reader support.
 
 **Files**: `components/`, `app/`
 **Changes**: ARIA attributes, focus management, keyboard shortcuts
 
-### T077: [P] Add Loading States
+### T086: [P] Add Loading States
 
 Implement skeleton screens and loading indicators.
 
 **Files**: `components/ui/loading.tsx`
 **Changes**: Loading components, skeleton screens, progress indicators
 
-### T078: [P] Create Documentation
+### T087: [P] Create Documentation
 
 Generate API documentation and usage guides.
 
 **Files**: `docs/`, `README.md`
 **Changes**: API docs, setup instructions, troubleshooting guide
 
-### T079: [P] Final Testing & Validation
+### T088: [P] Final Testing & Validation
 
 Run complete test suite and validate all functionality.
 
@@ -776,7 +880,7 @@ Run complete test suite and validate all functionality.
 ## 📝 **COMMIT NOTE - Phase 10 Complete**
 
 **Commit Message**: `feat(final): final integration & polish`
-**When to Commit**: After ALL Phase 10 tasks (T074-T079) are completed
+**When to Commit**: After ALL Phase 13 tasks (T083-T088) are completed
 **Status**: ⏳ **PENDING** - Phase 10 tasks not yet started
 
 ---
@@ -797,9 +901,12 @@ Run complete test suite and validate all functionality.
 - Hooks (T034-T045) before components
 - Components (T046-T056) before pages
 - Pages (T057-T060) before API integration
-- API Integration (T061-T064) before testing
-- Testing (T065-T069) before optimization
-- Optimization (T070-T073) before final integration
+- API Integration (T061-T064) before UX implementation
+- UX Implementation (T065-T067) before API wiring
+- API Wiring (T068-T070) before Map polish
+- Map polish (T071-T073) before testing
+- Testing (T074-T078) before optimization
+- Optimization (T079-T082) before final integration
 - Final Integration (T074-T079) last
 
 ## Parallel Execution Examples
