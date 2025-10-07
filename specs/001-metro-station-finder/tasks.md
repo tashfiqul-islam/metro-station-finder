@@ -642,27 +642,27 @@ Implement Google Places autocomplete functions with quota management using @vis.
 
 ## Phase 8: Autocomplete & Station Finder UX Implementation
 
-### T065: Implement Autocomplete UX (debounce, quotas, caching)
+### T065: [X] Implement Autocomplete UX (debounce, quotas, caching) ✅
 
 Build debounced Places Autocomplete with client rate limiting (10 req/min), daily quota awareness, and TTL cache. Fallback to manual lat/lng + local station search when disabled.
 
 **Files**: `components/ui/search-input.tsx`, `lib/hooks/use-google-places.ts`, `lib/api/places.ts`
-**Changes**: Debounce (300ms), min 3 chars, session tokens, cache, copy IDs for errors, DNT diagnostics off respected
+**Changes**: Debounce (300ms), min 3 chars, session tokens, TTL cache, copy IDs for errors, DNT respected, sliding-window limiter (10/min), local daily quota window and status, neutral fallback with manual lat/lng UI
 **Reference**: `specs/001-metro-station-finder/research-ux.md`
 
-### T066: Implement Geolocation UX & Service Area Guards
+### T066: [X] Implement Geolocation UX & Service Area Guards ✅
 
 Rationale string before prompt; handle denied/timeout/unavailable; validate 25 km service area; compute nearest station and announce results.
 
 **Files**: `lib/hooks/use-geolocation.ts`, `lib/hooks/use-nearest-station.ts`, `app/station-finder/page.tsx`
-**Changes**: Copy ID usage, aria-live announcements, problem codes, pills for active filters
+**Changes**: Copy ID usage, aria-live announcements, pills for active filters; reusable `isWithinServiceArea`; nearest station announced
 
-### T067: Station Finder Page E2E UX
+### T067: [X] Station Finder Page E2E UX ✅
 
 Compose Map/List views, view toggle (radiogroup), skip link, Retry Map CTA, directions link formatting (walking, precise lat/lng).
 
-**Files**: `app/station-finder/page.tsx`, `components/ui/station-card.tsx`, `components/ui/fare-display.tsx`
-**Changes**: Suspense boundaries, aria-busy, keyboard order, actions parity in list view
+**Files**: `app/station-finder/page.tsx`, `components/ui/station-card.tsx`, `components/ui/fare-display.tsx`, `components/ui/map.tsx`
+**Changes**: Suspense boundaries for results, aria-busy, keyboard order with radiogroup + skip link, Retry Map CTA (no lint suppression), list-view parity “Open Directions (walking)”, precise lat/lng formatting
 
 ---
 
@@ -670,7 +670,7 @@ Compose Map/List views, view toggle (radiogroup), skip link, Retry Map CTA, dire
 
 **Commit Message**: `feat(ux): autocomplete & station-finder experience`
 **When to Commit**: After ALL Phase 8 tasks (T065-T067) are completed
-**Status**: ⏳ **PENDING**
+**Status**: ✅ **COMPLETED**
 
 ---
 
@@ -681,7 +681,7 @@ Compose Map/List views, view toggle (radiogroup), skip link, Retry Map CTA, dire
 Use `lib/api/stations.ts` and `lib/api/places.ts` as the single source for station search and Places predictions per contracts and research. Remove direct data access from UI.
 
 **Files**: `app/station-finder/page.tsx`, `lib/hooks/use-station-search.ts`, `lib/hooks/use-google-places.ts`
-**Changes**: Replace local lookups with API adapters, ensure Result pattern handling, map problem codes to copy IDs
+**Changes (Top-tier expectations)**: Replace local lookups with API adapters, ensure Result pattern handling, map problem codes to copy IDs, preserve debounce/rate-limit/daily-quota semantics from Phase 8, keep Suspense-friendly boundaries
 **Reference**: `specs/001-metro-station-finder/research-ux.md`, `specs/001-metro-station-finder/contracts/stations.md`
 
 ### T069: Wire Geolocation & Nearest Station to API layer
@@ -689,7 +689,7 @@ Use `lib/api/stations.ts` and `lib/api/places.ts` as the single source for stati
 Use `lib/api/geolocation.ts` to request location and compute nearest station; ensure service area validation and copy IDs.
 
 **Files**: `lib/hooks/use-geolocation.ts`, `lib/hooks/use-nearest-station.ts`, `app/station-finder/page.tsx`
-**Changes**: Result pattern integration, OUT_OF_AREA handling, denied/timeout fallbacks
+**Changes (Top-tier expectations)**: Result pattern integration, OUT_OF_AREA handling, denied/timeout fallbacks; wrap browser API in `lib/api/geolocation.ts`; maintain announcements and service-area guard
 **Reference**: `specs/001-metro-station-finder/research-ux.md`, `specs/001-metro-station-finder/contracts/geolocation.md`
 
 ### T070: Wire Fare Calculator to API layer
@@ -697,7 +697,7 @@ Use `lib/api/geolocation.ts` to request location and compute nearest station; en
 Use `lib/api/fares.ts` for fare matrix lookup and formatting; enforce ceilings and display rules.
 
 **Files**: `app/fare-calculator/page.tsx`, `lib/hooks/use-fare-calculator.ts`
-**Changes**: Replace direct calculations with API adapter calls; ensure ৳1,234 formatting and time (est.)
+**Changes (Top-tier expectations)**: Replace direct calculations with API adapter calls; ensure ৳1,234 formatting and time (est.); preserve aria/live states and no lint/TS errors
 **Reference**: `specs/001-metro-station-finder/research-ux.md`, `specs/001-metro-station-finder/contracts/fares.md`
 
 ---
@@ -710,29 +710,38 @@ Use `lib/api/fares.ts` for fare matrix lookup and formatting; enforce ceilings a
 
 ---
 
-## Phase 10: Map Loading, Theme Sync & UX Polish
+## Phase 10: Map Loading, Theme Sync & UX Polish (post API wiring)
 
 ### T071: Lazy Map Loading with Failure Fallback
 
-Lazy load map; if load >3s or error, surface PROVIDER_FAIL and show Retry Map; ensure feature parity with list view.
+Lazy load the map client after Phase 9 API wiring. If load >3s or error, surface PROVIDER_FAIL and show Retry Map; maintain list-view feature parity and copy IDs.
 
 **Files**: `components/ui/map.tsx`, `lib/hooks/use-map-availability.ts`
-**Changes**: Lazy init, kill-switch/env checks, error handling, retry mechanics
+**Changes (Top-tier expectations)**:
+  - Defer map hydration until visible/selected; reuse single instance
+  - Honor kill-switch/env/keys and new API-layer availability states
+  - Retry CTA without lint suppressions; neutral, copy-deck messaging
 **Reference**: `specs/001-metro-station-finder/research-ux.md`
 
 ### T072: Theme Sync ≤200ms and A11y Controls
 
-Ensure theme switch updates map styles in ≤200ms; map controls keyboardable with labels and visible focus; attributions accessible.
+Ensure theme switch updates map styles ≤200ms with API-wired state in place; map controls fully keyboardable; attributions accessible.
 
 **Files**: `components/ui/map.tsx`, `lib/map/styles.ts`
-**Changes**: Imperative style swap, focus management, attribution links `rel="noopener noreferrer"`
+**Changes (Top-tier expectations)**:
+  - Imperative style swap without map re-create; verify contrast
+  - Controls: aria-labels, focus-visible rings, tab order ok
+  - Attributions open with `target="_blank" rel="noopener noreferrer"`
 
 ### T073: Quota Status UI & Rate Limit Enforcement
 
-Expose quota status badge and disable autocomplete when nearing/exceeded; enforce sliding-window client limiter.
+After API wiring, surface quota state and enforce limits consistently across UI.
 
 **Files**: `lib/api/places.ts`, `lib/hooks/use-google-places.ts`, `app/station-finder/page.tsx`
-**Changes**: Status exposure, gating, neutral copy deck messages
+**Changes (Top-tier expectations)**:
+  - Badge/UI reflects rate-limited/daily-exceeded from adapters
+  - Disable autocomplete when gated; neutral copy IDs displayed
+  - Keep debounce/rate-limit/daily semantics aligned with Phase 9
 
 ---
 

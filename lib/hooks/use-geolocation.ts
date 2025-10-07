@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { DHAKA_SERVICE_AREA } from "@/lib/constants";
 import { GeolocationResultSchema } from "@/lib/schemas";
 import type { Coordinates, Latitude, Longitude, Meters } from "@/lib/types";
 import { calculateDistance } from "@/lib/utils/distance";
@@ -81,4 +82,14 @@ export function useGeolocation() {
   };
 
   return { state, isCloseTo } as const;
+}
+
+/**
+ * Validate if coordinates are within the Dhaka service area (25 km radius).
+ */
+export function isWithinServiceArea(coords: Coordinates): boolean {
+  const result = calculateDistance(coords, DHAKA_SERVICE_AREA.centroid);
+  return (
+    result.success && result.distanceMeters <= DHAKA_SERVICE_AREA.radiusMeters
+  );
 }

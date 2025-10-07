@@ -1,7 +1,13 @@
 "use client";
 
 import { Map as GoogleMap, useMap } from "@vis.gl/react-google-maps";
-import { AlertCircle, Loader2, Maximize2, Navigation } from "lucide-react";
+import {
+  AlertCircle,
+  Loader2,
+  Maximize2,
+  Navigation,
+  RotateCcw,
+} from "lucide-react";
 import { useTheme } from "next-themes";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -274,6 +280,23 @@ export const MetroMap = memo(function MetroMapComponent({
               "You're currently offline. Maps require an internet connection."}
             {reason === "ok" && "Map is loading..."}
           </p>
+          <button
+            aria-label="Retry Map"
+            className={cn(
+              "inline-flex items-center gap-2 rounded-lg border border-border/50 bg-background px-3 py-2 text-sm shadow-sm",
+              "transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            )}
+            onClick={() => {
+              // Best-effort retry by soft reload (avoid restricted global)
+              if (typeof window !== "undefined") {
+                window.location.reload();
+              }
+            }}
+            type="button"
+          >
+            <RotateCcw aria-hidden="true" className="h-4 w-4" />
+            Retry Map
+          </button>
           <div className="text-muted-foreground text-xs">
             Showing station list instead
           </div>
