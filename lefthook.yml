@@ -2,142 +2,138 @@
 
 min_version: 1.13.0
 
-# Output configuration for clean, informative feedback
+# Output configuration
 output:
   - execution_out
   - summary
   - failure
 
-# Skip unnecessary output sections for cleaner logs
+# Skip unnecessary output sections
 skip_output:
   - meta
   - empty_summary
   - execution_info
 
-# Pre-commit hooks - Run before every commit
+# Global settings
+colors: true
+
+# Pre-commit hooks
 pre-commit:
-  # Enable parallel execution for faster hooks
   parallel: true
   
   jobs:
-    # TypeScript type checking
     - name: "TypeScript Type Check"
       run: bun run type-check
       glob: "*.{ts,tsx}"
       fail_text: "❌ TypeScript type check failed. Please fix type errors before committing."
     
-    # Ultracite linting and formatting
     - name: "Ultracite Lint & Format"
       run: npx ultracite@latest fix
       glob: "*.{ts,tsx,js,jsx,mjs,cjs,json,jsonc,md,mdx}"
       stage_fixed: true
       fail_text: "❌ Linting failed. Please fix code style issues before committing."
     
-    # Security audit
     - name: "Security Audit"
       run: bun run deps:audit
       fail_text: "❌ Security vulnerabilities found. Please fix before committing."
     
-    # Project validation
     - name: "Project Validation"
       run: bun run validate
       fail_text: "❌ Project configuration validation failed. Please check your setup."
     
-    # Test execution (unit tests only for speed)
     - name: "Unit Tests"
-      run: bun run test:run
+      run: bun run test
       fail_text: "❌ Unit tests failed. Please fix failing tests before committing."
     
-    # Basic validation
+    - name: "Update Package Manager"
+      run: bun run update-package-manager
+      fail_text: "❌ Failed to update package manager version."
+    
     - name: "Basic Validation"
       run: echo "✅ Basic validation passed!"
       fail_text: "❌ Basic validation failed."
+    
+    - name: "Dependency Check"
+      run: bun run deps:check
+      fail_text: "❌ Dependency check failed. Please review outdated packages."
 
-# Pre-push hooks - Run before pushing to remote
+# Pre-push hooks
 pre-push:
-  # Enable parallel execution for faster hooks
   parallel: true
-  
-  # Follow output in real-time
   follow: true
   
   jobs:
-    # Full type checking including scripts
     - name: "Full TypeScript Check"
-      run: bun run type-check && bun run type-check:scripts
+      run: bun run type-check
       fail_text: "❌ Full TypeScript validation failed. Please fix all type errors."
     
-    # Complete linting check
     - name: "Complete Lint Check"
       run: npx ultracite@latest check
       fail_text: "❌ Complete linting check failed. Please fix all code style issues."
     
-    # Run all tests including E2E
     - name: "Full Test Suite"
-      run: bun run test:run
+      run: bun run test
       fail_text: "❌ Test suite failed. Please fix all failing tests."
     
-    # E2E tests (temporarily disabled for Phase 2)
-    # - name: "E2E Tests"
-    #   run: bun run e2e
-    #   only:
-    #     - ref: main
-    #     - ref: develop
-    #   fail_text: "❌ E2E tests failed. Please fix end-to-end test failures."
+    - name: "Build Verification"
+      run: bun run build
+      fail_text: "❌ Build failed. Please fix build errors before pushing."
     
-    # Build verification (temporarily disabled for Phase 2)
-    # - name: "Build Verification"
-    #   run: bun run build
-    #   fail_text: "❌ Build failed. Please fix build errors before pushing."
+    - name: "E2E Tests"
+      run: bun run e2e
+      only:
+        - ref: "master"
+        - ref: "main"
+        - ref: "develop"
+      fail_text: "❌ E2E tests failed. Please fix end-to-end test failures."
     
-    # Bundle analysis (temporarily disabled for Phase 2)
-    # - name: "Bundle Analysis"
-    #   run: bun run analyze
-    #   fail_text: "❌ Bundle analysis failed. Please check bundle size and dependencies."
-    
-    # Comprehensive checks (temporarily disabled for Phase 2)
-    # - name: "Comprehensive Checks"
-    #   run: bun run ci
-    #   fail_text: "❌ Comprehensive checks failed. Please review and fix issues before pushing."
+    - name: "Bundle Analysis"
+      run: bun run analyze
+      only:
+        - ref: "master"
+        - ref: "main"
+      fail_text: "❌ Bundle analysis failed. Please check bundle size and dependencies."
 
-# Commit-msg hooks - Validate commit messages
+# Commit-msg hooks
 commit-msg:
   jobs:
-    # Conventional commits validation
     - name: "Conventional Commits"
       run: npx commitlint --edit $1
       fail_text: "❌ Invalid commit message format. Please use conventional commits."
 
-# Post-commit hooks - Run after successful commit
+# Post-commit hooks
 post-commit:
   jobs:
-    # Post-commit notification and cleanup
     - name: "Post-Commit Cleanup"
       run: echo "✅ Commit completed successfully!"
       fail_text: "⚠️  Post-commit cleanup failed. Project may need attention."
 
-# Post-merge hooks - Run after successful merge
+# Post-merge hooks
 post-merge:
   jobs:
-    # Install dependencies after merge
     - name: "Install Dependencies"
       run: bun install
       fail_text: "❌ Failed to install dependencies after merge."
     
-    # Health check after merge
+    - name: "Update Package Manager"
+      run: bun run update-package-manager
+      fail_text: "❌ Failed to update package manager version."
+    
     - name: "Post-Merge Health Check"
       run: bun run health
       fail_text: "⚠️  Post-merge health check failed. Project may need attention."
 
-# Post-checkout hooks - Run after checkout
+# Post-checkout hooks
 post-checkout:
   jobs:
-    # Install dependencies after checkout
     - name: "Install Dependencies"
       run: bun install
       fail_text: "❌ Failed to install dependencies after checkout."
     
-    # Health check after checkout
+    - name: "Update Package Manager"
+      run: bun run update-package-manager
+      fail_text: "❌ Failed to update package manager version."
+    
     - name: "Post-Checkout Health Check"
       run: bun run health
       fail_text: "⚠️  Post-checkout health check failed. Project may need attention."

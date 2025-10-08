@@ -1,17 +1,18 @@
 # 🚀 Semantic Release Documentation
 
-This document describes the comprehensive semantic-release setup for the Metro Station Finder project, implementing 2025 best practices for automated versioning, changelog generation, and release management.
+This document describes the semantic-release setup for the Metro Station Finder project - a passion project for helping commuters navigate Dhaka's metro system with automated versioning, changelog generation, and release management.
 
 ## 📋 Overview
 
-Our semantic-release workflow provides:
+The semantic-release workflow provides:
 
-- **Automated Versioning**: Based on conventional commits
+- **Automated Versioning**: Based on conventional commits with metro app specific types
 - **Beautiful Release Notes**: Categorized and formatted changelog
 - **GitHub Integration**: Automatic releases and issue linking
 - **CI/CD Integration**: Seamless GitHub Actions workflow
 - **Manual Release Support**: For emergency releases
 - **Dry Run Testing**: Safe testing of release process
+- **Multi-Branch Strategy**: Support for main, beta, and alpha releases
 
 ## 🏗️ Architecture
 
@@ -27,11 +28,12 @@ Our semantic-release workflow provides:
 
 ### Configuration Files
 
-- `.releaserc.json` - Main semantic-release configuration
-- `commitlint.config.js` - Commit message validation rules
+- `.releaserc.json` - Main semantic-release configuration with multi-branch support
+- `commitlint.config.mjs` - Commit message validation rules with metro app specific types
 - `.github/workflows/release.yml` - GitHub Actions workflow
 - `scripts/release.mjs` - Manual release script
 - `CHANGELOG.md` - Generated changelog
+- `lefthook.yml` - Git hooks integration for commit validation
 
 ## 🔧 Configuration
 
@@ -40,29 +42,76 @@ Our semantic-release workflow provides:
 ```json
 {
   "branches": [
-    "main",
+    "master",
     { "name": "beta", "prerelease": true },
-    { "name": "alpha", "prerelease": true }
+    { "name": "alpha", "prerelease": "alpha" }
   ],
   "plugins": [
-    "@semantic-release/commit-analyzer",
-    "@semantic-release/release-notes-generator",
-    "@semantic-release/changelog",
-    "@semantic-release/git",
-    "@semantic-release/github"
-  ]
+    ["@semantic-release/commit-analyzer", {
+      "preset": "conventionalcommits",
+      "releaseRules": [
+        { "type": "feat", "release": "minor" },
+        { "type": "fix", "release": "patch" },
+        { "type": "perf", "release": "patch" },
+        { "type": "docs", "release": "patch" },
+        { "type": "style", "release": "patch" },
+        { "type": "refactor", "release": "patch" },
+        { "type": "test", "release": "patch" },
+        { "type": "build", "release": "patch" },
+        { "type": "ci", "release": "patch" },
+        { "type": "chore", "release": "patch" },
+        { "type": "revert", "release": "patch" },
+        { "breaking": true, "release": "major" }
+      ]
+    }],
+    ["@semantic-release/release-notes-generator", {
+      "preset": "conventionalcommits",
+      "presetConfig": {
+        "types": [
+          { "type": "feat", "section": "Features" },
+          { "type": "fix", "section": "Bug Fixes" },
+          { "type": "perf", "section": "Performance Improvements" },
+          { "type": "docs", "section": "Documentation" },
+          { "type": "style", "section": "Styles" },
+          { "type": "refactor", "section": "Code Refactoring" },
+          { "type": "test", "section": "Tests" },
+          { "type": "build", "section": "Build System" },
+          { "type": "ci", "section": "Continuous Integration" },
+          { "type": "chore", "section": "Miscellaneous" },
+          { "type": "revert", "section": "Reverts" }
+        ]
+      }
+    }],
+    ["@semantic-release/changelog", {
+      "changelogFile": "CHANGELOG.md"
+    }],
+    ["@semantic-release/git", {
+      "assets": ["package.json", "package-lock.json", "bun.lock", "CHANGELOG.md"],
+      "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
+    }],
+    ["@semantic-release/github", {
+      "successComment": "🎉 This issue has been resolved in version ${nextRelease.version} :tada:\n\nThe release is available on:\n- [GitHub release](https://github.com/${context.repository}/releases/tag/${nextRelease.gitTag})\n- [npm package](https://www.npmjs.com/package/${context.repository})\n\nYour **[semantic-release](https://github.com/semantic-release/semantic-release)** bot :package::rocket:",
+      "releasedLabels": {
+        "repository": "${context.repository}"
+      },
+      "addReleases": "bottom"
+    }]
+  ],
+  "tagFormat": "v${version}",
+  "repositoryUrl": "https://github.com/tashfiqul-islam/metro-station-finder.git"
 }
 ```
 
 ### Commit Message Rules
 
-Our commitlint configuration enforces:
+The commitlint configuration enforces:
 
-- **Type**: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`
-- **Scope**: Optional, lowercase, max 20 characters
-- **Subject**: Sentence case, 10-100 characters, no period
-- **Body**: Optional, max 100 characters per line
+- **Type**: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`, `accessibility`, `maps`, `navigation`, `offline`, `pwa`
+- **Scope**: Optional, lowercase, max 30 characters, metro app specific scopes
+- **Subject**: Lowercase, 10-50 characters, no period
+- **Body**: Optional, max 72 characters per line
 - **Footer**: Optional, for breaking changes and issue references
+- **Validation**: Automatic validation via Lefthook Git hooks
 
 ### Release Types
 
@@ -87,7 +136,7 @@ Our commitlint configuration enforces:
 
 The release process runs automatically on:
 
-- **Push to `main`**: Creates a new release
+- **Push to `master`**: Creates a new release
 - **Push to `beta`**: Creates a beta prerelease
 - **Push to `alpha`**: Creates an alpha prerelease
 
@@ -114,10 +163,16 @@ bun run semantic-release:debug
 
 ```bash
 # Feature (minor release)
-git commit -m "feat(station): add real-time arrival times"
+git commit -m "feat(stations): add real-time arrival times"
 
 # Bug fix (patch release)
-git commit -m "fix(map): resolve marker positioning issue"
+git commit -m "fix(maps): resolve marker positioning issue"
+
+# Metro app specific types
+git commit -m "accessibility(ui): add screen reader support"
+git commit -m "maps(geolocation): improve location accuracy"
+git commit -m "offline(stations): add offline station data"
+git commit -m "pwa(manifest): add app installation prompt"
 
 # Breaking change (major release)
 git commit -m "feat(api): redesign station data structure
@@ -129,7 +184,7 @@ The `coordinates` field is now `location` and uses a different format."
 git commit -m "docs(readme): update installation instructions"
 
 # Performance improvement (patch release)
-git commit -m "perf(map): optimize marker rendering for large datasets"
+git commit -m "perf(maps): optimize marker rendering for large datasets"
 
 # Refactoring (patch release)
 git commit -m "refactor(utils): extract distance calculation logic"
@@ -184,28 +239,62 @@ Our release notes are automatically generated with:
 
 ## 🔄 Workflow
 
-### 1. Development
+### Development Branch Strategy
+
+The Metro Station Finder project uses a standalone development branch strategy:
+
+- **`001-metro-station-finder`**: Development branch (no releases)
+- **`master`**: Production branch (triggers releases)
+- **`beta`**: Beta testing branch (prereleases)
+- **`alpha`**: Alpha testing branch (prereleases)
+
+### 1. Development on Feature Branch
 
 ```bash
-# Make changes
+# Work on development branch (no releases triggered)
+git checkout 001-metro-station-finder
 git add .
-git commit -m "feat(station): add new feature"
-git push origin main
+git commit -m "feat(stations): add new metro station data"
+git push origin 001-metro-station-finder
 ```
 
-### 2. Automatic Release
+### 2. Release Process
 
-1. GitHub Actions detects push to `main`
-2. Runs tests and validation
-3. Analyzes commit messages
-4. Determines release type
-5. Updates version in `package.json`
-6. Generates changelog
-7. Creates git tag
-8. Publishes GitHub release
-9. Updates repository
+#### For v1.0.0 Initial Release
 
-### 3. Manual Release
+```bash
+# When v1.0.0 is ready, create pull request from development branch
+# After PR is merged to master, release is automatically triggered
+```
+
+#### For Future Releases
+
+```bash
+# Any commits merged to master will trigger releases based on commit messages
+# feat: → minor version bump
+# fix: → patch version bump
+# BREAKING CHANGE: → major version bump
+```
+
+### 3. Creating Pull Request from Standalone Branch
+
+Since your `001-metro-station-finder` branch is standalone (not based on master), you'll need to:
+
+```bash
+# Option 1: Create a new branch from master and merge your changes
+git checkout master
+git pull origin master
+git checkout -b feature/merge-development-branch
+git merge 001-metro-station-finder --allow-unrelated-histories
+git push origin feature/merge-development-branch
+# Then create PR: feature/merge-development-branch → master
+
+# Option 2: Force push your branch to master (if you want to replace master completely)
+git checkout 001-metro-station-finder
+git push origin 001-metro-station-finder:master --force
+```
+
+### 4. Manual Release (Emergency)
 
 ```bash
 # For emergency releases
@@ -320,6 +409,141 @@ bun run validate:config
 4. **Monitor release pipeline**
 5. **Have rollback procedures**
 
+## 🎯 Metro Station Finder - Release Workflow
+
+### Project Development Strategy
+
+This project uses a **standalone development branch strategy** for building a comprehensive metro station finder:
+
+- **`001-metro-station-finder`**: Active development branch (standalone, not based on master)
+- **`master`**: Production branch (currently contains legacy Next.js 14 app)
+- **Goal**: Merge development work to master for v1.0.0 release
+
+### Development Workflow
+
+#### Phase 1: Active Development
+
+```bash
+# Continue working on the development branch
+git checkout 001-metro-station-finder
+
+# Make commits with proper conventional commit format
+git commit -m "feat(stations): add new metro station data"
+git commit -m "fix(maps): resolve marker positioning issue"
+git commit -m "accessibility(ui): add screen reader support"
+
+# Push to development branch (no releases triggered)
+git push origin 001-metro-station-finder
+```
+
+#### Phase 2: v1.0.0 Release Preparation
+
+When ready for v1.0.0, there are two approaches:
+
+#### Option A: Create Pull Request (Recommended)
+
+```bash
+# Create a new branch from master
+git checkout master
+git pull origin master
+git checkout -b feature/v1.0.0-release
+
+# Merge the development work
+git merge 001-metro-station-finder --allow-unrelated-histories
+# Resolve any conflicts if they occur
+
+# Push and create PR
+git push origin feature/v1.0.0-release
+# Create PR: feature/v1.0.0-release → master
+```
+
+#### Option B: Direct Merge (Replace master completely)
+
+```bash
+# Force push the development branch to master
+git checkout 001-metro-station-finder
+git push origin 001-metro-station-finder:master --force
+```
+
+#### Phase 3: Automatic Release
+
+Once merged to master:
+
+1. **Semantic Release** automatically analyzes all commits
+2. **Determines version** based on commit types (feat = minor, fix = patch, etc.)
+3. **Generates CHANGELOG.md** from all commit messages
+4. **Creates GitHub release** with release notes
+5. **Updates package.json** version
+
+#### Phase 4: Future Releases
+
+After v1.0.0:
+
+```bash
+# Any future commits merged to master will trigger new releases
+git checkout master
+git commit -m "feat(maps): add new feature"  # → v1.1.0
+git commit -m "fix(ui): resolve bug"         # → v1.1.1
+git commit -m "feat(api): BREAKING CHANGE"   # → v2.0.0
+```
+
+### Commit Message Strategy
+
+For the current development work, use these commit types:
+
+```bash
+# Features (will create minor releases)
+git commit -m "feat(stations): add real-time arrival times"
+git commit -m "feat(maps): implement custom markers"
+
+# Bug fixes (will create patch releases)
+git commit -m "fix(geolocation): resolve location accuracy"
+git commit -m "fix(ui): correct mobile layout issues"
+
+# Metro app specific types
+git commit -m "accessibility(ui): add screen reader support"
+git commit -m "maps(geolocation): improve location services"
+git commit -m "offline(stations): add offline data caching"
+git commit -m "pwa(manifest): add app installation prompt"
+
+# Documentation
+git commit -m "docs(readme): update installation guide"
+
+# Performance improvements
+git commit -m "perf(maps): optimize marker rendering"
+
+# Code refactoring
+git commit -m "refactor(utils): extract distance calculation"
+```
+
+### Expected Release Notes for v1.0.0
+
+When merged to master, semantic-release will generate something like:
+
+```markdown
+## [1.0.0](https://github.com/tashfiqul-islam/metro-station-finder/compare/v0.0.0...v1.0.0) (2025-01-15)
+
+### 🚀 Features
+- **stations**: add real-time arrival times
+- **maps**: implement custom marker clustering
+- **accessibility**: add screen reader support
+- **offline**: add offline data caching
+- **pwa**: add app installation prompt
+
+### 🐛 Bug Fixes
+- **maps**: resolve marker positioning on mobile
+- **geolocation**: improve location accuracy
+- **ui**: fix mobile layout issues
+
+### ⚡ Performance Improvements
+- **maps**: optimize marker rendering
+- **bundle**: reduce initial bundle size
+
+### 📚 Documentation
+- **readme**: update installation guide
+- **api**: add comprehensive documentation
+```
+
 ## 📚 Resources
 
 - [Semantic Release Documentation](https://semantic-release.gitbook.io/)
@@ -329,6 +553,7 @@ bun run validate:config
 
 ---
 
-**Last Updated**: 2025-09-29  
+**Last Updated**: 2025-10-08  
 **Version**: 1.0.0  
-**Maintainer**: Tashfiqul Islam
+**Maintainer**: Tashfiqul Islam ([@tashfiqul-islam](https://github.com/tashfiqul-islam))  
+**Project**: Metro Station Finder - A passion project for Dhaka's commuters

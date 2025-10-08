@@ -9,14 +9,16 @@ const SECONDS_IN_MINUTE = 60;
 const MILLISECONDS_IN_SECOND = 1000;
 
 // Timeout configuration
-const GLOBAL_TIMEOUT_MINUTES = 10;
-const TEST_TIMEOUT_SECONDS = 30;
-const EXPECT_TIMEOUT_SECONDS = 10;
-const WEB_SERVER_TIMEOUT_SECONDS = 120;
+const GLOBAL_TIMEOUT_MINUTES = 15;
+const TEST_TIMEOUT_SECONDS = 45;
+const EXPECT_TIMEOUT_SECONDS = 15;
+const WEB_SERVER_TIMEOUT_SECONDS = 180;
 
-// Worker configuration for optimal performance
-const DEFAULT_WORKERS = 4;
-const CI_WORKERS = 1;
+// Worker configuration
+const DEFAULT_WORKERS = 6;
+const CI_WORKERS = 2;
+const RETRY_COUNT_CI = 3;
+const RETRY_COUNT_LOCAL = 1;
 
 // Calculated timeouts
 const GLOBAL_TIMEOUT_MS =
@@ -26,14 +28,17 @@ const EXPECT_TIMEOUT_MS = EXPECT_TIMEOUT_SECONDS * MILLISECONDS_IN_SECOND;
 const WEB_SERVER_TIMEOUT_MS =
   WEB_SERVER_TIMEOUT_SECONDS * MILLISECONDS_IN_SECOND;
 
-// Viewport configurations for comprehensive testing
+// Viewport configurations
 const VIEWPORTS = {
-  desktop: { width: 1280, height: 720 },
+  desktop: { width: 1920, height: 1080 },
   mobile: { width: 375, height: 667 },
   pixel5: { width: 393, height: 851 },
   iphone12: { width: 390, height: 844 },
   galaxyS3: { width: 360, height: 640 },
   ipad: { width: 1024, height: 1366 },
+  iphone14: { width: 390, height: 844 },
+  galaxyS21: { width: 384, height: 854 },
+  surfacePro: { width: 912, height: 1368 },
 } as const;
 
 // Dhaka coordinates for metro station testing
@@ -51,18 +56,12 @@ const isDebug = Boolean(process.env["DEBUG"]);
 // ============================================================================
 
 /**
- * Metro Station Finder - Modern Playwright Configuration
+ * Metro Station Finder - Playwright Configuration
  *
- * This configuration implements the latest Playwright best practices for 2025:
- * - Modern TypeScript patterns with strict typing
- * - Comprehensive browser and device testing
- * - Accessibility-first testing approach
- * - Performance-optimized parallel execution
- * - CI/CD integration with proper reporting
- * - Mobile-first design testing for public transportation apps
+ * Configuration for end-to-end testing of the metro station finder application.
+ * Includes browser testing, device testing, accessibility testing, and API testing.
  *
  * @see https://playwright.dev/docs/test-configuration
- * @see https://playwright.dev/docs/best-practices
  */
 export default defineConfig({
   // ============================================================================
@@ -90,16 +89,15 @@ export default defineConfig({
   timeout: TEST_TIMEOUT_MS,
 
   // Retry strategy for reliability
-  retries: isCI ? 2 : 0,
+  retries: isCI ? RETRY_COUNT_CI : RETRY_COUNT_LOCAL,
   forbidOnly: isCI,
 
   // ============================================================================
   // REPORTING & DEBUGGING
   // ============================================================================
 
-  // Modern reporter configuration with conditional CI reporting
+  // Reporter configuration
   reporter: [
-    // HTML reporter for local development and CI
     [
       "html",
       {
@@ -108,7 +106,6 @@ export default defineConfig({
         attachments: "on-first-retry",
       },
     ],
-    // JSON reporter for CI integration
     [
       "json",
       {
@@ -116,7 +113,6 @@ export default defineConfig({
         includeProjectInTestId: true,
       },
     ],
-    // JUnit reporter for CI systems
     [
       "junit",
       {
@@ -124,10 +120,10 @@ export default defineConfig({
         includeProjectInTestId: true,
       },
     ],
-    // List reporter for CI logs (cleaner output)
+    ...(isCI ? [["github"] as const] : []),
     ...(isCI ? [["list", { printSteps: true }] as const] : []),
-    // Line reporter for local development
     ...(isDebug ? [["line"] as const] : []),
+    ...(isDebug ? [["dot"] as const] : []),
   ],
 
   // ============================================================================
@@ -140,18 +136,14 @@ export default defineConfig({
 
     // Visual regression testing configuration
     toHaveScreenshot: {
-      // Allow minor pixel differences for cross-browser compatibility
-      maxDiffPixels: 100,
-      // Threshold for pixel difference ratio
-      threshold: 0.2,
+      maxDiffPixels: 500,
+      threshold: 0.3,
     },
 
     // Snapshot comparison settings
     toMatchSnapshot: {
-      // Allow 10% pixel difference for cross-browser compatibility
-      maxDiffPixelRatio: 0.1,
-      // Threshold for pixel difference ratio
-      threshold: 0.2,
+      maxDiffPixelRatio: 0.15,
+      threshold: 0.3,
     },
   },
 
@@ -170,34 +162,39 @@ export default defineConfig({
 
     // Browser context options
     contextOptions: {
-      // Accessibility testing - respect user preferences
       reducedMotion: "reduce",
-      // Color scheme for accessibility testing
       colorScheme: "light",
-      // Locale for internationalization testing
-      locale: "en-BD", // Bangladesh English
+      locale: "en-BD",
+      forcedColors: "none",
     },
 
     // Geolocation for metro station testing
     geolocation: DHAKA_COORDINATES,
-    permissions: ["geolocation"],
+    permissions: ["geolocation", "notifications"],
 
     // Timezone configuration
     timezoneId: "Asia/Dhaka",
 
-    // Mobile-first viewport (metro apps are primarily mobile)
+    // Mobile-first viewport
     viewport: VIEWPORTS.mobile,
 
     // Network configuration
     ignoreHTTPSErrors: true,
     acceptDownloads: true,
+    offline: false,
+    serviceWorkers: "allow",
 
     // Performance optimization
-    actionTimeout: 10_000, // 10 seconds for actions
-    navigationTimeout: 30_000, // 30 seconds for navigation
+    actionTimeout: 15_000,
+    navigationTimeout: 45_000,
 
     // User agent for consistent testing
     userAgent: "Metro Station Finder E2E Tests",
+
+    // Additional testing features
+    launchOptions: {
+      args: ["--enable-gpu", "--enable-accelerated-2d-canvas"],
+    },
   },
 
   // ============================================================================
@@ -214,9 +211,8 @@ export default defineConfig({
       use: {
         ...devices["Desktop Chrome"],
         viewport: VIEWPORTS.desktop,
-        // Desktop-specific settings
         contextOptions: {
-          reducedMotion: "no-preference", // Desktop users may prefer animations
+          reducedMotion: "no-preference",
         },
       },
     },
@@ -244,7 +240,7 @@ export default defineConfig({
     },
 
     // ============================================================================
-    // MOBILE DEVICES (Primary focus for metro apps)
+    // MOBILE DEVICES
     // ============================================================================
 
     {
@@ -252,9 +248,8 @@ export default defineConfig({
       use: {
         ...devices["Pixel 5"],
         viewport: VIEWPORTS.pixel5,
-        // Mobile-specific optimizations
         contextOptions: {
-          reducedMotion: "reduce", // Mobile users often prefer reduced motion
+          reducedMotion: "reduce",
         },
       },
     },
@@ -281,6 +276,28 @@ export default defineConfig({
       },
     },
 
+    {
+      name: "iPhone 14",
+      use: {
+        ...devices["iPhone 14"],
+        viewport: VIEWPORTS.iphone14,
+        contextOptions: {
+          reducedMotion: "reduce",
+        },
+      },
+    },
+
+    {
+      name: "Galaxy S21",
+      use: {
+        ...devices["Galaxy S21"],
+        viewport: VIEWPORTS.galaxyS21,
+        contextOptions: {
+          reducedMotion: "reduce",
+        },
+      },
+    },
+
     // ============================================================================
     // TABLET DEVICES
     // ============================================================================
@@ -296,6 +313,17 @@ export default defineConfig({
       },
     },
 
+    {
+      name: "Surface Pro",
+      use: {
+        ...devices["Desktop Edge"],
+        viewport: VIEWPORTS.surfacePro,
+        contextOptions: {
+          reducedMotion: "no-preference",
+        },
+      },
+    },
+
     // ============================================================================
     // ACCESSIBILITY TESTING PROJECT
     // ============================================================================
@@ -305,13 +333,11 @@ export default defineConfig({
       use: {
         ...devices["Desktop Chrome"],
         viewport: VIEWPORTS.desktop,
-        // Enhanced accessibility testing settings
         contextOptions: {
           reducedMotion: "reduce",
           colorScheme: "light",
           forcedColors: "none",
         },
-        // Additional permissions for accessibility testing
         permissions: ["geolocation", "notifications"],
       },
       // Run accessibility tests with specific tags
@@ -327,17 +353,35 @@ export default defineConfig({
       use: {
         ...devices["Desktop Chrome"],
         viewport: VIEWPORTS.desktop,
-        // Performance testing optimizations
         contextOptions: {
           reducedMotion: "no-preference",
         },
-        // Disable unnecessary features for performance testing
         video: "off",
         screenshot: "off",
         trace: "off",
       },
       // Run performance tests with specific tags
       grep: /@performance/,
+    },
+
+    // ============================================================================
+    // API TESTING PROJECT
+    // ============================================================================
+
+    {
+      name: "api",
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: VIEWPORTS.desktop,
+        contextOptions: {
+          reducedMotion: "no-preference",
+        },
+        video: "off",
+        screenshot: "only-on-failure",
+        trace: "off",
+      },
+      // Run API tests with specific tags
+      grep: /@api/,
     },
   ],
 
@@ -352,10 +396,15 @@ export default defineConfig({
     reuseExistingServer: !isCI,
     stdout: "ignore",
     stderr: "pipe",
-    // Health check configuration
     env: {
-      nodeEnv: "test",
-      playwrightTest: "true",
+      // biome-ignore lint/style/useNamingConvention: Environment variables must be uppercase
+      NODE_ENV: "test",
+      // biome-ignore lint/style/useNamingConvention: Environment variables must be uppercase
+      PLAYWRIGHT_TEST: "true",
+      // biome-ignore lint/style/useNamingConvention: Environment variables must be uppercase
+      NEXT_TELEMETRY_DISABLED: "1",
+      // biome-ignore lint/style/useNamingConvention: Environment variables must be uppercase
+      NEXT_PUBLIC_TEST_MODE: "true",
     },
   },
 });

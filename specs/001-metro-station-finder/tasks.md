@@ -676,7 +676,7 @@ Compose Map/List views, view toggle (radiogroup), skip link, Retry Map CTA, dire
 
 ## Phase 9: API Layer Integration into UX
 
-### T068: Wire Station Finder to API layer
+### T068: [X] Wire Station Finder to API layer ✅
 
 Use `lib/api/stations.ts` and `lib/api/places.ts` as the single source for station search and Places predictions per contracts and research. Remove direct data access from UI.
 
@@ -684,7 +684,7 @@ Use `lib/api/stations.ts` and `lib/api/places.ts` as the single source for stati
 **Changes (Top-tier expectations)**: Replace local lookups with API adapters, ensure Result pattern handling, map problem codes to copy IDs, preserve debounce/rate-limit/daily-quota semantics from Phase 8, keep Suspense-friendly boundaries
 **Reference**: `specs/001-metro-station-finder/research-ux.md`, `specs/001-metro-station-finder/contracts/stations.md`
 
-### T069: Wire Geolocation & Nearest Station to API layer
+### T069: [X] Wire Geolocation & Nearest Station to API layer ✅
 
 Use `lib/api/geolocation.ts` to request location and compute nearest station; ensure service area validation and copy IDs.
 
@@ -692,7 +692,7 @@ Use `lib/api/geolocation.ts` to request location and compute nearest station; en
 **Changes (Top-tier expectations)**: Result pattern integration, OUT_OF_AREA handling, denied/timeout fallbacks; wrap browser API in `lib/api/geolocation.ts`; maintain announcements and service-area guard
 **Reference**: `specs/001-metro-station-finder/research-ux.md`, `specs/001-metro-station-finder/contracts/geolocation.md`
 
-### T070: Wire Fare Calculator to API layer
+### T070: [X] Wire Fare Calculator to API layer ✅
 
 Use `lib/api/fares.ts` for fare matrix lookup and formatting; enforce ceilings and display rules.
 
@@ -706,7 +706,7 @@ Use `lib/api/fares.ts` for fare matrix lookup and formatting; enforce ceilings a
 
 **Commit Message**: `feat(ux-api): wire ui to api layer`
 **When to Commit**: After ALL Phase 9 tasks (T068-T070) are completed
-**Status**: ⏳ **PENDING**
+**Status**: ✅ **COMPLETED**
 
 ---
 
@@ -718,9 +718,10 @@ Lazy load the map client after Phase 9 API wiring. If load >3s or error, surface
 
 **Files**: `components/ui/map.tsx`, `lib/hooks/use-map-availability.ts`
 **Changes (Top-tier expectations)**:
-  - Defer map hydration until visible/selected; reuse single instance
-  - Honor kill-switch/env/keys and new API-layer availability states
-  - Retry CTA without lint suppressions; neutral, copy-deck messaging
+
+- Defer map hydration until visible/selected; reuse single instance
+- Honor kill-switch/env/keys and new API-layer availability states
+- Retry CTA without lint suppressions; neutral, copy-deck messaging
 **Reference**: `specs/001-metro-station-finder/research-ux.md`
 
 ### T072: Theme Sync ≤200ms and A11y Controls
@@ -729,9 +730,10 @@ Ensure theme switch updates map styles ≤200ms with API-wired state in place; m
 
 **Files**: `components/ui/map.tsx`, `lib/map/styles.ts`
 **Changes (Top-tier expectations)**:
-  - Imperative style swap without map re-create; verify contrast
-  - Controls: aria-labels, focus-visible rings, tab order ok
-  - Attributions open with `target="_blank" rel="noopener noreferrer"`
+
+- Imperative style swap without map re-create; verify contrast
+- Controls: aria-labels, focus-visible rings, tab order ok
+- Attributions open with `target="_blank" rel="noopener noreferrer"`
 
 ### T073: Quota Status UI & Rate Limit Enforcement
 
@@ -739,9 +741,10 @@ After API wiring, surface quota state and enforce limits consistently across UI.
 
 **Files**: `lib/api/places.ts`, `lib/hooks/use-google-places.ts`, `app/station-finder/page.tsx`
 **Changes (Top-tier expectations)**:
-  - Badge/UI reflects rate-limited/daily-exceeded from adapters
-  - Disable autocomplete when gated; neutral copy IDs displayed
-  - Keep debounce/rate-limit/daily semantics aligned with Phase 9
+
+- Badge/UI reflects rate-limited/daily-exceeded from adapters
+- Disable autocomplete when gated; neutral copy IDs displayed
+- Keep debounce/rate-limit/daily semantics aligned with Phase 9
 
 ---
 

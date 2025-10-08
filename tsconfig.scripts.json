@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
   "extends": "./tsconfig.json",
-  "display": "Metro Station Finder — Scripts (Node LTS)",
+  "display": "Metro Station Finder — Scripts (Node context)",
   "compilerOptions": {
     "module": "nodenext",
     "moduleResolution": "nodenext",
@@ -12,8 +12,11 @@
     "isolatedModules": false,
     "verbatimModuleSyntax": true,
     "allowJs": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "types": ["node"]
   },
-  "include": ["scripts/**/*.mjs"],
+  "include": ["scripts/**/*.{ts,js,mjs,cjs}"],
   "exclude": ["node_modules", "dist-scripts", "**/*.test.ts", "**/*.spec.ts"]
 }

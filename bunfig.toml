@@ -1,0 +1,150 @@
+# Metro Station Finder - Bun Configuration
+# Optimized for Next.js 15, TypeScript, and production deployment
+
+# Package Installation Settings
+[install]
+# Use exact versions for reproducible builds
+exact = true
+# Save lockfile in text format for better git diffs
+saveTextLockfile = true
+# Cache packages for faster installs
+cache = true
+# Use production dependencies by default
+production = false
+# Enable peer dependencies
+peer = true
+# Use exact versions for lockfile
+lockfile = "bun.lockb"
+
+# Runtime Configuration
+[run]
+# Environment file for runtime
+env = ".env.local"
+# Enable hot reloading for development
+hot = true
+# Watch for file changes
+watch = true
+
+# Development Server Settings
+[dev]
+# Development server configuration
+port = 3000
+hostname = "localhost"
+# Enable hot module replacement
+hot = true
+# Watch for file changes
+watch = true
+# Enable HTTPS in development
+https = false
+
+# Test Runner Configuration
+[test]
+# Test root directory
+root = "./test"
+# Enable coverage reporting
+coverage = true
+# Coverage thresholds for quality gates
+coverageThreshold = { 
+  line = 0.9, 
+  function = 0.9, 
+  statement = 0.9,
+  branch = 0.9
+}
+# Coverage reporters
+coverageReporter = ["text", "lcov"]
+# Coverage output directory
+coverageDir = "coverage"
+# Skip test files from coverage
+coverageSkipTestFiles = true
+# Path patterns to ignore in coverage
+coveragePathIgnorePatterns = [
+  "**/node_modules/**",
+  "**/dist/**",
+  "**/out/**",
+  "**/.next/**",
+  "**/coverage/**",
+  "**/*.test.*",
+  "**/*.spec.*",
+  "**/test/**",
+  "**/scripts/**"
+]
+# Enable concurrent test execution
+concurrent = true
+# Test timeout in milliseconds
+timeout = 10000
+# Enable test preload for setup
+preload = ["./test/setup.ts"]
+
+# Build Configuration
+[build]
+# Output directory for builds
+outdir = "./out"
+# Target environment
+target = "browser"
+# Output format
+format = "esm"
+# Enable code splitting
+splitting = true
+# Enable minification for production
+minify = true
+# Generate source maps
+sourcemap = true
+# External dependencies to exclude from bundle
+external = [
+  "react",
+  "react-dom",
+  "next"
+]
+
+# JSX Configuration for React
+jsx = "react"
+jsxFactory = "React.createElement"
+jsxFragment = "React.Fragment"
+jsxImportSource = "react"
+
+# Global Definitions
+[define]
+# Environment variables for build-time replacement
+"process.env.NODE_ENV" = "process.env.NODE_ENV"
+"process.env.NEXT_PUBLIC_APP_NAME" = "process.env.NEXT_PUBLIC_APP_NAME"
+"process.env.NEXT_PUBLIC_APP_VERSION" = "process.env.NEXT_PUBLIC_APP_VERSION"
+
+# File Loaders
+[loader]
+# Custom file extensions
+".svg" = "file"
+".png" = "file"
+".jpg" = "file"
+".jpeg" = "file"
+".gif" = "file"
+".webp" = "file"
+".avif" = "file"
+".ico" = "file"
+".woff" = "file"
+".woff2" = "file"
+".ttf" = "file"
+".eot" = "file"
+
+# Console Configuration
+[console]
+# Object inspection depth
+depth = 3
+# Enable colors in console output
+colors = true
+
+# Logging Configuration
+logLevel = "info"
+
+# Telemetry (disabled for privacy)
+telemetry = false
+
+# Memory Optimization
+# Enable smol mode for reduced memory usage
+smol = false
+
+# Performance Settings
+[performance]
+# Enable experimental features
+experimental = true
+# Enable JIT compilation
+jit = true

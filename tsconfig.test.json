@@ -1,8 +1,9 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
-  "display": "Metro Station Finder — Next.js 15 / React 19",
+  "display": "Metro Station Finder — Test Configuration",
+  "extends": "./tsconfig.json",
   "compilerOptions": {
-    "target": "ES2024",
+    "types": ["node", "react", "react-dom"],
     "lib": ["ES2024", "DOM", "DOM.Iterable", "ESNext.AsyncIterable"],
     "module": "ESNext",
     "moduleResolution": "bundler",
@@ -27,7 +28,7 @@
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
     "incremental": true,
-    "tsBuildInfoFile": ".tsbuildinfo",
+    "tsBuildInfoFile": ".tsbuildinfo.test",
     "noEmit": true,
     "isolatedModules": true,
     "newLine": "lf",
@@ -43,10 +44,11 @@
       "@/hooks/*": ["./hooks/*"],
       "@/types/*": ["./types/*"],
       "@/utils/*": ["./utils/*"],
-      "@/styles/*": ["./styles/*"]
+      "@/styles/*": ["./styles/*"],
+      "@/test/*": ["./test/*"],
+      "@/__mocks__/*": ["./__mocks__/*"]
     },
     "typeRoots": ["types", "node_modules/@types"],
-    "types": ["node", "react", "react-dom"],
     "plugins": [
       {
         "name": "next"
@@ -55,13 +57,13 @@
     "allowJs": true
   },
   "include": [
-    "next-env.d.ts",
-    ".next/types/**/*.ts",
     "vitest.config.ts",
+    "test/**/*",
+    "**/*.{test,spec}.{ts,tsx}",
     "app/**/*",
     "components/**/*",
-    "hooks/**/*",
     "lib/**/*",
+    "hooks/**/*",
     "types/**/*",
     "utils/**/*",
     "styles/**/*"
@@ -75,8 +77,6 @@
     "coverage",
     ".turbo",
     "scripts/**/*",
-    "test/**/*",
-    "**/*.{test,spec}.{ts,tsx}",
     "e2e/**/*",
     "playwright-report/**/*"
   ]
