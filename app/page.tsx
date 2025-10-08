@@ -8,6 +8,8 @@ import {
 } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { StationErrorBoundary } from "@/components/error/station-error-boundary";
+import { StationListSuspense } from "@/components/suspense/station-list-suspense";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -75,6 +77,12 @@ export default function HomePage() {
               href="/fare-calculator"
             >
               Fares
+            </Link>
+            <Link
+              className="rounded-lg px-3 py-2 text-muted-foreground text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+              href="/demo"
+            >
+              Demo
             </Link>
             <Link
               className="rounded-lg px-3 py-2 text-muted-foreground text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
@@ -298,7 +306,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Featured Stations */}
+        {/* Featured Stations with React 19 Server Components */}
         {featuredStations.length > 0 && (
           <section
             aria-labelledby="featured-stations-title"
@@ -317,80 +325,10 @@ export default function HomePage() {
                 </p>
               </div>
 
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {featuredStations.map((station) => (
-                  <Link
-                    className="group focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                    href={`/station-finder?station=${station.id}`}
-                    key={station.id}
-                  >
-                    <Card
-                      className={cn(
-                        "h-full overflow-hidden rounded-xl border-border/50 bg-card/50 backdrop-blur-sm",
-                        "hover:-translate-y-1 transition-all duration-300 hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5"
-                      )}
-                    >
-                      <CardHeader>
-                        <CardTitle className="flex items-center justify-between">
-                          <span className="text-lg">{station.name}</span>
-                          <Badge
-                            className="ml-2 bg-primary/10 text-primary text-xs"
-                            variant="secondary"
-                          >
-                            MRT-6
-                          </Badge>
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                            <MapPin
-                              aria-hidden="true"
-                              className="h-4 w-4 shrink-0"
-                            />
-                            <span className="truncate">
-                              Station #{station.order}
-                            </span>
-                          </div>
-
-                          <div className="flex flex-wrap gap-2">
-                            {station.amenities.elevator && (
-                              <Badge className="text-xs" variant="outline">
-                                Elevator
-                              </Badge>
-                            )}
-                            {station.amenities.wheelchair && (
-                              <Badge className="text-xs" variant="outline">
-                                Accessible
-                              </Badge>
-                            )}
-                            {station.amenities.parking && (
-                              <Badge className="text-xs" variant="outline">
-                                Parking
-                              </Badge>
-                            )}
-                          </div>
-
-                          <div className="flex items-center text-primary text-sm">
-                            <span className="transition-transform group-hover:translate-x-1">
-                              View Details →
-                            </span>
-                          </div>
-                        </div>
-                      </CardContent>
-
-                      {/* Hover Effect Overlay */}
-                      <div
-                        aria-hidden="true"
-                        className={cn(
-                          "pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-br from-primary/5 via-transparent to-transparent",
-                          "opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-                        )}
-                      />
-                    </Card>
-                  </Link>
-                ))}
-              </div>
+              {/* React 19 Server Component with Suspense */}
+              <StationErrorBoundary>
+                <StationListSuspense />
+              </StationErrorBoundary>
 
               <div className="mt-12 text-center">
                 <Button asChild size="lg" variant="outline">

@@ -566,6 +566,31 @@ export const ERROR_CODES = {
 } as const satisfies Record<string, Record<string, string>>;
 
 /**
+ * Copy deck IDs for consistent messaging
+ */
+export const COPY_DECK = {
+  // Geolocation messages
+  geoRationale:
+    "We need your location to find the nearest metro station. Your location is not stored or shared.",
+  geoDenied:
+    "Location access denied. You can still search for stations manually.",
+  geoTimeout:
+    "Location request timed out. Please try again or search manually.",
+  geoUnavailable:
+    "Location services are unavailable. Please search for stations manually.",
+
+  // Error messages
+  providerUnavailable:
+    "Service temporarily unavailable. Please try again later.",
+  outOfArea:
+    "You're outside the service area. Please search for stations manually.",
+
+  // Success messages
+  locationFound: "Location found! Showing nearest stations.",
+  searchResults: "Search results updated.",
+} as const satisfies Record<string, string>;
+
+/**
  * Cache configuration
  */
 export const CACHE_CONFIG = {

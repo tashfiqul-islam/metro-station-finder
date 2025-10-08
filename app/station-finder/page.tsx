@@ -11,17 +11,30 @@ import {
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  MapErrorBoundary,
+  StationErrorBoundary,
+} from "@/components/error/station-error-boundary";
+import { StationSearchForm } from "@/components/forms/station-search-form";
+import { MapSuspense } from "@/components/suspense/station-list-suspense";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { MetroMap } from "@/components/ui/map";
 import { SearchInput } from "@/components/ui/search-input";
 import { StationCard } from "@/components/ui/station-card";
+import {
+  requestCurrentLocation,
+  validateServiceArea,
+} from "@/lib/api/geolocation";
 import { getQuotaStatus } from "@/lib/api/places";
-import { DHAKA_SERVICE_AREA } from "@/lib/constants";
-import { getOperationalStations } from "@/lib/data/stations";
-import { isWithinServiceArea } from "@/lib/hooks/use-geolocation";
-import type { Coordinates, Meters } from "@/lib/types";
+import { getAllStations, searchStations } from "@/lib/api/stations";
+import {
+  COPY_DECK,
+  DHAKA_SERVICE_AREA,
+  SEARCH_CONSTANTS,
+} from "@/lib/constants";
+import type { Coordinates, Meters, Milliseconds } from "@/lib/types";
 import type { Station } from "@/lib/types/station";
 import { cn } from "@/lib/utils";
 import { calculateDistancePure } from "@/lib/utils/distance";
@@ -45,6 +58,13 @@ type StationWithDistance = {
 const MAP_ZOOM = {
   selected: 14,
   default: 12,
+} as const;
+
+/**
+ * UX timing constants
+ */
+const UX_TIMING = {
+  rationaleDelayMs: 1000, // 1 second delay for rationale reading
 } as const;
 
 // Precision for directions URL lat/lng values
@@ -171,13 +191,17 @@ function ResultsSection({
           {viewMode === "map" && filteredStations.length > 0 && (
             <div className="space-y-4">
               <div className="h-[500px] w-full overflow-hidden rounded-xl border border-border/50 shadow-lg">
-                <MetroMap
-                  center={mapCenter}
-                  onStationSelect={onSelect}
-                  {...(selectedStation ? { selectedStation } : {})}
-                  stations={[...filteredStations]}
-                  zoom={mapZoom}
-                />
+                <MapErrorBoundary>
+                  <MapSuspense>
+                    <MetroMap
+                      center={mapCenter}
+                      onStationSelect={onSelect}
+                      {...(selectedStation ? { selectedStation } : {})}
+                      stations={[...filteredStations]}
+                      zoom={mapZoom}
+                    />
+                  </MapSuspense>
+                </MapErrorBoundary>
               </div>
 
               {selectedStation && userLocation && (
@@ -219,12 +243,14 @@ function ResultsSection({
           )}
 
           {viewMode === "list" && filteredStations.length > 0 && (
-            <StationsList
-              onSelect={onSelect}
-              selectedStationId={selectedStation?.id}
-              stationsWithDistance={stationsWithDistance}
-              userLocation={userLocation}
-            />
+            <StationErrorBoundary>
+              <StationsList
+                onSelect={onSelect}
+                selectedStationId={selectedStation?.id}
+                stationsWithDistance={stationsWithDistance}
+                userLocation={userLocation}
+              />
+            </StationErrorBoundary>
           )}
         </div>
       </section>
@@ -242,6 +268,7 @@ function SearchSection({
   onUseLocation,
   onClearLocation,
   userLocation,
+  onShowRationale,
 }: {
   readonly onClearLocation: () => void;
   readonly onClearSearch: () => void;
@@ -249,6 +276,7 @@ function SearchSection({
   readonly onUseLocation: () => void;
   readonly searchQuery: string;
   readonly userLocation: Coordinates | undefined;
+  readonly onShowRationale: () => void;
 }) {
   return (
     <section aria-label="Station search" className="bg-background">
@@ -264,7 +292,13 @@ function SearchSection({
           </div>
           <Button
             className="w-full sm:w-auto"
-            onClick={onUseLocation}
+            onClick={() => {
+              // Show rationale before prompting for location
+              onShowRationale();
+              setTimeout(() => {
+                onUseLocation();
+              }, UX_TIMING.rationaleDelayMs);
+            }}
             variant="outline"
           >
             <MapIcon aria-hidden="true" className="mr-2 h-4 w-4" />
@@ -311,7 +345,7 @@ function SearchSection({
  * Station Finder page for discovering and exploring metro stations.
  * Features search, interactive map, list view, and geolocation support.
  */
-export default function StationFinderPage() {
+function StationFinderContent() {
   const searchParams = useSearchParams();
   const initialStationId = searchParams.get("station");
 
@@ -320,12 +354,17 @@ export default function StationFinderPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("map");
   const [userLocation, setUserLocation] = useState<Coordinates | undefined>();
   const [isGeoLoading, setIsGeoLoading] = useState(false);
-  const [messageId, setMessageId] = useState<string | undefined>(undefined);
+  const [messageId, setMessageId] = useState<
+    keyof typeof COPY_DECK | undefined
+  >(undefined);
   const [manualLat, setManualLat] = useState<string>("");
   const [manualLng, setManualLng] = useState<string>("");
 
-  // Get all operational stations
-  const allStations = getOperationalStations();
+  // Get all stations via API adapter
+  const allStationsResponse = useMemo(() => getAllStations(), []);
+  const allStations = allStationsResponse.success
+    ? allStationsResponse.data
+    : [];
   // Quota status (computed on demand; adapter is synchronous)
   const quota = useMemo(() => getQuotaStatus(), []);
   const isRateLimited = quota.success ? quota.data.isRateLimited : false;
@@ -333,7 +372,9 @@ export default function StationFinderPage() {
   // Initialize selected station from URL parameter
   useEffect(() => {
     if (initialStationId) {
-      const station = allStations.find((s) => s.id === initialStationId);
+      const station = allStations.find(
+        (s: Station) => s.id === initialStationId
+      );
       if (station) {
         setSelectedStation(station);
       }
@@ -341,22 +382,23 @@ export default function StationFinderPage() {
   }, [initialStationId, allStations]);
 
   /**
-   * Filter stations based on search query.
-   * Searches station name and aliases for matches.
+   * Filter stations based on search query using API adapter.
+   * Uses searchStations API for consistent Result pattern and error handling.
    */
   const filteredStations = useMemo(() => {
     if (!searchQuery.trim()) {
       return allStations;
     }
 
-    const query = searchQuery.toLowerCase();
-    return allStations.filter((station) => {
-      const matchName = station.name.toLowerCase().includes(query);
-      const matchAlias = station.aliases.some((alias) =>
-        alias.toLowerCase().includes(query)
-      );
-      return matchName || matchAlias;
-    });
+    const searchResponse = searchStations(
+      searchQuery,
+      SEARCH_CONSTANTS.maxResultsDefault
+    );
+    return searchResponse.success
+      ? searchResponse.data.map(
+          (r: import("@/lib/types/station").StationSearchResult) => r.station
+        )
+      : [];
   }, [allStations, searchQuery]);
 
   /**
@@ -364,18 +406,18 @@ export default function StationFinderPage() {
    */
   const stationsWithDistance = useMemo<readonly StationWithDistance[]>(() => {
     if (!userLocation) {
-      return filteredStations.map((station) => ({
+      return filteredStations.map((station: Station) => ({
         station,
         distance: undefined,
       }));
     }
 
     return filteredStations
-      .map((station) => ({
+      .map((station: Station) => ({
         station,
         distance: calculateDistancePure(userLocation, station.coordinates),
       }))
-      .sort((a, b) => {
+      .sort((a: StationWithDistance, b: StationWithDistance) => {
         if (a.distance === undefined || b.distance === undefined) {
           return 0;
         }
@@ -384,38 +426,65 @@ export default function StationFinderPage() {
   }, [filteredStations, userLocation]);
 
   /**
-   * Request user's current geolocation.
+   * Request user's current geolocation using API adapter.
    */
-  const handleUseMyLocation = useCallback(() => {
-    if (!("geolocation" in navigator)) {
-      setMessageId("err.provider_unavailable");
-      return;
-    }
+  const handleUseMyLocation = useCallback(async () => {
     // Show rationale before prompting
-    setMessageId("note.geo_denied");
+    setMessageId("geoRationale");
     setIsGeoLoading(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const loc = {
-          lat: position.coords.latitude as Coordinates["lat"],
-          lng: position.coords.longitude as Coordinates["lng"],
-        };
-        // Validate service area (25 km from centroid)
-        if (isWithinServiceArea(loc)) {
-          setMessageId(undefined);
-          setUserLocation(loc);
-        } else {
-          setMessageId("err.out_of_area");
-          setUserLocation(undefined);
+
+    try {
+      const locationResponse = await requestCurrentLocation({
+        enableHighAccuracy: true,
+        maximumAge: 0 as Milliseconds,
+        timeout: 10_000 as Milliseconds,
+      });
+
+      if (!locationResponse.success) {
+        // Handle geolocation errors with proper copy IDs
+        switch (locationResponse.error.code) {
+          case "GEO_UNAVAILABLE":
+            setMessageId("geoUnavailable");
+            break;
+          case "GEO_DENIED":
+            setMessageId("geoDenied");
+            break;
+          case "GEO_TIMEOUT":
+            setMessageId("geoTimeout");
+            break;
+          default:
+            setMessageId("providerUnavailable");
         }
+        setUserLocation(undefined);
         setIsGeoLoading(false);
-      },
-      () => {
+        return;
+      }
+
+      const coordinates = locationResponse.data.coordinates;
+
+      // Validate service area using API adapter
+      const validationResponse = validateServiceArea(coordinates);
+
+      if (!validationResponse.success) {
+        setMessageId("providerUnavailable");
+        setUserLocation(undefined);
         setIsGeoLoading(false);
-        setMessageId("note.geo_denied");
-      },
-      { enableHighAccuracy: true, maximumAge: 0, timeout: 10_000 }
-    );
+        return;
+      }
+
+      if (validationResponse.data.isValid) {
+        setMessageId("locationFound");
+        setUserLocation(coordinates);
+      } else {
+        setMessageId("outOfArea");
+        setUserLocation(undefined);
+      }
+    } catch {
+      setMessageId("providerUnavailable");
+      setUserLocation(undefined);
+    } finally {
+      setIsGeoLoading(false);
+    }
   }, []);
 
   /**
@@ -458,6 +527,14 @@ export default function StationFinderPage() {
 
   return (
     <div className="flex min-h-screen flex-col">
+      {/* Skip link for keyboard navigation */}
+      <a
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:rounded-lg focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+        href="#results"
+      >
+        Skip to results
+      </a>
+
       {/* Header */}
       <header className="sticky top-0 z-50 w-full border-border/40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -532,21 +609,27 @@ export default function StationFinderPage() {
 
         {/* Live region for geolocation and system messages */}
         <output aria-live="polite" className="sr-only">
-          {messageId ? messageId : ""}
+          {messageId ? COPY_DECK[messageId] : ""}
         </output>
 
-        {/* Search Section */}
+        {/* React 19 Search Section with Actions API */}
+        <StationErrorBoundary>
+          <StationSearchForm />
+        </StationErrorBoundary>
+
+        {/* Legacy Search Section for Location */}
         <SearchSection
           onClearLocation={() => setUserLocation(undefined)}
           onClearSearch={handleClearSearch}
           onSearchChange={setSearchQuery}
+          onShowRationale={() => setMessageId("geoRationale")}
           onUseLocation={handleUseMyLocation}
           searchQuery={searchQuery}
           userLocation={userLocation}
         />
 
         {/* Manual lat/lng fallback when Places disabled or rate-limited */}
-        {(isRateLimited || messageId === "err.provider_unavailable") && (
+        {(isRateLimited || messageId === "providerUnavailable") && (
           <section aria-label="Manual location entry" className="bg-background">
             <div className="container mx-auto max-w-7xl px-4 pb-4 sm:px-6 lg:px-8">
               <div className="flex flex-wrap items-end gap-2">
@@ -596,18 +679,23 @@ export default function StationFinderPage() {
                       lngNum >= minLng &&
                       lngNum <= maxLng;
                     if (!valid) {
-                      setMessageId("err.invalid_coordinates");
+                      setMessageId("providerUnavailable");
                       return;
                     }
                     const loc = {
                       lat: latNum as Coordinates["lat"],
                       lng: lngNum as Coordinates["lng"],
                     };
-                    if (isWithinServiceArea(loc)) {
-                      setMessageId(undefined);
+                    // Validate service area using API adapter
+                    const validationResponse = validateServiceArea(loc);
+                    if (
+                      validationResponse.success &&
+                      validationResponse.data.isValid
+                    ) {
+                      setMessageId("locationFound");
                       setUserLocation(loc);
                     } else {
-                      setMessageId("err.out_of_area");
+                      setMessageId("outOfArea");
                       setUserLocation(undefined);
                     }
                   }}
@@ -643,5 +731,37 @@ export default function StationFinderPage() {
         />
       </main>
     </div>
+  );
+}
+
+/**
+ * Station Finder page with Suspense boundary for useSearchParams.
+ */
+export default function StationFinderPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen flex-col">
+          <header className="sticky top-0 z-50 w-full border-border/40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <div className="container mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+              <div className="flex items-center gap-4">
+                <div className="h-10 w-10 animate-pulse rounded bg-muted" />
+                <div className="h-6 w-32 animate-pulse rounded bg-muted" />
+              </div>
+            </div>
+          </header>
+          <main className="flex-1 bg-muted/30">
+            <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+              <div className="space-y-6">
+                <div className="h-32 w-full animate-pulse rounded-lg bg-muted" />
+                <div className="h-64 w-full animate-pulse rounded-lg bg-muted" />
+              </div>
+            </div>
+          </main>
+        </div>
+      }
+    >
+      <StationFinderContent />
+    </Suspense>
   );
 }

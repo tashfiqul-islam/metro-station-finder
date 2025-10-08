@@ -10,7 +10,10 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { StationErrorBoundary } from "@/components/error/station-error-boundary";
+import { StationSearchForm } from "@/components/forms/station-search-form";
+// StationListSuspense is used implicitly by React 19 patterns
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,8 +25,9 @@ import {
 } from "@/components/ui/card";
 import { FareDisplay } from "@/components/ui/fare-display";
 import { SearchInput } from "@/components/ui/search-input";
-import { calculateFare } from "@/lib/data/fares";
-import { getOperationalStations } from "@/lib/data/stations";
+import { calculateFare } from "@/lib/api/fares";
+import { getAllStations, searchStations } from "@/lib/api/stations";
+import { SEARCH_CONSTANTS } from "@/lib/constants";
 import type { FareInput } from "@/lib/schemas";
 import type { Station } from "@/lib/types/station";
 import { cn } from "@/lib/utils";
@@ -234,7 +238,7 @@ function TicketTypeSelector({
  * Fare Calculator page for calculating metro fares between stations.
  * Features station selection, ticket type selection, and fare display.
  */
-export default function FareCalculatorPage() {
+function FareCalculatorContent() {
   const searchParams = useSearchParams();
   const originParam = searchParams.get("origin");
   const destinationParam = searchParams.get("destination");
@@ -247,8 +251,11 @@ export default function FareCalculatorPage() {
   const [searchState, setSearchState] = useState<SearchState>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Get all operational stations
-  const allStations = getOperationalStations();
+  // Get all stations via API adapter
+  const allStationsResponse = useMemo(() => getAllStations(), []);
+  const allStations = allStationsResponse.success
+    ? allStationsResponse.data
+    : [];
 
   // Initialize stations from URL parameters
   useEffect(() => {
@@ -267,25 +274,24 @@ export default function FareCalculatorPage() {
   }, [originParam, destinationParam, allStations]);
 
   /**
-   * Filter stations based on search query.
+   * Filter stations based on search query using API adapter.
    */
   const filteredStations = useMemo(() => {
     if (!searchQuery.trim()) {
       return allStations;
     }
 
-    const query = searchQuery.toLowerCase();
-    return allStations.filter((station) => {
-      const matchName = station.name.toLowerCase().includes(query);
-      const matchAlias = station.aliases.some((alias) =>
-        alias.toLowerCase().includes(query)
-      );
-      return matchName || matchAlias;
-    });
+    const searchResponse = searchStations(
+      searchQuery,
+      SEARCH_CONSTANTS.maxResultsDefault
+    );
+    return searchResponse.success
+      ? searchResponse.data.map((r) => r.station)
+      : [];
   }, [allStations, searchQuery]);
 
   /**
-   * Calculate fare when both stations are selected.
+   * Calculate fare when both stations are selected using API adapter.
    */
   const calculatedFare = useMemo<FareInput | undefined>(() => {
     if (!(selection.origin && selection.destination)) {
@@ -293,16 +299,17 @@ export default function FareCalculatorPage() {
     }
 
     try {
-      // Get the first alias which contains the official station name
-      const originName = selection.origin.aliases[0] || selection.origin.name;
-      const destinationName =
-        selection.destination.aliases[0] || selection.destination.name;
+      const fareResponse = calculateFare(
+        selection.origin.id,
+        selection.destination.id,
+        { type: ticketType }
+      );
 
-      return calculateFare(
-        originName,
-        destinationName,
-        ticketType
-      ) as unknown as FareInput;
+      if (!fareResponse.success) {
+        return;
+      }
+
+      return fareResponse.data as unknown as FareInput;
     } catch {
       return;
     }
@@ -394,6 +401,11 @@ export default function FareCalculatorPage() {
       <main className="flex-1 bg-muted/30">
         <div className="container mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
           <div className="space-y-6">
+            {/* React 19 Search Form with Actions API */}
+            <StationErrorBoundary>
+              <StationSearchForm />
+            </StationErrorBoundary>
+
             {/* Info Card */}
             <Card className="border-primary/20 bg-primary/5">
               <CardContent className="flex gap-3 p-4">
@@ -409,7 +421,7 @@ export default function FareCalculatorPage() {
               </CardContent>
             </Card>
 
-            {/* Station Selection Card */}
+            {/* Station Selection Card with React 19 Suspense */}
             <Card>
               <CardHeader>
                 <CardTitle>Select Stations</CardTitle>
@@ -418,17 +430,19 @@ export default function FareCalculatorPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <StationSelector
-                  filteredStations={filteredStations}
-                  isSearching={searchState === "origin"}
-                  label="Origin Station"
-                  onSearchChange={setSearchQuery}
-                  onSelect={handleOriginSelect}
-                  onStartSearch={() => setSearchState("origin")}
-                  placeholder="Select origin station"
-                  searchQuery={searchQuery}
-                  station={selection.origin}
-                />
+                <StationErrorBoundary>
+                  <StationSelector
+                    filteredStations={filteredStations}
+                    isSearching={searchState === "origin"}
+                    label="Origin Station"
+                    onSearchChange={setSearchQuery}
+                    onSelect={handleOriginSelect}
+                    onStartSearch={() => setSearchState("origin")}
+                    placeholder="Select origin station"
+                    searchQuery={searchQuery}
+                    station={selection.origin}
+                  />
+                </StationErrorBoundary>
 
                 {/* Swap Button */}
                 {selection.origin && selection.destination && (
@@ -444,17 +458,19 @@ export default function FareCalculatorPage() {
                   </div>
                 )}
 
-                <StationSelector
-                  filteredStations={filteredStations}
-                  isSearching={searchState === "destination"}
-                  label="Destination Station"
-                  onSearchChange={setSearchQuery}
-                  onSelect={handleDestinationSelect}
-                  onStartSearch={() => setSearchState("destination")}
-                  placeholder="Select destination station"
-                  searchQuery={searchQuery}
-                  station={selection.destination}
-                />
+                <StationErrorBoundary>
+                  <StationSelector
+                    filteredStations={filteredStations}
+                    isSearching={searchState === "destination"}
+                    label="Destination Station"
+                    onSearchChange={setSearchQuery}
+                    onSelect={handleDestinationSelect}
+                    onStartSearch={() => setSearchState("destination")}
+                    placeholder="Select destination station"
+                    searchQuery={searchQuery}
+                    station={selection.destination}
+                  />
+                </StationErrorBoundary>
               </CardContent>
             </Card>
 
@@ -490,5 +506,37 @@ export default function FareCalculatorPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+/**
+ * Fare Calculator page with Suspense boundary for useSearchParams.
+ */
+export default function FareCalculatorPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen flex-col">
+          <header className="sticky top-0 z-50 w-full border-border/40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <div className="container mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+              <div className="flex items-center gap-4">
+                <div className="h-10 w-10 animate-pulse rounded bg-muted" />
+                <div className="h-6 w-32 animate-pulse rounded bg-muted" />
+              </div>
+            </div>
+          </header>
+          <main className="flex-1 bg-muted/30">
+            <div className="container mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+              <div className="space-y-6">
+                <div className="h-20 w-full animate-pulse rounded-lg bg-muted" />
+                <div className="h-64 w-full animate-pulse rounded-lg bg-muted" />
+              </div>
+            </div>
+          </main>
+        </div>
+      }
+    >
+      <FareCalculatorContent />
+    </Suspense>
   );
 }
