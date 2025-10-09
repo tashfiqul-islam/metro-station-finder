@@ -42,19 +42,16 @@
     "build:webpack:analyze": "ANALYZE=true next build",
     "start": "next start",
     "preview": "next start",
-
     "// === CODE QUALITY ===": "",
     "lint": "bunx ultracite@latest check",
     "format": "bunx ultracite@latest fix",
     "type-check": "tsc -p tsconfig.json --noEmit",
     "type-check:scripts": "tsc --project tsconfig.scripts.json --noEmit",
-
     "// === TESTING ===": "",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
-
     "// === RELEASE ===": "",
     "release": "semantic-release",
     "release:dry-run": "semantic-release --dry-run",
@@ -62,7 +59,6 @@
     "release:alpha": "semantic-release --branches alpha",
     "e2e": "playwright test",
     "e2e:ui": "playwright test --ui",
-
     "// === PROJECT MANAGEMENT ===": "",
     "clean": "bun run scripts/cleanup.mjs",
     "clean:all": "bun run scripts/cleanup.mjs && rm -rf node_modules",
@@ -70,39 +66,31 @@
     "fresh": "bun run clean:all && bun install && bun run setup",
     "validate": "bun run scripts/validate-project.mjs",
     "health": "bun run scripts/health-check.mjs",
-
     "// === DEPENDENCIES ===": "",
     "deps:update": "bun update",
     "deps:audit": "bun audit",
     "deps:check": "bun pm ls --outdated",
-
     "// === ANALYSIS & PERFORMANCE ===": "",
     "analyze": "ANALYZE=true bun run build",
     "perf:lighthouse": "bun run scripts/lighthouse.mjs",
-
     "// === RELEASE & DEPLOYMENT ===": "",
     "release:manual": "bun run scripts/release.mjs",
     "release:patch": "bun run scripts/release.mjs patch",
     "release:minor": "bun run scripts/release.mjs minor",
     "release:major": "bun run scripts/release.mjs major",
-
     "// === GIT HOOKS ===": "",
     "hooks:install": "lefthook install",
     "precommit": "bun run format && bun run type-check && bun run test:run",
     "prepush": "bun run lint && bun run type-check && bun run test:run",
-
     "// === CI/CD ===": "",
     "ci": "bun run lint && bun run type-check && bun run test:run && bun run e2e",
-
     "// === UI COMPONENTS ===": "",
     "ui:add": "bunx shadcn@latest add",
     "ui:init": "bunx shadcn@latest init",
-
     "// === AI DEVELOPMENT TOOLS ===": "",
     "ai": "bun run scripts/ai-dev-tools.mjs",
     "ai:analyze": "bun run ai ai:analyze",
     "ai:fix": "bun run ai ai:fix",
-
     "// === UTILITIES ===": "",
     "dev-tools": "bun run scripts/dev-tools.mjs",
     "quick": "bun run dev-tools dev:full",
@@ -113,11 +101,12 @@
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-dialog": "^1.1.15",
-    "@radix-ui/react-dropdown-menu": "^2.1.16",
     "@radix-ui/react-select": "^2.2.6",
     "@radix-ui/react-slot": "^1.2.3",
+    "@radix-ui/react-use-controllable-state": "1.2.2",
     "@vis.gl/react-google-maps": "^1.5.5",
-    "lucide-react": "^0.545.0",
+    "lucide-react": "0.545.0",
+    "motion": "12.23.22",
     "next": "^15.5.4",
     "next-themes": "^0.4.6",
     "react": "^19.2.0",

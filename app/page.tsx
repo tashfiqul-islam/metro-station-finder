@@ -9,11 +9,11 @@ import {
 import type { Metadata } from "next";
 import Link from "next/link";
 import { StationErrorBoundary } from "@/components/error/station-error-boundary";
+import { Navbar } from "@/components/navbar";
 import { StationListSuspense } from "@/components/suspense/station-list-suspense";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { getOperationalStations } from "@/lib/data/stations";
 import { cn } from "@/lib/utils";
 
@@ -53,47 +53,8 @@ export default function HomePage() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      {/* Header */}
-      <header className="sticky top-0 z-50 w-full border-border/40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <Link
-            className="flex items-center gap-2 font-semibold text-foreground text-lg transition-colors hover:text-primary"
-            href="/"
-          >
-            <Train aria-hidden="true" className="h-6 w-6 text-primary" />
-            <span className="hidden sm:inline">Metro Station Finder</span>
-            <span className="sm:hidden">MSF</span>
-          </Link>
-
-          <nav aria-label="Main navigation" className="flex items-center gap-2">
-            <Link
-              className="rounded-lg px-3 py-2 text-muted-foreground text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
-              href="/station-finder"
-            >
-              Stations
-            </Link>
-            <Link
-              className="rounded-lg px-3 py-2 text-muted-foreground text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
-              href="/fare-calculator"
-            >
-              Fares
-            </Link>
-            <Link
-              className="rounded-lg px-3 py-2 text-muted-foreground text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
-              href="/demo"
-            >
-              Demo
-            </Link>
-            <Link
-              className="rounded-lg px-3 py-2 text-muted-foreground text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
-              href="/about"
-            >
-              About
-            </Link>
-            <ThemeToggle />
-          </nav>
-        </div>
-      </header>
+      {/* Navigation */}
+      <Navbar />
 
       {/* Main Content */}
       <main className="flex-1">

@@ -2,7 +2,9 @@
 
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { KiboThemeSwitcherDemo } from "@/components/demo/kibo-theme-switcher-demo";
 import { OptimisticDemo } from "@/components/demo/optimistic-demo";
+import { ThemeSwitcherDemo } from "@/components/demo/theme-switcher-demo";
 import { StationErrorBoundary } from "@/components/error/station-error-boundary";
 import { StationSearchForm } from "@/components/forms/station-search-form";
 import { StationListSuspense } from "@/components/suspense/station-list-suspense";
@@ -106,6 +108,30 @@ export default function DemoPage() {
               <CardContent>
                 <StationErrorBoundary>
                   <OptimisticDemo />
+                </StationErrorBoundary>
+              </CardContent>
+            </Card>
+
+            {/* Kibo UI Theme Switcher Demo */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Kibo UI Theme Switcher (Controlled)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <StationErrorBoundary>
+                  <KiboThemeSwitcherDemo />
+                </StationErrorBoundary>
+              </CardContent>
+            </Card>
+
+            {/* Next-themes Theme Switcher Demo */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Next-themes Theme Switcher (Uncontrolled)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <StationErrorBoundary>
+                  <ThemeSwitcherDemo />
                 </StationErrorBoundary>
               </CardContent>
             </Card>

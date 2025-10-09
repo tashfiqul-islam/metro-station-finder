@@ -15,7 +15,6 @@ import {
   MapErrorBoundary,
   StationErrorBoundary,
 } from "@/components/error/station-error-boundary";
-import { StationSearchForm } from "@/components/forms/station-search-form";
 import { MapSuspense } from "@/components/suspense/station-list-suspense";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -611,11 +610,6 @@ function StationFinderContent() {
         <output aria-live="polite" className="sr-only">
           {messageId ? COPY_DECK[messageId] : ""}
         </output>
-
-        {/* React 19 Search Section with Actions API */}
-        <StationErrorBoundary>
-          <StationSearchForm />
-        </StationErrorBoundary>
 
         {/* Legacy Search Section for Location */}
         <SearchSection

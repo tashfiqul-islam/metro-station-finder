@@ -12,7 +12,6 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { StationErrorBoundary } from "@/components/error/station-error-boundary";
-import { StationSearchForm } from "@/components/forms/station-search-form";
 // StationListSuspense is used implicitly by React 19 patterns
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -401,11 +400,6 @@ function FareCalculatorContent() {
       <main className="flex-1 bg-muted/30">
         <div className="container mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
           <div className="space-y-6">
-            {/* React 19 Search Form with Actions API */}
-            <StationErrorBoundary>
-              <StationSearchForm />
-            </StationErrorBoundary>
-
             {/* Info Card */}
             <Card className="border-primary/20 bg-primary/5">
               <CardContent className="flex gap-3 p-4">

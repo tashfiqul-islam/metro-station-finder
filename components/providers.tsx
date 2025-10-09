@@ -1,8 +1,8 @@
 "use client";
 
 import { APIProvider } from "@vis.gl/react-google-maps";
+import { ThemeProvider as NextThemesProvider } from "next-themes";
 import type { ReactNode } from "react";
-import { ThemeProvider } from "@/components/theme-provider";
 
 /**
  * Root providers wrapper for the application.
@@ -18,7 +18,14 @@ export function Providers({ children }: { readonly children: ReactNode }) {
       libraries={["places", "geometry", "marker"]}
       region="BD"
     >
-      <ThemeProvider>{children}</ThemeProvider>
+      <NextThemesProvider
+        attribute="class"
+        defaultTheme="system"
+        disableTransitionOnChange
+        enableSystem
+      >
+        {children}
+      </NextThemesProvider>
     </APIProvider>
   );
 }

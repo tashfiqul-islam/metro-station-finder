@@ -241,10 +241,8 @@
     @apply outline-2 outline-offset-2 outline-ring;
   }
 
-  /* Smooth transitions for theme switching */
-  *,
-  *::before,
-  *::after {
+  /* Smooth transitions for theme switching - more selective */
+  [data-theme] {
     transition:
       background-color var(--duration-200) var(--ease-out),
       border-color var(--duration-200) var(--ease-out),
@@ -252,8 +250,7 @@
       fill var(--duration-200) var(--ease-out),
       stroke var(--duration-200) var(--ease-out),
       opacity var(--duration-200) var(--ease-out),
-      box-shadow var(--duration-200) var(--ease-out),
-      transform var(--duration-200) var(--ease-out);
+      box-shadow var(--duration-200) var(--ease-out);
   }
 
   /* Disable transitions for reduced motion */

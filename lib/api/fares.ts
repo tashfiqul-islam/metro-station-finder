@@ -62,6 +62,7 @@ export function calculateFare(
   const start = Date.now() as Milliseconds;
   const from = STATION_BY_ID.get(origin);
   const to = STATION_BY_ID.get(destination);
+
   if (!(from && to)) {
     return failure(
       ERROR_CODES.fare.invalidStations,

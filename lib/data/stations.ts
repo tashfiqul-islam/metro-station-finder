@@ -9,6 +9,7 @@
  * @since 2025-09-28
  */
 
+import { MRT6_FARE_CONSTANTS } from "@/lib/constants";
 import type {
   Coordinates,
   Latitude,
@@ -422,34 +423,52 @@ const MRT6_STATUS: Record<string, StationStatus> = {
  * MRT-6 Station aliases for search functionality
  */
 const MRT6_ALIASES: Record<string, readonly string[]> = {
-  uttaraNorth: ["Uttara North", "Uttara North Station", "Uttara 1"],
-  uttaraCenter: ["Uttara Center", "Uttara Central", "Uttara 2"],
-  uttaraSouth: ["Uttara South", "Uttara South Station", "Uttara 3"],
-  pallabi: ["Pallabi", "Pallabi Station"],
-  mirpur10: ["Mirpur 10", "Mirpur 10 Station", "Mirpur-10"],
-  mirpur11: ["Mirpur 11", "Mirpur 11 Station", "Mirpur-11"],
-  kazipara: ["Kazipara", "Kazipara Station"],
-  shewrapara: ["Shewrapara", "Shewrapara Station"],
-  agargaon: ["Agargaon", "Agargaon Station"],
-  bijoySarani: ["Bijoy Sarani", "Bijoy Sarani Station"],
-  farmgate: ["Farmgate", "Farmgate Station"],
-  karwanBazar: ["Karwan Bazar", "Karwan Bazar Station"],
-  shahbagh: ["Shahbagh", "Shahbagh Station"],
+  uttaraNorth: ["Northern Terminus", "Uttara 1", "Residential Area"],
+  uttaraCenter: ["Central Uttara", "Uttara 2", "Commercial Zone"],
+  uttaraSouth: ["Southern Uttara", "Uttara 3", "Near Airport"],
+  pallabi: ["Near Pallabi Market", "Residential Zone", "Local Shopping"],
+  mirpur10: ["Near Mirpur Stadium", "Sports Complex", "Recreation Center"],
+  mirpur11: ["Near Mirpur Zoo", "Recreation Zone", "Family Area"],
+  kazipara: ["Near Kazipara Market", "Shopping District", "Local Bazaar"],
+  shewrapara: ["Near Shewrapara Market", "Local Market", "Community Center"],
+  agargaon: [
+    "Near Agargaon Market",
+    "Government Zone",
+    "Administrative Center",
+  ],
+  bijoySarani: [
+    "Near Bijoy Sarani Road",
+    "Shopping Hub",
+    "Shopping Center",
+    "Retail Zone",
+  ],
+  farmgate: [
+    "Farmgate Intersection",
+    "Major Commercial Hub",
+    "Business District",
+  ],
+  karwanBazar: ["Karwan Bazar Market", "Wholesale Market", "Trading Center"],
+  shahbagh: ["Near Shahbagh Park", "Cultural District", "University Area"],
   dhakaUniversity: [
-    "Dhaka University",
-    "DU",
-    "University Station",
+    "DU Campus",
     "TSC",
-    "Teacher Student Center",
+    "Student Zone",
+    "Academic District",
+    "University Center",
   ],
   bangladeshSecretariat: [
-    "Bangladesh Secretariat",
-    "Secretariat",
-    "Secretariat Station",
     "Government Secretariat",
+    "Administrative Zone",
+    "Ministry Area",
+    "Government Center",
   ],
-  motijheel: ["Motijheel", "Motijheel Station"],
-  kamalapur: ["Kamalapur", "Kamalapur Station", "Kamalapur Railway Station"],
+  motijheel: ["Commercial Hub", "Business Center", "Financial District", "CBD"],
+  kamalapur: [
+    "Railway Station",
+    "Train Station",
+    "Transport Center",
+    "Intercity Terminal",
+  ],
 } as const satisfies Record<string, readonly string[]>;
 
 /**
@@ -746,7 +765,7 @@ const createMRT6Station = (key: string, order: number): Station => {
 
   return createStation({
     id: `mrt-6-${key}` as StationId,
-    name: metadata.description.split(",")[0] ?? `Station ${order}`, // Use first part of description as name
+    name: MRT6_FARE_CONSTANTS.stationOrder[order - 1] ?? `Station ${order}`, // Use proper station name from order
     coordinates,
     amenities,
     status,

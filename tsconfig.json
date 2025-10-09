@@ -5,7 +5,7 @@
     "target": "ES2024",
     "lib": ["ES2024", "DOM", "DOM.Iterable", "ESNext.AsyncIterable"],
     "module": "ESNext",
-    "moduleResolution": "bundler",
+    "moduleResolution": "node",
     "moduleDetection": "auto",
     "resolveJsonModule": true,
     "esModuleInterop": true,
@@ -34,11 +34,11 @@
     "useDefineForClassFields": true,
     "jsx": "preserve",
     "jsxImportSource": "react",
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./*"],
       "@/app/*": ["./app/*"],
       "@/components/*": ["./components/*"],
+      "@/components/navbar/*": ["./components/navbar/*"],
       "@/lib/*": ["./lib/*"],
       "@/hooks/*": ["./hooks/*"],
       "@/types/*": ["./types/*"],
@@ -55,16 +55,17 @@
     "allowJs": true
   },
   "include": [
-    "next-env.d.ts",
     ".next/types/**/*.ts",
-    "vitest.config.ts",
     "app/**/*",
     "components/**/*",
     "hooks/**/*",
     "lib/**/*",
+    "next-env.d.ts",
+    "styles/**/*",
     "types/**/*",
     "utils/**/*",
-    "styles/**/*"
+    "vitest.config.ts",
+    "out/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

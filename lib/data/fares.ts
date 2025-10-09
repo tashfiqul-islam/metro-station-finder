@@ -489,9 +489,9 @@ export function calculateFare(
 ): Fare {
   const baseFare = calculateBaseFare(fromStation, toStation);
   const discountAmount = calculateDiscountAmount(baseFare, discountType);
-  const finalAmount = Math.max(
-    MRT6_FARE_CONSTANTS.minFareAmount,
-    Math.min(MRT6_FARE_CONSTANTS.maxFareAmount, baseFare - discountAmount)
+  const finalAmount = Math.min(
+    MRT6_FARE_CONSTANTS.maxFareAmount,
+    Math.max(0, baseFare - discountAmount)
   ) as TakaAmount;
 
   const travelTime = calculateTravelTime(fromStation, toStation);

@@ -452,6 +452,28 @@ export const GOOGLE_MAPS_STATUS = {
 } as const satisfies Record<string, string>;
 
 /**
+ * Animation constants for consistent motion primitives throughout the app
+ */
+const EASING_P1 = 0.4;
+const EASING_P2 = 0;
+const EASING_P3 = 0.2;
+const EASING_P4 = 1;
+
+export const ANIMATION_CONSTANTS = {
+  // Duration constants
+  fast: 0.2,
+  normal: 0.3,
+  slow: 0.5,
+  // Easing curves
+  metro: [EASING_P1, EASING_P2, EASING_P3, EASING_P4] as const,
+  easeInOut: [EASING_P1, EASING_P2, EASING_P3, EASING_P4] as const,
+  // Legacy duration constants (for compatibility)
+  shortAnimationMs: 150 as Milliseconds,
+  mediumAnimationMs: 300 as Milliseconds,
+  longAnimationMs: 500 as Milliseconds,
+} as const satisfies Record<string, unknown>;
+
+/**
  * UI component constants
  */
 export const UI_CONSTANTS = {
@@ -459,10 +481,6 @@ export const UI_CONSTANTS = {
   mobileBreakpoint: 320,
   tabletBreakpoint: 768,
   desktopBreakpoint: 1024,
-  // Animation durations
-  shortAnimationMs: 150 as Milliseconds,
-  mediumAnimationMs: 300 as Milliseconds,
-  longAnimationMs: 500 as Milliseconds,
   // Debounce delays
   searchDebounceMs: 300 as Milliseconds,
   inputDebounceMs: 150 as Milliseconds,

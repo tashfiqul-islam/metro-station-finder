@@ -1,29 +1,31 @@
 import { Suspense } from "react";
-import { StationDataServer } from "@/components/server/station-data";
-import { StationListSkeleton } from "@/components/ui/station-list-skeleton";
+import { MRT6_STATIONS } from "@/lib/data/stations";
+import type { Station } from "@/lib/types/station";
 
 /**
- * React 19 Suspense boundary for station list streaming
- * Demonstrates modern streaming and lazy loading patterns
+ * Server Component for station list
+ * No Suspense or use() needed for static data
  */
 export function StationListSuspense() {
+  const stations = MRT6_STATIONS;
+  const displayStationCount = 5;
   return (
-    <Suspense
-      fallback={
-        <div className="space-y-4">
-          <StationListSkeleton />
-          <StationListSkeleton />
-          <StationListSkeleton />
-        </div>
-      }
-    >
-      <StationDataServer />
-    </Suspense>
+    <div className="station-data-server">
+      <h2>Station Data (Server Component)</h2>
+      <p>Total stations: {stations.length}</p>
+      <ul>
+        {stations.slice(0, displayStationCount).map((station: Station) => (
+          <li key={station.id}>
+            {station.name} - {station.line}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
 /**
- * React 19 Suspense boundary for map loading
+ * Suspense boundary for map loading
  * Provides fallback UI while map loads
  */
 export function MapSuspense({ children }: { children: React.ReactNode }) {
@@ -44,7 +46,7 @@ export function MapSuspense({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * React 19 Suspense boundary for search results
+ * Suspense boundary for search results
  * Provides fallback UI while search completes
  */
 export function SearchResultsSuspense({
