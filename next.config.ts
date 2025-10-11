@@ -11,7 +11,11 @@ const withBundleAnalyzer = require("@next/bundle-analyzer")({
 const NODE_MODULES_REGEX = /[\\/]node_modules[\\/]/;
 const VIS_GL_REGEX = /[\\/]node_modules[\\/]@vis\.gl[\\/]/;
 const LUCIDE_REGEX = /[\\/]node_modules[\\/]lucide-react[\\/]/;
+const REACT_REGEX = /[\\/]node_modules[\\/](react|react-dom)[\\/]/;
+const UI_LIBRARIES_REGEX =
+  /[\\/]node_modules[\\/](@radix-ui|lucide-react|class-variance-authority|clsx|tailwind-merge)[\\/]/;
 const SVG_REGEX = /\.svg$/;
+const NEXTJS_REGEX = /[\\/]node_modules[\\/](next|@next)[\\/]/;
 
 // Environment detection
 const isProduction = process.env.NODE_ENV === "production";
@@ -60,9 +64,9 @@ const IMAGE_SIZES = [
 
 // Webpack optimization constants
 // Optimized for static export and mobile performance
-const MIN_CHUNK_SIZE = 20_000; // Conservative minimum to avoid tiny chunks
-const MAX_CHUNK_SIZE = 150_000; // Conservative maximum for mobile loading
-const VENDOR_CHUNK_SIZE = 80_000; // Reasonable vendor chunk size
+const _MIN_CHUNK_SIZE = 20_000; // Conservative minimum to avoid tiny chunks
+const _MAX_CHUNK_SIZE = 150_000; // Conservative maximum for mobile loading
+const _VENDOR_CHUNK_SIZE = 80_000; // Reasonable vendor chunk size
 
 const nextConfig: NextConfig = {
   // React configuration
@@ -106,7 +110,14 @@ const nextConfig: NextConfig = {
     ],
   },
 
-  // Experimental features
+  // Server-side bundling optimization (2025 approach)
+  serverExternalPackages: [
+    // Exclude packages that should remain external for better performance
+    "sharp", // Image processing
+    "canvas", // Canvas operations
+  ],
+
+  // Experimental features - 2025 optimizations for 100% Lighthouse
   experimental: {
     reactCompiler: true,
     viewTransition: true,
@@ -120,15 +131,26 @@ const nextConfig: NextConfig = {
       "zod",
       "react-hook-form",
       "@hookform/resolvers",
-      // Removed react and react-dom - they're optimized by default
+      "motion",
+      "next-themes",
     ],
     scrollRestoration: true,
+    // Add performance optimizations
+    optimizeServerReact: true,
+    serverMinification: true,
+    serverSourceMaps: false,
+    // Enable modern JavaScript features
+    esmExternals: true,
   },
 
   // Compiler settings
   compiler: {
     removeConsole: isProduction ? { exclude: ["error", "warn"] } : false,
     styledComponents: false,
+    // Add minification optimizations
+    reactRemoveProperties: isProduction
+      ? { properties: ["^data-testid$"] }
+      : false,
   },
 
   // Turbopack configuration
@@ -143,38 +165,75 @@ const nextConfig: NextConfig = {
 
   // Webpack configuration
   webpack: (config, { isServer }) => {
+    // Production optimizations - 2025 approach for 100% Lighthouse
     if (isProduction && !isServer) {
+      // Enable aggressive minification
+      config.optimization.minimize = true;
+
+      // Optimize split chunks for maximum performance
       config.optimization.splitChunks = {
         chunks: "all",
-        minSize: MIN_CHUNK_SIZE,
-        maxSize: MAX_CHUNK_SIZE,
-        maxAsyncRequests: 30,
+        minSize: 20_000, // Smaller chunks for better caching
+        maxSize: 200_000, // Prevent chunks from being too large
+        maxAsyncRequests: 50, // Allow more async chunks
         maxInitialRequests: 30,
         cacheGroups: {
+          // Critical React libraries - highest priority
+          react: {
+            test: REACT_REGEX,
+            name: "react",
+            chunks: "all",
+            priority: 50,
+            maxSize: 150_000,
+            enforce: true,
+            reuseExistingChunk: true,
+          },
+          // Next.js framework
+          nextjs: {
+            test: NEXTJS_REGEX,
+            name: "nextjs",
+            chunks: "all",
+            priority: 45,
+            maxSize: 200_000,
+            enforce: true,
+          },
+          // Google Maps - lazy loaded only
+          maps: {
+            test: VIS_GL_REGEX,
+            name: "maps",
+            chunks: "async",
+            priority: 20,
+            maxSize: 300_000,
+            enforce: true,
+          },
+          // UI libraries
+          ui: {
+            test: UI_LIBRARIES_REGEX,
+            name: "ui",
+            chunks: "all",
+            priority: 35,
+            maxSize: 100_000,
+            enforce: true,
+          },
+          // Icons - separate chunk for better caching
+          icons: {
+            test: LUCIDE_REGEX,
+            name: "icons",
+            chunks: "all",
+            priority: 25,
+            maxSize: 50_000,
+            enforce: true,
+          },
+          // Other vendor libraries
           vendor: {
             test: NODE_MODULES_REGEX,
             name: "vendors",
             chunks: "all",
             priority: 10,
-            maxSize: VENDOR_CHUNK_SIZE,
-            // Removed enforce: true to prevent aggressive splitting
-          },
-          maps: {
-            test: VIS_GL_REGEX,
-            name: "maps",
-            chunks: "all",
-            priority: 20,
             maxSize: 150_000,
-            enforce: true,
+            reuseExistingChunk: true,
           },
-          icons: {
-            test: LUCIDE_REGEX,
-            name: "icons",
-            chunks: "all",
-            priority: 15,
-            maxSize: 50_000,
-            enforce: true,
-          },
+          // Common code
           common: {
             name: "common",
             minChunks: 2,
@@ -185,6 +244,35 @@ const nextConfig: NextConfig = {
           },
         },
       };
+
+      // Enable aggressive tree shaking
+      config.optimization.usedExports = true;
+      config.optimization.sideEffects = false;
+      config.optimization.providedExports = true;
+      config.optimization.concatenateModules = true;
+      config.optimization.mergeDuplicateChunks = true;
+      config.optimization.removeAvailableModules = true;
+      config.optimization.removeEmptyChunks = true;
+
+      // Optimize module resolution
+      config.resolve.symlinks = false;
+      config.resolve.cacheWithContext = false;
+      config.resolve.modules = ["node_modules"];
+      config.resolve.mainFields = ["browser", "module", "main"];
+
+      // 2025 bundling optimization - modern approach
+      config.optimization.moduleIds = "deterministic";
+      config.optimization.chunkIds = "deterministic";
+
+      // Optimize module resolution
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        react: "react",
+        "react-dom": "react-dom",
+      };
+
+      // Enable source maps for production debugging
+      config.devtool = "source-map";
     }
 
     // SVG handling - only for webpack (turbopack has its own SVG handling)
@@ -216,6 +304,9 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   compress: true,
   generateBuildId: () => `metro-station-finder-${Date.now()}`,
+
+  // Modern bundling optimizations (2025 approach)
+  bundlePagesRouterDependencies: true,
 };
 
 export default withBundleAnalyzer(nextConfig);

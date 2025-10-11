@@ -10,14 +10,23 @@ const ropaSans = Ropa_Sans({
   display: "swap",
   preload: true,
   adjustFontFallback: true,
+  fallback: [
+    "system-ui",
+    "-apple-system",
+    "BlinkMacSystemFont",
+    "Segoe UI",
+    "Roboto",
+    "sans-serif",
+  ],
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
   display: "swap",
-  preload: true,
+  preload: false, // Only preload the primary font
   adjustFontFallback: true,
+  fallback: ["Courier New", "monospace"],
 });
 
 export const metadata: Metadata = {
@@ -81,10 +90,13 @@ export default function RootLayout({
       <head>
         <link href="/favicon.ico" rel="icon" />
         <link href="/apple-touch-icon.png" rel="apple-touch-icon" />
+        <link href="/manifest.json" rel="manifest" />
+        {/* Preconnect to Google Fonts for better performance */}
+        <link href="https://fonts.googleapis.com" rel="preconnect" />
         <link
-          as="style"
-          href="https://fonts.googleapis.com/css2?family=Ropa+Sans:ital,wght@0,400;1,400&display=swap"
-          rel="preload"
+          crossOrigin="anonymous"
+          href="https://fonts.gstatic.com"
+          rel="preconnect"
         />
         <meta
           content="#3b82f6"
@@ -97,6 +109,54 @@ export default function RootLayout({
           name="theme-color"
         />
         <meta content="width=device-width, initial-scale=1" name="viewport" />
+        {/* Security headers via meta tags for static export */}
+        <meta content="nosniff" httpEquiv="X-Content-Type-Options" />
+        <meta content="DENY" httpEquiv="X-Frame-Options" />
+        <meta content="1; mode=block" httpEquiv="X-XSS-Protection" />
+        <meta
+          content="strict-origin-when-cross-origin"
+          httpEquiv="Referrer-Policy"
+        />
+        <meta
+          content="camera=(), microphone=(), geolocation=(), browsing-topics=()"
+          httpEquiv="Permissions-Policy"
+        />
+        <meta
+          content="max-age=31536000; includeSubDomains; preload"
+          httpEquiv="Strict-Transport-Security"
+        />
+        <meta
+          content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com https://maps.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://maps.googleapis.com; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self';"
+          httpEquiv="Content-Security-Policy"
+        />
+
+        {/* Resource hints for better performance */}
+        <link href="//fonts.googleapis.com" rel="dns-prefetch" />
+        <link href="//fonts.gstatic.com" rel="dns-prefetch" />
+        <link href="//maps.googleapis.com" rel="dns-prefetch" />
+        <link href="//maps.gstatic.com" rel="dns-prefetch" />
+
+        {/* Preload critical resources for instant LCP */}
+        <link as="image" href="/favicon.ico" rel="preload" />
+        <link
+          as="fetch"
+          crossOrigin="anonymous"
+          href="/manifest.json"
+          rel="preload"
+        />
+
+        {/* Preload critical fonts with high priority */}
+        <link
+          as="style"
+          href="https://fonts.googleapis.com/css2?family=Ropa+Sans:wght@400&display=swap"
+          rel="preload"
+        />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Ropa+Sans:wght@400&display=swap"
+          rel="stylesheet"
+        />
+
+        {/* Critical CSS is now handled by Tailwind v4 in src/input.css */}
       </head>
       <body
         className={`${ropaSans.variable} ${geistMono.variable} antialiased`}

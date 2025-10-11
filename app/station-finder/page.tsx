@@ -8,6 +8,7 @@ import {
   Route,
   X,
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
@@ -19,7 +20,19 @@ import { MapSuspense } from "@/components/suspense/station-list-suspense";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { MetroMap } from "@/components/ui/map";
+
+// Lazy load the map component to reduce initial bundle size
+const MetroMap = dynamic(
+  () =>
+    import("@/components/ui/map").then((mod) => ({ default: mod.MetroMap })),
+  {
+    ssr: false, // Maps need client-side rendering
+    loading: () => (
+      <div className="h-[500px] w-full animate-pulse rounded-xl bg-muted" />
+    ),
+  }
+);
+
 import { SearchInput } from "@/components/ui/search-input";
 import { StationCard } from "@/components/ui/station-card";
 import {

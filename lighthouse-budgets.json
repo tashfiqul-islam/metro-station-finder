@@ -3,12 +3,139 @@
     "path": "/*",
     "resourceSizes": [
       {
+        "resourceType": "total",
+        "budget": 2500
+      },
+      {
         "resourceType": "script",
-        "budget": 100
+        "budget": 800
       },
       {
         "resourceType": "stylesheet",
-        "budget": 40
+        "budget": 200
+      },
+      {
+        "resourceType": "image",
+        "budget": 1000
+      },
+      {
+        "resourceType": "font",
+        "budget": 100
+      },
+      {
+        "resourceType": "document",
+        "budget": 50
+      },
+      {
+        "resourceType": "media",
+        "budget": 500
+      },
+      {
+        "resourceType": "other",
+        "budget": 200
+      }
+    ],
+    "resourceCounts": [
+      {
+        "resourceType": "total",
+        "budget": 100
+      },
+      {
+        "resourceType": "script",
+        "budget": 20
+      },
+      {
+        "resourceType": "stylesheet",
+        "budget": 5
+      },
+      {
+        "resourceType": "image",
+        "budget": 30
+      },
+      {
+        "resourceType": "font",
+        "budget": 5
+      },
+      {
+        "resourceType": "document",
+        "budget": 1
+      },
+      {
+        "resourceType": "media",
+        "budget": 10
+      },
+      {
+        "resourceType": "third-party",
+        "budget": 15
+      },
+      {
+        "resourceType": "other",
+        "budget": 20
+      }
+    ],
+    "timings": [
+      {
+        "metric": "first-contentful-paint",
+        "budget": 1800
+      },
+      {
+        "metric": "largest-contentful-paint",
+        "budget": 2500
+      },
+      {
+        "metric": "speed-index",
+        "budget": 3000
+      },
+      {
+        "metric": "interactive",
+        "budget": 4000
+      },
+      {
+        "metric": "total-blocking-time",
+        "budget": 200
+      },
+      {
+        "metric": "cumulative-layout-shift",
+        "budget": 0.1
+      },
+      {
+        "metric": "max-potential-fid",
+        "budget": 100
+      },
+      {
+        "metric": "first-meaningful-paint",
+        "budget": 2000
+      },
+      {
+        "metric": "estimated-input-latency",
+        "budget": 50
+      }
+    ]
+  },
+  {
+    "path": "/station-finder",
+    "resourceSizes": [
+      {
+        "resourceType": "total",
+        "budget": 3000
+      },
+      {
+        "resourceType": "script",
+        "budget": 1000
+      },
+      {
+        "resourceType": "image",
+        "budget": 1200
+      }
+    ],
+    "resourceCounts": [
+      {
+        "resourceType": "total",
+        "budget": 120
+      },
+      {
+        "resourceType": "third-party",
+        "budget": 20
       }
     ],
     "timings": [
@@ -18,19 +145,93 @@
       },
       {
         "metric": "largest-contentful-paint",
-        "budget": 2000
-      },
-      {
-        "metric": "interactive",
         "budget": 3000
       },
       {
-        "metric": "cumulative-layout-shift",
-        "budget": 0.1
+        "metric": "interactive",
+        "budget": 5000
+      }
+    ]
+  },
+  {
+    "path": "/fare-calculator",
+    "resourceSizes": [
+      {
+        "resourceType": "total",
+        "budget": 2800
       },
       {
-        "metric": "interaction-to-next-paint",
-        "budget": 200
+        "resourceType": "script",
+        "budget": 900
+      },
+      {
+        "resourceType": "image",
+        "budget": 1000
+      }
+    ],
+    "resourceCounts": [
+      {
+        "resourceType": "total",
+        "budget": 110
+      },
+      {
+        "resourceType": "third-party",
+        "budget": 18
+      }
+    ],
+    "timings": [
+      {
+        "metric": "first-contentful-paint",
+        "budget": 1900
+      },
+      {
+        "metric": "largest-contentful-paint",
+        "budget": 2800
+      },
+      {
+        "metric": "interactive",
+        "budget": 4500
+      }
+    ]
+  },
+  {
+    "path": "/about",
+    "resourceSizes": [
+      {
+        "resourceType": "total",
+        "budget": 2000
+      },
+      {
+        "resourceType": "script",
+        "budget": 600
+      },
+      {
+        "resourceType": "image",
+        "budget": 800
+      }
+    ],
+    "resourceCounts": [
+      {
+        "resourceType": "total",
+        "budget": 80
+      },
+      {
+        "resourceType": "third-party",
+        "budget": 10
+      }
+    ],
+    "timings": [
+      {
+        "metric": "first-contentful-paint",
+        "budget": 1500
+      },
+      {
+        "metric": "largest-contentful-paint",
+        "budget": 2200
+      },
+      {
+        "metric": "interactive",
+        "budget": 3500
       }
     ]
   }

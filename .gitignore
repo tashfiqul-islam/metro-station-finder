@@ -141,6 +141,7 @@ dist-scripts/
 
 # Performance monitoring
 .lighthouse/
+lighthouse-*.json
 
 # Security
 *.pem

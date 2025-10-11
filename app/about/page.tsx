@@ -138,15 +138,21 @@ function SectionNav({
   return (
     <button
       className={cn(
-        "flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors",
+        "flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-all duration-200",
         isActive
-          ? "bg-primary/10 font-medium text-primary"
+          ? "bg-muted font-medium text-foreground"
           : "text-muted-foreground hover:bg-muted hover:text-foreground"
       )}
       onClick={onClick}
       type="button"
     >
-      <Icon aria-hidden="true" className="h-4 w-4" />
+      <Icon
+        aria-hidden="true"
+        className={cn(
+          "h-4 w-4 transition-colors duration-200",
+          isActive ? "text-primary" : "text-muted-foreground"
+        )}
+      />
       <span>{section.title}</span>
     </button>
   );

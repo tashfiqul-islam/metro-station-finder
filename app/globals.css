@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import "./input.css";
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
@@ -83,6 +83,7 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-light: var(--primary-light);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -94,6 +95,11 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-hero-accent: var(--hero-accent);
+  --color-hero-accent-foreground: var(--hero-accent-foreground);
+  --color-hero-gradient-from: var(--hero-gradient-from);
+  --color-hero-gradient-via: var(--hero-gradient-via);
+  --color-hero-gradient-to: var(--hero-gradient-to);
 }
 
 :root {
@@ -108,9 +114,26 @@
   --popover: oklch(1 0 0); /* Pure white popovers */
   --popover-foreground: oklch(0.09 0.005 106.423); /* Dark text on popovers */
 
-  /* Primary - Modern blue inspired by Supabase */
-  --primary: oklch(0.45 0.15 240); /* Vibrant blue */
+  /* Primary - Using direct hex color for exact matching */
+  --primary-hex: #047857; /* Deep emerald green - exact hex */
+  --primary: var(--primary-hex); /* Use hex directly in light mode */
   --primary-foreground: oklch(0.98 0.005 106.423); /* Near white on primary */
+
+  /* Primary variant for gradients - lighter end */
+  --primary-light-hex: #6ee7b7; /* Light emerald green - exact hex */
+  --primary-light: var(
+    --primary-light-hex
+  ); /* Use hex directly in light mode */
+
+  /* Hero section colors - for consistent theming */
+  --hero-accent: var(--primary-light); /* Light emerald for accents */
+  --hero-accent-foreground: #065f46; /* Very dark emerald-800 for high contrast */
+  --hero-gradient-from: #047857; /* Gradient start - emerald-700 */
+  --hero-gradient-via: #059669; /* Gradient middle - emerald-600 */
+  --hero-gradient-to: #047857; /* Gradient end - emerald-700 */
+  --hero-radial-top: 4, 120, 87; /* RGB for radial gradient top (#047857) */
+  --hero-radial-bottom:
+    110, 231, 183; /* RGB for radial gradient bottom (#6EE7B7) */
 
   /* Secondary - Subtle gray */
   --secondary: oklch(0.96 0.005 106.423); /* Very light gray */
@@ -120,8 +143,8 @@
   --muted: oklch(0.96 0.005 106.423); /* Light gray background */
   --muted-foreground: oklch(0.45 0.005 106.423); /* Medium gray text */
 
-  /* Accent - Subtle highlight */
-  --accent: oklch(0.94 0.02 240); /* Light blue tint */
+  /* Accent - Subtle emerald highlight matching #6EE7B7 */
+  --accent: #f0fdf4; /* Very light emerald tint for backgrounds */
   --accent-foreground: oklch(0.15 0.005 106.423); /* Dark text on accent */
 
   /* Destructive - Modern red */
@@ -131,26 +154,34 @@
   /* Borders and inputs */
   --border: oklch(0.9 0.01 106.423); /* Light border */
   --input: oklch(0.9 0.01 106.423); /* Input border */
-  --ring: oklch(0.45 0.15 240); /* Focus ring (primary color) */
+  --ring: #047857; /* Focus ring matching deep emerald */
 
-  /* Chart colors - Modern palette */
-  --chart-1: oklch(0.45 0.15 240); /* Blue */
-  --chart-2: oklch(0.55 0.15 160); /* Teal */
-  --chart-3: oklch(0.5 0.15 300); /* Purple */
-  --chart-4: oklch(0.6 0.15 60); /* Green */
-  --chart-5: oklch(0.55 0.15 30); /* Orange */
+  /* Particle colors for theme-aware sparkles */
+  --particle-color-hue: 142;
+  --particle-color-saturation: 0.15;
+  --particle-color-lightness: 0.1; /* Light mode: very dark green */
+
+  /* Shooting star colors for theme-aware effects - Light mode: very dark green */
+  --shooting-star-color: 6, 25, 6;
+
+  /* Chart colors - Emerald-focused palette matching #047857 to #6EE7B7 */
+  --chart-1: #047857; /* Deep emerald */
+  --chart-2: #059669; /* Mid emerald */
+  --chart-3: #6ee7b7; /* Light emerald */
+  --chart-4: #34d399; /* Lighter emerald */
+  --chart-5: #10b981; /* Medium emerald */
 
   /* Sidebar */
   --sidebar: oklch(0.98 0.005 106.423); /* Very light background */
   --sidebar-foreground: oklch(0.15 0.005 106.423); /* Dark text */
-  --sidebar-primary: oklch(0.45 0.15 240); /* Primary blue */
+  --sidebar-primary: #047857; /* Deep emerald */
   --sidebar-primary-foreground: oklch(
     0.98 0.005 106.423
   ); /* White on primary */
-  --sidebar-accent: oklch(0.94 0.02 240); /* Light blue accent */
+  --sidebar-accent: #6ee7b7; /* Light emerald accent */
   --sidebar-accent-foreground: oklch(0.15 0.005 106.423); /* Dark text */
   --sidebar-border: oklch(0.9 0.01 106.423); /* Light border */
-  --sidebar-ring: oklch(0.45 0.15 240); /* Focus ring */
+  --sidebar-ring: #047857; /* Focus ring matching deep emerald */
 }
 
 .dark {
@@ -162,9 +193,23 @@
   --popover: oklch(0.12 0.01 106.423); /* Dark popovers */
   --popover-foreground: oklch(0.95 0.005 106.423); /* Light text on popovers */
 
-  /* Primary - Bright blue for dark theme */
-  --primary: oklch(0.65 0.15 240); /* Bright blue */
+  /* Primary - Soothing emerald green for dark theme */
+  --primary: oklch(0.7 0.15 142); /* Bright emerald green */
   --primary-foreground: oklch(0.08 0.005 106.423); /* Dark text on primary */
+
+  /* Primary variant for gradients - lighter end */
+  --primary-light: oklch(0.75 0.15 142); /* Lighter emerald for dark mode */
+
+  /* Hero section colors - for consistent theming */
+  --hero-accent: oklch(0.7 0.15 142); /* Bright emerald for accents */
+  --hero-accent-foreground: #10b981; /* Bright emerald for text readability */
+  --hero-gradient-from: #10b981; /* Gradient start - bright emerald-500 for button contrast with white text */
+  --hero-gradient-via: #34d399; /* Gradient middle - lighter emerald-400 */
+  --hero-gradient-to: #10b981; /* Gradient end - bright emerald-500 */
+  --hero-radial-top:
+    73, 213, 73; /* RGB for radial gradient top (bright emerald) */
+  --hero-radial-bottom:
+    73, 213, 73; /* RGB for radial gradient bottom (bright emerald) */
 
   /* Secondary - Dark gray */
   --secondary: oklch(0.15 0.01 106.423); /* Dark gray */
@@ -174,8 +219,8 @@
   --muted: oklch(0.15 0.01 106.423); /* Dark gray background */
   --muted-foreground: oklch(0.55 0.01 106.423); /* Medium gray text */
 
-  /* Accent - Subtle highlight */
-  --accent: oklch(0.2 0.02 240); /* Dark blue tint */
+  /* Accent - Subtle green highlight */
+  --accent: oklch(0.2 0.02 142); /* Dark green tint */
   --accent-foreground: oklch(0.85 0.005 106.423); /* Light text on accent */
 
   /* Destructive - Bright red for dark theme */
@@ -185,26 +230,34 @@
   /* Borders and inputs */
   --border: oklch(0.25 0.01 106.423); /* Dark border */
   --input: oklch(0.25 0.01 106.423); /* Input border */
-  --ring: oklch(0.65 0.15 240); /* Focus ring (primary color) */
+  --ring: oklch(0.7 0.15 142); /* Focus ring (primary color) */
 
-  /* Chart colors - Vibrant palette for dark theme */
-  --chart-1: oklch(0.65 0.15 240); /* Bright blue */
-  --chart-2: oklch(0.7 0.15 160); /* Bright teal */
+  /* Particle colors for theme-aware sparkles - Dark mode: bright emerald green */
+  --particle-color-hue: 142;
+  --particle-color-saturation: 0.15;
+  --particle-color-lightness: 0.7;
+
+  /* Shooting star colors for theme-aware effects - Dark mode: bright green */
+  --shooting-star-color: 73, 213, 73;
+
+  /* Chart colors - Green-focused palette for dark theme */
+  --chart-1: oklch(0.7 0.15 142); /* Bright emerald green */
+  --chart-2: oklch(0.75 0.15 160); /* Bright teal */
   --chart-3: oklch(0.65 0.15 300); /* Bright purple */
-  --chart-4: oklch(0.7 0.15 60); /* Bright green */
+  --chart-4: oklch(0.8 0.15 100); /* Bright light green */
   --chart-5: oklch(0.7 0.15 30); /* Bright orange */
 
   /* Sidebar */
   --sidebar: oklch(0.1 0.01 106.423); /* Dark background */
   --sidebar-foreground: oklch(0.85 0.005 106.423); /* Light text */
-  --sidebar-primary: oklch(0.65 0.15 240); /* Bright blue */
+  --sidebar-primary: oklch(0.7 0.15 142); /* Bright emerald green */
   --sidebar-primary-foreground: oklch(
     0.08 0.005 106.423
   ); /* Dark text on primary */
-  --sidebar-accent: oklch(0.2 0.02 240); /* Dark blue accent */
+  --sidebar-accent: oklch(0.2 0.02 142); /* Dark green accent */
   --sidebar-accent-foreground: oklch(0.85 0.005 106.423); /* Light text */
   --sidebar-border: oklch(0.25 0.01 106.423); /* Dark border */
-  --sidebar-ring: oklch(0.65 0.15 240); /* Focus ring */
+  --sidebar-ring: oklch(0.7 0.15 142); /* Focus ring */
 }
 
 @layer base {

@@ -216,7 +216,7 @@ export function FareDisplay({
                         {formatComponentName(component)}
                       </span>
                       <span className="font-medium text-card-foreground">
-                        {formatCurrency(amount)}
+                        {formatCurrency(amount as number)}
                       </span>
                     </div>
                   )

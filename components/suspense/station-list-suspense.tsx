@@ -4,22 +4,31 @@ import type { Station } from "@/lib/types/station";
 
 /**
  * Server Component for station list
- * No Suspense or use() needed for static data
+ * Optimized for performance with minimal rendering
  */
 export function StationListSuspense() {
   const stations = MRT6_STATIONS;
-  const displayStationCount = 5;
+  const displayStationCount = 3; // Reduced for better performance
+  const featuredStations = stations.filter((station: Station) =>
+    ["farmgate", "mirpur-10", "motijheel"].includes(station.id)
+  );
+
   return (
-    <div className="station-data-server">
-      <h2>Station Data (Server Component)</h2>
-      <p>Total stations: {stations.length}</p>
-      <ul>
-        {stations.slice(0, displayStationCount).map((station: Station) => (
-          <li key={station.id}>
-            {station.name} - {station.line}
-          </li>
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {featuredStations
+        .slice(0, displayStationCount)
+        .map((station: Station) => (
+          <div
+            className="rounded-lg border border-border/50 bg-card/50 p-4 backdrop-blur-sm"
+            key={station.id}
+          >
+            <h3 className="font-semibold text-foreground">{station.name}</h3>
+            <p className="text-muted-foreground text-sm">{station.line}</p>
+            <p className="text-muted-foreground text-xs">
+              Order: {station.order}
+            </p>
+          </div>
         ))}
-      </ul>
     </div>
   );
 }

@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { LazyMapProviderWrapper } from "@/components/providers/lazy-map-provider";
 import { Card, CardContent } from "@/components/ui/card";
 import { useMapAvailability } from "@/lib/hooks/use-map-availability";
 import { darkModeMapStyle, lightModeMapStyle } from "@/lib/map/styles";
@@ -215,7 +216,7 @@ const MapEffects = memo(function MapEffectsComponent({
  * />
  * ```
  */
-export const MetroMap = memo(function MetroMapComponent({
+const MetroMapInner = memo(function MetroMapComponent({
   center = DEFAULT_CENTER,
   zoom = 12,
   selectedStation,
@@ -352,5 +353,16 @@ export const MetroMap = memo(function MetroMapComponent({
         </output>
       )}
     </div>
+  );
+});
+
+/**
+ * MetroMap component wrapped with lazy Google Maps provider for better bfcache compatibility.
+ */
+export const MetroMap = memo(function MetroMapWrapper(props: MapProps) {
+  return (
+    <LazyMapProviderWrapper>
+      <MetroMapInner {...props} />
+    </LazyMapProviderWrapper>
   );
 });

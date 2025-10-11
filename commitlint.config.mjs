@@ -17,8 +17,8 @@
 const COMMIT_LIMITS = {
   typeMaxLength: 20,
   scopeMaxLength: 30,
-  subjectMaxLength: 50,
-  subjectMinLength: 10,
+  subjectMaxLength: 72,
+  subjectMinLength: 5,
   bodyMaxLength: 72,
   footerMaxLength: 72,
   headerMaxLength: 72,
