@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist_Mono, Ropa_Sans } from "next/font/google";
+import { WebVitalsMonitor } from "@/components/metrics/web-vitals-monitor";
 import { Footer } from "@/components/navigation/footer";
 import { NavBar } from "@/components/navigation/nav-bar";
 import { Providers } from "@/components/providers";
@@ -148,6 +149,7 @@ export default function RootLayout({
           <NavBar />
           {children}
           <Footer />
+          <WebVitalsMonitor />
         </Providers>
       </body>
     </html>
