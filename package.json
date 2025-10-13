@@ -121,10 +121,10 @@
     "zod": "4.1.12"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.2.5",
+    "@biomejs/biome": "2.2.6",
     "@commitlint/cli": "20.1.0",
     "@commitlint/config-conventional": "20.0.0",
-    "@next/bundle-analyzer": "15.5.4",
+    "@next/bundle-analyzer": "15.5.5",
     "@playwright/test": "1.56.0",
     "@semantic-release/changelog": "6.0.3",
     "@semantic-release/commit-analyzer": "13.0.1",
@@ -138,7 +138,7 @@
     "@types/google.maps": "3.58.1",
     "@types/node": "24.7.2",
     "@types/react": "19.2.2",
-    "@types/react-dom": "19.2.1",
+    "@types/react-dom": "19.2.2",
     "@vercel/analytics": "1.5.0",
     "@vercel/speed-insights": "1.2.0",
     "@vitejs/plugin-react": "5.0.4",

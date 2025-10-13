@@ -14,7 +14,7 @@ import {
   Users,
 } from "lucide-react";
 import Link from "next/link";
-import { memo, useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -144,6 +144,10 @@ const SectionNav = memo(
             : "text-muted-foreground hover:bg-muted hover:text-foreground"
         )}
         onClick={onClick}
+        style={{
+          willChange: isActive ? "auto" : "background-color, color",
+          transform: "translateZ(0)",
+        }}
         type="button"
       >
         <Icon
@@ -327,20 +331,81 @@ DiagnosticsSection.displayName = "DiagnosticsSection";
 export function AboutContent() {
   const [activeSection, setActiveSection] = useState<string>("about");
 
-  useEffect(() => {
-    // Handle hash navigation
-    const hash = window.location.hash.slice(1);
-    if (hash && SECTIONS.some((s) => s.id === hash)) {
-      setActiveSection(hash);
-      document.getElementById(hash)?.scrollIntoView({ behavior: "smooth" });
+  // Memoized scroll handler with optimized performance
+  const scrollToSection = useCallback((id: string) => {
+    setActiveSection(id);
+    const element = document.getElementById(id);
+    if (element) {
+      // Use native smooth scroll for better performance
+      element.scrollIntoView({ behavior: "smooth", block: "start" });
+      window.history.pushState(null, "", `#${id}`);
     }
   }, []);
 
-  const scrollToSection = (id: string) => {
-    setActiveSection(id);
-    document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
-    window.history.pushState(null, "", `#${id}`);
-  };
+  // Initial hash navigation
+  useEffect(() => {
+    const hash = window.location.hash.slice(1);
+    if (hash && SECTIONS.some((s) => s.id === hash)) {
+      setActiveSection(hash);
+      const element = document.getElementById(hash);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+  }, []);
+
+  // IntersectionObserver for automatic section detection
+  useEffect(() => {
+    const observerOptions = {
+      root: null,
+      rootMargin: "-20% 0px -70% 0px", // Trigger when section is ~30% visible
+      threshold: 0,
+    };
+
+    const handleIntersection = (id: string) => {
+      if (SECTIONS.some((s) => s.id === id)) {
+        setActiveSection(id);
+        // Update URL without scrolling
+        if (window.location.hash !== `#${id}`) {
+          window.history.replaceState(null, "", `#${id}`);
+        }
+      }
+    };
+
+    const observerCallback: IntersectionObserverCallback = (entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          handleIntersection(entry.target.id);
+        }
+      }
+    };
+
+    const observer = new IntersectionObserver(
+      observerCallback,
+      observerOptions
+    );
+
+    // Observe all sections
+    for (const section of SECTIONS) {
+      const element = document.getElementById(section.id);
+      if (element) {
+        observer.observe(element);
+      }
+    }
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  // Memoized section click handlers
+  const sectionHandlers = useMemo(() => {
+    const handlers: Record<string, () => void> = {};
+    for (const section of SECTIONS) {
+      handlers[section.id] = () => scrollToSection(section.id);
+    }
+    return handlers;
+  }, [scrollToSection]);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -351,13 +416,18 @@ export function AboutContent() {
           <nav
             aria-label="Page sections"
             className="sticky top-20 z-40 mb-8 hidden rounded-xl border border-border/50 bg-background/95 p-2 backdrop-blur-sm md:block"
+            style={{
+              willChange: "transform",
+              contain: "layout style paint",
+              transform: "translateZ(0)",
+            }}
           >
             <ul className="flex justify-center gap-2">
               {SECTIONS.map((section) => (
                 <li key={section.id}>
                   <SectionNav
                     isActive={activeSection === section.id}
-                    onClick={() => scrollToSection(section.id)}
+                    onClick={sectionHandlers[section.id] as () => void}
                     section={section}
                   />
                 </li>
