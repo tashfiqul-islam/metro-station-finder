@@ -65,9 +65,10 @@ const nextConfig: NextConfig = {
   trailingSlash: true,
 
   // Static export configuration
-  // Note: headers and redirects don't work with static export
-  // These would need to be handled at the hosting/CDN level
-  output: "export",
+  // NOTE: Static export is currently disabled due to Next.js 16 beta limitations
+  // The new App Router navigation requires RSC payloads that aren't generated in static exports
+  // This will be re-enabled once Next.js 16 stable is released with proper static export support
+  // output: "export",
   distDir: "out",
   skipTrailingSlashRedirect: true,
   skipMiddlewareUrlNormalize: true,
