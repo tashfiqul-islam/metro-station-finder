@@ -72,11 +72,6 @@ const nextConfig: NextConfig = {
   skipTrailingSlashRedirect: true,
   skipMiddlewareUrlNormalize: true,
 
-  // Disable features incompatible with static export
-  eslint: {
-    ignoreDuringBuilds: false,
-  },
-
   // Image optimization settings
   images: {
     unoptimized: true,
