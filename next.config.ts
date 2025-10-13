@@ -97,8 +97,6 @@ const nextConfig: NextConfig = {
   experimental: {
     // Next.js 16 beta: Turbopack filesystem caching
     turbopackFileSystemCacheForDev: true,
-    // Next.js 16 beta: Cache Components (PPR successor)
-    cacheComponents: true,
     viewTransition: true,
     staticGenerationRetryCount: 3,
     staticGenerationMaxConcurrency: 8,
@@ -139,13 +137,6 @@ const nextConfig: NextConfig = {
         loaders: ["@svgr/webpack"],
         as: "*.js",
       },
-    },
-  },
-
-  // Import optimization (Next.js 16: modularizeImports for granular imports)
-  modularizeImports: {
-    "lucide-react": {
-      transform: "lucide-react/icons/{{member}}",
     },
   },
 

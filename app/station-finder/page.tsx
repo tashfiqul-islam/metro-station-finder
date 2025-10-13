@@ -9,6 +9,9 @@ type StationFinderPageProps = {
   readonly searchParams: Promise<StationFinderSearchParams>;
 };
 
+// Force static export despite async searchParams
+export const dynamic = "force-static";
+
 /**
  * Station Finder page (Next.js 16 server component with async searchParams).
  */

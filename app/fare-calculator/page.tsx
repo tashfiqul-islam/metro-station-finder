@@ -10,6 +10,9 @@ type FareCalculatorPageProps = {
   readonly searchParams: Promise<FareCalculatorSearchParams>;
 };
 
+// Force static export despite async searchParams
+export const dynamic = "force-static";
+
 /**
  * Fare Calculator page (Next.js 16 server component with async searchParams).
  */

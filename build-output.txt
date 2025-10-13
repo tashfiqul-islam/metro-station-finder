@@ -1,0 +1,37 @@
+﻿bun : $ next build --turbopack
+At C:\Users\Tashfiq\AppData\Local\Temp\ps-script-baec84fc-9a56-4d83-8e10-6cef5ecfe0b9.ps1:87 char:1
++ bun run build 2>&1 | Out-File -FilePath build-output.txt -Encoding ut ...
++ ~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ($ next build --turbopack:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+   Γû▓ Next.js 16.0.0-beta.0 (Turbopack)
+   - Environments: .env.local
+   - Experiments (use with caution):
+     ┬╖ optimizePackageImports
+     Γ£ô scrollRestoration
+     ┬╖ staticGenerationRetryCount: 3
+     Γ£ô turbopackFileSystemCacheForDev
+     Γ£ô viewTransition
+
+   Creating an optimized production build ...
+ Γ£ô Compiled successfully in 2.4s
+   Running TypeScript ...
+   Collecting page data ...
+   Generating static pages (0/7) ...
+   Generating static pages (1/7) 
+   Generating static pages (3/7) 
+   Generating static pages (5/7) 
+ Γ£ô Generating static pages (7/7) in 436ms
+   Finalizing page optimization ...
+
+Route (app)
+Γöî Γùï /
+Γö£ Γùï /_not-found
+Γö£ Γùï /about
+Γö£ Γùï /fare-calculator
+Γöö Γùï /station-finder
+
+
+Γùï  (Static)  prerendered as static content
+

@@ -32,7 +32,7 @@
     "isolatedModules": true,
     "newLine": "lf",
     "useDefineForClassFields": true,
-    "jsx": "preserve",
+    "jsx": "react-jsx",
     "jsxImportSource": "react",
     "paths": {
       "@/*": ["./*"],
