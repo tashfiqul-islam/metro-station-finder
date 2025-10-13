@@ -40,7 +40,7 @@
     "build:analyze": "ANALYZE=true next build --turbopack",
     "build:webpack": "next build",
     "build:webpack:analyze": "ANALYZE=true next build",
-    "start": "bunx serve out",
+    "start": "next start",
     "serve": "bunx serve out",
     "preview": "bunx serve out",
     "// === CODE QUALITY ===": "",
