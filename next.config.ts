@@ -69,7 +69,7 @@ const nextConfig: NextConfig = {
   // The new App Router navigation requires RSC payloads that aren't generated in static exports
   // This will be re-enabled once Next.js 16 stable is released with proper static export support
   // output: "export",
-  distDir: "out",
+  // distDir: "out", // Use default .next directory for Node.js builds
   skipTrailingSlashRedirect: true,
   skipMiddlewareUrlNormalize: true,
 

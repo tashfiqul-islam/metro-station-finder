@@ -9,7 +9,8 @@
 ## Error Symptoms
 
 ### In Production Build
-```
+
+```console
 GET /station-finder/__next.station-finder.__PAGE__.txt?_rsc=1wn9k
 Returned 404
 
@@ -18,7 +19,8 @@ Returned 404
 ```
 
 ### Console Warnings (Development)
-```
+
+```console
 params are being enumerated. `params` is a Promise and must be unwrapped 
 with `React.use()` before accessing its properties.
 
@@ -42,19 +44,21 @@ and must be unwrapped with `React.use()` before accessing its properties.
 ## Solution Options
 
 ### Option 1: Wait for Next.js 16 Stable (Recommended)
+
 **Status**: `output: "export"` temporarily disabled in `next.config.ts`
 
-- **Pros**: 
+- **Pros**:
   - Proper solution once Next.js 16 stable is released
   - Full App Router features work
   - Client-side navigation is fast and smooth
-- **Cons**: 
+- **Cons**:
   - Requires waiting for stable release (~November 2025)
   - Temporarily requires Node.js deployment
 
 **When to Use**: If you can wait for the stable release and temporarily use a Node.js deployment.
 
 ### Option 2: Deploy with Node.js Server
+
 **Status**: Current configuration (static export disabled)
 
 - **Pros**:
@@ -68,6 +72,7 @@ and must be unwrapped with `React.use()` before accessing its properties.
 **When to Use**: If you can deploy to a platform that supports Node.js (Vercel, Railway, etc.).
 
 ### Option 3: Downgrade to Next.js 15
+
 **Status**: Not implemented
 
 - **Pros**:
@@ -82,6 +87,7 @@ and must be unwrapped with `React.use()` before accessing its properties.
 **When to Use**: If static export is critical and you can sacrifice Next.js 16 features.
 
 ### Option 4: Use Pages Router (Not Recommended)
+
 **Status**: Not implemented (would require major refactor)
 
 - **Pros**:
@@ -123,15 +129,18 @@ With static export disabled:
 ## Deployment Recommendations
 
 ### Free Hosting Options (Node.js)
+
 1. **Vercel** - Best Next.js support, free tier available
 2. **Railway** - Free tier with Node.js support
 3. **Render** - Free tier for static sites and web services
 4. **Fly.io** - Free tier available
 
 ### After Next.js 16 Stable Release
+
 Once Next.js 16 is stable (expected ~November 2025):
 
 1. Re-enable static export in `next.config.ts`:
+
    ```typescript
    output: "export",
    ```
@@ -152,7 +161,7 @@ These warnings don't affect functionality and can be safely ignored.
 
 ## Migration Path
 
-```
+```mermaid
 Current State:
 Next.js 16 Beta → Node.js Deployment → Works ✅
 
@@ -182,6 +191,7 @@ bun run start
 ```
 
 Then navigate between:
+
 - Home (`/`)
 - Station Finder (`/station-finder`)
 - Fare Calculator (`/fare-calculator`)
@@ -203,4 +213,3 @@ All navigation should be **instant** with smooth transitions.
 *Last Updated: October 14, 2025*
 *Next.js Version: 16.0.0-beta.0*
 *Status: Known Beta Limitation*
-
