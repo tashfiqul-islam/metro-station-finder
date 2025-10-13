@@ -332,112 +332,110 @@ export function FareCalculatorContent() {
   const canCalculate = selection.origin && selection.destination;
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <main className="flex-1 bg-muted/30 pb-4 md:pb-16">
-        <div className="container mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-          <div className="space-y-6">
-            <Card className="border-primary/20 bg-primary/5">
-              <CardContent className="flex items-start justify-between gap-3 p-4">
-                <div className="flex gap-3">
-                  <Info
-                    aria-hidden="true"
-                    className="h-5 w-5 flex-shrink-0 text-primary"
-                  />
-                  <p className="text-sm">
-                    Select your origin and destination stations to calculate the
-                    fare. You can also choose your ticket type to see applicable
-                    discounts.
-                  </p>
-                </div>
-                {canCalculate && (
-                  <Button onClick={handleReset} size="sm" variant="outline">
-                    <RefreshCw aria-hidden="true" className="mr-2 h-4 w-4" />
-                    Reset
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
+    <main className="bg-muted/30 pb-4 md:pb-16">
+      <div className="container mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="space-y-6">
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="flex items-start justify-between gap-3 p-4">
+              <div className="flex gap-3">
+                <Info
+                  aria-hidden="true"
+                  className="h-5 w-5 flex-shrink-0 text-primary"
+                />
+                <p className="text-sm">
+                  Select your origin and destination stations to calculate the
+                  fare. You can also choose your ticket type to see applicable
+                  discounts.
+                </p>
+              </div>
+              {canCalculate && (
+                <Button onClick={handleReset} size="sm" variant="outline">
+                  <RefreshCw aria-hidden="true" className="mr-2 h-4 w-4" />
+                  Reset
+                </Button>
+              )}
+            </CardContent>
+          </Card>
 
+          <Card>
+            <CardHeader>
+              <CardTitle>Select Stations</CardTitle>
+              <CardDescription>
+                Choose your starting point and destination
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <StationErrorBoundary>
+                <StationSelector
+                  filteredStations={filteredStations}
+                  isSearching={searchState === "origin"}
+                  label="Origin Station"
+                  onSearchChange={setSearchQuery}
+                  onSelect={handleOriginSelect}
+                  onStartSearch={() => setSearchState("origin")}
+                  placeholder="Select origin station"
+                  searchQuery={searchQuery}
+                  station={selection.origin}
+                />
+              </StationErrorBoundary>
+
+              {selection.origin && selection.destination && (
+                <div className="flex justify-center">
+                  <Button
+                    onClick={handleSwapStations}
+                    size="icon"
+                    variant="outline"
+                  >
+                    <RefreshCw aria-hidden="true" className="h-4 w-4" />
+                    <span className="sr-only">Swap stations</span>
+                  </Button>
+                </div>
+              )}
+
+              <StationErrorBoundary>
+                <StationSelector
+                  filteredStations={filteredStations}
+                  isSearching={searchState === "destination"}
+                  label="Destination Station"
+                  onSearchChange={setSearchQuery}
+                  onSelect={handleDestinationSelect}
+                  onStartSearch={() => setSearchState("destination")}
+                  placeholder="Select destination station"
+                  searchQuery={searchQuery}
+                  station={selection.destination}
+                />
+              </StationErrorBoundary>
+            </CardContent>
+          </Card>
+
+          {canCalculate && (
             <Card>
               <CardHeader>
-                <CardTitle>Select Stations</CardTitle>
+                <CardTitle>Select Ticket Type</CardTitle>
                 <CardDescription>
-                  Choose your starting point and destination
+                  Choose your preferred ticket for fare calculation
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <StationErrorBoundary>
-                  <StationSelector
-                    filteredStations={filteredStations}
-                    isSearching={searchState === "origin"}
-                    label="Origin Station"
-                    onSearchChange={setSearchQuery}
-                    onSelect={handleOriginSelect}
-                    onStartSearch={() => setSearchState("origin")}
-                    placeholder="Select origin station"
-                    searchQuery={searchQuery}
-                    station={selection.origin}
-                  />
-                </StationErrorBoundary>
-
-                {selection.origin && selection.destination && (
-                  <div className="flex justify-center">
-                    <Button
-                      onClick={handleSwapStations}
-                      size="icon"
-                      variant="outline"
-                    >
-                      <RefreshCw aria-hidden="true" className="h-4 w-4" />
-                      <span className="sr-only">Swap stations</span>
-                    </Button>
-                  </div>
-                )}
-
-                <StationErrorBoundary>
-                  <StationSelector
-                    filteredStations={filteredStations}
-                    isSearching={searchState === "destination"}
-                    label="Destination Station"
-                    onSearchChange={setSearchQuery}
-                    onSelect={handleDestinationSelect}
-                    onStartSearch={() => setSearchState("destination")}
-                    placeholder="Select destination station"
-                    searchQuery={searchQuery}
-                    station={selection.destination}
-                  />
-                </StationErrorBoundary>
+              <CardContent>
+                <TicketTypeSelector
+                  onSelect={setTicketType}
+                  selectedType={ticketType}
+                />
               </CardContent>
             </Card>
+          )}
 
-            {canCalculate && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Select Ticket Type</CardTitle>
-                  <CardDescription>
-                    Choose your preferred ticket for fare calculation
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <TicketTypeSelector
-                    onSelect={setTicketType}
-                    selectedType={ticketType}
-                  />
-                </CardContent>
-              </Card>
-            )}
-
-            {calculatedFare && selection.origin && selection.destination && (
-              <FareDisplay
-                destinationStationName={selection.destination.name}
-                fare={calculatedFare}
-                originStationName={selection.origin.name}
-                showRouteDetails
-                {...(travelTime !== undefined ? { travelTime } : {})}
-              />
-            )}
-          </div>
+          {calculatedFare && selection.origin && selection.destination && (
+            <FareDisplay
+              destinationStationName={selection.destination.name}
+              fare={calculatedFare}
+              originStationName={selection.origin.name}
+              showRouteDetails
+              {...(travelTime !== undefined ? { travelTime } : {})}
+            />
+          )}
         </div>
-      </main>
-    </div>
+      </div>
+    </main>
   );
 }

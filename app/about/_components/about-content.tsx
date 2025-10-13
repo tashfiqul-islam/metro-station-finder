@@ -13,8 +13,7 @@ import {
   Train,
   Users,
 } from "lucide-react";
-import Link from "next/link";
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -120,50 +119,6 @@ const TECH_STACK = {
   maps: ["Google Maps JavaScript API", "@vis.gl/react-google-maps"],
   tools: ["Bun", "Ultracite (Biome)", "Git"],
 } as const;
-
-/**
- * Renders a section navigation item.
- */
-const SectionNav = memo(
-  ({
-    section,
-    isActive,
-    onClick,
-  }: {
-    readonly section: Section;
-    readonly isActive: boolean;
-    readonly onClick: () => void;
-  }) => {
-    const Icon = section.icon;
-    return (
-      <button
-        className={cn(
-          "flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-all duration-200",
-          isActive
-            ? "bg-muted font-medium text-foreground"
-            : "text-muted-foreground hover:bg-muted hover:text-foreground"
-        )}
-        onClick={onClick}
-        style={{
-          willChange: isActive ? "auto" : "background-color, color",
-          transform: "translateZ(0)",
-        }}
-        type="button"
-      >
-        <Icon
-          aria-hidden="true"
-          className={cn(
-            "h-4 w-4 transition-colors duration-200",
-            isActive ? "text-primary" : "text-muted-foreground"
-          )}
-        />
-        <span>{section.title}</span>
-      </button>
-    );
-  }
-);
-
-SectionNav.displayName = "SectionNav";
 
 /**
  * Renders a feature card.
@@ -329,24 +284,10 @@ DiagnosticsSection.displayName = "DiagnosticsSection";
  * About content component with all client-side logic.
  */
 export function AboutContent() {
-  const [activeSection, setActiveSection] = useState<string>("about");
-
-  // Memoized scroll handler with optimized performance
-  const scrollToSection = useCallback((id: string) => {
-    setActiveSection(id);
-    const element = document.getElementById(id);
-    if (element) {
-      // Use native smooth scroll for better performance
-      element.scrollIntoView({ behavior: "smooth", block: "start" });
-      window.history.pushState(null, "", `#${id}`);
-    }
-  }, []);
-
-  // Initial hash navigation
+  // Scroll to section on initial load if hash is present
   useEffect(() => {
     const hash = window.location.hash.slice(1);
     if (hash && SECTIONS.some((s) => s.id === hash)) {
-      setActiveSection(hash);
       const element = document.getElementById(hash);
       if (element) {
         element.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -354,21 +295,20 @@ export function AboutContent() {
     }
   }, []);
 
-  // IntersectionObserver for automatic section detection
+  // Update URL hash as user scrolls through sections
   useEffect(() => {
     const observerOptions = {
       root: null,
-      rootMargin: "-20% 0px -70% 0px", // Trigger when section is ~30% visible
+      rootMargin: "-20% 0px -70% 0px",
       threshold: 0,
     };
 
     const handleIntersection = (id: string) => {
-      if (SECTIONS.some((s) => s.id === id)) {
-        setActiveSection(id);
-        // Update URL without scrolling
-        if (window.location.hash !== `#${id}`) {
-          window.history.replaceState(null, "", `#${id}`);
-        }
+      if (
+        SECTIONS.some((s) => s.id === id) &&
+        window.location.hash !== `#${id}`
+      ) {
+        window.history.replaceState(null, "", `#${id}`);
       }
     };
 
@@ -385,7 +325,6 @@ export function AboutContent() {
       observerOptions
     );
 
-    // Observe all sections
     for (const section of SECTIONS) {
       const element = document.getElementById(section.id);
       if (element) {
@@ -398,473 +337,384 @@ export function AboutContent() {
     };
   }, []);
 
-  // Memoized section click handlers
-  const sectionHandlers = useMemo(() => {
-    const handlers: Record<string, () => void> = {};
-    for (const section of SECTIONS) {
-      handlers[section.id] = () => scrollToSection(section.id);
-    }
-    return handlers;
-  }, [scrollToSection]);
-
   return (
-    <div className="flex min-h-screen flex-col">
-      {/* Main Content */}
-      <main className="flex-1 bg-muted/30 pb-4 md:pb-16">
-        <div className="container mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-          {/* Section Navigation - Desktop Only */}
-          <nav
-            aria-label="Page sections"
-            className="sticky top-20 z-40 mb-8 hidden rounded-xl border border-border/50 bg-background/95 p-2 backdrop-blur-sm md:block"
-            style={{
-              willChange: "transform",
-              contain: "layout style paint",
-              transform: "translateZ(0)",
-            }}
-          >
-            <ul className="flex justify-center gap-2">
-              {SECTIONS.map((section) => (
-                <li key={section.id}>
-                  <SectionNav
-                    isActive={activeSection === section.id}
-                    onClick={sectionHandlers[section.id] as () => void}
-                    section={section}
-                  />
-                </li>
-              ))}
-            </ul>
-          </nav>
-
-          <div className="space-y-12">
-            {/* About Section */}
-            <section className="scroll-mt-24 space-y-6" id="about">
-              <div>
-                <h2 className="mb-2 font-bold text-3xl">
-                  About Metro Station Finder
-                </h2>
-                <p className="text-muted-foreground text-xl">
-                  Your comprehensive guide to navigating Dhaka's MRT-6 metro
-                  system
-                </p>
-              </div>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="space-y-4 text-base text-muted-foreground">
-                    <p>
-                      Metro Station Finder is a modern, accessible web
-                      application designed to help commuters navigate Dhaka's
-                      Mass Rapid Transit (MRT) Line 6. Built with the latest web
-                      technologies and following best practices for performance
-                      and accessibility, it provides accurate fare calculations,
-                      station information, and interactive maps.
-                    </p>
-                    <p>
-                      Our mission is to make metro travel more accessible and
-                      convenient for everyone in Dhaka by providing a fast,
-                      reliable, and easy-to-use platform that works seamlessly
-                      across all devices.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Features */}
-              <div>
-                <h3 className="mb-4 font-semibold text-xl">Key Features</h3>
-                <div className="grid gap-4 md:grid-cols-2">
-                  {FEATURES.map((feature) => (
-                    <FeatureCard feature={feature} key={feature.name} />
-                  ))}
-                </div>
-              </div>
-
-              {/* Tech Stack */}
-              <div>
-                <h3 className="mb-4 font-semibold text-xl">Technology Stack</h3>
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="grid gap-6 md:grid-cols-2">
-                      <div>
-                        <div className="mb-3 flex items-center gap-2 font-medium text-sm">
-                          <Code
-                            aria-hidden="true"
-                            className="h-4 w-4 text-primary"
-                          />
-                          Frontend
-                        </div>
-                        <ul className="space-y-1 text-muted-foreground text-sm">
-                          {TECH_STACK.frontend.map((tech) => (
-                            <li key={tech}>• {tech}</li>
-                          ))}
-                        </ul>
-                      </div>
-                      <div>
-                        <div className="mb-3 flex items-center gap-2 font-medium text-sm">
-                          <Building2
-                            aria-hidden="true"
-                            className="h-4 w-4 text-primary"
-                          />
-                          UI Components
-                        </div>
-                        <ul className="space-y-1 text-muted-foreground text-sm">
-                          {TECH_STACK.ui.map((tech) => (
-                            <li key={tech}>• {tech}</li>
-                          ))}
-                        </ul>
-                      </div>
-                      <div>
-                        <div className="mb-3 flex items-center gap-2 font-medium text-sm">
-                          <MapPin
-                            aria-hidden="true"
-                            className="h-4 w-4 text-primary"
-                          />
-                          Maps & Location
-                        </div>
-                        <ul className="space-y-1 text-muted-foreground text-sm">
-                          {TECH_STACK.maps.map((tech) => (
-                            <li key={tech}>• {tech}</li>
-                          ))}
-                        </ul>
-                      </div>
-                      <div>
-                        <div className="mb-3 flex items-center gap-2 font-medium text-sm">
-                          <Github
-                            aria-hidden="true"
-                            className="h-4 w-4 text-primary"
-                          />
-                          Development Tools
-                        </div>
-                        <ul className="space-y-1 text-muted-foreground text-sm">
-                          {TECH_STACK.tools.map((tech) => (
-                            <li key={tech}>• {tech}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </section>
-
-            {/* Attribution Section */}
-            <section className="scroll-mt-24 space-y-6" id="attribution">
-              <div>
-                <h2 className="mb-2 font-bold text-3xl">Data Attribution</h2>
-                <p className="text-muted-foreground text-xl">
-                  Acknowledging our data sources and partners
-                </p>
-              </div>
-
-              <div className="space-y-4">
-                {DATA_SOURCES.map((source) => (
-                  <DataSourceCard key={source.name} source={source} />
-                ))}
-              </div>
-
-              <Card className="border-primary/20 bg-primary/5">
-                <CardContent className="flex gap-3 p-6">
-                  <Info
-                    aria-hidden="true"
-                    className="h-5 w-5 flex-shrink-0 text-primary"
-                  />
-                  <div className="space-y-2 text-base">
-                    <p className="font-medium">Important Notice</p>
-                    <p className="text-muted-foreground">
-                      All fare data and station information are sourced from
-                      official DMTCL publications and are subject to change.
-                      While we strive to maintain accuracy, please verify
-                      critical information with official sources. This is an
-                      independent project and is not officially affiliated with
-                      or endorsed by DMTCL or Google.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </section>
-
-            {/* Privacy Section */}
-            <section className="scroll-mt-24 space-y-6" id="privacy">
-              <div>
-                <h2 className="mb-2 font-bold text-3xl">Privacy Policy</h2>
-                <p className="text-muted-foreground text-xl">
-                  How we protect and respect your privacy
-                </p>
-              </div>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Shield
-                      aria-hidden="true"
-                      className="h-5 w-5 text-primary"
-                    />
-                    Your Privacy Matters
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div>
-                    <h3 className="mb-2 font-semibold text-lg">
-                      Information We Collect
-                    </h3>
-                    <ul className="ml-4 list-disc space-y-2 text-base text-muted-foreground">
-                      <li>
-                        <strong>Location Data:</strong> When you use the "Use My
-                        Location" feature, your browser provides approximate
-                        coordinates. This data is processed locally and never
-                        sent to our servers.
-                      </li>
-                      <li>
-                        <strong>Search Queries:</strong> Station searches are
-                        processed client-side and are not stored or transmitted.
-                      </li>
-                      <li>
-                        <strong>Usage Analytics:</strong> If diagnostics are
-                        enabled, we collect anonymous usage statistics to
-                        improve the application. This respects Do Not Track
-                        settings.
-                      </li>
-                    </ul>
-                  </div>
-
-                  <div>
-                    <h3 className="mb-2 font-semibold text-lg">
-                      How We Use Your Information
-                    </h3>
-                    <ul className="ml-4 list-disc space-y-2 text-base text-muted-foreground">
-                      <li>
-                        Calculate distances and fares based on your location
-                      </li>
-                      <li>Provide personalized station recommendations</li>
-                      <li>
-                        Improve application performance and user experience
-                      </li>
-                      <li>Debug issues and enhance features</li>
-                    </ul>
-                  </div>
-
-                  <div>
-                    <h3 className="mb-2 font-semibold text-lg">
-                      Third-Party Services
-                    </h3>
-                    <ul className="ml-4 list-disc space-y-2 text-base text-muted-foreground">
-                      <li>
-                        <strong>Google Maps Platform:</strong> Map tiles and
-                        geolocation services are provided by Google. Your usage
-                        is subject to{" "}
-                        <a
-                          className="text-primary underline-offset-4 hover:underline"
-                          href="https://policies.google.com/privacy"
-                          rel="noopener noreferrer"
-                          target="_blank"
-                        >
-                          Google's Privacy Policy
-                        </a>
-                        .
-                      </li>
-                    </ul>
-                  </div>
-
-                  <div>
-                    <h3 className="mb-2 font-semibold text-lg">Your Rights</h3>
-                    <ul className="ml-4 list-disc space-y-2 text-base text-muted-foreground">
-                      <li>Deny location permission at any time</li>
-                      <li>
-                        Enable or disable diagnostics in the settings below
-                      </li>
-                      <li>
-                        Use Do Not Track to automatically disable all tracking
-                      </li>
-                      <li>Browse anonymously without creating an account</li>
-                    </ul>
-                  </div>
-
-                  <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
-                    <p className="font-medium text-base">
-                      Last Updated: December 2024
-                    </p>
-                    <p className="mt-2 text-base text-muted-foreground">
-                      We are committed to protecting your privacy and will never
-                      sell your personal information to third parties.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </section>
-
-            {/* License Section */}
-            <section className="scroll-mt-24 space-y-6" id="license">
-              <div>
-                <h2 className="mb-2 font-bold text-3xl">Open Source License</h2>
-                <p className="text-muted-foreground text-xl">
-                  This project is open source and available under the MIT
-                  License
-                </p>
-              </div>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Code aria-hidden="true" className="h-5 w-5 text-primary" />
-                    MIT License
-                  </CardTitle>
-                  <CardDescription className="text-base">
-                    A permissive open source license that allows commercial use
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div>
-                    <h3 className="mb-2 font-semibold text-lg">
-                      What this means:
-                    </h3>
-                    <ul className="ml-4 list-disc space-y-2 text-base text-muted-foreground">
-                      <li>
-                        <strong>Free to use:</strong> Anyone can use this
-                        project for any purpose
-                      </li>
-                      <li>
-                        <strong>Commercial use allowed:</strong> Companies and
-                        organizations can use it in their products
-                      </li>
-                      <li>
-                        <strong>Modification permitted:</strong> You can modify
-                        and distribute the code
-                      </li>
-                      <li>
-                        <strong>Attribution required:</strong> You must include
-                        the original license and copyright notice
-                      </li>
-                      <li>
-                        <strong>No warranty:</strong> The software is provided
-                        "as is" without any guarantees
-                      </li>
-                    </ul>
-                  </div>
-
-                  <div>
-                    <h3 className="mb-2 font-semibold text-lg">
-                      How to use this project:
-                    </h3>
-                    <ul className="ml-4 list-disc space-y-2 text-base text-muted-foreground">
-                      <li>
-                        <strong>Fork the repository</strong> and make your own
-                        modifications
-                      </li>
-                      <li>
-                        <strong>Use as a template</strong> for your own metro
-                        station finder apps
-                      </li>
-                      <li>
-                        <strong>Contribute back</strong> by submitting pull
-                        requests and issues
-                      </li>
-                      <li>
-                        <strong>Deploy for your city</strong> by adapting the
-                        data and configuration
-                      </li>
-                    </ul>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant="secondary">
-                      <Github className="mr-1 h-3 w-3" />
-                      Open Source
-                    </Badge>
-                    <Badge variant="secondary">
-                      <Code className="mr-1 h-3 w-3" />
-                      MIT License
-                    </Badge>
-                    <Badge variant="secondary">
-                      <Users className="mr-1 h-3 w-3" />
-                      Community Driven
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-primary/20 bg-primary/5">
-                <CardContent className="flex gap-3 p-6">
-                  <Github
-                    aria-hidden="true"
-                    className="h-5 w-5 flex-shrink-0 text-primary"
-                  />
-                  <div className="space-y-2 text-base">
-                    <p className="font-medium">Full License Text</p>
-                    <p className="text-muted-foreground">
-                      The complete MIT License text is available in the{" "}
-                      <a
-                        className="text-primary underline-offset-4 hover:underline"
-                        href="/LICENSE"
-                        rel="noopener noreferrer"
-                      >
-                        LICENSE file
-                      </a>{" "}
-                      in the project repository.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </section>
-
-            {/* Diagnostics Section */}
-            <section className="scroll-mt-24 space-y-6" id="diagnostics">
-              <div>
-                <h2 className="mb-2 font-bold text-3xl">
-                  Diagnostics Settings
-                </h2>
-                <p className="text-muted-foreground text-xl">
-                  Control anonymous usage data collection
-                </p>
-              </div>
-
-              <DiagnosticsSection />
-            </section>
-          </div>
-        </div>
-      </main>
-
-      {/* Footer */}
-      <footer className="border-border/40 border-t bg-background py-8">
-        <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
-            <div className="flex items-center gap-2 text-base text-muted-foreground">
-              <Train aria-hidden="true" className="h-4 w-4 text-primary" />
-              <span>Metro Station Finder</span>
-              <span>•</span>
-              <span>© 2024</span>
+    <main className="flex-1 bg-muted/30 pb-4 md:pb-16">
+      <div className="container mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="space-y-12">
+          {/* About Section */}
+          <section className="scroll-mt-24 space-y-6" id="about">
+            <div>
+              <h2 className="mb-2 font-bold text-3xl">
+                About Metro Station Finder
+              </h2>
+              <p className="text-muted-foreground text-xl">
+                Your comprehensive guide to navigating Dhaka's MRT-6 metro
+                system
+              </p>
             </div>
 
-            <nav aria-label="Footer navigation">
-              <ul className="flex gap-6 text-base text-muted-foreground">
-                <li>
-                  <Link
-                    className="transition-colors hover:text-foreground"
-                    href="/"
-                  >
-                    Home
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    className="transition-colors hover:text-foreground"
-                    href="/station-finder"
-                  >
-                    Stations
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    className="transition-colors hover:text-foreground"
-                    href="/fare-calculator"
-                  >
-                    Fares
-                  </Link>
-                </li>
-              </ul>
-            </nav>
-          </div>
+            <Card>
+              <CardContent className="p-6">
+                <div className="space-y-4 text-base text-muted-foreground">
+                  <p>
+                    Metro Station Finder is a modern, accessible web application
+                    designed to help commuters navigate Dhaka's Mass Rapid
+                    Transit (MRT) Line 6. Built with the latest web technologies
+                    and following best practices for performance and
+                    accessibility, it provides accurate fare calculations,
+                    station information, and interactive maps.
+                  </p>
+                  <p>
+                    Our mission is to make metro travel more accessible and
+                    convenient for everyone in Dhaka by providing a fast,
+                    reliable, and easy-to-use platform that works seamlessly
+                    across all devices.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Features */}
+            <div>
+              <h3 className="mb-4 font-semibold text-xl">Key Features</h3>
+              <div className="grid gap-4 md:grid-cols-2">
+                {FEATURES.map((feature) => (
+                  <FeatureCard feature={feature} key={feature.name} />
+                ))}
+              </div>
+            </div>
+
+            {/* Tech Stack */}
+            <div>
+              <h3 className="mb-4 font-semibold text-xl">Technology Stack</h3>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="grid gap-6 md:grid-cols-2">
+                    <div>
+                      <div className="mb-3 flex items-center gap-2 font-medium text-sm">
+                        <Code
+                          aria-hidden="true"
+                          className="h-4 w-4 text-primary"
+                        />
+                        Frontend
+                      </div>
+                      <ul className="space-y-1 text-muted-foreground text-sm">
+                        {TECH_STACK.frontend.map((tech) => (
+                          <li key={tech}>• {tech}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div>
+                      <div className="mb-3 flex items-center gap-2 font-medium text-sm">
+                        <Building2
+                          aria-hidden="true"
+                          className="h-4 w-4 text-primary"
+                        />
+                        UI Components
+                      </div>
+                      <ul className="space-y-1 text-muted-foreground text-sm">
+                        {TECH_STACK.ui.map((tech) => (
+                          <li key={tech}>• {tech}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div>
+                      <div className="mb-3 flex items-center gap-2 font-medium text-sm">
+                        <MapPin
+                          aria-hidden="true"
+                          className="h-4 w-4 text-primary"
+                        />
+                        Maps & Location
+                      </div>
+                      <ul className="space-y-1 text-muted-foreground text-sm">
+                        {TECH_STACK.maps.map((tech) => (
+                          <li key={tech}>• {tech}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div>
+                      <div className="mb-3 flex items-center gap-2 font-medium text-sm">
+                        <Github
+                          aria-hidden="true"
+                          className="h-4 w-4 text-primary"
+                        />
+                        Development Tools
+                      </div>
+                      <ul className="space-y-1 text-muted-foreground text-sm">
+                        {TECH_STACK.tools.map((tech) => (
+                          <li key={tech}>• {tech}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </section>
+
+          {/* Attribution Section */}
+          <section className="scroll-mt-24 space-y-6" id="attribution">
+            <div>
+              <h2 className="mb-2 font-bold text-3xl">Data Attribution</h2>
+              <p className="text-muted-foreground text-xl">
+                Acknowledging our data sources and partners
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {DATA_SOURCES.map((source) => (
+                <DataSourceCard key={source.name} source={source} />
+              ))}
+            </div>
+
+            <Card className="border-primary/20 bg-primary/5">
+              <CardContent className="flex gap-3 p-6">
+                <Info
+                  aria-hidden="true"
+                  className="h-5 w-5 flex-shrink-0 text-primary"
+                />
+                <div className="space-y-2 text-base">
+                  <p className="font-medium">Important Notice</p>
+                  <p className="text-muted-foreground">
+                    All fare data and station information are sourced from
+                    official DMTCL publications and are subject to change. While
+                    we strive to maintain accuracy, please verify critical
+                    information with official sources. This is an independent
+                    project and is not officially affiliated with or endorsed by
+                    DMTCL or Google.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </section>
+
+          {/* Privacy Section */}
+          <section className="scroll-mt-24 space-y-6" id="privacy">
+            <div>
+              <h2 className="mb-2 font-bold text-3xl">Privacy Policy</h2>
+              <p className="text-muted-foreground text-xl">
+                How we protect and respect your privacy
+              </p>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield aria-hidden="true" className="h-5 w-5 text-primary" />
+                  Your Privacy Matters
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div>
+                  <h3 className="mb-2 font-semibold text-lg">
+                    Information We Collect
+                  </h3>
+                  <ul className="ml-4 list-disc space-y-2 text-base text-muted-foreground">
+                    <li>
+                      <strong>Location Data:</strong> When you use the "Use My
+                      Location" feature, your browser provides approximate
+                      coordinates. This data is processed locally and never sent
+                      to our servers.
+                    </li>
+                    <li>
+                      <strong>Search Queries:</strong> Station searches are
+                      processed client-side and are not stored or transmitted.
+                    </li>
+                    <li>
+                      <strong>Usage Analytics:</strong> If diagnostics are
+                      enabled, we collect anonymous usage statistics to improve
+                      the application. This respects Do Not Track settings.
+                    </li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h3 className="mb-2 font-semibold text-lg">
+                    How We Use Your Information
+                  </h3>
+                  <ul className="ml-4 list-disc space-y-2 text-base text-muted-foreground">
+                    <li>
+                      Calculate distances and fares based on your location
+                    </li>
+                    <li>Provide personalized station recommendations</li>
+                    <li>Improve application performance and user experience</li>
+                    <li>Debug issues and enhance features</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h3 className="mb-2 font-semibold text-lg">
+                    Third-Party Services
+                  </h3>
+                  <ul className="ml-4 list-disc space-y-2 text-base text-muted-foreground">
+                    <li>
+                      <strong>Google Maps Platform:</strong> Map tiles and
+                      geolocation services are provided by Google. Your usage is
+                      subject to{" "}
+                      <a
+                        className="text-primary underline-offset-4 hover:underline"
+                        href="https://policies.google.com/privacy"
+                        rel="noopener noreferrer"
+                        target="_blank"
+                      >
+                        Google's Privacy Policy
+                      </a>
+                      .
+                    </li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h3 className="mb-2 font-semibold text-lg">Your Rights</h3>
+                  <ul className="ml-4 list-disc space-y-2 text-base text-muted-foreground">
+                    <li>Deny location permission at any time</li>
+                    <li>Enable or disable diagnostics in the settings below</li>
+                    <li>
+                      Use Do Not Track to automatically disable all tracking
+                    </li>
+                    <li>Browse anonymously without creating an account</li>
+                  </ul>
+                </div>
+
+                <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                  <p className="font-medium text-base">
+                    Last Updated: December 2024
+                  </p>
+                  <p className="mt-2 text-base text-muted-foreground">
+                    We are committed to protecting your privacy and will never
+                    sell your personal information to third parties.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </section>
+
+          {/* License Section */}
+          <section className="scroll-mt-24 space-y-6" id="license">
+            <div>
+              <h2 className="mb-2 font-bold text-3xl">Open Source License</h2>
+              <p className="text-muted-foreground text-xl">
+                This project is open source and available under the MIT License
+              </p>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Code aria-hidden="true" className="h-5 w-5 text-primary" />
+                  MIT License
+                </CardTitle>
+                <CardDescription className="text-base">
+                  A permissive open source license that allows commercial use
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div>
+                  <h3 className="mb-2 font-semibold text-lg">
+                    What this means:
+                  </h3>
+                  <ul className="ml-4 list-disc space-y-2 text-base text-muted-foreground">
+                    <li>
+                      <strong>Free to use:</strong> Anyone can use this project
+                      for any purpose
+                    </li>
+                    <li>
+                      <strong>Commercial use allowed:</strong> Companies and
+                      organizations can use it in their products
+                    </li>
+                    <li>
+                      <strong>Modification permitted:</strong> You can modify
+                      and distribute the code
+                    </li>
+                    <li>
+                      <strong>Attribution required:</strong> You must include
+                      the original license and copyright notice
+                    </li>
+                    <li>
+                      <strong>No warranty:</strong> The software is provided "as
+                      is" without any guarantees
+                    </li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h3 className="mb-2 font-semibold text-lg">
+                    How to use this project:
+                  </h3>
+                  <ul className="ml-4 list-disc space-y-2 text-base text-muted-foreground">
+                    <li>
+                      <strong>Fork the repository</strong> and make your own
+                      modifications
+                    </li>
+                    <li>
+                      <strong>Use as a template</strong> for your own metro
+                      station finder apps
+                    </li>
+                    <li>
+                      <strong>Contribute back</strong> by submitting pull
+                      requests and issues
+                    </li>
+                    <li>
+                      <strong>Deploy for your city</strong> by adapting the data
+                      and configuration
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="secondary">
+                    <Github className="mr-1 h-3 w-3" />
+                    Open Source
+                  </Badge>
+                  <Badge variant="secondary">
+                    <Code className="mr-1 h-3 w-3" />
+                    MIT License
+                  </Badge>
+                  <Badge variant="secondary">
+                    <Users className="mr-1 h-3 w-3" />
+                    Community Driven
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-primary/20 bg-primary/5">
+              <CardContent className="flex gap-3 p-6">
+                <Github
+                  aria-hidden="true"
+                  className="h-5 w-5 flex-shrink-0 text-primary"
+                />
+                <div className="space-y-2 text-base">
+                  <p className="font-medium">Full License Text</p>
+                  <p className="text-muted-foreground">
+                    The complete MIT License text is available in the{" "}
+                    <a
+                      className="text-primary underline-offset-4 hover:underline"
+                      href="/LICENSE"
+                      rel="noopener noreferrer"
+                    >
+                      LICENSE file
+                    </a>{" "}
+                    in the project repository.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </section>
+
+          {/* Diagnostics Section */}
+          <section className="scroll-mt-24 space-y-6" id="diagnostics">
+            <div>
+              <h2 className="mb-2 font-bold text-3xl">Diagnostics Settings</h2>
+              <p className="text-muted-foreground text-xl">
+                Control anonymous usage data collection
+              </p>
+            </div>
+
+            <DiagnosticsSection />
+          </section>
         </div>
-      </footer>
-    </div>
+      </div>
+    </main>
   );
 }
