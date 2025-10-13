@@ -93,13 +93,6 @@ export default function RootLayout({
         <link href="/favicon.ico" rel="icon" />
         <link href="/apple-touch-icon.png" rel="apple-touch-icon" />
         <link href="/manifest.json" rel="manifest" />
-        {/* Preconnect to Google Fonts for better performance */}
-        <link href="https://fonts.googleapis.com" rel="preconnect" />
-        <link
-          crossOrigin="anonymous"
-          href="https://fonts.gstatic.com"
-          rel="preconnect"
-        />
         <meta
           content="#3b82f6"
           media="(prefers-color-scheme: light)"
@@ -133,8 +126,6 @@ export default function RootLayout({
         />
 
         {/* Resource hints for better performance */}
-        <link href="//fonts.googleapis.com" rel="dns-prefetch" />
-        <link href="//fonts.gstatic.com" rel="dns-prefetch" />
         <link href="//maps.googleapis.com" rel="dns-prefetch" />
         <link href="//maps.gstatic.com" rel="dns-prefetch" />
 
@@ -147,17 +138,7 @@ export default function RootLayout({
           rel="preload"
         />
 
-        {/* Preload critical fonts with high priority */}
-        <link
-          as="style"
-          href="https://fonts.googleapis.com/css2?family=Ropa+Sans:wght@400&display=swap"
-          rel="preload"
-        />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Ropa+Sans:wght@400&display=swap"
-          rel="stylesheet"
-        />
-
+        {/* next/font handles font optimization automatically */}
         {/* Critical CSS is now handled by Tailwind v4 in src/input.css */}
       </head>
       <body
