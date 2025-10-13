@@ -20,7 +20,6 @@
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
     font-size: 16px;
-    min-height: 100vh;
   }
 
   /* Font loading optimization - prevent layout shift */

@@ -298,7 +298,6 @@
     transition:
       background-color var(--duration-200) var(--ease-out),
       color var(--duration-200) var(--ease-out);
-    min-height: 100vh;
     overflow-x: hidden;
   }
 
