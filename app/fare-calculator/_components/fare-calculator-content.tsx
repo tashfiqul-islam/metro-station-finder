@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowRight, Calculator, Info, RefreshCw, Ticket } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { StationErrorBoundary } from "@/components/error/station-error-boundary";
 import { Badge } from "@/components/ui/badge";
@@ -223,18 +224,11 @@ function TicketTypeSelector({
   );
 }
 
-type FareCalculatorContentProps = {
-  readonly initialOriginId?: string | undefined;
-  readonly initialDestinationId?: string | undefined;
-};
-
 /**
  * Fare Calculator content component with all client-side logic.
  */
-export function FareCalculatorContent({
-  initialOriginId,
-  initialDestinationId,
-}: FareCalculatorContentProps) {
+export function FareCalculatorContent() {
+  const searchParams = useSearchParams();
   const [selection, setSelection] = useState<StationSelection>({
     origin: undefined,
     destination: undefined,
@@ -248,7 +242,11 @@ export function FareCalculatorContent({
     ? allStationsResponse.data
     : [];
 
+  // Handle initial stations from URL params
   useEffect(() => {
+    const initialOriginId = searchParams.get("origin");
+    const initialDestinationId = searchParams.get("destination");
+
     if (initialOriginId) {
       const origin = allStations.find((s) => s.id === initialOriginId);
       if (origin) {
@@ -263,7 +261,7 @@ export function FareCalculatorContent({
         setSelection((prev) => ({ ...prev, destination }));
       }
     }
-  }, [initialOriginId, initialDestinationId, allStations]);
+  }, [searchParams, allStations]);
 
   const filteredStations = useMemo(() => {
     if (!searchQuery.trim()) {

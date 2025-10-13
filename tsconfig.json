@@ -65,7 +65,8 @@
     "types/**/*",
     "utils/**/*",
     "vitest.config.ts",
-    "out/types/**/*.ts"
+    "out/types/**/*.ts",
+    "out\\dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

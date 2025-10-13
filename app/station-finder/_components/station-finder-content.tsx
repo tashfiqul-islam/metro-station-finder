@@ -2,6 +2,7 @@
 
 import { AlertCircle, List, Map as MapIcon, Route, X } from "lucide-react";
 import dynamic from "next/dynamic";
+import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import {
   MapErrorBoundary,
@@ -382,16 +383,11 @@ function SearchSection({
   );
 }
 
-type StationFinderContentProps = {
-  readonly initialStationId?: string | undefined;
-};
-
 /**
  * Station Finder content component with all client-side logic.
  */
-export function StationFinderContent({
-  initialStationId,
-}: StationFinderContentProps) {
+export function StationFinderContent() {
+  const searchParams = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStation, setSelectedStation] = useState<Station | undefined>();
   const [viewMode, setViewMode] = useState<ViewMode>("map");
@@ -411,7 +407,9 @@ export function StationFinderContent({
   const quota = useMemo(() => getQuotaStatus(), []);
   const isRateLimited = quota.success ? quota.data.isRateLimited : false;
 
+  // Handle initial station from URL params
   useEffect(() => {
+    const initialStationId = searchParams.get("station");
     if (initialStationId) {
       const station = allStations.find(
         (s: Station) => s.id === initialStationId
@@ -420,7 +418,7 @@ export function StationFinderContent({
         setSelectedStation(station);
       }
     }
-  }, [initialStationId, allStations]);
+  }, [searchParams, allStations]);
 
   const filteredStations = useMemo(() => {
     if (!searchQuery.trim()) {
