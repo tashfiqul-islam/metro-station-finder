@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Geist_Mono, Ropa_Sans } from "next/font/google";
+import { Footer } from "@/components/navigation/footer";
+import { NavBar } from "@/components/navigation/nav-bar";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 
@@ -161,7 +163,11 @@ export default function RootLayout({
       <body
         className={`${ropaSans.variable} ${geistMono.variable} antialiased`}
       >
-        <Providers>{children}</Providers>
+        <Providers>
+          <NavBar />
+          {children}
+          <Footer />
+        </Providers>
       </body>
     </html>
   );

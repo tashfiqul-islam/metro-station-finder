@@ -1,119 +1,243 @@
 "use client";
 
 import { ArrowRight, Calculator, MapPin, Navigation } from "lucide-react";
-import { motion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
-import { useTheme } from "next-themes";
-import { useEffect, useMemo, useState } from "react";
-import { StatsCard } from "@/components/hero/stats-card";
-import { HoverBorderGradient } from "@/components/ui/hover-border-gradient";
-import { ShootingStars } from "@/components/ui/shooting-stars";
-import { SparklesCore } from "@/components/ui/sparkles";
+import { memo, useEffect, useState } from "react";
+import { Sparkles } from "@/components/ui/sparkles";
+import { cn } from "@/lib/utils";
 
-// Animation constants following React 19 best practices
-const EASE_CUBIC_BEZIER_P1 = 0.22;
-const EASE_CUBIC_BEZIER_P2 = 1;
-const EASE_CUBIC_BEZIER_P3 = 0.36;
-const EASE_CUBIC_BEZIER_P4 = 1;
-const EASE_CUBIC_BEZIER = [
-  EASE_CUBIC_BEZIER_P1,
-  EASE_CUBIC_BEZIER_P2,
-  EASE_CUBIC_BEZIER_P3,
-  EASE_CUBIC_BEZIER_P4,
-] as const;
+/**
+ * Animation constants
+ */
+const EASE_CUBIC_P1 = 0.22;
+const EASE_CUBIC_P2 = 1;
+const EASE_CUBIC_P3 = 0.36;
+const EASE_CUBIC_P4 = 1;
+const STAGGER_DELAY = 0.1;
 
-// Theme-aware particle colors
-const PARTICLE_COLORS = {
-  dark: "#49d549",
-  light: "#061906",
+/**
+ * Animation configuration for smooth, performant animations
+ */
+const ANIMATION_CONFIG = {
+  spring: {
+    type: "spring",
+    stiffness: 100,
+    damping: 20,
+  },
+  ease: [EASE_CUBIC_P1, EASE_CUBIC_P2, EASE_CUBIC_P3, EASE_CUBIC_P4] as const,
+  durations: {
+    fast: 0.4,
+    normal: 0.6,
+    slow: 0.8,
+  },
+  delays: {
+    badge: 0.1,
+    heading: 0.2,
+    description: 0.3,
+    cta: 0.4,
+    stats: 0.5,
+  },
+  stagger: STAGGER_DELAY,
 } as const;
 
-// Animation timing constants
-const ANIMATION_DURATIONS = {
-  badge: 0.8,
-  heading: 0.9,
-  description: 0.7,
-  cta: 0.7,
-  stats: 0.9,
-} as const;
-
-// Individual stat animation delays
-const STAT_DELAY_FIRST = 1.4;
-const STAT_DELAY_SECOND = 1.5;
-const STAT_DELAY_THIRD = 1.6;
-
-const ANIMATION_DELAYS = {
-  badge: 0.3,
-  heading: 0.5,
-  description: 0.8,
-  cta: 1,
-  stats: 1.3,
-  statsItems: [STAT_DELAY_FIRST, STAT_DELAY_SECOND, STAT_DELAY_THIRD],
-} as const;
-
-// Stats data following TypeScript 5.9 strict typing
-type StatsDataItem = {
-  readonly icon: "station" | "fare" | "time";
-  readonly label: string;
-  readonly sublabel: string;
-  readonly value: string;
-  readonly delay: number;
-};
-
-const STATS_DATA: readonly StatsDataItem[] = [
+/**
+ * Stats data configuration
+ */
+const STATS_DATA = [
   {
-    icon: "station",
-    label: "Active Stations",
-    sublabel: "Across Dhaka",
+    icon: MapPin,
     value: "16",
-    delay: ANIMATION_DELAYS.statsItems[0],
+    label: "Active Stations",
+    description: "Across MRT-6",
   },
   {
-    icon: "fare",
-    label: "Fare Range",
-    sublabel: "Distance Based",
+    icon: Calculator,
     value: "৳20-100",
-    delay: ANIMATION_DELAYS.statsItems[1],
+    label: "Fare Range",
+    description: "Distance Based",
   },
   {
-    icon: "time",
-    label: "Full Line",
-    sublabel: "End to End",
+    icon: Navigation,
     value: "~40min",
-    delay: ANIMATION_DELAYS.statsItems[2],
+    label: "Full Line",
+    description: "End to End",
   },
 ] as const;
 
 /**
- * Hero Section Component - Optimized with React 19 best practices
- * Features:
- * - useMemo for expensive computations
- * - useCallback for stable function references
- * - TypeScript 5.9 strict typing
- * - Tailwind CSS v4 design system
- * - Modern layout with proper spacing
+ * Optimized stat card with GPU acceleration
  */
-export function Hero() {
-  const { theme, resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
+const StatCard = memo(
+  ({
+    icon: Icon,
+    value,
+    label,
+    description,
+    index,
+  }: {
+    readonly icon: React.ElementType;
+    readonly value: string;
+    readonly label: string;
+    readonly description: string;
+    readonly index: number;
+  }): React.ReactElement => {
+    const shouldReduceMotion = useReducedMotion();
 
-  // Optimize hydration with useEffect
+    return (
+      <motion.div
+        animate={{ opacity: 1, y: 0 }}
+        className="group relative overflow-hidden rounded-2xl border border-primary/10 bg-gradient-to-br from-background/95 to-background/80 p-6 backdrop-blur-sm transition-all duration-300 hover:border-primary/20 hover:shadow-lg hover:shadow-primary/5"
+        initial={{ opacity: 0, y: 20 }}
+        style={{
+          willChange: shouldReduceMotion ? "auto" : "transform, opacity",
+        }}
+        transition={{
+          duration: ANIMATION_CONFIG.durations.normal,
+          delay:
+            ANIMATION_CONFIG.delays.stats + index * ANIMATION_CONFIG.stagger,
+          ease: ANIMATION_CONFIG.ease,
+        }}
+      >
+        {/* Background gradient */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+
+        {/* Content */}
+        <div className="relative flex items-start gap-4">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 transition-all duration-300 group-hover:scale-110 group-hover:bg-primary/15">
+            <Icon
+              aria-hidden="true"
+              className="h-6 w-6 text-primary transition-transform duration-300 group-hover:scale-110"
+            />
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <div className="mb-1 font-bold text-2xl text-foreground">
+              {value}
+            </div>
+            <div className="mb-0.5 font-medium text-foreground text-sm">
+              {label}
+            </div>
+            <div className="text-muted-foreground text-xs">{description}</div>
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
+);
+
+StatCard.displayName = "StatCard";
+
+/**
+ * Optimized button component with GPU acceleration
+ */
+const CTAButton = memo(
+  ({
+    href,
+    variant = "primary",
+    icon: Icon,
+    children,
+    delay,
+  }: {
+    readonly href: string;
+    readonly variant?: "primary" | "secondary";
+    readonly icon: React.ElementType;
+    readonly children: React.ReactNode;
+    readonly delay: number;
+  }): React.ReactElement => {
+    const shouldReduceMotion = useReducedMotion();
+
+    return (
+      <motion.div
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full sm:w-auto"
+        initial={{ opacity: 0, y: 20 }}
+        style={{
+          willChange: shouldReduceMotion ? "auto" : "transform, opacity",
+        }}
+        transition={{
+          duration: ANIMATION_CONFIG.durations.fast,
+          delay,
+          ease: ANIMATION_CONFIG.ease,
+        }}
+      >
+        <Link
+          className={cn(
+            "group relative inline-flex w-full items-center justify-center gap-2 overflow-hidden rounded-full px-8 py-4 font-semibold text-sm shadow-lg transition-all duration-300 sm:w-auto",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+            variant === "primary"
+              ? "bg-primary text-primary-foreground shadow-primary/25 hover:shadow-primary/40 hover:shadow-xl"
+              : "border border-border/50 bg-background/50 text-foreground backdrop-blur-sm hover:bg-background/80"
+          )}
+          href={href}
+        >
+          {/* Hover effect */}
+          <span className="absolute inset-0 translate-x-[-200%] bg-gradient-to-r from-transparent via-white/10 to-transparent transition-transform duration-700 group-hover:translate-x-[200%]" />
+
+          {/* Content */}
+          <Icon aria-hidden="true" className="h-4 w-4 shrink-0" />
+          <span className="relative">{children}</span>
+          {variant === "primary" && (
+            <ArrowRight
+              aria-hidden="true"
+              className="h-4 w-4 shrink-0 transition-transform duration-300 group-hover:translate-x-1"
+            />
+          )}
+        </Link>
+      </motion.div>
+    );
+  }
+);
+
+CTAButton.displayName = "CTAButton";
+
+/**
+ * Ambient background gradient orbs
+ */
+const BackgroundGradients = memo(
+  (): React.ReactElement => (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden opacity-40">
+      <div
+        className="absolute top-0 left-1/4 h-96 w-96 rounded-full bg-primary/30 blur-3xl"
+        style={{
+          animation: "float 20s ease-in-out infinite",
+        }}
+      />
+      <div
+        className="absolute top-1/3 right-1/4 h-96 w-96 rounded-full bg-primary/20 blur-3xl"
+        style={{
+          animation: "float 25s ease-in-out infinite reverse",
+        }}
+      />
+
+      <style jsx>{`
+      @keyframes float {
+        0%,
+        100% {
+          transform: translateY(0) translateX(0);
+        }
+        50% {
+          transform: translateY(-50px) translateX(50px);
+        }
+      }
+    `}</style>
+    </div>
+  )
+);
+
+BackgroundGradients.displayName = "BackgroundGradients";
+
+/**
+ * Modern hero section with optimized performance
+ * Features GPU-accelerated animations and reduced motion support
+ */
+export function Hero(): React.ReactElement | null {
+  const [mounted, setMounted] = useState(false);
+  const shouldReduceMotion = useReducedMotion();
+
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  // Memoize theme calculation to prevent unnecessary re-renders
-  const currentTheme = useMemo(
-    () => (theme === "system" ? resolvedTheme : theme),
-    [theme, resolvedTheme]
-  );
-
-  // Memoize particle color based on theme
-  const particleColor = useMemo(
-    () =>
-      currentTheme === "dark" ? PARTICLE_COLORS.dark : PARTICLE_COLORS.light,
-    [currentTheme]
-  );
 
   // Prevent hydration mismatch
   if (!mounted) {
@@ -121,167 +245,91 @@ export function Hero() {
   }
 
   return (
-    <section className="relative flex h-full items-center justify-center overflow-hidden bg-gradient-to-b from-slate-50 via-slate-100 to-slate-200 dark:from-slate-950 dark:via-slate-900 dark:to-black">
-      <div className="absolute inset-0 h-full w-full">
-        <SparklesCore
-          background="transparent"
-          className="h-full w-full"
-          id="tsparticles"
-          key={`sparkles-${currentTheme}`}
-          maxSize={1}
-          minSize={0.4}
-          particleColor={particleColor}
-          particleDensity={500}
-        />
+    <section className="relative flex h-[calc(100vh-8rem)] min-h-[600px] items-center justify-center overflow-hidden bg-gradient-to-b from-background via-background/95 to-muted/30">
+      {/* Optimized sparkles effect */}
+      <div className="pointer-events-none absolute inset-0">
+        <Sparkles />
       </div>
 
-      <ShootingStars />
+      {/* Ambient gradients */}
+      <BackgroundGradients />
 
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(var(--hero-radial-top),0.06),transparent_50%)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,rgba(var(--hero-radial-bottom),0.08),transparent_50%)]" />
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[var(--hero-accent)]/10 to-[var(--hero-accent)]/20 dark:from-transparent dark:via-slate-950/50 dark:to-black/80" />
-
-      {/* Content Container - Modern Tailwind v4 spacing system */}
-      <div className="relative z-10 mx-auto flex w-full max-w-7xl flex-col items-center justify-center px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
-        <div className="flex w-full flex-col items-center gap-6 text-center sm:gap-8 lg:gap-10">
-          {/* Badge Section */}
+      {/* Content */}
+      <div className="relative z-10 mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="flex flex-col items-center gap-8 text-center sm:gap-10">
+          {/* Badge */}
           <motion.div
-            animate={{ opacity: 1, y: 0 }}
-            className="relative inline-block"
-            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-2 font-semibold text-primary text-xs uppercase tracking-wider backdrop-blur-sm"
+            initial={{ opacity: 0, scale: 0.95 }}
+            style={{
+              willChange: shouldReduceMotion ? "auto" : "transform, opacity",
+            }}
             transition={{
-              duration: ANIMATION_DURATIONS.badge,
-              delay: ANIMATION_DELAYS.badge,
-              ease: EASE_CUBIC_BEZIER,
+              duration: ANIMATION_CONFIG.durations.fast,
+              delay: ANIMATION_CONFIG.delays.badge,
+              ease: ANIMATION_CONFIG.ease,
             }}
           >
-            <div className="inline-flex items-center gap-2 rounded-full border border-[var(--hero-accent)]/50 bg-gradient-to-r from-[var(--hero-accent)]/60 via-[var(--hero-accent)]/40 to-[var(--hero-accent)]/60 px-5 py-2.5 font-bold text-[var(--hero-accent-foreground)] text-xs uppercase tracking-wider shadow-lg backdrop-blur-xl transition-all duration-300 hover:scale-105 hover:shadow-xl sm:px-6">
-              <MapPin aria-hidden="true" className="h-3.5 w-3.5" />
-              <span>Intelligent Metro Navigation</span>
-            </div>
+            <MapPin aria-hidden="true" className="h-3.5 w-3.5" />
+            <span>Dhaka MRT-6 Navigation</span>
           </motion.div>
 
-          {/* Heading Section - Optimized for readability and spacing */}
+          {/* Heading */}
           <motion.div
             animate={{ opacity: 1, y: 0 }}
-            className="w-full max-w-5xl"
-            initial={{ opacity: 0, y: 40 }}
+            className="max-w-4xl"
+            initial={{ opacity: 0, y: 30 }}
+            style={{
+              willChange: shouldReduceMotion ? "auto" : "transform, opacity",
+            }}
             transition={{
-              duration: ANIMATION_DURATIONS.heading,
-              delay: ANIMATION_DELAYS.heading,
-              ease: EASE_CUBIC_BEZIER,
+              duration: ANIMATION_CONFIG.durations.slow,
+              delay: ANIMATION_CONFIG.delays.heading,
+              ease: ANIMATION_CONFIG.ease,
             }}
           >
-            <h1 className="font-black text-[clamp(2.5rem,8vw,5rem)] text-slate-900 leading-[0.95] tracking-tighter sm:text-[clamp(3rem,9vw,6rem)] md:text-[clamp(3.5rem,10vw,7rem)] lg:text-[clamp(4rem,11vw,8rem)] dark:text-white">
-              <span className="block drop-shadow-2xl">Discover Your</span>
-              <span className="mt-2 block bg-gradient-to-r from-[var(--hero-gradient-from)] via-[var(--hero-gradient-via)] to-[var(--hero-gradient-to)] bg-clip-text text-transparent drop-shadow-2xl sm:mt-3">
-                Perfect Route
+            <h1 className="mb-6 font-extrabold text-4xl text-foreground tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
+              Navigate Dhaka&apos;s Metro with{" "}
+              <span className="bg-gradient-to-r from-primary via-primary/90 to-primary/80 bg-clip-text text-transparent">
+                Precision
               </span>
             </h1>
+            <p className="mx-auto max-w-2xl text-lg text-muted-foreground leading-relaxed sm:text-xl">
+              Find stations, calculate fares, and plan your journey across
+              Dhaka&apos;s MRT-6 network—fast, accurate, and completely free.
+            </p>
           </motion.div>
 
-          {/* Description - Enhanced readability */}
-          <motion.p
-            animate={{ opacity: 1, y: 0 }}
-            className="mx-auto max-w-2xl font-normal text-[clamp(1rem,2.5vw,1.25rem)] text-slate-600 leading-relaxed dark:text-slate-400"
-            initial={{ opacity: 0, y: 20 }}
-            transition={{
-              duration: ANIMATION_DURATIONS.description,
-              delay: ANIMATION_DELAYS.description,
-              ease: EASE_CUBIC_BEZIER,
-            }}
-          >
-            Seamlessly navigate Dhaka&apos;s metro network with intelligent
-            precision. Experience real-time updates, AI-powered routing, and
-            lightning-fast fare calculations.
-          </motion.p>
-
-          {/* CTA Buttons - Enhanced with modern interaction patterns */}
-          <motion.div
-            animate={{ opacity: 1, y: 0 }}
-            className="flex w-full max-w-lg flex-col items-center gap-3 sm:flex-row sm:gap-4"
-            initial={{ opacity: 0, y: 30 }}
-            transition={{
-              duration: ANIMATION_DURATIONS.cta,
-              delay: ANIMATION_DELAYS.cta,
-              ease: EASE_CUBIC_BEZIER,
-            }}
-          >
-            <motion.div
-              className="w-full sm:w-auto"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.98 }}
+          {/* CTA Buttons */}
+          <div className="flex w-full max-w-md flex-col items-center gap-3 sm:flex-row sm:gap-4">
+            <CTAButton
+              delay={ANIMATION_CONFIG.delays.cta}
+              href="/station-finder"
+              icon={Navigation}
+              variant="primary"
             >
-              <Link className="block w-full" href="/station-finder">
-                <HoverBorderGradient
-                  as="button"
-                  className="w-full border-0 bg-gradient-to-r from-[var(--hero-gradient-from)] via-[var(--hero-gradient-via)] to-[var(--hero-gradient-to)] px-6 py-3.5 font-bold text-sm text-white shadow-2xl shadow-[var(--hero-gradient-from)]/30 transition-all duration-500 hover:from-[var(--hero-gradient-from)]/90 hover:via-[var(--hero-gradient-via)]/90 hover:to-[var(--hero-gradient-to)]/90 hover:shadow-[var(--hero-gradient-via)]/50 sm:px-8 sm:py-4"
-                  containerClassName="rounded-full w-full"
-                  duration={1}
-                >
-                  <span className="flex items-center justify-center gap-2">
-                    <Navigation aria-hidden="true" className="h-4 w-4" />
-                    <span>Find Nearest Station</span>
-                    <ArrowRight
-                      aria-hidden="true"
-                      className="h-3 w-3 transition-transform duration-300 group-hover:translate-x-1"
-                    />
-                  </span>
-                </HoverBorderGradient>
-              </Link>
-            </motion.div>
-
-            <motion.div
-              className="w-full sm:w-auto"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.98 }}
+              Find Station
+            </CTAButton>
+            <CTAButton
+              delay={ANIMATION_CONFIG.delays.cta + ANIMATION_CONFIG.stagger}
+              href="/fare-calculator"
+              icon={Calculator}
+              variant="secondary"
             >
-              <Link className="block w-full" href="/fare-calculator">
-                <HoverBorderGradient
-                  as="button"
-                  className="w-full border border-[var(--hero-accent)]/20 bg-slate-900/40 px-6 py-3.5 font-bold text-sm text-white shadow-xl backdrop-blur-xl transition-all duration-500 hover:bg-slate-900/20 sm:px-8 sm:py-4"
-                  containerClassName="rounded-full w-full"
-                  duration={1.2}
-                >
-                  <span className="flex items-center justify-center gap-2">
-                    <Calculator aria-hidden="true" className="h-4 w-4" />
-                    <span>Calculate Fare Price</span>
-                  </span>
-                </HoverBorderGradient>
-              </Link>
-            </motion.div>
-          </motion.div>
+              Calculate Fare
+            </CTAButton>
+          </div>
 
-          {/* Stats Section - Data-driven with proper responsive design */}
-          <motion.div
-            animate={{ opacity: 1, y: 0 }}
-            className="w-full max-w-3xl pt-6 sm:pt-8"
-            initial={{ opacity: 0, y: 50 }}
-            transition={{
-              duration: ANIMATION_DURATIONS.stats,
-              delay: ANIMATION_DELAYS.stats,
-              ease: EASE_CUBIC_BEZIER,
-            }}
-          >
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
-              {STATS_DATA.map((stat) => (
-                <StatsCard
-                  delay={stat.delay}
-                  icon={stat.icon}
-                  key={stat.label}
-                  label={stat.label}
-                  sublabel={stat.sublabel}
-                  value={stat.value}
-                />
+          {/* Stats */}
+          <div className="w-full max-w-4xl pt-12">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6">
+              {STATS_DATA.map((stat, index) => (
+                <StatCard key={stat.label} {...stat} index={index} />
               ))}
             </div>
-          </motion.div>
+          </div>
         </div>
-      </div>
-
-      <div className="absolute right-0 bottom-0 left-0 h-px">
-        <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent light:via-[var(--hero-gradient-from)]/30 via-[var(--hero-gradient-from)]/50 to-transparent blur-sm" />
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent light:via-[var(--hero-gradient-via)]/60 via-[var(--hero-gradient-via)]/80 to-transparent" />
       </div>
     </section>
   );

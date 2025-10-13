@@ -1,15 +1,7 @@
 "use client";
 
-import {
-  AlertCircle,
-  ArrowLeft,
-  List,
-  Map as MapIcon,
-  Route,
-  X,
-} from "lucide-react";
+import { AlertCircle, List, Map as MapIcon, Route, X } from "lucide-react";
 import dynamic from "next/dynamic";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -281,6 +273,8 @@ function SearchSection({
   onClearLocation,
   userLocation,
   onShowRationale,
+  viewMode,
+  onViewModeChange,
 }: {
   readonly onClearLocation: () => void;
   readonly onClearSearch: () => void;
@@ -289,33 +283,72 @@ function SearchSection({
   readonly searchQuery: string;
   readonly userLocation: Coordinates | undefined;
   readonly onShowRationale: () => void;
+  readonly viewMode: ViewMode;
+  readonly onViewModeChange: (mode: ViewMode) => void;
 }) {
   return (
     <section aria-label="Station search" className="bg-background">
       <div className="container mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-          <div className="flex-1">
-            <SearchInput
-              onChange={(e) => onSearchChange(e.target.value)}
-              onClear={onClearSearch}
-              placeholder="Search stations by name..."
-              value={searchQuery}
-            />
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+            <div className="flex-1">
+              <SearchInput
+                onChange={(e) => onSearchChange(e.target.value)}
+                onClear={onClearSearch}
+                placeholder="Search stations by name..."
+                value={searchQuery}
+              />
+            </div>
+            <Button
+              className="w-full sm:w-auto"
+              onClick={() => {
+                // Show rationale before prompting for location
+                onShowRationale();
+                setTimeout(() => {
+                  onUseLocation();
+                }, UX_TIMING.rationaleDelayMs);
+              }}
+              variant="outline"
+            >
+              <MapIcon aria-hidden="true" className="mr-2 h-4 w-4" />
+              Use My Location
+            </Button>
+            {/* View Mode Toggle */}
+            <div
+              aria-label="View mode selection"
+              className="flex gap-1 rounded-lg bg-muted p-1"
+              role="radiogroup"
+            >
+              <Button
+                aria-checked={viewMode === "map"}
+                className={cn(
+                  "h-9 gap-2 px-3",
+                  viewMode === "map" && "bg-background shadow-sm"
+                )}
+                onClick={() => onViewModeChange("map")}
+                role="radio"
+                size="sm"
+                variant={viewMode === "map" ? "secondary" : "ghost"}
+              >
+                <MapIcon aria-hidden="true" className="h-4 w-4" />
+                <span className="hidden sm:inline">Map</span>
+              </Button>
+              <Button
+                aria-checked={viewMode === "list"}
+                className={cn(
+                  "h-9 gap-2 px-3",
+                  viewMode === "list" && "bg-background shadow-sm"
+                )}
+                onClick={() => onViewModeChange("list")}
+                role="radio"
+                size="sm"
+                variant={viewMode === "list" ? "secondary" : "ghost"}
+              >
+                <List aria-hidden="true" className="h-4 w-4" />
+                <span className="hidden sm:inline">List</span>
+              </Button>
+            </div>
           </div>
-          <Button
-            className="w-full sm:w-auto"
-            onClick={() => {
-              // Show rationale before prompting for location
-              onShowRationale();
-              setTimeout(() => {
-                onUseLocation();
-              }, UX_TIMING.rationaleDelayMs);
-            }}
-            variant="outline"
-          >
-            <MapIcon aria-hidden="true" className="mr-2 h-4 w-4" />
-            Use My Location
-          </Button>
         </div>
 
         {(searchQuery || userLocation) && (
@@ -547,70 +580,8 @@ function StationFinderContent() {
         Skip to results
       </a>
 
-      {/* Header */}
-      <header className="sticky top-0 z-50 w-full border-border/40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-4">
-            <Button asChild size="icon" variant="ghost">
-              <Link href="/">
-                <ArrowLeft aria-hidden="true" className="h-5 w-5" />
-                <span className="sr-only">Back to home</span>
-              </Link>
-            </Button>
-            <h1 className="font-semibold text-foreground text-lg">
-              Station Finder
-            </h1>
-            <Badge className="hidden sm:inline-flex" variant="secondary">
-              {filteredStations.length} station
-              {filteredStations.length !== 1 ? "s" : ""}
-            </Badge>
-            {isRateLimited && (
-              <Badge className="hidden sm:inline-flex" variant="secondary">
-                Autocomplete disabled
-              </Badge>
-            )}
-          </div>
-
-          {/* View Mode Toggle */}
-          <div
-            aria-label="View mode selection"
-            className="flex gap-1 rounded-lg bg-muted p-1"
-            role="radiogroup"
-          >
-            <Button
-              aria-checked={viewMode === "map"}
-              className={cn(
-                "h-8 gap-2 px-3",
-                viewMode === "map" && "bg-background shadow-sm"
-              )}
-              onClick={() => setViewMode("map")}
-              role="radio"
-              size="sm"
-              variant={viewMode === "map" ? "secondary" : "ghost"}
-            >
-              <MapIcon aria-hidden="true" className="h-4 w-4" />
-              <span className="hidden sm:inline">Map</span>
-            </Button>
-            <Button
-              aria-checked={viewMode === "list"}
-              className={cn(
-                "h-8 gap-2 px-3",
-                viewMode === "list" && "bg-background shadow-sm"
-              )}
-              onClick={() => setViewMode("list")}
-              role="radio"
-              size="sm"
-              variant={viewMode === "list" ? "secondary" : "ghost"}
-            >
-              <List aria-hidden="true" className="h-4 w-4" />
-              <span className="hidden sm:inline">List</span>
-            </Button>
-          </div>
-        </div>
-      </header>
-
       {/* Main Content */}
-      <main className="flex-1">
+      <main className="flex-1 pb-4 md:pb-16">
         {/* Skip to Results Link */}
         <a
           className="sr-only rounded-md bg-primary px-4 py-2 text-primary-foreground focus:not-sr-only focus:absolute focus:top-20 focus:left-4 focus:z-50"
@@ -624,15 +595,17 @@ function StationFinderContent() {
           {messageId ? COPY_DECK[messageId] : ""}
         </output>
 
-        {/* Legacy Search Section for Location */}
+        {/* Search Section */}
         <SearchSection
           onClearLocation={() => setUserLocation(undefined)}
           onClearSearch={handleClearSearch}
           onSearchChange={setSearchQuery}
           onShowRationale={() => setMessageId("geoRationale")}
           onUseLocation={handleUseMyLocation}
+          onViewModeChange={setViewMode}
           searchQuery={searchQuery}
           userLocation={userLocation}
+          viewMode={viewMode}
         />
 
         {/* Manual lat/lng fallback when Places disabled or rate-limited */}

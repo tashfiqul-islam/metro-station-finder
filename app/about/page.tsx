@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  ArrowLeft,
   Building2,
   Code,
   Database,
@@ -338,22 +337,15 @@ export default function AboutPage() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      {/* Header */}
-      <header className="sticky top-0 z-50 w-full border-border/40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-4">
-            <Button asChild size="icon" variant="ghost">
-              <Link href="/">
-                <ArrowLeft aria-hidden="true" className="h-5 w-5" />
-                <span className="sr-only">Back to home</span>
-              </Link>
-            </Button>
-            <h1 className="font-semibold text-foreground text-lg">About</h1>
-          </div>
-
-          {/* Desktop Navigation */}
-          <nav aria-label="Page sections" className="hidden md:block">
-            <ul className="flex gap-2">
+      {/* Main Content */}
+      <main className="flex-1 bg-muted/30 pb-4 md:pb-16">
+        <div className="container mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+          {/* Section Navigation - Desktop Only */}
+          <nav
+            aria-label="Page sections"
+            className="sticky top-20 z-40 mb-8 hidden rounded-xl border border-border/50 bg-background/95 p-2 backdrop-blur-sm md:block"
+          >
+            <ul className="flex justify-center gap-2">
               {SECTIONS.map((section) => (
                 <li key={section.id}>
                   <SectionNav
@@ -365,12 +357,7 @@ export default function AboutPage() {
               ))}
             </ul>
           </nav>
-        </div>
-      </header>
 
-      {/* Main Content */}
-      <main className="flex-1 bg-muted/30">
-        <div className="container mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
           <div className="space-y-12">
             {/* About Section */}
             <section className="scroll-mt-24 space-y-6" id="about">

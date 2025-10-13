@@ -1,9 +1,6 @@
-import { Train } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { preconnect, prefetchDNS } from "react-dom";
 import { Hero } from "@/components/hero/hero-section";
-import { Navbar } from "@/components/navbar";
 import { StructuredData } from "@/components/seo/structured-data";
 
 // Preload critical external resources for better performance (React 19)
@@ -64,7 +61,7 @@ export const metadata: Metadata = {
  */
 export default function HomePage() {
   return (
-    <div className="flex h-screen flex-col overflow-hidden">
+    <>
       {/* Structured Data for SEO - JSON-LD schema */}
       <StructuredData
         data={{
@@ -100,63 +97,8 @@ export default function HomePage() {
         }}
       />
 
-      {/* Navigation Header - Sticky positioning for optimal UX */}
-      <header className="sticky top-0 z-50 shrink-0">
-        <Navbar />
-      </header>
-
-      {/* Main Content - Flexbox for perfect viewport fitting */}
-      <main className="flex-1 overflow-hidden">
-        <Hero />
-      </main>
-
-      {/* Footer - Compact and accessible design */}
-      <footer className="shrink-0 border-border/40 border-t bg-background/95 py-3 backdrop-blur-sm sm:py-4">
-        <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col items-center justify-between gap-2 sm:flex-row sm:gap-3">
-            {/* Brand Section */}
-            <div className="flex items-center gap-2 text-muted-foreground text-xs transition-colors hover:text-foreground sm:text-sm">
-              <Train
-                aria-hidden="true"
-                className="h-3.5 w-3.5 text-primary sm:h-4 sm:w-4"
-              />
-              <span className="font-medium">Metro Station Finder</span>
-              <span aria-hidden="true">•</span>
-              <span>Dhaka MRT-6</span>
-            </div>
-
-            {/* Footer Navigation */}
-            <nav aria-label="Footer navigation" className="shrink-0">
-              <ul className="flex gap-3 text-muted-foreground text-xs sm:gap-5 sm:text-sm">
-                <li>
-                  <Link
-                    className="inline-block transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-                    href="/about"
-                  >
-                    About
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    className="inline-block transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-                    href="/about#privacy"
-                  >
-                    Privacy
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    className="inline-block transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-                    href="/about#attribution"
-                  >
-                    Attribution
-                  </Link>
-                </li>
-              </ul>
-            </nav>
-          </div>
-        </div>
-      </footer>
-    </div>
+      {/* Main Content - Hero Section */}
+      <Hero />
+    </>
   );
 }

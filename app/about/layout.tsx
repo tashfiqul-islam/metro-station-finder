@@ -29,5 +29,7 @@ export default function AboutLayout({
 }: {
   readonly children: React.ReactNode;
 }) {
-  return children;
+  return (
+    <div className="flex min-h-screen flex-col pb-20 md:pb-0">{children}</div>
+  );
 }

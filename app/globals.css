@@ -74,6 +74,15 @@
   --z-tooltip: 1070;
   --z-toast: 1080;
 
+  /* Navigation Z-Index */
+  --z-top-nav: 50;
+  --z-mobile-dock: 50;
+  --z-footer: 40;
+
+  /* Layout Heights */
+  --header-height: 4rem;
+  --footer-height: 4rem;
+
   /* Color Palette - Map CSS variables to Tailwind utilities */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -273,6 +282,8 @@
     scroll-behavior: smooth;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    height: 100%;
+    overflow-x: hidden;
   }
 
   body {
@@ -287,6 +298,8 @@
     transition:
       background-color var(--duration-200) var(--ease-out),
       color var(--duration-200) var(--ease-out);
+    min-height: 100vh;
+    overflow-x: hidden;
   }
 
   /* Modern focus styles */
@@ -330,5 +343,16 @@
     border-radius: 4px;
     font-size: 12px;
     z-index: 9999;
+  }
+}
+
+/* Safe area padding for mobile devices */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
   }
 }

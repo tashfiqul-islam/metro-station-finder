@@ -1,15 +1,28 @@
 "use client";
-import type { Container, SingleOrMultiple } from "@tsparticles/engine";
 import Particles, { initParticlesEngine } from "@tsparticles/react";
 import { loadSlim } from "@tsparticles/slim";
-import { motion, useAnimation } from "motion/react";
 import { useEffect, useId, useState } from "react";
 import { cn } from "@/lib/utils";
 
-// Animation constants
-const DEFAULT_PARTICLE_DENSITY = 120;
-const DEFAULT_SPEED = 4;
-const DEFAULT_MAX_SIZE = 3;
+/**
+ * Default particle configuration values
+ */
+const DEFAULT_PARTICLE_DENSITY = 200;
+const DEFAULT_ANIMATION_SPEED = 3;
+const DEFAULT_MIN_SIZE = 0.5;
+const DEFAULT_MAX_SIZE = 2;
+
+/**
+ * Gets theme-aware particle color based on dark mode
+ */
+const getParticleColor = (): string => {
+  if (typeof window === "undefined") {
+    return "#047857"; // Fallback for SSR - emerald-700
+  }
+  const isDark = document.documentElement.classList.contains("dark");
+  // Dark mode: bright emerald, Light mode: dark emerald
+  return isDark ? "#10b981" : "#047857";
+};
 
 type ParticlesProps = {
   id?: string;
@@ -26,7 +39,6 @@ export const SparklesCore = (props: ParticlesProps) => {
   const {
     id,
     className,
-    background,
     minSize,
     maxSize,
     speed,
@@ -34,6 +46,10 @@ export const SparklesCore = (props: ParticlesProps) => {
     particleDensity,
   } = props;
   const [init, setInit] = useState(false);
+  const [particleColorState, setParticleColorState] = useState(
+    particleColor || "#047857"
+  );
+
   useEffect(() => {
     initParticlesEngine(async (engine) => {
       await loadSlim(engine);
@@ -41,30 +57,50 @@ export const SparklesCore = (props: ParticlesProps) => {
       setInit(true);
     });
   }, []);
-  const controls = useAnimation();
 
-  const particlesLoaded = async (container?: Container) => {
-    if (container) {
-      await controls.start({
-        opacity: 1,
-        transition: {
-          duration: 1,
-        },
-      });
-    }
-  };
+  // Update particle color when theme changes or component mounts
+  useEffect(() => {
+    const updateColor = () => {
+      setParticleColorState(particleColor || getParticleColor());
+    };
+
+    // Update color on mount
+    updateColor();
+
+    // Listen for theme changes
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (
+          mutation.type === "attributes" &&
+          mutation.attributeName === "class"
+        ) {
+          updateColor();
+        }
+      }
+    });
+
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [particleColor]);
 
   const generatedId = useId();
   return (
-    <motion.div animate={controls} className={cn("opacity-0", className)}>
+    <div className={cn("h-full w-full", className)}>
       {init && (
         <Particles
           className={cn("h-full w-full")}
           id={id || generatedId}
+          key={particleColorState}
           options={{
             background: {
               color: {
-                value: background || "#0d47a1",
+                value: "transparent",
               },
             },
             fullScreen: {
@@ -83,7 +119,9 @@ export const SparklesCore = (props: ParticlesProps) => {
                   enable: false,
                   mode: "repulse",
                 },
-                resize: { enable: true },
+                resize: {
+                  enable: true,
+                },
               },
               modes: {
                 push: {
@@ -125,7 +163,7 @@ export const SparklesCore = (props: ParticlesProps) => {
                 },
               },
               color: {
-                value: particleColor || "#ffffff",
+                value: particleColorState,
                 animation: {
                   h: {
                     count: 0,
@@ -160,7 +198,6 @@ export const SparklesCore = (props: ParticlesProps) => {
                 close: true,
                 fill: true,
                 options: {},
-                type: "trail" as SingleOrMultiple<string>,
               },
               groups: {},
               move: {
@@ -207,8 +244,8 @@ export const SparklesCore = (props: ParticlesProps) => {
                 random: false,
                 size: false,
                 speed: {
-                  min: 0.1,
-                  max: 1,
+                  min: 0.5,
+                  max: 2,
                 },
                 spin: {
                   acceleration: 0,
@@ -237,13 +274,13 @@ export const SparklesCore = (props: ParticlesProps) => {
               },
               opacity: {
                 value: {
-                  min: 0.1,
-                  max: 1,
+                  min: 0.3,
+                  max: 0.8,
                 },
                 animation: {
                   count: 0,
                   enable: true,
-                  speed: speed || DEFAULT_SPEED,
+                  speed: speed || DEFAULT_ANIMATION_SPEED,
                   decay: 0,
                   delay: 0,
                   sync: false,
@@ -272,7 +309,7 @@ export const SparklesCore = (props: ParticlesProps) => {
               },
               size: {
                 value: {
-                  min: minSize || 1,
+                  min: minSize || DEFAULT_MIN_SIZE,
                   max: maxSize || DEFAULT_MAX_SIZE,
                 },
                 animation: {
@@ -430,9 +467,10 @@ export const SparklesCore = (props: ParticlesProps) => {
             },
             detectRetina: true,
           }}
-          particlesLoaded={particlesLoaded}
         />
       )}
-    </motion.div>
+    </div>
   );
 };
+
+export { SparklesCore as Sparkles };
