@@ -92,7 +92,6 @@ export function NavBar(): React.ReactElement {
   return (
     <header
       className="sticky top-0 z-50 w-full border-border/40 border-b bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/80"
-      style={{ position: "sticky", top: 0 }}
     >
       <nav
         aria-label="Main navigation"
