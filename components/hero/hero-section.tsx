@@ -3,9 +3,15 @@
 import { ArrowRight, Calculator, MapPin, Navigation } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
-import { memo, useEffect, useState } from "react";
-import { Sparkles } from "@/components/ui/sparkles";
+import { lazy, memo, Suspense, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+
+// Lazy load Sparkles for better initial page load
+const Sparkles = lazy(() =>
+  import("@/components/ui/sparkles").then((mod) => ({
+    default: mod.Sparkles,
+  }))
+);
 
 /**
  * Animation constants
@@ -15,6 +21,7 @@ const EASE_CUBIC_P2 = 1;
 const EASE_CUBIC_P3 = 0.36;
 const EASE_CUBIC_P4 = 1;
 const STAGGER_DELAY = 0.1;
+const SPARKLES_LOAD_DELAY_MS = 1000;
 
 /**
  * Animation configuration for smooth, performant animations
@@ -229,15 +236,43 @@ BackgroundGradients.displayName = "BackgroundGradients";
 
 /**
  * Modern hero section with optimized performance
- * Features GPU-accelerated animations and reduced motion support
+ * Features GPU-accelerated animations, lazy-loaded sparkles, and reduced motion support
  */
 export function Hero(): React.ReactElement | null {
   const [mounted, setMounted] = useState(false);
+  const [shouldLoadSparkles, setShouldLoadSparkles] = useState(false);
   const shouldReduceMotion = useReducedMotion();
+  const heroRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Lazy load sparkles with IntersectionObserver
+  useEffect(() => {
+    const element = heroRef.current;
+    if (!(element && mounted)) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          // Delay sparkles after hero is visible
+          setTimeout(() => {
+            setShouldLoadSparkles(true);
+          }, SPARKLES_LOAD_DELAY_MS);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    observer.observe(element);
+    return () => {
+      observer.disconnect();
+    };
+  }, [mounted]);
 
   // Prevent hydration mismatch
   if (!mounted) {
@@ -245,11 +280,21 @@ export function Hero(): React.ReactElement | null {
   }
 
   return (
-    <section className="relative flex h-[calc(100vh-8rem)] min-h-[600px] items-center justify-center overflow-hidden bg-gradient-to-b from-background via-background/95 to-muted/30">
-      {/* Optimized sparkles effect */}
-      <div className="pointer-events-none absolute inset-0">
-        <Sparkles />
-      </div>
+    <section
+      className="relative flex h-[calc(100vh-8rem)] min-h-[600px] items-center justify-center overflow-hidden bg-gradient-to-b from-background via-background/95 to-muted/30"
+      ref={heroRef}
+    >
+      {/* Lazily loaded sparkles effect */}
+      {shouldLoadSparkles && (
+        <Suspense fallback={null}>
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0"
+          >
+            <Sparkles />
+          </div>
+        </Suspense>
+      )}
 
       {/* Ambient gradients */}
       <BackgroundGradients />

@@ -32,7 +32,7 @@
     "isolatedModules": true,
     "newLine": "lf",
     "useDefineForClassFields": true,
-    "jsx": "preserve",
+    "jsx": "react-jsx",
     "jsxImportSource": "react",
     "paths": {
       "@/*": ["./*"],
@@ -65,7 +65,9 @@
     "types/**/*",
     "utils/**/*",
     "vitest.config.ts",
-    "out/types/**/*.ts"
+    "out/types/**/*.ts",
+    "out\\dev/types/**/*.ts",
+    ".next\\dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",
