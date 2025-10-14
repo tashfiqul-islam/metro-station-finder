@@ -41,8 +41,6 @@
     "build:webpack": "next build",
     "build:webpack:analyze": "ANALYZE=true next build",
     "start": "next start",
-    "serve": "bunx serve out",
-    "preview": "bunx serve out",
     "// === CODE QUALITY ===": "",
     "lint": "bunx ultracite@latest check",
     "format": "bunx ultracite@latest fix",
