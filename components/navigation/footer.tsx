@@ -15,7 +15,7 @@ export function Footer(): React.ReactElement {
     currentYear > startYear ? `${startYear}-${currentYear}` : startYear;
 
   return (
-    <footer className="fixed inset-x-0 bottom-0 z-30 hidden border-border/40 border-t bg-background/80 backdrop-blur-md md:block">
+    <footer className="border-border/40 border-t bg-background/80 backdrop-blur-md">
       <div className="container mx-auto max-w-7xl px-6 py-3">
         <div className="flex items-center justify-between text-[11px]">
           {/* Left: Brand & Version */}
