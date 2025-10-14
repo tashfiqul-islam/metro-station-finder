@@ -90,7 +90,10 @@ export function NavBar(): React.ReactElement {
   const pathname = usePathname();
 
   return (
-    <header className="sticky top-0 z-50 w-full border-border/40 border-b bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/80">
+    <header
+      className="sticky top-0 z-50 w-full border-border/40 border-b bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/80"
+      style={{ position: "sticky", top: 0 }}
+    >
       <nav
         aria-label="Main navigation"
         className="container mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8"

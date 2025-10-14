@@ -16,7 +16,7 @@ export function Footer(): React.ReactElement {
 
   return (
     <footer className="border-border/40 border-t bg-background/80 backdrop-blur-md">
-      <div className="container mx-auto max-w-7xl px-6 py-3">
+      <div className="container mx-auto max-w-7xl px-6 py-2">
         <div className="flex items-center justify-between text-[11px]">
           {/* Left: Brand & Version */}
           <div className="flex items-center gap-3 text-muted-foreground">
