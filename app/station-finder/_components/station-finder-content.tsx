@@ -539,7 +539,7 @@ export function StationFinderContent() {
   }, [selectedStation, userLocation]);
 
   return (
-    <main className="pb-4 md:pb-16">
+    <main>
       <output aria-live="polite" className="sr-only">
         {messageId ? COPY_DECK[messageId] : ""}
       </output>
