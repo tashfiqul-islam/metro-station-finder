@@ -539,137 +539,121 @@ export function StationFinderContent() {
   }, [selectedStation, userLocation]);
 
   return (
-    <>
-      <a
-        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:rounded-lg focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-        href="#results"
-      >
-        Skip to results
-      </a>
+    <main className="pb-4 md:pb-16">
+      <output aria-live="polite" className="sr-only">
+        {messageId ? COPY_DECK[messageId] : ""}
+      </output>
 
-      <main className="pb-4 md:pb-16">
-        <a
-          className="sr-only rounded-md bg-primary px-4 py-2 text-primary-foreground focus:not-sr-only focus:absolute focus:top-20 focus:left-4 focus:z-50"
-          href="#results"
-        >
-          Skip to results
-        </a>
+      <SearchSection
+        onClearLocation={() => setUserLocation(undefined)}
+        onClearSearch={handleClearSearch}
+        onSearchChange={setSearchQuery}
+        onShowRationale={() => setMessageId("geoRationale")}
+        onUseLocation={handleUseMyLocation}
+        onViewModeChange={setViewMode}
+        searchQuery={searchQuery}
+        userLocation={userLocation}
+        viewMode={viewMode}
+      />
 
-        <output aria-live="polite" className="sr-only">
-          {messageId ? COPY_DECK[messageId] : ""}
-        </output>
-
-        <SearchSection
-          onClearLocation={() => setUserLocation(undefined)}
-          onClearSearch={handleClearSearch}
-          onSearchChange={setSearchQuery}
-          onShowRationale={() => setMessageId("geoRationale")}
-          onUseLocation={handleUseMyLocation}
-          onViewModeChange={setViewMode}
-          searchQuery={searchQuery}
-          userLocation={userLocation}
-          viewMode={viewMode}
-        />
-
-        {(isRateLimited || messageId === "providerUnavailable") && (
-          <section aria-label="Manual location entry" className="bg-background">
-            <div className="container mx-auto max-w-7xl px-4 pb-4 sm:px-6 lg:px-8">
-              <div className="flex flex-wrap items-end gap-2">
-                <div className="flex flex-col">
-                  <label
-                    className="text-muted-foreground text-sm"
-                    htmlFor="manual-lat"
-                  >
-                    Latitude
-                  </label>
-                  <input
-                    className="h-10 rounded-md border border-border/50 bg-background px-3 text-sm"
-                    id="manual-lat"
-                    onChange={(e) => setManualLat(e.target.value)}
-                    placeholder="e.g., 23.7779"
-                    value={manualLat}
-                  />
-                </div>
-                <div className="flex flex-col">
-                  <label
-                    className="text-muted-foreground text-sm"
-                    htmlFor="manual-lng"
-                  >
-                    Longitude
-                  </label>
-                  <input
-                    className="h-10 rounded-md border border-border/50 bg-background px-3 text-sm"
-                    id="manual-lng"
-                    onChange={(e) => setManualLng(e.target.value)}
-                    placeholder="e.g., 90.3971"
-                    value={manualLng}
-                  />
-                </div>
-                <Button
-                  onClick={() => {
-                    const latNum = Number(manualLat);
-                    const lngNum = Number(manualLng);
-                    const minLat = -90;
-                    const maxLat = 90;
-                    const minLng = -180;
-                    const maxLng = 180;
-                    const valid =
-                      Number.isFinite(latNum) &&
-                      Number.isFinite(lngNum) &&
-                      latNum >= minLat &&
-                      latNum <= maxLat &&
-                      lngNum >= minLng &&
-                      lngNum <= maxLng;
-                    if (!valid) {
-                      setMessageId("providerUnavailable");
-                      return;
-                    }
-                    const loc = {
-                      lat: latNum as Coordinates["lat"],
-                      lng: lngNum as Coordinates["lng"],
-                    };
-                    const validationResponse = validateServiceArea(loc);
-                    if (
-                      validationResponse.success &&
-                      validationResponse.data.isValid
-                    ) {
-                      setMessageId("locationFound");
-                      setUserLocation(loc);
-                    } else {
-                      setMessageId("outOfArea");
-                      setUserLocation(undefined);
-                    }
-                  }}
-                  type="button"
-                  variant="outline"
+      {(isRateLimited || messageId === "providerUnavailable") && (
+        <section aria-label="Manual location entry" className="bg-background">
+          <div className="container mx-auto max-w-7xl px-4 pb-4 sm:px-6 lg:px-8">
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="flex flex-col">
+                <label
+                  className="text-muted-foreground text-sm"
+                  htmlFor="manual-lat"
                 >
-                  Use coordinates
-                </Button>
+                  Latitude
+                </label>
+                <input
+                  className="h-10 rounded-md border border-border/50 bg-background px-3 text-sm"
+                  id="manual-lat"
+                  onChange={(e) => setManualLat(e.target.value)}
+                  placeholder="e.g., 23.7779"
+                  value={manualLat}
+                />
               </div>
+              <div className="flex flex-col">
+                <label
+                  className="text-muted-foreground text-sm"
+                  htmlFor="manual-lng"
+                >
+                  Longitude
+                </label>
+                <input
+                  className="h-10 rounded-md border border-border/50 bg-background px-3 text-sm"
+                  id="manual-lng"
+                  onChange={(e) => setManualLng(e.target.value)}
+                  placeholder="e.g., 90.3971"
+                  value={manualLng}
+                />
+              </div>
+              <Button
+                onClick={() => {
+                  const latNum = Number(manualLat);
+                  const lngNum = Number(manualLng);
+                  const minLat = -90;
+                  const maxLat = 90;
+                  const minLng = -180;
+                  const maxLng = 180;
+                  const valid =
+                    Number.isFinite(latNum) &&
+                    Number.isFinite(lngNum) &&
+                    latNum >= minLat &&
+                    latNum <= maxLat &&
+                    lngNum >= minLng &&
+                    lngNum <= maxLng;
+                  if (!valid) {
+                    setMessageId("providerUnavailable");
+                    return;
+                  }
+                  const loc = {
+                    lat: latNum as Coordinates["lat"],
+                    lng: lngNum as Coordinates["lng"],
+                  };
+                  const validationResponse = validateServiceArea(loc);
+                  if (
+                    validationResponse.success &&
+                    validationResponse.data.isValid
+                  ) {
+                    setMessageId("locationFound");
+                    setUserLocation(loc);
+                  } else {
+                    setMessageId("outOfArea");
+                    setUserLocation(undefined);
+                  }
+                }}
+                type="button"
+                variant="outline"
+              >
+                Use coordinates
+              </Button>
             </div>
-          </section>
+          </div>
+        </section>
+      )}
+
+      {userLocation &&
+        Array.isArray(stationsWithDistance) &&
+        stationsWithDistance.length > 0 && (
+          <output aria-live="polite" className="sr-only">
+            Nearest station is {stationsWithDistance[0].station.name}
+          </output>
         )}
 
-        {userLocation &&
-          Array.isArray(stationsWithDistance) &&
-          stationsWithDistance.length > 0 && (
-            <output aria-live="polite" className="sr-only">
-              Nearest station is {stationsWithDistance[0].station.name}
-            </output>
-          )}
-
-        <ResultsSection
-          filteredStations={filteredStations}
-          isGeoLoading={isGeoLoading}
-          mapCenter={mapCenter}
-          mapZoom={mapZoom}
-          onSelect={handleStationSelect}
-          selectedStation={selectedStation}
-          stationsWithDistance={stationsWithDistance}
-          userLocation={userLocation}
-          viewMode={viewMode}
-        />
-      </main>
-    </>
+      <ResultsSection
+        filteredStations={filteredStations}
+        isGeoLoading={isGeoLoading}
+        mapCenter={mapCenter}
+        mapZoom={mapZoom}
+        onSelect={handleStationSelect}
+        selectedStation={selectedStation}
+        stationsWithDistance={stationsWithDistance}
+        userLocation={userLocation}
+        viewMode={viewMode}
+      />
+    </main>
   );
 }
