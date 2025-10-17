@@ -1,9 +1,19 @@
 "use client";
 
-import { ArrowRight, Calculator, Info, RefreshCw, Ticket } from "lucide-react";
+import { Calculator, Info, RefreshCw, Ticket } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { StationErrorBoundary } from "@/components/error/station-error-boundary";
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxGroup,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+  ComboboxTrigger,
+} from "@/components/kibo-ui/combobox";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,13 +24,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FareDisplay } from "@/components/ui/fare-display";
-import { SearchInput } from "@/components/ui/search-input";
 import { calculateFare } from "@/lib/api/fares";
-import { getAllStations, searchStations } from "@/lib/api/stations";
-import { SEARCH_CONSTANTS } from "@/lib/constants";
+import { getAllStations } from "@/lib/api/stations";
 import type { FareInput } from "@/lib/schemas";
 import type { Station } from "@/lib/types/station";
 import { cn } from "@/lib/utils";
+import { transformStationsForCombobox } from "@/lib/utils/station-combobox";
 
 /**
  * Station selection state.
@@ -70,75 +79,46 @@ const TICKET_TYPES: readonly TicketInfo[] = [
 ] as const;
 
 /**
- * Search state type for station filtering.
- */
-type SearchState = "origin" | "destination" | null;
-
-/**
- * Renders a station selection button with search capability.
+ * Renders a station selection combobox using kibo-ui.
  */
 function StationSelector({
   label,
   station,
-  searchQuery,
-  isSearching,
-  onSearchChange,
   onSelect,
-  onStartSearch,
-  filteredStations,
+  allStations,
   placeholder,
 }: {
   readonly label: string;
   readonly station: Station | undefined;
-  readonly searchQuery: string;
-  readonly isSearching: boolean;
-  readonly onSearchChange: (value: string) => void;
   readonly onSelect: (station: Station) => void;
-  readonly onStartSearch: () => void;
-  readonly filteredStations: readonly Station[];
+  readonly allStations: readonly Station[];
   readonly placeholder: string;
 }) {
+  const comboboxData = useMemo(
+    () => transformStationsForCombobox(allStations),
+    [allStations]
+  );
+
+  const handleValueChange = useCallback(
+    (value: string) => {
+      const selectedStation = allStations.find((s) => s.id === value);
+      if (selectedStation) {
+        onSelect(selectedStation);
+      }
+    },
+    [allStations, onSelect]
+  );
+
   return (
     <div className="flex flex-col gap-3">
       <div className="font-medium text-sm">{label}</div>
-      {isSearching ? (
-        <div className="space-y-2">
-          <SearchInput
-            onChange={(e) => onSearchChange(e.target.value)}
-            onClear={() => onSearchChange("")}
-            placeholder="Search stations..."
-            value={searchQuery}
-          />
-          <div className="max-h-[300px] overflow-y-auto rounded-lg border border-border bg-card">
-            {filteredStations.length === 0 ? (
-              <div className="p-4 text-center text-muted-foreground text-sm">
-                No stations found
-              </div>
-            ) : (
-              <div className="divide-y divide-border">
-                {filteredStations.map((s) => (
-                  <button
-                    className="w-full px-4 py-3 text-left transition-colors hover:bg-muted focus:bg-muted focus:outline-none"
-                    key={s.id}
-                    onClick={() => onSelect(s)}
-                    type="button"
-                  >
-                    <div className="font-medium text-sm">{s.name}</div>
-                    <div className="text-muted-foreground text-xs">
-                      {s.aliases[0]}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      ) : (
-        <Button
-          className="h-auto justify-start gap-3 px-4 py-3 text-left"
-          onClick={onStartSearch}
-          variant={station ? "outline" : "secondary"}
-        >
+      <Combobox
+        data={comboboxData}
+        onValueChange={handleValueChange}
+        type="station"
+        value={station?.id ?? ""}
+      >
+        <ComboboxTrigger className="h-auto w-full justify-start gap-3 px-4 py-3 text-left">
           <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary/10">
             <Calculator aria-hidden="true" className="h-5 w-5 text-primary" />
           </div>
@@ -152,9 +132,28 @@ function StationSelector({
               </div>
             )}
           </div>
-          <ArrowRight aria-hidden="true" className="h-4 w-4" />
-        </Button>
-      )}
+        </ComboboxTrigger>
+        <ComboboxContent className="w-[var(--radix-popover-trigger-width)]">
+          <ComboboxInput placeholder="Search stations..." />
+          <ComboboxList>
+            <ComboboxEmpty>No stations found.</ComboboxEmpty>
+            <ComboboxGroup>
+              {comboboxData.map((item) => (
+                <ComboboxItem key={item.value} value={item.value}>
+                  <div className="flex flex-col">
+                    <span className="font-medium text-sm">{item.label}</span>
+                    {item.hint && (
+                      <span className="text-muted-foreground text-xs">
+                        {item.hint}
+                      </span>
+                    )}
+                  </div>
+                </ComboboxItem>
+              ))}
+            </ComboboxGroup>
+          </ComboboxList>
+        </ComboboxContent>
+      </Combobox>
     </div>
   );
 }
@@ -234,8 +233,6 @@ export function FareCalculatorContent() {
     destination: undefined,
   });
   const [ticketType, setTicketType] = useState<TicketType>("single-journey");
-  const [searchState, setSearchState] = useState<SearchState>(null);
-  const [searchQuery, setSearchQuery] = useState("");
 
   const allStationsResponse = useMemo(() => getAllStations(), []);
   const allStations = allStationsResponse.success
@@ -263,20 +260,6 @@ export function FareCalculatorContent() {
     }
   }, [searchParams, allStations]);
 
-  const filteredStations = useMemo(() => {
-    if (!searchQuery.trim()) {
-      return allStations;
-    }
-
-    const searchResponse = searchStations(
-      searchQuery,
-      SEARCH_CONSTANTS.maxResultsDefault
-    );
-    return searchResponse.success
-      ? searchResponse.data.map((r) => r.station)
-      : [];
-  }, [allStations, searchQuery]);
-
   const calculatedFare = useMemo<FareInput | undefined>(() => {
     if (!(selection.origin && selection.destination)) {
       return;
@@ -301,14 +284,10 @@ export function FareCalculatorContent() {
 
   const handleOriginSelect = useCallback((station: Station) => {
     setSelection((prev) => ({ ...prev, origin: station }));
-    setSearchState(null);
-    setSearchQuery("");
   }, []);
 
   const handleDestinationSelect = useCallback((station: Station) => {
     setSelection((prev) => ({ ...prev, destination: station }));
-    setSearchState(null);
-    setSearchQuery("");
   }, []);
 
   const handleSwapStations = useCallback(() => {
@@ -321,8 +300,6 @@ export function FareCalculatorContent() {
   const handleReset = useCallback(() => {
     setSelection({ origin: undefined, destination: undefined });
     setTicketType("single-journey");
-    setSearchState(null);
-    setSearchQuery("");
   }, []);
 
   const travelTime = calculatedFare?.travelTime
@@ -366,14 +343,10 @@ export function FareCalculatorContent() {
           <CardContent className="space-y-4">
             <StationErrorBoundary>
               <StationSelector
-                filteredStations={filteredStations}
-                isSearching={searchState === "origin"}
+                allStations={allStations}
                 label="Origin Station"
-                onSearchChange={setSearchQuery}
                 onSelect={handleOriginSelect}
-                onStartSearch={() => setSearchState("origin")}
                 placeholder="Select origin station"
-                searchQuery={searchQuery}
                 station={selection.origin}
               />
             </StationErrorBoundary>
@@ -393,14 +366,10 @@ export function FareCalculatorContent() {
 
             <StationErrorBoundary>
               <StationSelector
-                filteredStations={filteredStations}
-                isSearching={searchState === "destination"}
+                allStations={allStations}
                 label="Destination Station"
-                onSearchChange={setSearchQuery}
                 onSelect={handleDestinationSelect}
-                onStartSearch={() => setSearchState("destination")}
                 placeholder="Select destination station"
-                searchQuery={searchQuery}
                 station={selection.destination}
               />
             </StationErrorBoundary>

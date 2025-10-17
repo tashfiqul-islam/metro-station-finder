@@ -4,7 +4,7 @@ import { Calculator, Home, Info, MapPin } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { memo } from "react";
-import { GithubLink } from "@/components/navbar/github";
+import { GithubGlimpse } from "@/components/navbar/github-glimpse";
 import { Logo } from "@/components/navbar/logo";
 import { Theme } from "@/components/navbar/theme";
 import { cn } from "@/lib/utils";
@@ -117,7 +117,7 @@ export function NavBar(): React.ReactElement {
         {/* Utilities */}
         <div className="flex items-center gap-2">
           <Theme />
-          <GithubLink />
+          <GithubGlimpse />
         </div>
       </nav>
 
