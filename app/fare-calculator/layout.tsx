@@ -29,7 +29,5 @@ export default function FareCalculatorLayout({
 }: {
   readonly children: React.ReactNode;
 }) {
-  return (
-    <div className="flex min-h-screen flex-col pb-20 md:pb-0">{children}</div>
-  );
+  return <div className="min-h-full">{children}</div>;
 }

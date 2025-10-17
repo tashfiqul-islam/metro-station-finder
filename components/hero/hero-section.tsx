@@ -3,15 +3,8 @@
 import { ArrowRight, Calculator, MapPin, Navigation } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
-import { lazy, memo, Suspense, useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
-
-// Lazy load Sparkles for better initial page load
-const Sparkles = lazy(() =>
-  import("@/components/ui/sparkles").then((mod) => ({
-    default: mod.Sparkles,
-  }))
-);
 
 /**
  * Animation constants
@@ -21,7 +14,6 @@ const EASE_CUBIC_P2 = 1;
 const EASE_CUBIC_P3 = 0.36;
 const EASE_CUBIC_P4 = 1;
 const STAGGER_DELAY = 0.1;
-const SPARKLES_LOAD_DELAY_MS = 1000;
 
 /**
  * Animation configuration for smooth, performant animations
@@ -240,39 +232,12 @@ BackgroundGradients.displayName = "BackgroundGradients";
  */
 export function Hero(): React.ReactElement | null {
   const [mounted, setMounted] = useState(false);
-  const [shouldLoadSparkles, setShouldLoadSparkles] = useState(false);
   const shouldReduceMotion = useReducedMotion();
   const heroRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  // Lazy load sparkles with IntersectionObserver
-  useEffect(() => {
-    const element = heroRef.current;
-    if (!(element && mounted)) {
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting) {
-          // Delay sparkles after hero is visible
-          setTimeout(() => {
-            setShouldLoadSparkles(true);
-          }, SPARKLES_LOAD_DELAY_MS);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    observer.observe(element);
-    return () => {
-      observer.disconnect();
-    };
-  }, [mounted]);
 
   // Prevent hydration mismatch
   if (!mounted) {
@@ -281,21 +246,19 @@ export function Hero(): React.ReactElement | null {
 
   return (
     <section
-      className="relative flex h-[calc(100vh-8rem)] min-h-[600px] items-center justify-center overflow-hidden bg-gradient-to-b from-background via-background/95 to-muted/30"
+      className="relative flex min-h-[600px] items-center justify-center overflow-hidden"
       ref={heroRef}
+      style={{
+        minHeight: "calc(100svh - var(--header-height) - var(--footer-height))",
+      }}
     >
-      {/* Lazily loaded sparkles effect */}
-      {shouldLoadSparkles && (
-        <Suspense fallback={null}>
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0"
-          >
-            <Sparkles />
-          </div>
-        </Suspense>
-      )}
+      {/* Sparkles moved to global Providers layer */}
 
+      {/* Contrast-friendly top fade that doesn't block the background */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-2/3 bg-gradient-to-b from-background/70 via-background/20 to-transparent"
+      />
       {/* Ambient gradients */}
       <BackgroundGradients />
 

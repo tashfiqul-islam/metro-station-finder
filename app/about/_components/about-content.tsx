@@ -338,7 +338,7 @@ export function AboutContent() {
   }, []);
 
   return (
-    <main className="flex-1 bg-muted/30 pb-4 md:pb-16">
+    <main className="flex-1 pb-4 md:pb-16">
       <div className="container mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="space-y-12">
           {/* About Section */}

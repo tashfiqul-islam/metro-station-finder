@@ -143,11 +143,13 @@ export default function RootLayout({
         {/* Critical CSS is now handled by Tailwind v4 in src/input.css */}
       </head>
       <body
-        className={`${ropaSans.variable} ${geistMono.variable} antialiased`}
+        className={`${ropaSans.variable} ${geistMono.variable} min-h-dvh bg-background text-foreground antialiased`}
       >
         <Providers>
           <NavBar />
-          {children}
+          <main className="min-h-dvh pt-[var(--header-height)] pb-[var(--footer-height)]">
+            {children}
+          </main>
           <Footer />
           <WebVitalsMonitor />
         </Providers>

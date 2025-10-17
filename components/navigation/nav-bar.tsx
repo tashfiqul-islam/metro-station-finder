@@ -90,10 +90,13 @@ export function NavBar(): React.ReactElement {
   const pathname = usePathname();
 
   return (
-    <header className="sticky top-0 z-50 w-full border-border/40 border-b bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/80">
+    <header
+      className="fixed top-0 right-0 left-0 z-50 w-full border-border/40 border-b bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60"
+      style={{ height: "var(--header-height)" }}
+    >
       <nav
         aria-label="Main navigation"
-        className="container mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8"
+        className="container mx-auto flex h-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8"
       >
         {/* Logo */}
         <div className="flex items-center">
@@ -121,9 +124,9 @@ export function NavBar(): React.ReactElement {
       {/* Mobile Navigation */}
       <nav
         aria-label="Mobile navigation"
-        className="border-border/40 border-t bg-background/95 md:hidden"
+        className="border-border/40 border-t bg-background/80 backdrop-blur-md md:hidden"
       >
-        <div className="container mx-auto flex items-center justify-around px-2 py-2">
+        <div className="container mx-auto flex items-center justify-around px-2 py-2 pb-safe">
           {NAVIGATION_ITEMS.map((item) => {
             const isActive = pathname === item.href;
             const Icon = item.icon;
@@ -150,7 +153,7 @@ export function NavBar(): React.ReactElement {
                 />
                 <span className="font-medium text-[10px]">{item.label}</span>
                 {isActive && (
-                  <span className="-bottom-px -translate-x-1/2 absolute left-1/2 h-0.5 w-8 bg-primary" />
+                  <span className="-bottom-px -translate-x-1/2 absolute left-1/2 h-0.5 w-8 bg-gradient-to-r from-transparent via-primary to-transparent" />
                 )}
               </Link>
             );

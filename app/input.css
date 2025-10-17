@@ -19,11 +19,11 @@
 
   body {
     margin: 0;
-    background-color: hsl(var(--background));
+    background-color: transparent;
     color: hsl(var(--foreground));
     font-size: 16px;
     overflow-x: hidden;
-    min-height: 100vh;
+    min-height: 100dvh;
   }
 
   /* Font loading optimization - prevent layout shift */

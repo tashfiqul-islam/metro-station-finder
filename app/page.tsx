@@ -98,7 +98,9 @@ export default function HomePage() {
       />
 
       {/* Main Content - Hero Section */}
-      <Hero />
+      <div className="overflow-hidden">
+        <Hero />
+      </div>
     </>
   );
 }

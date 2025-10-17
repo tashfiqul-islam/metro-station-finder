@@ -183,17 +183,22 @@ function ResultsSection({
         aria-busy={isGeoLoading}
         aria-live="polite"
         aria-relevant="additions removals"
-        className="bg-muted/30"
+        className="bg-transparent"
         id="results"
       >
-        <div className="container mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <div className="container mx-auto max-w-7xl px-4 py-2 sm:px-6 lg:px-8">
           {filteredStations.length === 0 && (
             <EmptyState onClear={onSelect as unknown as () => void} />
           )}
 
           {viewMode === "map" && filteredStations.length > 0 && (
-            <div className="space-y-4">
-              <div className="h-[500px] w-full overflow-hidden rounded-xl border border-border/50 shadow-lg">
+            <div className="space-y-3">
+              <div
+                className="w-full overflow-hidden rounded-xl border border-border/50 shadow-lg"
+                style={{
+                  height: "min(420px, calc(100vh - 400px))",
+                }}
+              >
                 <MapErrorBoundary>
                   <MapSuspense>
                     <MetroMap
@@ -286,7 +291,7 @@ function SearchSection({
   readonly onViewModeChange: (mode: ViewMode) => void;
 }) {
   return (
-    <section aria-label="Station search" className="bg-background">
+    <section aria-label="Station search" className="bg-transparent">
       <div className="container mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
@@ -539,7 +544,7 @@ export function StationFinderContent() {
   }, [selectedStation, userLocation]);
 
   return (
-    <main>
+    <div className="min-h-full">
       <output aria-live="polite" className="sr-only">
         {messageId ? COPY_DECK[messageId] : ""}
       </output>
@@ -557,7 +562,7 @@ export function StationFinderContent() {
       />
 
       {(isRateLimited || messageId === "providerUnavailable") && (
-        <section aria-label="Manual location entry" className="bg-background">
+        <section aria-label="Manual location entry" className="bg-transparent">
           <div className="container mx-auto max-w-7xl px-4 pb-4 sm:px-6 lg:px-8">
             <div className="flex flex-wrap items-end gap-2">
               <div className="flex flex-col">
@@ -654,6 +659,6 @@ export function StationFinderContent() {
         userLocation={userLocation}
         viewMode={viewMode}
       />
-    </main>
+    </div>
   );
 }

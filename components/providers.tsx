@@ -2,6 +2,7 @@
 
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 import type { ReactNode } from "react";
+import { Sparkles } from "@/components/ui/sparkles";
 
 /**
  * Root providers wrapper for the application.
@@ -18,6 +19,10 @@ export function Providers({ children }: { readonly children: ReactNode }) {
       disableTransitionOnChange
       enableSystem
     >
+      {/* Global wallpaper layer behind all content */}
+      <div className="-z-10 pointer-events-none fixed inset-0 w-full">
+        <Sparkles />
+      </div>
       {children}
     </NextThemesProvider>
   );
