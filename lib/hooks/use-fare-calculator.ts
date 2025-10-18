@@ -1,32 +1,68 @@
-import { useMemo } from "react";
+import { useMemo, useOptimistic, useTransition } from "react";
 import { calculateFare } from "@/lib/api/fares";
 import type { StationId } from "@/lib/types";
 import type { Fare } from "@/lib/types/fare";
-
-type Options = {
-  readonly origin?: StationId;
-  readonly destination?: StationId;
-  readonly discountType?: "single-journey" | "mrt-pass" | "rapid-pass";
-};
+import { useFareCalculatorActions } from "./use-fare-calculator-actions";
+import { useFareCalculatorState } from "./use-fare-calculator-state";
+import { useStationData } from "./use-station-search";
 
 /**
- * Calculates fare between two stations with memoization.
- * Returns undefined if either station is missing or calculation fails.
+ * Comprehensive hook for fare calculator functionality
+ * Combines state management, actions, and data fetching
  */
-export function useFareCalculator({
-  origin,
-  destination,
-  discountType = "single-journey",
-}: Options): Fare | undefined {
-  return useMemo(() => {
-    if (origin === undefined || destination === undefined) {
+export function useFareCalculatorComplete() {
+  const { state, dispatch } = useFareCalculatorState();
+
+  const [isPending, startTransition] = useTransition();
+
+  const [optimisticState, addOptimisticUpdate] = useOptimistic(
+    { isCalculating: false },
+    (currentState, optimisticUpdate: { isCalculating: boolean }) => ({
+      ...currentState,
+      ...optimisticUpdate,
+    })
+  );
+
+  const displayFare = useMemo((): Fare | undefined => {
+    if (state.origin?.id === undefined || state.destination?.id === undefined) {
       return;
     }
     try {
-      const result = calculateFare(origin, destination, { type: discountType });
+      const result = calculateFare(
+        state.origin.id as StationId,
+        state.destination.id as StationId,
+        {
+          type: state.selectedDiscount,
+        }
+      );
       return result.success ? result.data : undefined;
     } catch {
       return;
     }
-  }, [origin, destination, discountType]);
+  }, [state.origin?.id, state.destination?.id, state.selectedDiscount]);
+
+  const { originStations, destinationStations } = useStationData(state);
+
+  const actions = useFareCalculatorActions(
+    state,
+    dispatch,
+    startTransition,
+    addOptimisticUpdate
+  );
+
+  return {
+    // State
+    state,
+    displayFare,
+    originStations,
+    destinationStations,
+    isPending,
+    optimisticState,
+
+    // Actions
+    ...actions,
+
+    // Direct dispatch for specific actions
+    dispatch,
+  } as const;
 }

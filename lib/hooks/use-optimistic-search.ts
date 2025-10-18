@@ -65,16 +65,9 @@ export function useOptimisticFare(initialFare?: number) {
   const [isPending, startTransition] = useTransition();
   const [optimisticFare, setOptimisticFare] = useOptimistic(
     initialFare,
-    (_state, newFare: number) => {
-      // Update fare optimistically
-      return newFare;
-    }
+    (_state, newFare: number) => newFare
   );
 
-  /**
-   * Optimistically update fare calculation
-   * This provides instant UI feedback while the actual calculation completes
-   */
   const optimisticCalculateFare = (fare: number) => {
     startTransition(() => {
       setOptimisticFare(fare);
@@ -86,4 +79,30 @@ export function useOptimisticFare(initialFare?: number) {
     isPending,
     optimisticCalculateFare,
   };
+}
+
+/**
+ * Generic optimistic state hook for UI feedback during async operations
+ */
+export function useOptimisticState<T>(initialState: T) {
+  const [isPending, startTransition] = useTransition();
+  const [optimisticState, addOptimisticUpdate] = useOptimistic(
+    initialState,
+    (currentState, update: Partial<T>) => ({
+      ...currentState,
+      ...update,
+    })
+  );
+
+  const updateOptimistic = (update: Partial<T>) => {
+    startTransition(() => {
+      addOptimisticUpdate(update);
+    });
+  };
+
+  return {
+    optimisticState,
+    isPending,
+    updateOptimistic,
+  } as const;
 }

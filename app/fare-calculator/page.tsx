@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { FareCalculator } from "@/components/fare-calculator/fare-calculator";
+import { FareCalculator } from "./_components/fare-calculator";
 
 export const metadata: Metadata = {
   title: "Fare Calculator | Metro Station Finder",
