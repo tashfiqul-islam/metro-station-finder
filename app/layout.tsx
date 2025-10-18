@@ -147,7 +147,7 @@ export default function RootLayout({
       >
         <Providers>
           <NavBar />
-          <main className="min-h-dvh pt-[var(--header-height)] pb-[var(--footer-height)]">
+          <main className="min-h-[calc(100dvh-var(--header-height)-var(--footer-height))] pt-[var(--header-height)] pb-[var(--footer-height)]">
             {children}
           </main>
           <Footer />

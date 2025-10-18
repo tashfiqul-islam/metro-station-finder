@@ -40,7 +40,7 @@
       "@/components/*": ["./components/*"],
       "@/components/navbar/*": ["./components/navbar/*"],
       "@/lib/*": ["./lib/*"],
-      "@/hooks/*": ["./hooks/*"],
+      "@/hooks/*": ["./lib/hooks/*"],
       "@/types/*": ["./types/*"],
       "@/utils/*": ["./utils/*"],
       "@/styles/*": ["./styles/*"]

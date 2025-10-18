@@ -46,24 +46,26 @@ type ComboboxContextType = {
   setInputValue: (value: string) => void;
 };
 
+const DEFAULT_COMBOBOX_WIDTH = 200;
+
 const ComboboxContext = createContext<ComboboxContextType>({
   data: [],
   type: "item",
   value: "",
   onValueChange: () => {
-    // Default empty handler
+    // Intentionally empty for default context
   },
   open: false,
   onOpenChange: () => {
-    // Default empty handler
+    // Intentionally empty for default context
   },
-  width: 200,
+  width: DEFAULT_COMBOBOX_WIDTH,
   setWidth: () => {
-    // Default empty handler
+    // Intentionally empty for default context
   },
   inputValue: "",
   setInputValue: () => {
-    // Default empty handler
+    // Intentionally empty for default context
   },
 });
 
@@ -91,15 +93,22 @@ export const Combobox = ({
   const [value, onValueChange] = useControllableState({
     defaultProp: defaultValue ?? "",
     prop: controlledValue,
-    ...(controlledOnValueChange && { onChange: controlledOnValueChange }),
+    onChange:
+      controlledOnValueChange ??
+      (() => {
+        // Noop handler when onChange is not provided
+      }),
   });
   const [open, onOpenChange] = useControllableState({
     defaultProp: defaultOpen,
     prop: controlledOpen,
-    ...(controlledOnOpenChange && { onChange: controlledOnOpenChange }),
+    onChange:
+      controlledOnOpenChange ??
+      (() => {
+        // Noop handler when onChange is not provided
+      }),
   });
-  const DefaultWidth = 200;
-  const [width, setWidth] = useState(DefaultWidth);
+  const [width, setWidth] = useState(DEFAULT_COMBOBOX_WIDTH);
   const [inputValue, setInputValue] = useState("");
 
   return (

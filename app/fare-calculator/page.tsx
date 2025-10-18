@@ -1,20 +1,17 @@
-import { Suspense } from "react";
-import { FareCalculatorContent } from "./_components/fare-calculator-content";
+import type { Metadata } from "next";
+import { FareCalculator } from "@/components/fare-calculator/fare-calculator";
 
-/**
- * Fare Calculator page (Next.js 16 with static export).
- * Note: Using client-side searchParams handling for static export compatibility.
- */
+export const metadata: Metadata = {
+  title: "Fare Calculator | Metro Station Finder",
+  description:
+    "Calculate fares between metro stations. Instant fare lookup with multiple ticket types and real-time discount information.",
+  openGraph: {
+    title: "Fare Calculator | Metro Station Finder",
+    description: "Calculate fares between metro stations with instant results.",
+    type: "website",
+  },
+};
+
 export default function FareCalculatorPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-dvh items-center justify-center">
-          Loading...
-        </div>
-      }
-    >
-      <FareCalculatorContent />
-    </Suspense>
-  );
+  return <FareCalculator />;
 }
