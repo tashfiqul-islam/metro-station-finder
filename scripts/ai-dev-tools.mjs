@@ -31,12 +31,9 @@ const aiCommands = {
 
   "ai:analyze": () => {
     console.log("🔍 Running comprehensive AI analysis...");
-    execSync(
-      "bun run type-check && bun run lint && bun run test:run && bun run analyze",
-      {
-        stdio: "inherit",
-      }
-    );
+    execSync("bun run type-check && bun run lint && bun run test:run && bun run analyze", {
+      stdio: "inherit",
+    });
   },
 
   "ai:validate": () => {
@@ -49,9 +46,7 @@ const aiCommands = {
   // Component Development
   "component:create": (name) => {
     if (!name) {
-      console.log(
-        "❌ Please provide component name: bun run ai:component:create Button"
-      );
+      console.log("❌ Please provide component name: bun run ai:component:create Button");
       return;
     }
     console.log(`🎨 Creating component: ${name}`);
@@ -61,9 +56,7 @@ const aiCommands = {
 
   "component:test": (name) => {
     if (!name) {
-      console.log(
-        "❌ Please provide component name: bun run ai:component:test Button"
-      );
+      console.log("❌ Please provide component name: bun run ai:component:test Button");
       return;
     }
     console.log(`🧪 Testing component: ${name}`);
@@ -73,12 +66,9 @@ const aiCommands = {
   // Code Quality for AI
   "ai:quality": () => {
     console.log("🔍 Running AI-optimized quality checks...");
-    execSync(
-      "bun run type-check && bun run lint && bun run test:run && bun run analyze:security",
-      {
-        stdio: "inherit",
-      }
-    );
+    execSync("bun run type-check && bun run lint && bun run test:run && bun run analyze:security", {
+      stdio: "inherit",
+    });
   },
 
   "ai:fix": () => {

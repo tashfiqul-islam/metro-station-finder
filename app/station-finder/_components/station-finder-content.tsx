@@ -7,37 +7,34 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import {
   MapErrorBoundary,
   StationErrorBoundary,
-} from "@/components/error/station-error-boundary";
-import { MapSuspense } from "@/components/suspense/station-list-suspense";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+} from "@/app/_components/shared/error/station-error-boundary";
+import { MapSuspense } from "@/app/_components/shared/suspense/station-list-suspense";
+import { Badge } from "@/app/_components/shared/ui/badge";
+import { Button } from "@/app/_components/shared/ui/button";
+import { Card, CardContent } from "@/app/_components/shared/ui/card";
+import { useCustomLoading } from "@/lib/hooks/loading/use-custom-loading";
+import { useEnhancedOptimistic } from "@/lib/hooks/optimization/use-enhanced-optimistic";
+import { useDeferredSearch } from "@/lib/hooks/performance/use-deferred-search";
+import { useViewTransitions } from "@/lib/hooks/transitions/use-view-transitions";
 
 // Lazy load the map component to reduce initial bundle size
 const MetroMap = dynamic(
   () =>
-    import("@/components/ui/map").then((mod) => ({ default: mod.MetroMap })),
+    import("@/app/_components/shared/ui/map").then((mod) => ({
+      default: mod.MetroMap,
+    })),
   {
     ssr: false,
-    loading: () => (
-      <div className="h-[500px] w-full animate-pulse rounded-xl bg-muted" />
-    ),
+    loading: () => <div className="h-[500px] w-full animate-pulse rounded-xl bg-muted" />,
   }
 );
 
-import { SearchInput } from "@/components/ui/search-input";
-import { StationCard } from "@/components/ui/station-card";
-import {
-  requestCurrentLocation,
-  validateServiceArea,
-} from "@/lib/api/geolocation";
-import { getQuotaStatus } from "@/lib/api/places";
-import { getAllStations, searchStations } from "@/lib/api/stations";
-import {
-  COPY_DECK,
-  DHAKA_SERVICE_AREA,
-  SEARCH_CONSTANTS,
-} from "@/lib/constants";
+import { SearchInput } from "@/app/_components/shared/ui/search-input";
+import { StationCard } from "@/app/_components/shared/ui/station-card";
+import { requestCurrentLocation, validateServiceArea } from "@/lib/adapters/geolocation";
+import { getQuotaStatus } from "@/lib/adapters/places";
+import { getAllStations, searchStations } from "@/lib/adapters/stations";
+import { COPY_DECK, DHAKA_SERVICE_AREA, SEARCH_CONSTANTS } from "@/lib/config/constants";
 import type { Coordinates, Meters, Milliseconds } from "@/lib/types";
 import type { Station } from "@/lib/types/station";
 import { cn } from "@/lib/utils";
@@ -81,10 +78,7 @@ function EmptyState({ onClear }: { readonly onClear: () => void }) {
     <Card className="mx-auto max-w-md">
       <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-          <AlertCircle
-            aria-hidden="true"
-            className="h-6 w-6 text-muted-foreground"
-          />
+          <AlertCircle aria-hidden="true" className="h-6 w-6 text-muted-foreground" />
         </div>
         <div>
           <h2 className="mb-2 font-semibold text-lg">No stations found</h2>
@@ -158,6 +152,7 @@ function ResultsSection({
   stationsWithDistance,
   userLocation,
   isGeoLoading,
+  isCustomLoading,
 }: {
   readonly viewMode: ViewMode;
   readonly filteredStations: readonly Station[];
@@ -168,6 +163,7 @@ function ResultsSection({
   readonly stationsWithDistance: readonly StationWithDistance[];
   readonly userLocation?: Coordinates | undefined;
   readonly isGeoLoading: boolean;
+  readonly isCustomLoading: boolean;
 }) {
   return (
     <Suspense
@@ -194,11 +190,19 @@ function ResultsSection({
           {viewMode === "map" && filteredStations.length > 0 && (
             <div className="space-y-3">
               <div
-                className="w-full overflow-hidden rounded-xl border border-border/50 shadow-lg"
+                className="relative w-full overflow-hidden rounded-xl border border-border/50 shadow-lg"
                 style={{
                   height: "min(420px, calc(100vh - 400px))",
                 }}
               >
+                {isCustomLoading && (
+                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                      <p className="text-muted-foreground text-sm">Loading map...</p>
+                    </div>
+                  </div>
+                )}
                 <MapErrorBoundary>
                   <MapSuspense>
                     <MetroMap
@@ -216,10 +220,7 @@ function ResultsSection({
                 <Card>
                   <CardContent className="pt-6">
                     <StationCard
-                      distance={calculateDistancePure(
-                        userLocation,
-                        selectedStation.coordinates
-                      )}
+                      distance={calculateDistancePure(userLocation, selectedStation.coordinates)}
                       onClick={() => onSelect(selectedStation)}
                       station={selectedStation}
                     />
@@ -323,10 +324,7 @@ function SearchSection({
             >
               <Button
                 aria-checked={viewMode === "map"}
-                className={cn(
-                  "h-9 gap-2 px-3",
-                  viewMode === "map" && "bg-background shadow-sm"
-                )}
+                className={cn("h-9 gap-2 px-3", viewMode === "map" && "bg-background shadow-sm")}
                 onClick={() => onViewModeChange("map")}
                 role="radio"
                 size="sm"
@@ -337,10 +335,7 @@ function SearchSection({
               </Button>
               <Button
                 aria-checked={viewMode === "list"}
-                className={cn(
-                  "h-9 gap-2 px-3",
-                  viewMode === "list" && "bg-background shadow-sm"
-                )}
+                className={cn("h-9 gap-2 px-3", viewMode === "list" && "bg-background shadow-sm")}
                 onClick={() => onViewModeChange("list")}
                 role="radio"
                 size="sm"
@@ -398,16 +393,35 @@ export function StationFinderContent() {
   const [viewMode, setViewMode] = useState<ViewMode>("map");
   const [userLocation, setUserLocation] = useState<Coordinates | undefined>();
   const [isGeoLoading, setIsGeoLoading] = useState(false);
-  const [messageId, setMessageId] = useState<
-    keyof typeof COPY_DECK | undefined
-  >(undefined);
+  const [messageId, setMessageId] = useState<keyof typeof COPY_DECK | undefined>(undefined);
   const [manualLat, setManualLat] = useState<string>("");
   const [manualLng, setManualLng] = useState<string>("");
 
+  // Enhanced hooks for better performance and UX
+  const { startPageTransition } = useViewTransitions();
+
+  // Custom loading for map and search operations
+  const { startLoading, completeLoading, isLoading: isCustomLoading } = useCustomLoading();
+
+  // Enhanced optimistic updates for station selection
+  const { updateOptimistic: updateStationOptimistic } = useEnhancedOptimistic({
+    initialState: selectedStation,
+    updateFn: (currentState, update) => {
+      if (update && typeof update === "object" && "id" in update) {
+        return update as Station;
+      }
+      return currentState;
+    },
+    onError: () => {
+      // Error handling for station selection
+    },
+    onSuccess: () => {
+      // Success handling for station selection
+    },
+  });
+
   const allStationsResponse = useMemo(() => getAllStations(), []);
-  const allStations = allStationsResponse.success
-    ? allStationsResponse.data
-    : [];
+  const allStations = allStationsResponse.success ? allStationsResponse.data : [];
 
   const quota = useMemo(() => getQuotaStatus(), []);
   const isRateLimited = quota.success ? quota.data.isRateLimited : false;
@@ -416,30 +430,31 @@ export function StationFinderContent() {
   useEffect(() => {
     const initialStationId = searchParams.get("station");
     if (initialStationId) {
-      const station = allStations.find(
-        (s: Station) => s.id === initialStationId
-      );
+      const station = allStations.find((s: Station) => s.id === initialStationId);
       if (station) {
         setSelectedStation(station);
       }
     }
   }, [searchParams, allStations]);
 
-  const filteredStations = useMemo(() => {
-    if (!searchQuery.trim()) {
-      return allStations;
-    }
+  // Use deferred search for better performance
+  const { deferredResults: deferredFilteredStations } = useDeferredSearch(
+    searchQuery,
+    useMemo(() => {
+      if (!searchQuery.trim()) {
+        return allStations as Station[];
+      }
 
-    const searchResponse = searchStations(
-      searchQuery,
-      SEARCH_CONSTANTS.maxResultsDefault
-    );
-    return searchResponse.success
-      ? searchResponse.data.map(
-          (r: import("@/lib/types/station").StationSearchResult) => r.station
-        )
-      : [];
-  }, [allStations, searchQuery]);
+      const searchResponse = searchStations(searchQuery, SEARCH_CONSTANTS.maxResultsDefault);
+      return searchResponse.success
+        ? searchResponse.data.map(
+            (r: import("@/lib/types/station").StationSearchResult) => r.station
+          )
+        : [];
+    }, [allStations, searchQuery])
+  );
+
+  const filteredStations = deferredFilteredStations;
 
   const stationsWithDistance = useMemo<readonly StationWithDistance[]>(() => {
     if (!userLocation) {
@@ -522,9 +537,35 @@ export function StationFinderContent() {
     setSelectedStation(undefined);
   }, []);
 
-  const handleStationSelect = useCallback((station: Station) => {
-    setSelectedStation(station);
-  }, []);
+  const handleStationSelect = useCallback(
+    (station: Station) => {
+      // Optimistic update for instant UI feedback
+      updateStationOptimistic(station);
+
+      // Start loading indicator
+      startLoading("station-selection", {
+        message: `Loading ${station.name} details...`,
+        progress: 0,
+      });
+
+      startPageTransition(() => {
+        setSelectedStation(station);
+
+        // Complete loading when station is set
+        completeLoading("station-selection", `Selected ${station.name}`);
+      });
+    },
+    [startPageTransition, updateStationOptimistic, startLoading, completeLoading]
+  );
+
+  const handleViewModeChange = useCallback(
+    (mode: ViewMode) => {
+      startPageTransition(() => {
+        setViewMode(mode);
+      });
+    },
+    [startPageTransition]
+  );
 
   const mapCenter = useMemo<Coordinates>(() => {
     if (selectedStation) {
@@ -544,7 +585,7 @@ export function StationFinderContent() {
   }, [selectedStation, userLocation]);
 
   return (
-    <div className="min-h-full">
+    <div className="page-container min-h-full">
       <output aria-live="polite" className="sr-only">
         {messageId ? COPY_DECK[messageId] : ""}
       </output>
@@ -555,7 +596,7 @@ export function StationFinderContent() {
         onSearchChange={setSearchQuery}
         onShowRationale={() => setMessageId("geoRationale")}
         onUseLocation={handleUseMyLocation}
-        onViewModeChange={setViewMode}
+        onViewModeChange={handleViewModeChange}
         searchQuery={searchQuery}
         userLocation={userLocation}
         viewMode={viewMode}
@@ -566,10 +607,7 @@ export function StationFinderContent() {
           <div className="container mx-auto max-w-7xl px-4 pb-4 sm:px-6 lg:px-8">
             <div className="flex flex-wrap items-end gap-2">
               <div className="flex flex-col">
-                <label
-                  className="text-muted-foreground text-sm"
-                  htmlFor="manual-lat"
-                >
+                <label className="text-muted-foreground text-sm" htmlFor="manual-lat">
                   Latitude
                 </label>
                 <input
@@ -577,14 +615,12 @@ export function StationFinderContent() {
                   id="manual-lat"
                   onChange={(e) => setManualLat(e.target.value)}
                   placeholder="e.g., 23.7779"
+                  suppressHydrationWarning
                   value={manualLat}
                 />
               </div>
               <div className="flex flex-col">
-                <label
-                  className="text-muted-foreground text-sm"
-                  htmlFor="manual-lng"
-                >
+                <label className="text-muted-foreground text-sm" htmlFor="manual-lng">
                   Longitude
                 </label>
                 <input
@@ -592,6 +628,7 @@ export function StationFinderContent() {
                   id="manual-lng"
                   onChange={(e) => setManualLng(e.target.value)}
                   placeholder="e.g., 90.3971"
+                  suppressHydrationWarning
                   value={manualLng}
                 />
               </div>
@@ -619,10 +656,7 @@ export function StationFinderContent() {
                     lng: lngNum as Coordinates["lng"],
                   };
                   const validationResponse = validateServiceArea(loc);
-                  if (
-                    validationResponse.success &&
-                    validationResponse.data.isValid
-                  ) {
+                  if (validationResponse.success && validationResponse.data.isValid) {
                     setMessageId("locationFound");
                     setUserLocation(loc);
                   } else {
@@ -640,16 +674,15 @@ export function StationFinderContent() {
         </section>
       )}
 
-      {userLocation &&
-        Array.isArray(stationsWithDistance) &&
-        stationsWithDistance.length > 0 && (
-          <output aria-live="polite" className="sr-only">
-            Nearest station is {stationsWithDistance[0].station.name}
-          </output>
-        )}
+      {userLocation && Array.isArray(stationsWithDistance) && stationsWithDistance.length > 0 && (
+        <output aria-live="polite" className="sr-only">
+          Nearest station is {stationsWithDistance[0].station.name}
+        </output>
+      )}
 
       <ResultsSection
         filteredStations={filteredStations}
+        isCustomLoading={isCustomLoading}
         isGeoLoading={isGeoLoading}
         mapCenter={mapCenter}
         mapZoom={mapZoom}

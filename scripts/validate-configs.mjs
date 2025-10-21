@@ -22,14 +22,7 @@ const CONFIG_FILES = [
   "components.json",
 ];
 
-const REQUIRED_SCRIPTS = [
-  "dev",
-  "build",
-  "test",
-  "lint",
-  "type-check",
-  "semantic-release",
-];
+const REQUIRED_SCRIPTS = ["dev", "build", "test", "lint", "type-check", "semantic-release"];
 
 /**
  * Validate a configuration file exists and is readable
@@ -51,10 +44,7 @@ function validateConfigFile(filePath) {
     console.log(`✅ Configuration file valid: ${filePath}`);
     return true;
   } catch (error) {
-    console.error(
-      `❌ Error reading configuration file ${filePath}:`,
-      error.message
-    );
+    console.error(`❌ Error reading configuration file ${filePath}:`, error.message);
     return false;
   }
 }
@@ -72,14 +62,10 @@ function validatePackageScripts() {
       return false;
     }
 
-    const missingScripts = REQUIRED_SCRIPTS.filter(
-      (script) => !packageJson.scripts[script]
-    );
+    const missingScripts = REQUIRED_SCRIPTS.filter((script) => !packageJson.scripts[script]);
 
     if (missingScripts.length > 0) {
-      console.error(
-        `❌ Missing required scripts: ${missingScripts.join(", ")}`
-      );
+      console.error(`❌ Missing required scripts: ${missingScripts.join(", ")}`);
       return false;
     }
 
@@ -123,9 +109,7 @@ function main() {
     console.log("🎉 All configurations are valid!");
     process.exit(0);
   } else {
-    console.log(
-      "❌ Some configurations are invalid. Please fix the issues above."
-    );
+    console.log("❌ Some configurations are invalid. Please fix the issues above.");
     process.exit(1);
   }
 }

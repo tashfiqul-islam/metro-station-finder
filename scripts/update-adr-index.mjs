@@ -27,8 +27,7 @@ const ADR_FILE_RE = /^(\d{4})-(.+)\.md$/i;
 
 // Regex patterns for metadata extraction
 const H1_TITLE_RE = /^#\s+(.+?)\s*$/m;
-const DATE_TABLE_RE =
-  /^\s*\|?\s*Date\s*\|?\s*([0-9]{4}-[0-9]{2}-[0-9]{2})\s*\|?/im;
+const DATE_TABLE_RE = /^\s*\|?\s*Date\s*\|?\s*([0-9]{4}-[0-9]{2}-[0-9]{2})\s*\|?/im;
 const DATE_COLON_RE = /^\s*Date\s*:\s*([0-9]{4}-[0-9]{2}-[0-9]{2})/im;
 const STATUS_TABLE_RE = /^\s*\|?\s*Status\s*\|?\s*([A-Za-z]+)\s*\|?/im;
 const STATUS_COLON_RE = /^\s*Status\s*:\s*([A-Za-z]+)/im;
@@ -57,17 +56,13 @@ function extractMetadata(md) {
   const h1 = md.match(H1_TITLE_RE)?.[1]?.trim();
 
   // 2) Table-style metadata rows
-  const date =
-    md.match(DATE_TABLE_RE)?.[1] || md.match(DATE_COLON_RE)?.[1] || "";
+  const date = md.match(DATE_TABLE_RE)?.[1] || md.match(DATE_COLON_RE)?.[1] || "";
 
-  const status =
-    md.match(STATUS_TABLE_RE)?.[1] || md.match(STATUS_COLON_RE)?.[1] || "";
+  const status = md.match(STATUS_TABLE_RE)?.[1] || md.match(STATUS_COLON_RE)?.[1] || "";
 
-  const supersedes =
-    md.match(SUPERSEDES_RE)?.[1]?.replace(DASH_CLEANUP_RE, "").trim() || "";
+  const supersedes = md.match(SUPERSEDES_RE)?.[1]?.replace(DASH_CLEANUP_RE, "").trim() || "";
 
-  const supersededBy =
-    md.match(SUPERSEDED_BY_RE)?.[1]?.replace(DASH_CLEANUP_RE, "").trim() || "";
+  const supersededBy = md.match(SUPERSEDED_BY_RE)?.[1]?.replace(DASH_CLEANUP_RE, "").trim() || "";
 
   return { h1, date, status, supersedes, supersededBy };
 }
@@ -173,9 +168,7 @@ async function main() {
   const out = renderReadme(rows);
   await writeFile(README_PATH, out, "utf8");
 
-  console.log(
-    `ADR index updated: ${path.relative(process.cwd(), README_PATH)}`
-  );
+  console.log(`ADR index updated: ${path.relative(process.cwd(), README_PATH)}`);
 }
 
 main().catch((err) => {

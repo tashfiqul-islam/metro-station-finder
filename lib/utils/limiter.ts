@@ -8,10 +8,7 @@ export type WindowLimiterStatus = {
   readonly isExceeded: boolean;
 };
 
-export function createWindowLimiter(
-  limitPerWindow: number,
-  windowMs: Milliseconds
-) {
+export function createWindowLimiter(limitPerWindow: number, windowMs: Milliseconds) {
   let windowStart = Date.now();
   let used = 0;
   const resetIfNeeded = () => {

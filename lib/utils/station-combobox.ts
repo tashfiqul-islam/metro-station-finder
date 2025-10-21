@@ -16,9 +16,7 @@ export type StationComboboxItem = {
 /**
  * Transform station data for kibo-ui Combobox
  */
-export function transformStationsForCombobox(
-  stations: readonly Station[]
-): StationComboboxItem[] {
+export function transformStationsForCombobox(stations: readonly Station[]): StationComboboxItem[] {
   return stations.map((station) => {
     const item: StationComboboxItem = {
       value: station.id,
@@ -62,9 +60,7 @@ export function filterStationsByQuery(
   const normalizedQuery = query.toLowerCase().trim();
 
   return stations.filter((station) => {
-    const searchableText = [station.name, ...station.aliases]
-      .join(" ")
-      .toLowerCase();
+    const searchableText = [station.name, ...station.aliases].join(" ").toLowerCase();
 
     return searchableText.includes(normalizedQuery);
   });

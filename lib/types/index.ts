@@ -10,19 +10,13 @@
  * @since 2025-09-28
  */
 
-import {
-  COORDINATE_BOUNDS,
-  ID_CONSTANTS,
-  VALIDATION_PATTERNS,
-} from "@/lib/constants";
+import { COORDINATE_BOUNDS, ID_CONSTANTS, VALIDATION_PATTERNS } from "@/lib/config/constants";
 
 /**
  * Template literal types for operations
  */
-export type CoreOperation =
-  `core:${"validate" | "create" | "transform" | "serialize"}`;
-export type ValidationOperation =
-  `validate:${"type" | "range" | "format" | "constraint"}`;
+export type CoreOperation = `core:${"validate" | "create" | "transform" | "serialize"}`;
+export type ValidationOperation = `validate:${"type" | "range" | "format" | "constraint"}`;
 
 /**
  * Branded type factory types
@@ -149,9 +143,7 @@ export type ErrorResponse<E extends string = string> = {
  * @template T The success data type
  * @template E The error code type
  */
-export type ApiResponse<T, E extends string = string> =
-  | SuccessResponse<T>
-  | ErrorResponse<E>;
+export type ApiResponse<T, E extends string = string> = SuccessResponse<T> | ErrorResponse<E>;
 
 /**
  * Advanced utility types for type manipulation
@@ -163,9 +155,7 @@ export type ApiResponse<T, E extends string = string> =
  * @template T The Result type
  * @returns The success data type or never
  */
-export type ExtractSuccess<T> = T extends { success: true; data: infer U }
-  ? U
-  : never;
+export type ExtractSuccess<T> = T extends { success: true; data: infer U } ? U : never;
 
 /**
  * Extract error from Result type
@@ -173,9 +163,7 @@ export type ExtractSuccess<T> = T extends { success: true; data: infer U }
  * @template T The Result type
  * @returns The error type or never
  */
-export type ExtractError<T> = T extends { success: false; error: infer U }
-  ? U
-  : never;
+export type ExtractError<T> = T extends { success: false; error: infer U } ? U : never;
 
 /**
  * Non-empty array type
@@ -217,9 +205,7 @@ export type Brand<T, U> = T & { readonly __brand: U };
 /**
  * Extract branded type from branded type
  */
-export type ExtractBrand<T> = T extends { readonly __brand: infer U }
-  ? U
-  : never;
+export type ExtractBrand<T> = T extends { readonly __brand: infer U } ? U : never;
 
 /**
  * Create partial type with specific keys
@@ -229,8 +215,7 @@ export type PartialBy<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 /**
  * Create required type with specific keys
  */
-export type RequiredBy<T, K extends keyof T> = Omit<T, K> &
-  Required<Pick<T, K>>;
+export type RequiredBy<T, K extends keyof T> = Omit<T, K> & Required<Pick<T, K>>;
 
 /**
  * Create mutable version of readonly type
@@ -260,25 +245,19 @@ type _TupleOf<T, N extends number, R extends unknown[]> = R["length"] extends N
 /**
  * Create discriminated union helper
  */
-export type DiscriminatedUnion<
-  T,
-  K extends keyof T,
-  V extends T[K],
-> = T extends Record<K, V> ? T : never;
+export type DiscriminatedUnion<T, K extends keyof T, V extends T[K]> = T extends Record<K, V>
+  ? T
+  : never;
 
 /**
  * Create function type with specific parameters
  */
-export type FunctionWithParams<T extends readonly unknown[], R> = (
-  ...args: T
-) => R;
+export type FunctionWithParams<T extends readonly unknown[], R> = (...args: T) => R;
 
 /**
  * Create async function type
  */
-export type AsyncFunction<T extends readonly unknown[], R> = (
-  ...args: T
-) => Promise<R>;
+export type AsyncFunction<T extends readonly unknown[], R> = (...args: T) => Promise<R>;
 
 /**
  * Create generator function type
@@ -340,10 +319,7 @@ export function isCoordinates(value: unknown): value is Coordinates {
  */
 export function isTakaAmount(value: unknown): value is TakaAmount {
   return (
-    typeof value === "number" &&
-    Number.isInteger(value) &&
-    value >= 0 &&
-    Number.isFinite(value)
+    typeof value === "number" && Number.isInteger(value) && value >= 0 && Number.isFinite(value)
   );
 }
 
@@ -385,10 +361,7 @@ export function isMinutes(value: unknown): value is Minutes {
  */
 export function isMilliseconds(value: unknown): value is Milliseconds {
   return (
-    typeof value === "number" &&
-    value >= 0 &&
-    Number.isFinite(value) &&
-    Number.isInteger(value)
+    typeof value === "number" && value >= 0 && Number.isFinite(value) && Number.isInteger(value)
   );
 }
 
@@ -438,9 +411,7 @@ export function isPlaceId(value: unknown): value is PlaceId {
  * @param response The response to check
  * @returns True if response is a success response
  */
-export function isSuccessResponse<T>(
-  response: ApiResponse<T>
-): response is SuccessResponse<T> {
+export function isSuccessResponse<T>(response: ApiResponse<T>): response is SuccessResponse<T> {
   return response.success === true;
 }
 
@@ -450,9 +421,7 @@ export function isSuccessResponse<T>(
  * @param response The response to check
  * @returns True if response is an error response
  */
-export function isErrorResponse<T>(
-  response: ApiResponse<T>
-): response is ErrorResponse {
+export function isErrorResponse<T>(response: ApiResponse<T>): response is ErrorResponse {
   return response.success === false;
 }
 
@@ -511,9 +480,7 @@ export function createCoordinates(lat: number, lng: number): Coordinates {
  */
 export function createTakaAmount(amount: number): TakaAmount {
   if (!isTakaAmount(amount)) {
-    throw new Error(
-      `Invalid TakaAmount: ${amount}. Must be a non-negative integer.`
-    );
+    throw new Error(`Invalid TakaAmount: ${amount}. Must be a non-negative integer.`);
   }
   return amount as TakaAmount;
 }
@@ -527,9 +494,7 @@ export function createTakaAmount(amount: number): TakaAmount {
  */
 export function createMeters(value: number): Meters {
   if (!isMeters(value)) {
-    throw new Error(
-      `Invalid Meters: ${value}. Must be a non-negative finite number.`
-    );
+    throw new Error(`Invalid Meters: ${value}. Must be a non-negative finite number.`);
   }
   return value as Meters;
 }
@@ -543,9 +508,7 @@ export function createMeters(value: number): Meters {
  */
 export function createKilometers(value: number): Kilometers {
   if (!isKilometers(value)) {
-    throw new Error(
-      `Invalid Kilometers: ${value}. Must be a non-negative finite number.`
-    );
+    throw new Error(`Invalid Kilometers: ${value}. Must be a non-negative finite number.`);
   }
   return value as Kilometers;
 }
@@ -559,9 +522,7 @@ export function createKilometers(value: number): Kilometers {
  */
 export function createMinutes(value: number): Minutes {
   if (!isMinutes(value)) {
-    throw new Error(
-      `Invalid Minutes: ${value}. Must be a non-negative finite number.`
-    );
+    throw new Error(`Invalid Minutes: ${value}. Must be a non-negative finite number.`);
   }
   return value as Minutes;
 }
@@ -575,9 +536,7 @@ export function createMinutes(value: number): Minutes {
  */
 export function createMilliseconds(value: number): Milliseconds {
   if (!isMilliseconds(value)) {
-    throw new Error(
-      `Invalid Milliseconds: ${value}. Must be a non-negative finite integer.`
-    );
+    throw new Error(`Invalid Milliseconds: ${value}. Must be a non-negative finite integer.`);
   }
   return value as Milliseconds;
 }
@@ -646,7 +605,7 @@ export function safeJsonParse<T = unknown>(
   }
 }
 
-import { DHAKA_SERVICE_AREA } from "@/lib/constants";
+import { DHAKA_SERVICE_AREA } from "@/lib/config/constants";
 
 /**
  * Dhaka service area configuration
@@ -657,15 +616,13 @@ import { DHAKA_SERVICE_AREA } from "@/lib/constants";
 export const DHAKA_CENTROID: Coordinates = DHAKA_SERVICE_AREA.centroid;
 export const SERVICE_AREA_RADIUS_KM = DHAKA_SERVICE_AREA.radiusKm;
 
-import type { ERROR_CODES } from "@/lib/constants";
+import type { ERROR_CODES } from "@/lib/config/constants";
 
 /**
  * Error code types for type safety
  */
-export type StationErrorCode =
-  (typeof ERROR_CODES.station)[keyof typeof ERROR_CODES.station];
-export type FareErrorCode =
-  (typeof ERROR_CODES.fare)[keyof typeof ERROR_CODES.fare];
+export type StationErrorCode = (typeof ERROR_CODES.station)[keyof typeof ERROR_CODES.station];
+export type FareErrorCode = (typeof ERROR_CODES.fare)[keyof typeof ERROR_CODES.fare];
 export type GeolocationErrorCode =
   (typeof ERROR_CODES.geolocation)[keyof typeof ERROR_CODES.geolocation];
 export type GooglePlacesErrorCode =
@@ -738,13 +695,8 @@ export function createCacheKey(key: string): CacheKey {
  * Create Version with validation
  */
 export function createVersion(version: string): Version {
-  if (
-    typeof version !== "string" ||
-    !VALIDATION_PATTERNS.semver.test(version)
-  ) {
-    throw new Error(
-      `Invalid Version: ${version}. Must be in semver format (e.g., 1.0.0).`
-    );
+  if (typeof version !== "string" || !VALIDATION_PATTERNS.semver.test(version)) {
+    throw new Error(`Invalid Version: ${version}. Must be in semver format (e.g., 1.0.0).`);
   }
   return version as Version;
 }
@@ -763,10 +715,7 @@ export function createHash(hash: string): Hash {
  * Type-safe factory with configuration
  */
 export const createBrandedTypeFactory =
-  <T, U extends string>(
-    validator: (value: T) => boolean,
-    errorMessage: string
-  ) =>
+  <T, U extends string>(validator: (value: T) => boolean, errorMessage: string) =>
   (value: T): Brand<T, U> => {
     if (!validator(value)) {
       throw new Error(`${errorMessage}: ${value}`);
@@ -864,10 +813,7 @@ export const createCoreFactory = (config: CoreConfig) => ({
     id: createRequestId(
       `event_${Date.now()}_${Math.random()
         .toString(ID_CONSTANTS.base36)
-        .slice(
-          ID_CONSTANTS.idStartIndex,
-          ID_CONSTANTS.idStartIndex + ID_CONSTANTS.idLength
-        )}`
+        .slice(ID_CONSTANTS.idStartIndex, ID_CONSTANTS.idStartIndex + ID_CONSTANTS.idLength)}`
     ),
     version: config.version,
   }),

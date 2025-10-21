@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
-import { glimpse } from "@/components/kibo-ui/glimpse/server";
+import { glimpse } from "@/app/_components/shared/kibo-ui/glimpse/server";
 
 export async function GET() {
   try {
-    const data = await glimpse(
-      "https://github.com/tashfiqul-islam/metro-station-finder"
-    );
+    const data = await glimpse("https://github.com/tashfiqul-islam/metro-station-finder");
 
     return NextResponse.json(data, {
       headers: {

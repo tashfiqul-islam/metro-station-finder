@@ -46,9 +46,7 @@ function checkGitStatus() {
   try {
     const status = execSync("git status --porcelain", { encoding: "utf8" });
     if (status.trim()) {
-      console.error(
-        "❌ Working directory is not clean. Please commit or stash changes first."
-      );
+      console.error("❌ Working directory is not clean. Please commit or stash changes first.");
       console.log("Uncommitted changes:");
       console.log(status);
       process.exit(1);
@@ -114,12 +112,7 @@ function buildProject() {
 function runSemanticRelease() {
   console.log("🚀 Running semantic-release...");
 
-  const command = [
-    "npx semantic-release",
-    DRY_RUN && "--dry-run",
-    DEBUG && "--debug",
-    CI && "--ci",
-  ]
+  const command = ["npx semantic-release", DRY_RUN && "--dry-run", DEBUG && "--debug", CI && "--ci"]
     .filter(Boolean)
     .join(" ");
 
@@ -158,9 +151,7 @@ function runManualRelease() {
       process.exit(1);
   }
 
-  console.log(
-    `📦 Updating version from ${packageJson.version} to ${newVersion}`
-  );
+  console.log(`📦 Updating version from ${packageJson.version} to ${newVersion}`);
   packageJson.version = newVersion;
   writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
 

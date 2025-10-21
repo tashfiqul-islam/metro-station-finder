@@ -9,18 +9,14 @@
  * @since 2025-09-30
  */
 
-import type { FareInput } from "@/lib/schemas";
+import type { FareInput } from "@/lib/config/schemas";
 import type { Coordinates, Meters, StationId } from "@/lib/types";
 import type { Station } from "@/lib/types/station";
 
 /**
  * Geolocation permission states from Permissions API
  */
-export type GeolocationPermissionState =
-  | "prompt"
-  | "granted"
-  | "denied"
-  | "unsupported";
+export type GeolocationPermissionState = "prompt" | "granted" | "denied" | "unsupported";
 
 /**
  * Geolocation state discriminated union
@@ -58,11 +54,7 @@ export type PlacesState =
 /**
  * Map availability reasons for fallback UI
  */
-export type MapUnavailableReason =
-  | "disabled-by-env"
-  | "missing-api-key"
-  | "offline"
-  | "ok";
+export type MapUnavailableReason = "disabled-by-env" | "missing-api-key" | "offline" | "ok";
 
 /**
  * Map availability result
@@ -165,9 +157,7 @@ export function isGeolocationState(value: unknown): value is GeolocationState {
     value !== null &&
     "status" in value &&
     typeof (value as GeolocationState).status === "string" &&
-    ["idle", "loading", "success", "error"].includes(
-      (value as GeolocationState).status
-    )
+    ["idle", "loading", "success", "error"].includes((value as GeolocationState).status)
   );
 }
 
@@ -177,9 +167,7 @@ export function isPlacesState(value: unknown): value is PlacesState {
     value !== null &&
     "status" in value &&
     typeof (value as PlacesState).status === "string" &&
-    ["idle", "loading", "success", "error"].includes(
-      (value as PlacesState).status
-    )
+    ["idle", "loading", "success", "error"].includes((value as PlacesState).status)
   );
 }
 
@@ -222,13 +210,9 @@ export type UseDebouncedCallback = <Args extends readonly unknown[]>(
   delayMs: number
 ) => (...args: Args) => void;
 
-export type UseStationSearch = (
-  options: StationSearchOptions
-) => readonly Station[];
+export type UseStationSearch = (options: StationSearchOptions) => readonly Station[];
 
-export type UseFareCalculator = (
-  options: FareCalculatorOptions
-) => FareInput | undefined;
+export type UseFareCalculator = (options: FareCalculatorOptions) => FareInput | undefined;
 
 export type UseGeolocation = () => UseGeolocationReturn;
 
@@ -242,10 +226,6 @@ export type UseOnlineStatus = () => boolean;
 
 export type UseLiveRegion = (polite?: AriaPoliteness) => UseLiveRegionReturn;
 
-export type UseMapAvailability = (
-  options?: MapAvailabilityOptions
-) => MapAvailability;
+export type UseMapAvailability = (options?: MapAvailabilityOptions) => MapAvailability;
 
-export type UseNearestStation = (
-  origin?: Coordinates
-) => NearestStation | undefined;
+export type UseNearestStation = (origin?: Coordinates) => NearestStation | undefined;

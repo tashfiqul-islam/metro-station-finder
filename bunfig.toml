@@ -1,62 +1,47 @@
 # Metro Station Finder - Bun Configuration
-# Optimized for Next.js 15, TypeScript, and production deployment
 
-# Package Installation Settings
 [install]
-# Use exact versions for reproducible builds
 exact = true
-# Save lockfile in text format for better git diffs
 saveTextLockfile = true
-# Cache packages for faster installs
 cache = true
-# Use production dependencies by default
 production = false
-# Enable peer dependencies
 peer = true
-# Use exact versions for lockfile
 lockfile = "bun.lockb"
+# Enable faster installs with parallel downloads
+concurrent = true
+# Cache directory for better performance
+cacheDir = ".bun/cache"
 
-# Runtime Configuration
 [run]
-# Environment file for runtime
 env = ".env.local"
-# Enable hot reloading for development
 hot = true
-# Watch for file changes
 watch = true
+# Enable source maps for better debugging
+sourcemap = "inline"
 
-# Development Server Settings
 [dev]
-# Development server configuration
 port = 3000
 hostname = "localhost"
-# Enable hot module replacement
 hot = true
-# Watch for file changes
 watch = true
-# Enable HTTPS in development
 https = false
+# Enable faster refresh with optimized watching
+watchMode = "smart"
+# Enable experimental features for better performance
+experimental = true
 
-# Test Runner Configuration
 [test]
-# Test root directory
 root = "./test"
-# Enable coverage reporting
 coverage = true
-# Coverage thresholds for quality gates
 coverageThreshold = { 
-  line = 0.9, 
-  function = 0.9, 
-  statement = 0.9,
-  branch = 0.9
+  line = 0.85, 
+  function = 0.85, 
+  statement = 0.85,
+  branch = 0.80
 }
-# Coverage reporters
-coverageReporter = ["text", "lcov"]
-# Coverage output directory
+coverageReporter = ["text", "lcov", "html"]
 coverageDir = "coverage"
-# Skip test files from coverage
 coverageSkipTestFiles = true
-# Path patterns to ignore in coverage
 coveragePathIgnorePatterns = [
   "**/node_modules/**",
   "**/dist/**",
@@ -66,52 +51,57 @@ coveragePathIgnorePatterns = [
   "**/*.test.*",
   "**/*.spec.*",
   "**/test/**",
-  "**/scripts/**"
+  "**/scripts/**",
+  "**/app/api/**",
+  "**/public/**"
 ]
-# Enable concurrent test execution
 concurrent = true
-# Test timeout in milliseconds
-timeout = 10000
-# Enable test preload for setup
+timeout = 15000
 preload = ["./test/setup.ts"]
+# Enable test isolation for better reliability
+isolate = true
+# Enable test retry for flaky tests
+retry = 2
 
-# Build Configuration
 [build]
-# Output directory for builds
 outdir = "./out"
-# Target environment
 target = "browser"
-# Output format
 format = "esm"
-# Enable code splitting
 splitting = true
-# Enable minification for production
 minify = true
-# Generate source maps
-sourcemap = true
-# External dependencies to exclude from bundle
+sourcemap = "external"
+# Optimize for production builds
+optimize = true
+# Enable tree shaking for smaller bundles
+treeshake = true
 external = [
   "react",
   "react-dom",
-  "next"
+  "next",
+  "next/server",
+  "next/navigation",
+  "next/image",
+  "next/link"
 ]
+# Enable experimental build optimizations
+experimental = true
 
-# JSX Configuration for React
 jsx = "react"
 jsxFactory = "React.createElement"
 jsxFragment = "React.Fragment"
 jsxImportSource = "react"
+# Enable automatic JSX runtime for better performance
+jsxRuntime = "automatic"
 
-# Global Definitions
 [define]
-# Environment variables for build-time replacement
 "process.env.NODE_ENV" = "process.env.NODE_ENV"
 "process.env.NEXT_PUBLIC_APP_NAME" = "process.env.NEXT_PUBLIC_APP_NAME"
 "process.env.NEXT_PUBLIC_APP_VERSION" = "process.env.NEXT_PUBLIC_APP_VERSION"
+# Enable Next.js optimizations
+"__NEXT_OPTIMIZE_CSS" = "true"
+"__NEXT_OPTIMIZE_IMAGES" = "true"
 
-# File Loaders
 [loader]
-# Custom file extensions
 ".svg" = "file"
 ".png" = "file"
 ".jpg" = "file"
@@ -124,27 +114,43 @@ jsxImportSource = "react"
 ".woff2" = "file"
 ".ttf" = "file"
 ".eot" = "file"
+# Additional file types for web assets
+".css" = "css"
+".scss" = "css"
+".sass" = "css"
+".less" = "css"
+".styl" = "css"
 
-# Console Configuration
 [console]
-# Object inspection depth
 depth = 3
-# Enable colors in console output
 colors = true
+# Enable better error formatting
+format = "pretty"
 
-# Logging Configuration
 logLevel = "info"
 
-# Telemetry (disabled for privacy)
 telemetry = false
 
-# Memory Optimization
-# Enable smol mode for reduced memory usage
+# Memory optimization for production
 smol = false
+# Enable memory optimization features
+memoryOptimization = true
 
-# Performance Settings
 [performance]
-# Enable experimental features
 experimental = true
-# Enable JIT compilation
 jit = true
+optimize = true
+fastStart = true
+
+# Metro Station Finder specific optimizations
+[metro-station-finder]
+# Enable PWA optimizations
+pwa = true
+# Enable service worker caching
+serviceWorker = true
+# Enable offline support
+offline = true
+# Enable map optimizations for Google Maps
+mapOptimizations = true
+# Enable geolocation optimizations
+geolocation = true

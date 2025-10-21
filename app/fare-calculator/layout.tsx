@@ -15,8 +15,7 @@ export const metadata: Metadata = {
   ],
   openGraph: {
     title: "Fare Calculator - Calculate Metro Fares",
-    description:
-      "Get accurate fare estimates and travel information for your metro journey",
+    description: "Get accurate fare estimates and travel information for your metro journey",
     type: "website",
   },
   alternates: {
@@ -24,10 +23,6 @@ export const metadata: Metadata = {
   },
 };
 
-export default function FareCalculatorLayout({
-  children,
-}: {
-  readonly children: React.ReactNode;
-}) {
+export default function FareCalculatorLayout({ children }: { readonly children: React.ReactNode }) {
   return <div className="min-h-full">{children}</div>;
 }

@@ -39,16 +39,7 @@ const ICON_2XL = 128;
 const ICON_3XL = 256;
 const ICON_4XL = 384;
 
-const IMAGE_SIZES = [
-  ICON_XS,
-  ICON_SM,
-  ICON_MD,
-  ICON_LG,
-  ICON_XL,
-  ICON_2XL,
-  ICON_3XL,
-  ICON_4XL,
-];
+const IMAGE_SIZES = [ICON_XS, ICON_SM, ICON_MD, ICON_LG, ICON_XL, ICON_2XL, ICON_3XL, ICON_4XL];
 
 const nextConfig: NextConfig = {
   // React configuration
@@ -71,7 +62,7 @@ const nextConfig: NextConfig = {
   // output: "export",
   // distDir: "out", // Use default .next directory for Node.js builds
   skipTrailingSlashRedirect: true,
-  skipMiddlewareUrlNormalize: true,
+  skipProxyUrlNormalize: true,
 
   // Image optimization settings
   images: {
@@ -126,9 +117,7 @@ const nextConfig: NextConfig = {
   compiler: {
     removeConsole: isProduction ? { exclude: ["error", "warn"] } : false,
     styledComponents: false,
-    reactRemoveProperties: isProduction
-      ? { properties: ["^data-testid$"] }
-      : false,
+    reactRemoveProperties: isProduction ? { properties: ["^data-testid$"] } : false,
   },
 
   // Turbopack configuration
@@ -143,9 +132,7 @@ const nextConfig: NextConfig = {
 
   // Environment variables
   env: {
-    // biome-ignore lint/style/useNamingConvention: Next.js requires NEXT_PUBLIC_ prefix for client-side env vars
     NEXT_PUBLIC_APP_NAME: "Metro Station Finder",
-    // biome-ignore lint/style/useNamingConvention: Next.js requires NEXT_PUBLIC_ prefix for client-side env vars
     NEXT_PUBLIC_APP_VERSION: "2.0.0",
   },
 

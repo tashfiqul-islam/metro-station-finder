@@ -32,9 +32,7 @@ try {
   // Write updated package.json
   writeFileSync(PACKAGE_JSON_PATH, `${JSON.stringify(packageJson, null, 2)}\n`);
 
-  console.log(
-    `✅ Updated packageManager: ${oldPackageManager} → ${newPackageManager}`
-  );
+  console.log(`✅ Updated packageManager: ${oldPackageManager} → ${newPackageManager}`);
 } catch (error) {
   console.error("❌ Error updating packageManager:", error.message);
   process.exit(1);

@@ -9,11 +9,8 @@
  * @since 2025-09-28
  */
 
-import type { LOCATION_SOURCES } from "@/lib/constants";
-import {
-  GEOLOCATION_CONSTANTS,
-  type GEOLOCATION_STATUSES,
-} from "@/lib/constants";
+import type { LOCATION_SOURCES } from "@/lib/config/constants";
+import { GEOLOCATION_CONSTANTS, type GEOLOCATION_STATUSES } from "@/lib/config/constants";
 import type {
   Coordinates,
   GeolocationErrorCode,
@@ -34,10 +31,8 @@ export type ServiceAreaId = string & { readonly __brand: "ServiceAreaId" };
 /**
  * Template literal types for geolocation operations
  */
-export type GeolocationOperation =
-  `geo:${"locate" | "validate" | "track" | "stop"}`;
-export type LocationEvent =
-  `location:${"found" | "updated" | "lost" | "error"}`;
+export type GeolocationOperation = `geo:${"locate" | "validate" | "track" | "stop"}`;
+export type LocationEvent = `location:${"found" | "updated" | "lost" | "error"}`;
 
 /**
  * Const assertions for type safety
@@ -49,14 +44,12 @@ export type LocationEvent =
  * Indicates how a location was obtained.
  * Used for tracking and validation purposes.
  */
-export type LocationSource =
-  (typeof LOCATION_SOURCES)[keyof typeof LOCATION_SOURCES];
+export type LocationSource = (typeof LOCATION_SOURCES)[keyof typeof LOCATION_SOURCES];
 
 /**
  * Geolocation status enumeration
  */
-export type GeolocationStatus =
-  (typeof GEOLOCATION_STATUSES)[keyof typeof GEOLOCATION_STATUSES];
+export type GeolocationStatus = (typeof GEOLOCATION_STATUSES)[keyof typeof GEOLOCATION_STATUSES];
 
 /**
  * Geolocation options configuration with strict patterns
@@ -299,9 +292,7 @@ export function isLocationSource(value: unknown): value is LocationSource {
  * @param value The value to check
  * @returns True if value is valid GeolocationOptions
  */
-export function isGeolocationOptions(
-  value: unknown
-): value is GeolocationOptions {
+export function isGeolocationOptions(value: unknown): value is GeolocationOptions {
   if (typeof value !== "object" || value === null) {
     return false;
   }
@@ -313,8 +304,7 @@ export function isGeolocationOptions(
   };
 
   return (
-    (options.enableHighAccuracy === undefined ||
-      typeof options.enableHighAccuracy === "boolean") &&
+    (options.enableHighAccuracy === undefined || typeof options.enableHighAccuracy === "boolean") &&
     (options.timeout === undefined || typeof options.timeout === "number") &&
     (options.maximumAge === undefined || typeof options.maximumAge === "number")
   );
@@ -326,9 +316,7 @@ export function isGeolocationOptions(
  * @param value The value to check
  * @returns True if value is valid GeolocationResult
  */
-export function isGeolocationResult(
-  value: unknown
-): value is GeolocationResult {
+export function isGeolocationResult(value: unknown): value is GeolocationResult {
   if (typeof value !== "object" || value === null) {
     return false;
   }
@@ -359,9 +347,7 @@ export function isGeolocationResult(
  * @param value The value to check
  * @returns True if value is valid ServiceAreaValidation
  */
-export function isServiceAreaValidation(
-  value: unknown
-): value is ServiceAreaValidation {
+export function isServiceAreaValidation(value: unknown): value is ServiceAreaValidation {
   if (typeof value !== "object" || value === null) {
     return false;
   }
@@ -433,10 +419,7 @@ export function formatDistance(distance: Meters): string {
  * @param destination Destination coordinates
  * @returns Google Maps walking directions URL
  */
-export function createWalkingDirectionsUrl(
-  origin: Coordinates,
-  destination: Coordinates
-): string {
+export function createWalkingDirectionsUrl(origin: Coordinates, destination: Coordinates): string {
   const baseUrl = "https://www.google.com/maps/dir/";
   const originParam = `${origin.lat},${origin.lng}`;
   const destParam = `${destination.lat},${destination.lng}`;
@@ -454,10 +437,7 @@ export function createWalkingDirectionsUrl(
  * @param _serviceArea Service area configuration (placeholder for future implementation)
  * @returns True if coordinates are within service area
  */
-export function isWithinServiceArea(
-  _coordinates: Coordinates,
-  _serviceArea: ServiceArea
-): boolean {
+export function isWithinServiceArea(_coordinates: Coordinates, _serviceArea: ServiceArea): boolean {
   // This would use the Haversine formula to calculate distance
   // Implementation would be in the distance utility functions
   return true; // Placeholder - actual implementation in utils
@@ -470,10 +450,7 @@ export function isWithinServiceArea(
  * @param source Location source
  * @returns SearchContext object
  */
-export function createSearchContext(
-  query: string,
-  source: LocationSource
-): SearchContext {
+export function createSearchContext(query: string, source: LocationSource): SearchContext {
   return {
     query,
     timestamp: Date.now() as Milliseconds,
@@ -526,8 +503,7 @@ export function mapBrowserGeolocationError(browserError: {
  */
 export function checkGeolocationCapabilities(): GeolocationCapabilities {
   const isSupported = "geolocation" in navigator;
-  const isSecureContext =
-    typeof window !== "undefined" ? window.isSecureContext : false;
+  const isSecureContext = typeof window !== "undefined" ? window.isSecureContext : false;
 
   return {
     isSupported,
@@ -623,9 +599,7 @@ export type GeolocationAccuracy<T extends GeolocationResult> = T["accuracy"];
 /**
  * Create partial location for updates
  */
-export type PartialLocation = Partial<
-  Pick<Location, "state" | "updatedAt" | "confidence">
->;
+export type PartialLocation = Partial<Pick<Location, "state" | "updatedAt" | "confidence">>;
 
 /**
  * Geolocation strategy pattern
@@ -633,9 +607,7 @@ export type PartialLocation = Partial<
 export type GeolocationStrategy = {
   readonly locate: (options: GeolocationOptions) => Promise<GeolocationResult>;
   readonly validate: (location: Location) => boolean;
-  readonly track: (
-    callback: (location: Location) => void
-  ) => GeolocationSessionId;
+  readonly track: (callback: (location: Location) => void) => GeolocationSessionId;
   readonly stop: (sessionId: GeolocationSessionId) => void;
 };
 
@@ -677,9 +649,7 @@ export function validateLocationId(value: string): value is LocationId {
   );
 }
 
-export function validateGeolocationSessionId(
-  value: string
-): value is GeolocationSessionId {
+export function validateGeolocationSessionId(value: string): value is GeolocationSessionId {
   return (
     typeof value === "string" &&
     value.startsWith("session_") &&
@@ -749,9 +719,7 @@ export type GeolocationConfig = {
  * Geolocation factory with configuration with strict patterns
  */
 export const createGeolocationFactory = (config: GeolocationConfig) => ({
-  createLocation: (
-    data: Omit<Location, "id" | "createdAt" | "updatedAt">
-  ): Location => ({
+  createLocation: (data: Omit<Location, "id" | "createdAt" | "updatedAt">): Location => ({
     ...data,
     id: createLocationId(),
     createdAt: Date.now() as Milliseconds,

@@ -18,15 +18,15 @@ import {
 import { motion, useReducedMotion } from "motion/react";
 import { memo, useEffect, useState } from "react";
 import { SiGithub } from "react-icons/si";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@/app/_components/shared/ui/badge";
+import { Button } from "@/app/_components/shared/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@/app/_components/shared/ui/card";
 import { cn } from "@/lib/utils";
 
 /**
@@ -161,15 +161,13 @@ const FEATURES: readonly Feature[] = [
 const DATA_SOURCES: readonly DataSource[] = [
   {
     name: "Dhaka Mass Transit Company Limited (DMTCL)",
-    description:
-      "Official fare data, station information, and operational status for MRT-6 line",
+    description: "Official fare data, station information, and operational status for MRT-6 line",
     url: "https://dmtc.gov.bd",
     license: "Public Data",
   },
   {
     name: "Google Maps Platform",
-    description:
-      "Interactive maps, geolocation services, and place information",
+    description: "Interactive maps, geolocation services, and place information",
     url: "https://developers.google.com/maps",
     license: "Google Maps Platform Terms",
   },
@@ -223,9 +221,7 @@ const StickyNavigation = memo(
                   href={`#${section.id}`}
                   key={section.id}
                   whileHover={{
-                    scale: shouldReduceMotion
-                      ? 1
-                      : ANIMATION_CONFIG.scale.hover,
+                    scale: shouldReduceMotion ? 1 : ANIMATION_CONFIG.scale.hover,
                   }}
                   whileTap={{
                     scale: shouldReduceMotion ? 1 : ANIMATION_CONFIG.scale.tap,
@@ -267,7 +263,7 @@ const ModernHero = memo(() => {
   return (
     <motion.section
       animate={{ opacity: 1, y: 0 }}
-      className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary/5 via-background to-primary/5 p-8 md:p-12"
+      className="relative overflow-hidden rounded-3xl bg-linear-to-br from-primary/5 via-background to-primary/5 p-8 md:p-12"
       initial={{ opacity: 0, y: 20 }}
       transition={{ duration: ANIMATION_CONFIG.durations.slow }}
     >
@@ -295,11 +291,7 @@ const ModernHero = memo(() => {
               ? {}
               : {
                   rotate: [ANIMATION_CONFIG.rotation.background, 0],
-                  scale: [
-                    ANIMATION_CONFIG.scale.background,
-                    1,
-                    ANIMATION_CONFIG.scale.background,
-                  ],
+                  scale: [ANIMATION_CONFIG.scale.background, 1, ANIMATION_CONFIG.scale.background],
                 }
           }
           className="-bottom-20 -left-20 absolute h-32 w-32 rounded-full bg-primary/5 blur-2xl"
@@ -329,7 +321,7 @@ const ModernHero = memo(() => {
           transition={{ delay: 0.3 }}
         >
           About Our{" "}
-          <span className="bg-gradient-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent">
+          <span className="bg-linear-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent">
             Mission
           </span>
         </motion.h1>
@@ -340,8 +332,8 @@ const ModernHero = memo(() => {
           initial={{ opacity: 0, y: 20 }}
           transition={{ delay: 0.4 }}
         >
-          Empowering Dhaka's commuters with intelligent metro navigation,
-          real-time fare calculations, and seamless travel planning.
+          Empowering Dhaka's commuters with intelligent metro navigation, real-time fare
+          calculations, and seamless travel planning.
         </motion.p>
 
         <motion.div
@@ -387,13 +379,7 @@ ModernHero.displayName = "ModernHero";
  * Renders a modern feature card with micro-interactions
  */
 const FeatureCard = memo(
-  ({
-    feature,
-    index,
-  }: {
-    readonly feature: Feature;
-    readonly index: number;
-  }) => {
+  ({ feature, index }: { readonly feature: Feature; readonly index: number }) => {
     const Icon = feature.icon;
     const shouldReduceMotion = useReducedMotion();
 
@@ -414,7 +400,7 @@ const FeatureCard = memo(
         <Card className="h-full border-border/50 bg-card/50 backdrop-blur-sm transition-all duration-300 group-hover:border-primary/30 group-hover:bg-card/80 group-hover:shadow-lg">
           <CardContent className="flex gap-4 p-6">
             <motion.div
-              className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 transition-all duration-300 group-hover:scale-110 group-hover:bg-gradient-to-br group-hover:from-primary/20 group-hover:to-primary/10"
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-primary/10 to-primary/5 transition-all duration-300 group-hover:scale-110 group-hover:bg-linear-to-br group-hover:from-primary/20 group-hover:to-primary/10"
               whileHover={{
                 rotate: shouldReduceMotion ? 0 : ANIMATION_CONFIG.rotation.icon,
                 transition: { duration: 0.2 },
@@ -429,9 +415,7 @@ const FeatureCard = memo(
               <h3 className="mb-2 font-semibold text-foreground text-lg transition-colors duration-300 group-hover:text-primary">
                 {feature.name}
               </h3>
-              <p className="text-muted-foreground text-sm leading-relaxed">
-                {feature.description}
-              </p>
+              <p className="text-muted-foreground text-sm leading-relaxed">{feature.description}</p>
             </div>
           </CardContent>
         </Card>
@@ -446,13 +430,7 @@ FeatureCard.displayName = "FeatureCard";
  * Renders a modern data source card with glassmorphism
  */
 const DataSourceCard = memo(
-  ({
-    source,
-    index,
-  }: {
-    readonly source: DataSource;
-    readonly index: number;
-  }) => {
+  ({ source, index }: { readonly source: DataSource; readonly index: number }) => {
     const shouldReduceMotion = useReducedMotion();
 
     return (
@@ -473,11 +451,9 @@ const DataSourceCard = memo(
           <CardHeader className="pb-4">
             <CardTitle className="flex items-center gap-3 text-xl">
               <motion.div
-                className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 transition-all duration-300 group-hover:scale-110 group-hover:bg-gradient-to-br group-hover:from-primary/20 group-hover:to-primary/10"
+                className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-primary/10 to-primary/5 transition-all duration-300 group-hover:scale-110 group-hover:bg-linear-to-br group-hover:from-primary/20 group-hover:to-primary/10"
                 whileHover={{
-                  rotate: shouldReduceMotion
-                    ? 0
-                    : ANIMATION_CONFIG.rotation.icon,
+                  rotate: shouldReduceMotion ? 0 : ANIMATION_CONFIG.rotation.icon,
                   transition: { duration: 0.2 },
                 }}
               >
@@ -575,9 +551,7 @@ const DiagnosticsSection = memo(() => {
           <div>
             <div className="font-medium text-base">Enable Diagnostics</div>
             <div className="text-muted-foreground text-sm">
-              {doNotTrack
-                ? "Disabled (Do Not Track detected)"
-                : "Collect anonymous usage data"}
+              {doNotTrack ? "Disabled (Do Not Track detected)" : "Collect anonymous usage data"}
             </div>
           </div>
           <button
@@ -596,9 +570,7 @@ const DiagnosticsSection = memo(() => {
             <span
               className={cn(
                 "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
-                diagnosticsEnabled && !doNotTrack
-                  ? "translate-x-6"
-                  : "translate-x-1"
+                diagnosticsEnabled && !doNotTrack ? "translate-x-6" : "translate-x-1"
               )}
             />
           </button>
@@ -607,8 +579,7 @@ const DiagnosticsSection = memo(() => {
         {doNotTrack && (
           <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
             <p className="text-base">
-              We respect your Do Not Track browser setting. Diagnostics are
-              automatically disabled.
+              We respect your Do Not Track browser setting. Diagnostics are automatically disabled.
             </p>
           </div>
         )}
@@ -678,10 +649,7 @@ export function AboutContent() {
       }
     };
 
-    const observer = new IntersectionObserver(
-      observerCallback,
-      observerOptions
-    );
+    const observer = new IntersectionObserver(observerCallback, observerOptions);
 
     for (const section of SECTIONS) {
       const element = document.getElementById(section.id);
@@ -697,7 +665,8 @@ export function AboutContent() {
 
   return (
     <main className="flex-1 pb-4 md:pb-16">
-      <div className="container mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+      image.png{" "}
+      <div className="page-container container mx-auto max-w-6xl">
         <div className="space-y-16">
           {/* Modern Hero Section */}
           <ModernHero />
@@ -723,7 +692,7 @@ export function AboutContent() {
                 whileInView={{ opacity: 1, y: 0 }}
               >
                 About{" "}
-                <span className="bg-gradient-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent">
+                <span className="bg-linear-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent">
                   Metro Station Finder
                 </span>
               </motion.h2>
@@ -734,8 +703,7 @@ export function AboutContent() {
                 viewport={{ once: true }}
                 whileInView={{ opacity: 1, y: 0 }}
               >
-                Your comprehensive guide to navigating Dhaka's MRT-6 metro
-                system
+                Your comprehensive guide to navigating Dhaka's MRT-6 metro system
               </motion.p>
             </div>
 
@@ -749,18 +717,16 @@ export function AboutContent() {
                 <CardContent className="p-8">
                   <div className="space-y-6 text-base text-muted-foreground leading-relaxed">
                     <p>
-                      Metro Station Finder is a modern, accessible web
-                      application designed to help commuters navigate Dhaka's
-                      Mass Rapid Transit (MRT) Line 6. Built with the latest web
-                      technologies and following best practices for performance
-                      and accessibility, it provides accurate fare calculations,
-                      station information, and interactive maps.
+                      Metro Station Finder is a modern, accessible web application designed to help
+                      commuters navigate Dhaka's Mass Rapid Transit (MRT) Line 6. Built with the
+                      latest web technologies and following best practices for performance and
+                      accessibility, it provides accurate fare calculations, station information,
+                      and interactive maps.
                     </p>
                     <p>
-                      Our mission is to make metro travel more accessible and
-                      convenient for everyone in Dhaka by providing a fast,
-                      reliable, and easy-to-use platform that works seamlessly
-                      across all devices.
+                      Our mission is to make metro travel more accessible and convenient for
+                      everyone in Dhaka by providing a fast, reliable, and easy-to-use platform that
+                      works seamlessly across all devices.
                     </p>
                   </div>
                 </CardContent>
@@ -779,11 +745,7 @@ export function AboutContent() {
               </h3>
               <div className="grid gap-6 md:grid-cols-2">
                 {FEATURES.map((feature, index) => (
-                  <FeatureCard
-                    feature={feature}
-                    index={index}
-                    key={feature.name}
-                  />
+                  <FeatureCard feature={feature} index={index} key={feature.name} />
                 ))}
               </div>
             </motion.div>
@@ -804,18 +766,13 @@ export function AboutContent() {
                     <div>
                       <div className="mb-4 flex items-center gap-3 font-medium text-base">
                         <motion.div
-                          className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary/10 to-primary/5"
+                          className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-primary/10 to-primary/5"
                           whileHover={{
-                            scale: shouldReduceMotion
-                              ? 1
-                              : ANIMATION_CONFIG.scale.icon,
+                            scale: shouldReduceMotion ? 1 : ANIMATION_CONFIG.scale.icon,
                             transition: { duration: 0.2 },
                           }}
                         >
-                          <Code
-                            aria-hidden="true"
-                            className="h-4 w-4 text-primary"
-                          />
+                          <Code aria-hidden="true" className="h-4 w-4 text-primary" />
                         </motion.div>
                         Frontend
                       </div>
@@ -831,18 +788,13 @@ export function AboutContent() {
                     <div>
                       <div className="mb-4 flex items-center gap-3 font-medium text-base">
                         <motion.div
-                          className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary/10 to-primary/5"
+                          className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-primary/10 to-primary/5"
                           whileHover={{
-                            scale: shouldReduceMotion
-                              ? 1
-                              : ANIMATION_CONFIG.scale.icon,
+                            scale: shouldReduceMotion ? 1 : ANIMATION_CONFIG.scale.icon,
                             transition: { duration: 0.2 },
                           }}
                         >
-                          <Building2
-                            aria-hidden="true"
-                            className="h-4 w-4 text-primary"
-                          />
+                          <Building2 aria-hidden="true" className="h-4 w-4 text-primary" />
                         </motion.div>
                         UI Components
                       </div>
@@ -858,18 +810,13 @@ export function AboutContent() {
                     <div>
                       <div className="mb-4 flex items-center gap-3 font-medium text-base">
                         <motion.div
-                          className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary/10 to-primary/5"
+                          className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-primary/10 to-primary/5"
                           whileHover={{
-                            scale: shouldReduceMotion
-                              ? 1
-                              : ANIMATION_CONFIG.scale.icon,
+                            scale: shouldReduceMotion ? 1 : ANIMATION_CONFIG.scale.icon,
                             transition: { duration: 0.2 },
                           }}
                         >
-                          <MapPin
-                            aria-hidden="true"
-                            className="h-4 w-4 text-primary"
-                          />
+                          <MapPin aria-hidden="true" className="h-4 w-4 text-primary" />
                         </motion.div>
                         Maps & Location
                       </div>
@@ -885,18 +832,13 @@ export function AboutContent() {
                     <div>
                       <div className="mb-4 flex items-center gap-3 font-medium text-base">
                         <motion.div
-                          className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary/10 to-primary/5"
+                          className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-primary/10 to-primary/5"
                           whileHover={{
-                            scale: shouldReduceMotion
-                              ? 1
-                              : ANIMATION_CONFIG.scale.icon,
+                            scale: shouldReduceMotion ? 1 : ANIMATION_CONFIG.scale.icon,
                             transition: { duration: 0.2 },
                           }}
                         >
-                          <SiGithub
-                            aria-hidden="true"
-                            className="h-4 w-4 text-primary"
-                          />
+                          <SiGithub aria-hidden="true" className="h-4 w-4 text-primary" />
                         </motion.div>
                         Development Tools
                       </div>
@@ -933,7 +875,7 @@ export function AboutContent() {
                 whileInView={{ opacity: 1, y: 0 }}
               >
                 Data{" "}
-                <span className="bg-gradient-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent">
+                <span className="bg-linear-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent">
                   Attribution
                 </span>
               </motion.h2>
@@ -956,11 +898,7 @@ export function AboutContent() {
               whileInView={{ opacity: 1, y: 0 }}
             >
               {DATA_SOURCES.map((source, index) => (
-                <DataSourceCard
-                  index={index}
-                  key={source.name}
-                  source={source}
-                />
+                <DataSourceCard index={index} key={source.name} source={source} />
               ))}
             </motion.div>
 
@@ -970,30 +908,25 @@ export function AboutContent() {
               viewport={{ once: true }}
               whileInView={{ opacity: 1, y: 0 }}
             >
-              <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10 backdrop-blur-sm">
+              <Card className="border-primary/20 bg-linear-to-br from-primary/5 to-primary/10 backdrop-blur-sm">
                 <CardContent className="flex gap-4 p-8">
                   <motion.div
-                    className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-primary/20"
+                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/20"
                     whileHover={{
-                      scale: shouldReduceMotion
-                        ? 1
-                        : ANIMATION_CONFIG.scale.icon,
+                      scale: shouldReduceMotion ? 1 : ANIMATION_CONFIG.scale.icon,
                       transition: { duration: 0.2 },
                     }}
                   >
                     <Info aria-hidden="true" className="h-6 w-6 text-primary" />
                   </motion.div>
                   <div className="space-y-3 text-base">
-                    <p className="font-semibold text-foreground text-lg">
-                      Important Notice
-                    </p>
+                    <p className="font-semibold text-foreground text-lg">Important Notice</p>
                     <p className="text-muted-foreground leading-relaxed">
-                      All fare data and station information are sourced from
-                      official DMTCL publications and are subject to change.
-                      While we strive to maintain accuracy, please verify
-                      critical information with official sources. This is an
-                      independent project and is not officially affiliated with
-                      or endorsed by DMTCL or Google.
+                      All fare data and station information are sourced from official DMTCL
+                      publications and are subject to change. While we strive to maintain accuracy,
+                      please verify critical information with official sources. This is an
+                      independent project and is not officially affiliated with or endorsed by DMTCL
+                      or Google.
                     </p>
                   </div>
                 </CardContent>
@@ -1019,7 +952,7 @@ export function AboutContent() {
                 whileInView={{ opacity: 1, y: 0 }}
               >
                 Privacy{" "}
-                <span className="bg-gradient-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent">
+                <span className="bg-linear-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent">
                   Policy
                 </span>
               </motion.h2>
@@ -1044,18 +977,13 @@ export function AboutContent() {
                 <CardHeader className="pb-6">
                   <CardTitle className="flex items-center gap-3 text-2xl">
                     <motion.div
-                      className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary/10 to-primary/5"
+                      className="flex h-12 w-12 items-center justify-center rounded-xl bg-linear-to-br from-primary/10 to-primary/5"
                       whileHover={{
-                        scale: shouldReduceMotion
-                          ? 1
-                          : ANIMATION_CONFIG.scale.icon,
+                        scale: shouldReduceMotion ? 1 : ANIMATION_CONFIG.scale.icon,
                         transition: { duration: 0.2 },
                       }}
                     >
-                      <Shield
-                        aria-hidden="true"
-                        className="h-6 w-6 text-primary"
-                      />
+                      <Shield aria-hidden="true" className="h-6 w-6 text-primary" />
                     </motion.div>
                     <span>Your Privacy Matters</span>
                   </CardTitle>
@@ -1077,9 +1005,9 @@ export function AboutContent() {
                           Location Data
                         </div>
                         <p className="text-muted-foreground text-sm leading-relaxed">
-                          When you use the "Use My Location" feature, your
-                          browser provides approximate coordinates. This data is
-                          processed locally and never sent to our servers.
+                          When you use the "Use My Location" feature, your browser provides
+                          approximate coordinates. This data is processed locally and never sent to
+                          our servers.
                         </p>
                       </div>
                       <div className="rounded-lg border border-border/50 bg-muted/30 p-4">
@@ -1088,8 +1016,8 @@ export function AboutContent() {
                           Search Queries
                         </div>
                         <p className="text-muted-foreground text-sm leading-relaxed">
-                          Station searches are processed client-side and are not
-                          stored or transmitted.
+                          Station searches are processed client-side and are not stored or
+                          transmitted.
                         </p>
                       </div>
                       <div className="rounded-lg border border-border/50 bg-muted/30 p-4">
@@ -1098,9 +1026,8 @@ export function AboutContent() {
                           Usage Analytics
                         </div>
                         <p className="text-muted-foreground text-sm leading-relaxed">
-                          If diagnostics are enabled, we collect anonymous usage
-                          statistics to improve the application. This respects
-                          Do Not Track settings.
+                          If diagnostics are enabled, we collect anonymous usage statistics to
+                          improve the application. This respects Do Not Track settings.
                         </p>
                       </div>
                     </div>
@@ -1132,10 +1059,8 @@ export function AboutContent() {
                           viewport={{ once: true }}
                           whileInView={{ opacity: 1, x: 0 }}
                         >
-                          <Zap className="h-4 w-4 flex-shrink-0 text-primary" />
-                          <span className="text-muted-foreground text-sm">
-                            {item}
-                          </span>
+                          <Zap className="h-4 w-4 shrink-0 text-primary" />
+                          <span className="text-muted-foreground text-sm">{item}</span>
                         </motion.div>
                       ))}
                     </div>
@@ -1150,16 +1075,14 @@ export function AboutContent() {
                     <h3 className="mb-4 font-semibold text-foreground text-xl">
                       Third-Party Services
                     </h3>
-                    <div className="rounded-lg border border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10 p-6">
+                    <div className="rounded-lg border border-primary/20 bg-linear-to-br from-primary/5 to-primary/10 p-6">
                       <div className="mb-3 flex items-center gap-3">
                         <MapPin className="h-5 w-5 text-primary" />
-                        <span className="font-medium text-foreground">
-                          Google Maps Platform
-                        </span>
+                        <span className="font-medium text-foreground">Google Maps Platform</span>
                       </div>
                       <p className="mb-3 text-muted-foreground text-sm leading-relaxed">
-                        Map tiles and geolocation services are provided by
-                        Google. Your usage is subject to{" "}
+                        Map tiles and geolocation services are provided by Google. Your usage is
+                        subject to{" "}
                         <a
                           className="font-medium text-primary underline-offset-4 hover:underline"
                           href="https://policies.google.com/privacy"
@@ -1179,9 +1102,7 @@ export function AboutContent() {
                     viewport={{ once: true }}
                     whileInView={{ opacity: 1, y: 0 }}
                   >
-                    <h3 className="mb-4 font-semibold text-foreground text-xl">
-                      Your Rights
-                    </h3>
+                    <h3 className="mb-4 font-semibold text-foreground text-xl">Your Rights</h3>
                     <div className="grid gap-3 md:grid-cols-2">
                       {[
                         "Deny location permission at any time",
@@ -1199,17 +1120,15 @@ export function AboutContent() {
                           viewport={{ once: true }}
                           whileInView={{ opacity: 1, x: 0 }}
                         >
-                          <Shield className="h-4 w-4 flex-shrink-0 text-primary" />
-                          <span className="text-muted-foreground text-sm">
-                            {right}
-                          </span>
+                          <Shield className="h-4 w-4 shrink-0 text-primary" />
+                          <span className="text-muted-foreground text-sm">{right}</span>
                         </motion.div>
                       ))}
                     </div>
                   </motion.div>
 
                   <motion.div
-                    className="rounded-lg border border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10 p-6"
+                    className="rounded-lg border border-primary/20 bg-linear-to-br from-primary/5 to-primary/10 p-6"
                     initial={{ opacity: 0, y: 10 }}
                     transition={{ delay: 0.5 }}
                     viewport={{ once: true }}
@@ -1219,8 +1138,8 @@ export function AboutContent() {
                       Last Updated: December 2024
                     </p>
                     <p className="text-muted-foreground leading-relaxed">
-                      We are committed to protecting your privacy and will never
-                      sell your personal information to third parties.
+                      We are committed to protecting your privacy and will never sell your personal
+                      information to third parties.
                     </p>
                   </motion.div>
                 </CardContent>
@@ -1246,7 +1165,7 @@ export function AboutContent() {
                 whileInView={{ opacity: 1, y: 0 }}
               >
                 Open Source{" "}
-                <span className="bg-gradient-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent">
+                <span className="bg-linear-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent">
                   License
                 </span>
               </motion.h2>
@@ -1271,18 +1190,13 @@ export function AboutContent() {
                 <CardHeader className="pb-6">
                   <CardTitle className="flex items-center gap-3 text-2xl">
                     <motion.div
-                      className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary/10 to-primary/5"
+                      className="flex h-12 w-12 items-center justify-center rounded-xl bg-linear-to-br from-primary/10 to-primary/5"
                       whileHover={{
-                        scale: shouldReduceMotion
-                          ? 1
-                          : ANIMATION_CONFIG.scale.icon,
+                        scale: shouldReduceMotion ? 1 : ANIMATION_CONFIG.scale.icon,
                         transition: { duration: 0.2 },
                       }}
                     >
-                      <Code
-                        aria-hidden="true"
-                        className="h-6 w-6 text-primary"
-                      />
+                      <Code aria-hidden="true" className="h-6 w-6 text-primary" />
                     </motion.div>
                     <span>MIT License</span>
                   </CardTitle>
@@ -1297,9 +1211,7 @@ export function AboutContent() {
                     viewport={{ once: true }}
                     whileInView={{ opacity: 1, y: 0 }}
                   >
-                    <h3 className="mb-4 font-semibold text-foreground text-xl">
-                      What this means:
-                    </h3>
+                    <h3 className="mb-4 font-semibold text-foreground text-xl">What this means:</h3>
                     <div className="grid gap-4 md:grid-cols-2">
                       {[
                         {
@@ -1434,26 +1346,19 @@ export function AboutContent() {
               viewport={{ once: true }}
               whileInView={{ opacity: 1, y: 0 }}
             >
-              <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10 backdrop-blur-sm">
+              <Card className="border-primary/20 bg-linear-to-br from-primary/5 to-primary/10 backdrop-blur-sm">
                 <CardContent className="flex gap-4 p-8">
                   <motion.div
-                    className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-primary/20"
+                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/20"
                     whileHover={{
-                      scale: shouldReduceMotion
-                        ? 1
-                        : ANIMATION_CONFIG.scale.icon,
+                      scale: shouldReduceMotion ? 1 : ANIMATION_CONFIG.scale.icon,
                       transition: { duration: 0.2 },
                     }}
                   >
-                    <SiGithub
-                      aria-hidden="true"
-                      className="h-6 w-6 text-primary"
-                    />
+                    <SiGithub aria-hidden="true" className="h-6 w-6 text-primary" />
                   </motion.div>
                   <div className="space-y-3 text-base">
-                    <p className="font-semibold text-foreground text-lg">
-                      Full License Text
-                    </p>
+                    <p className="font-semibold text-foreground text-lg">Full License Text</p>
                     <p className="text-muted-foreground leading-relaxed">
                       The complete MIT License text is available in the{" "}
                       <a
@@ -1489,7 +1394,7 @@ export function AboutContent() {
                 whileInView={{ opacity: 1, y: 0 }}
               >
                 Diagnostics{" "}
-                <span className="bg-gradient-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent">
+                <span className="bg-linear-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent">
                   Settings
                 </span>
               </motion.h2>

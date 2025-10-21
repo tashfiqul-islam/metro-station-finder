@@ -4,6 +4,123 @@
     "resourceSizes": [
       {
         "resourceType": "total",
+        "budget": 2000
+      },
+      {
+        "resourceType": "script",
+        "budget": 600
+      },
+      {
+        "resourceType": "stylesheet",
+        "budget": 150
+      },
+      {
+        "resourceType": "image",
+        "budget": 800
+      },
+      {
+        "resourceType": "font",
+        "budget": 80
+      },
+      {
+        "resourceType": "document",
+        "budget": 40
+      },
+      {
+        "resourceType": "media",
+        "budget": 300
+      },
+      {
+        "resourceType": "other",
+        "budget": 150
+      }
+    ],
+    "resourceCounts": [
+      {
+        "resourceType": "total",
+        "budget": 80
+      },
+      {
+        "resourceType": "script",
+        "budget": 15
+      },
+      {
+        "resourceType": "stylesheet",
+        "budget": 4
+      },
+      {
+        "resourceType": "image",
+        "budget": 25
+      },
+      {
+        "resourceType": "font",
+        "budget": 4
+      },
+      {
+        "resourceType": "document",
+        "budget": 1
+      },
+      {
+        "resourceType": "media",
+        "budget": 8
+      },
+      {
+        "resourceType": "third-party",
+        "budget": 12
+      },
+      {
+        "resourceType": "other",
+        "budget": 15
+      }
+    ],
+    "timings": [
+      {
+        "metric": "first-contentful-paint",
+        "budget": 1200
+      },
+      {
+        "metric": "largest-contentful-paint",
+        "budget": 2000
+      },
+      {
+        "metric": "speed-index",
+        "budget": 2500
+      },
+      {
+        "metric": "interactive",
+        "budget": 3000
+      },
+      {
+        "metric": "total-blocking-time",
+        "budget": 150
+      },
+      {
+        "metric": "cumulative-layout-shift",
+        "budget": 0.05
+      },
+      {
+        "metric": "max-potential-fid",
+        "budget": 80
+      },
+      {
+        "metric": "first-meaningful-paint",
+        "budget": 1500
+      },
+      {
+        "metric": "estimated-input-latency",
+        "budget": 40
+      },
+      {
+        "metric": "interaction-to-next-paint",
+        "budget": 200
+      }
+    ]
+  },
+  {
+    "path": "/station-finder",
+    "resourceSizes": [
+      {
+        "resourceType": "total",
         "budget": 2500
       },
       {
@@ -11,27 +128,11 @@
         "budget": 800
       },
       {
-        "resourceType": "stylesheet",
-        "budget": 200
-      },
-      {
         "resourceType": "image",
         "budget": 1000
       },
       {
-        "resourceType": "font",
-        "budget": 100
-      },
-      {
-        "resourceType": "document",
-        "budget": 50
-      },
-      {
-        "resourceType": "media",
-        "budget": 500
-      },
-      {
-        "resourceType": "other",
+        "resourceType": "stylesheet",
         "budget": 200
       }
     ],
@@ -41,50 +142,22 @@
         "budget": 100
       },
       {
-        "resourceType": "script",
-        "budget": 20
-      },
-      {
-        "resourceType": "stylesheet",
-        "budget": 5
-      },
-      {
-        "resourceType": "image",
-        "budget": 30
-      },
-      {
-        "resourceType": "font",
-        "budget": 5
-      },
-      {
-        "resourceType": "document",
-        "budget": 1
-      },
-      {
-        "resourceType": "media",
-        "budget": 10
-      },
-      {
         "resourceType": "third-party",
         "budget": 15
       },
       {
-        "resourceType": "other",
+        "resourceType": "script",
         "budget": 20
       }
     ],
     "timings": [
       {
         "metric": "first-contentful-paint",
-        "budget": 1800
+        "budget": 1500
       },
       {
         "metric": "largest-contentful-paint",
         "budget": 2500
-      },
-      {
-        "metric": "speed-index",
-        "budget": 3000
       },
       {
         "metric": "interactive",
@@ -97,59 +170,6 @@
       {
         "metric": "cumulative-layout-shift",
         "budget": 0.1
-      },
-      {
-        "metric": "max-potential-fid",
-        "budget": 100
-      },
-      {
-        "metric": "first-meaningful-paint",
-        "budget": 2000
-      },
-      {
-        "metric": "estimated-input-latency",
-        "budget": 50
-      }
-    ]
-  },
-  {
-    "path": "/station-finder",
-    "resourceSizes": [
-      {
-        "resourceType": "total",
-        "budget": 3000
-      },
-      {
-        "resourceType": "script",
-        "budget": 1000
-      },
-      {
-        "resourceType": "image",
-        "budget": 1200
-      }
-    ],
-    "resourceCounts": [
-      {
-        "resourceType": "total",
-        "budget": 120
-      },
-      {
-        "resourceType": "third-party",
-        "budget": 20
-      }
-    ],
-    "timings": [
-      {
-        "metric": "first-contentful-paint",
-        "budget": 2000
-      },
-      {
-        "metric": "largest-contentful-paint",
-        "budget": 3000
-      },
-      {
-        "metric": "interactive",
-        "budget": 5000
       }
     ]
   },
@@ -158,72 +178,39 @@
     "resourceSizes": [
       {
         "resourceType": "total",
-        "budget": 2800
+        "budget": 2200
       },
       {
         "resourceType": "script",
-        "budget": 900
+        "budget": 700
       },
       {
         "resourceType": "image",
-        "budget": 1000
+        "budget": 800
+      },
+      {
+        "resourceType": "stylesheet",
+        "budget": 180
       }
     ],
     "resourceCounts": [
       {
         "resourceType": "total",
-        "budget": 110
+        "budget": 90
       },
       {
         "resourceType": "third-party",
+        "budget": 12
+      },
+      {
+        "resourceType": "script",
         "budget": 18
       }
     ],
     "timings": [
       {
         "metric": "first-contentful-paint",
-        "budget": 1900
-      },
-      {
-        "metric": "largest-contentful-paint",
-        "budget": 2800
-      },
-      {
-        "metric": "interactive",
-        "budget": 4500
-      }
-    ]
-  },
-  {
-    "path": "/about",
-    "resourceSizes": [
-      {
-        "resourceType": "total",
-        "budget": 2000
-      },
-      {
-        "resourceType": "script",
-        "budget": 600
-      },
-      {
-        "resourceType": "image",
-        "budget": 800
-      }
-    ],
-    "resourceCounts": [
-      {
-        "resourceType": "total",
-        "budget": 80
-      },
-      {
-        "resourceType": "third-party",
-        "budget": 10
-      }
-    ],
-    "timings": [
-      {
-        "metric": "first-contentful-paint",
-        "budget": 1500
+        "budget": 1400
       },
       {
         "metric": "largest-contentful-paint",
@@ -232,6 +219,128 @@
       {
         "metric": "interactive",
         "budget": 3500
+      },
+      {
+        "metric": "total-blocking-time",
+        "budget": 180
+      },
+      {
+        "metric": "cumulative-layout-shift",
+        "budget": 0.08
+      }
+    ]
+  },
+  {
+    "path": "/about",
+    "resourceSizes": [
+      {
+        "resourceType": "total",
+        "budget": 1500
+      },
+      {
+        "resourceType": "script",
+        "budget": 400
+      },
+      {
+        "resourceType": "image",
+        "budget": 600
+      },
+      {
+        "resourceType": "stylesheet",
+        "budget": 120
+      }
+    ],
+    "resourceCounts": [
+      {
+        "resourceType": "total",
+        "budget": 60
+      },
+      {
+        "resourceType": "third-party",
+        "budget": 8
+      },
+      {
+        "resourceType": "script",
+        "budget": 12
+      }
+    ],
+    "timings": [
+      {
+        "metric": "first-contentful-paint",
+        "budget": 1000
+      },
+      {
+        "metric": "largest-contentful-paint",
+        "budget": 1800
+      },
+      {
+        "metric": "interactive",
+        "budget": 2500
+      },
+      {
+        "metric": "total-blocking-time",
+        "budget": 100
+      },
+      {
+        "metric": "cumulative-layout-shift",
+        "budget": 0.05
+      }
+    ]
+  },
+  {
+    "path": "/",
+    "resourceSizes": [
+      {
+        "resourceType": "total",
+        "budget": 1800
+      },
+      {
+        "resourceType": "script",
+        "budget": 500
+      },
+      {
+        "resourceType": "image",
+        "budget": 700
+      },
+      {
+        "resourceType": "stylesheet",
+        "budget": 100
+      }
+    ],
+    "resourceCounts": [
+      {
+        "resourceType": "total",
+        "budget": 70
+      },
+      {
+        "resourceType": "third-party",
+        "budget": 10
+      },
+      {
+        "resourceType": "script",
+        "budget": 15
+      }
+    ],
+    "timings": [
+      {
+        "metric": "first-contentful-paint",
+        "budget": 800
+      },
+      {
+        "metric": "largest-contentful-paint",
+        "budget": 1500
+      },
+      {
+        "metric": "interactive",
+        "budget": 2000
+      },
+      {
+        "metric": "total-blocking-time",
+        "budget": 80
+      },
+      {
+        "metric": "cumulative-layout-shift",
+        "budget": 0.03
       }
     ]
   }

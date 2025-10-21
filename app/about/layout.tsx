@@ -15,8 +15,7 @@ export const metadata: Metadata = {
   ],
   openGraph: {
     title: "About Metro Station Finder",
-    description:
-      "Learn about our metro station finder app for Dhaka's MRT-6 system",
+    description: "Learn about our metro station finder app for Dhaka's MRT-6 system",
     type: "website",
   },
   alternates: {
@@ -24,10 +23,6 @@ export const metadata: Metadata = {
   },
 };
 
-export default function AboutLayout({
-  children,
-}: {
-  readonly children: React.ReactNode;
-}) {
+export default function AboutLayout({ children }: { readonly children: React.ReactNode }) {
   return <div className="min-h-full">{children}</div>;
 }

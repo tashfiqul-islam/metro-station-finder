@@ -1,13 +1,15 @@
 {
   "$schema": "https://ui.shadcn.com/schema.json",
   "registries": {
-    "@aceternity": "https://ui.aceternity.com/registry/{name}.json"
+    "@shadcn": "https://ui.shadcn.com/r/{name}.json",
+    "@aceternity": "https://ui.aceternity.com/registry/{name}.json",
+    "@kibo-ui": "https://kibo-ui.com/registry/{name}.json"
   },
   "style": "new-york",
   "rsc": true,
   "tsx": true,
   "tailwind": {
-    "config": "",
+    "config": "tailwind.config.ts",
     "css": "app/globals.css",
     "baseColor": "neutral",
     "cssVariables": true,
@@ -19,8 +21,13 @@
     "utils": "@/lib/utils",
     "ui": "@/components/ui",
     "lib": "@/lib",
-    "hooks": "@/hooks",
-    "types": "@/types",
-    "styles": "@/styles"
+    "hooks": "@/lib/hooks",
+    "types": "@/lib/types",
+    "styles": "@/styles",
+    "app": "@/app",
+    "shared": "@/app/_components/shared",
+    "providers": "@/app/_components/shared/providers",
+    "seo": "@/app/_components/shared/seo",
+    "kibo-ui": "@/app/_components/shared/kibo-ui"
   }
 }

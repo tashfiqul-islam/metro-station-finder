@@ -21,12 +21,10 @@ const RETRY_COUNT_CI = 3;
 const RETRY_COUNT_LOCAL = 1;
 
 // Calculated timeouts
-const GLOBAL_TIMEOUT_MS =
-  GLOBAL_TIMEOUT_MINUTES * SECONDS_IN_MINUTE * MILLISECONDS_IN_SECOND;
+const GLOBAL_TIMEOUT_MS = GLOBAL_TIMEOUT_MINUTES * SECONDS_IN_MINUTE * MILLISECONDS_IN_SECOND;
 const TEST_TIMEOUT_MS = TEST_TIMEOUT_SECONDS * MILLISECONDS_IN_SECOND;
 const EXPECT_TIMEOUT_MS = EXPECT_TIMEOUT_SECONDS * MILLISECONDS_IN_SECOND;
-const WEB_SERVER_TIMEOUT_MS =
-  WEB_SERVER_TIMEOUT_SECONDS * MILLISECONDS_IN_SECOND;
+const WEB_SERVER_TIMEOUT_MS = WEB_SERVER_TIMEOUT_SECONDS * MILLISECONDS_IN_SECOND;
 
 // Viewport configurations
 const VIEWPORTS = {
@@ -397,13 +395,9 @@ export default defineConfig({
     stdout: "ignore",
     stderr: "pipe",
     env: {
-      // biome-ignore lint/style/useNamingConvention: Environment variables must be uppercase
       NODE_ENV: "test",
-      // biome-ignore lint/style/useNamingConvention: Environment variables must be uppercase
       PLAYWRIGHT_TEST: "true",
-      // biome-ignore lint/style/useNamingConvention: Environment variables must be uppercase
       NEXT_TELEMETRY_DISABLED: "1",
-      // biome-ignore lint/style/useNamingConvention: Environment variables must be uppercase
       NEXT_PUBLIC_TEST_MODE: "true",
     },
   },

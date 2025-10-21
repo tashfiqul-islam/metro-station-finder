@@ -1,5 +1,5 @@
-import { MRT6_FARE_CONSTANTS } from "@/lib/constants";
-import MRT6_STATIONS from "@/lib/data/stations";
+import { MRT6_FARE_CONSTANTS } from "@/lib/config/constants";
+import MRT6_STATIONS from "@/lib/services/data/stations";
 import type { Station } from "@/lib/types/station";
 
 /**
@@ -31,8 +31,7 @@ export function validateStationsData(stations: readonly Station[]): void {
 
 /** Validate fare constants basic bounds. */
 export function validateFaresConfig(): void {
-  const { minFareAmount, maxFareAmount, validFareIncrements } =
-    MRT6_FARE_CONSTANTS;
+  const { minFareAmount, maxFareAmount, validFareIncrements } = MRT6_FARE_CONSTANTS;
   if (!(minFareAmount >= 0 && maxFareAmount >= minFareAmount)) {
     throw new Error("Invalid fare bounds");
   }

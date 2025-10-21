@@ -8,11 +8,7 @@ import { AboutContent } from "./_components/about-content";
 export default function AboutPage() {
   return (
     <Suspense
-      fallback={
-        <div className="flex min-h-dvh items-center justify-center">
-          Loading...
-        </div>
-      }
+      fallback={<div className="flex min-h-dvh items-center justify-center">Loading...</div>}
     >
       <AboutContent />
     </Suspense>

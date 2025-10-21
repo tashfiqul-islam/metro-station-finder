@@ -9,18 +9,8 @@
  * @since 2025-09-28
  */
 
-import {
-  type DISCOUNT_TYPES,
-  FARE_CONSTANTS,
-  type TICKET_TYPES,
-} from "@/lib/constants";
-import type {
-  Kilometers,
-  Milliseconds,
-  Minutes,
-  StationId,
-  TakaAmount,
-} from "@/lib/types";
+import { type DISCOUNT_TYPES, FARE_CONSTANTS, type TICKET_TYPES } from "@/lib/config/constants";
+import type { Kilometers, Milliseconds, Minutes, StationId, TakaAmount } from "@/lib/types";
 import type { Station } from "@/lib/types/station";
 
 /**
@@ -33,10 +23,8 @@ export type TicketId = string & { readonly __brand: "TicketId" };
 /**
  * Template literal types for fare operations
  */
-export type FareOperation =
-  `fare:${"calculate" | "validate" | "apply_discount" | "format"}`;
-export type DiscountOperation =
-  `discount:${"apply" | "remove" | "validate" | "calculate"}`;
+export type FareOperation = `fare:${"calculate" | "validate" | "apply_discount" | "format"}`;
+export type DiscountOperation = `discount:${"apply" | "remove" | "validate" | "calculate"}`;
 
 /**
  * Discount type enumeration
@@ -280,9 +268,7 @@ export type LegacyFareCalculationResult = {
 export function isDiscountType(value: unknown): value is DiscountType {
   return (
     typeof value === "string" &&
-    (value === "single-journey" ||
-      value === "mrt-pass" ||
-      value === "rapid-pass")
+    (value === "single-journey" || value === "mrt-pass" || value === "rapid-pass")
   );
 }
 
@@ -295,9 +281,7 @@ export function isDiscountType(value: unknown): value is DiscountType {
 export function isTicketType(value: unknown): value is TicketType {
   return (
     typeof value === "string" &&
-    (value === "single-journey" ||
-      value === "mrt-pass" ||
-      value === "rapid-pass")
+    (value === "single-journey" || value === "mrt-pass" || value === "rapid-pass")
   );
 }
 
@@ -411,10 +395,7 @@ export function isFare(value: unknown): value is Fare {
  * @param discountRate The discount rate (0-1)
  * @returns The discount amount
  */
-export function calculateDiscountAmount(
-  baseFare: TakaAmount,
-  discountRate: number
-): TakaAmount {
+export function calculateDiscountAmount(baseFare: TakaAmount, discountRate: number): TakaAmount {
   return Math.floor(baseFare * discountRate) as TakaAmount;
 }
 
@@ -425,10 +406,7 @@ export function calculateDiscountAmount(
  * @param discountType The type of discount to apply
  * @returns The discounted fare amount
  */
-export function applyDiscount(
-  baseFare: TakaAmount,
-  discountType: DiscountType
-): TakaAmount {
+export function applyDiscount(baseFare: TakaAmount, discountType: DiscountType): TakaAmount {
   const discountRates = {
     "single-journey": FARE_CONSTANTS.singleJourneyDiscount,
     "mrt-pass": FARE_CONSTANTS.mrtPassDiscount,
@@ -438,10 +416,7 @@ export function applyDiscount(
   const discountRate = discountRates[discountType];
   const discountAmount = calculateDiscountAmount(baseFare, discountRate);
 
-  return Math.max(
-    FARE_CONSTANTS.minFare,
-    baseFare - discountAmount
-  ) as TakaAmount;
+  return Math.max(FARE_CONSTANTS.minFare, baseFare - discountAmount) as TakaAmount;
 }
 
 /**
@@ -451,9 +426,7 @@ export function applyDiscount(
  * @returns Travel time in minutes
  */
 export function calculateTravelTime(stationCount: number): Minutes {
-  return Math.ceil(
-    (stationCount - 1) * FARE_CONSTANTS.minutesPerSegment
-  ) as Minutes;
+  return Math.ceil((stationCount - 1) * FARE_CONSTANTS.minutesPerSegment) as Minutes;
 }
 
 /**
@@ -516,9 +489,7 @@ export function getDiscountRate(ticketType: TicketType): number {
  */
 export function isValidFareAmount(amount: TakaAmount): boolean {
   return (
-    amount >= FARE_CONSTANTS.minFare &&
-    amount <= FARE_CONSTANTS.maxFare &&
-    Number.isInteger(amount)
+    amount >= FARE_CONSTANTS.minFare && amount <= FARE_CONSTANTS.maxFare && Number.isInteger(amount)
   );
 }
 
@@ -536,16 +507,10 @@ export function createFareBreakdown(
   return {
     id: `breakdown_${Date.now()}_${Math.random()
       .toString(FARE_CONSTANTS.base36)
-      .slice(
-        FARE_CONSTANTS.idStartIndex,
-        FARE_CONSTANTS.idStartIndex + FARE_CONSTANTS.idLength
-      )}`,
+      .slice(FARE_CONSTANTS.idStartIndex, FARE_CONSTANTS.idStartIndex + FARE_CONSTANTS.idLength)}`,
     baseFare,
     discountAmount,
-    finalAmount: Math.max(
-      FARE_CONSTANTS.minFare,
-      baseFare - discountAmount
-    ) as TakaAmount,
+    finalAmount: Math.max(FARE_CONSTANTS.minFare, baseFare - discountAmount) as TakaAmount,
     components: {},
     calculatedAt: Date.now() as Milliseconds,
     status: "calculated",
@@ -569,23 +534,15 @@ export type FareDiscount<T extends Fare> = T["discount"];
 /**
  * Create partial fare for updates
  */
-export type PartialFare = Partial<
-  Pick<Fare, "state" | "updatedAt" | "metadata">
->;
+export type PartialFare = Partial<Pick<Fare, "state" | "updatedAt" | "metadata">>;
 
 /**
  * Fare calculation strategy pattern
  */
 export type FareCalculationStrategy = {
-  readonly calculate: (
-    baseFare: TakaAmount,
-    options: FareCalculationOptions
-  ) => TakaAmount;
+  readonly calculate: (baseFare: TakaAmount, options: FareCalculationOptions) => TakaAmount;
   readonly validate: (fare: Fare) => boolean;
-  readonly applyDiscount: (
-    fare: TakaAmount,
-    discountType: DiscountType
-  ) => TakaAmount;
+  readonly applyDiscount: (fare: TakaAmount, discountType: DiscountType) => TakaAmount;
 };
 
 /**
@@ -620,9 +577,7 @@ export const createTicketId = (): TicketId =>
  */
 export function validateFareAmount(amount: number): amount is TakaAmount {
   return (
-    Number.isInteger(amount) &&
-    amount >= FARE_CONSTANTS.minFare &&
-    amount <= FARE_CONSTANTS.maxFare
+    Number.isInteger(amount) && amount >= FARE_CONSTANTS.minFare && amount <= FARE_CONSTANTS.maxFare
   );
 }
 
@@ -690,9 +645,7 @@ export const createFareFactory = (config: FareConfig) => ({
     createdAt: Date.now() as Milliseconds,
     updatedAt: Date.now() as Milliseconds,
   }),
-  createDiscount: (
-    data: Omit<DiscountInfo, "id" | "appliedAt">
-  ): DiscountInfo => ({
+  createDiscount: (data: Omit<DiscountInfo, "id" | "appliedAt">): DiscountInfo => ({
     ...data,
     id: createDiscountId(),
     appliedAt: Date.now() as Milliseconds,

@@ -1,19 +1,16 @@
 import type { Metadata } from "next";
-import { preconnect, prefetchDNS } from "react-dom";
-import { Hero } from "@/components/hero/hero-section";
-import { StructuredData } from "@/components/seo/structured-data";
-
-// Preload critical external resources for better performance (React 19)
-prefetchDNS("https://fonts.googleapis.com");
-prefetchDNS("https://fonts.gstatic.com");
-preconnect("https://fonts.googleapis.com");
-preconnect("https://fonts.gstatic.com", { crossOrigin: "anonymous" });
+import {
+  StructuredData,
+  StructuredDataGenerators,
+} from "@/app/_components/shared/seo/structured-data";
+import { generateMetadata as generateSEOMetadata } from "@/lib/services/seo/metadata";
+import { HomePage } from "./_components/home-page";
 
 /**
- * Metadata for the homepage - Next.js 15 App Router optimized
+ * Metadata for the home page - Next.js 16 App Router optimized
  * Follows 2025 SEO best practices with comprehensive metadata
  */
-export const metadata: Metadata = {
+export const metadata: Metadata = generateSEOMetadata({
   title: "Metro Station Finder | Find Dhaka Metro Stations & Calculate Fares",
   description:
     "Discover the nearest Dhaka metro station from your location and calculate fares between stations. Fast, accessible, and easy to use.",
@@ -27,80 +24,45 @@ export const metadata: Metadata = {
     "metro navigation",
     "Dhaka transport",
   ],
-  authors: [{ name: "Metro Station Finder Team" }],
-  creator: "Metro Station Finder",
-  publisher: "Metro Station Finder",
-  openGraph: {
-    title: "Metro Station Finder - Dhaka Metro Navigation Made Easy",
-    description: "Find stations and calculate fares for Dhaka's metro system",
-    type: "website",
-    locale: "en_US",
-    siteName: "Metro Station Finder",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Metro Station Finder - Dhaka Metro Navigation",
-    description: "Find stations and calculate fares for Dhaka's metro system",
-  },
-  alternates: {
-    canonical: "https://metro-station-finder.vercel.app",
-  },
-  other: {
-    "application-name": "Metro Station Finder",
-    "mobile-web-app-capable": "yes",
-    "apple-mobile-web-app-capable": "yes",
-    "apple-mobile-web-app-status-bar-style": "default",
-    "apple-mobile-web-app-title": "Metro Station Finder",
-  },
-};
+});
 
 /**
- * Homepage component - Next.js 15 App Router with React 19 optimizations
- * Features a full-viewport hero section with sticky header and footer
- * Implements modern 2025 web development best practices
+ * Home page component - Next.js 16 App Router with React 19 optimizations
+ * Features modern React patterns for optimal user experience
  */
-export default function HomePage() {
+export default function HomePageRoute() {
   return (
     <>
-      {/* Structured Data for SEO - JSON-LD schema */}
+      {/* Page-specific JSON-LD Structured Data */}
       <StructuredData
-        data={{
-          "@context": "https://schema.org",
-          "@type": "WebApplication",
-          name: "Metro Station Finder",
-          description:
-            "Find the nearest Dhaka metro station and calculate fares for MRT-6",
-          url: "https://metro-station-finder.vercel.app",
-          applicationCategory: "Transportation",
-          operatingSystem: "Web Browser",
-          offers: {
-            "@type": "Offer",
-            price: "0",
-            priceCurrency: "USD",
+        data={StructuredDataGenerators.faq([
+          {
+            question: "How do I find the nearest metro station?",
+            answer:
+              "Use our station finder tool to search by location or station name. The app will show you the closest metro station with directions and fare information.",
           },
-          author: {
-            "@type": "Organization",
-            name: "Metro Station Finder Team",
+          {
+            question: "What are the metro operating hours?",
+            answer: "Dhaka Metro operates from 6:00 AM to 10:00 PM daily, seven days a week.",
           },
-          publisher: {
-            "@type": "Organization",
-            name: "Metro Station Finder",
+          {
+            question: "How much does a metro ride cost?",
+            answer:
+              "Metro fares range from 20-50 BDT depending on the distance traveled. Use our fare calculator to get exact pricing between stations.",
           },
-          potentialAction: [
-            {
-              "@type": "SearchAction",
-              target:
-                "https://metro-station-finder.vercel.app/station-finder?q={search_term_string}",
-              "query-input": "required name=search_term_string",
-            },
-          ],
-        }}
+          {
+            question: "Is the metro accessible for people with disabilities?",
+            answer:
+              "Yes, all metro stations are equipped with accessibility features including elevators, ramps, and tactile guidance systems.",
+          },
+        ])}
       />
-
-      {/* Main Content - Hero Section */}
-      <div className="overflow-hidden">
-        <Hero />
-      </div>
+      <StructuredData
+        data={StructuredDataGenerators.breadcrumbList([
+          { name: "Home", url: "https://metro-station-finder.vercel.app" },
+        ])}
+      />
+      <HomePage />
     </>
   );
 }

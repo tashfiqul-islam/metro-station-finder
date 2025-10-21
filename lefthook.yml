@@ -1,23 +1,14 @@
 # Metro Station Finder - Lefthook Configuration
 
-min_version: 1.13.0
+min_version: 2.0.0
 
-# Output configuration
 output:
   - execution_out
   - summary
   - failure
 
-# Skip unnecessary output sections
-skip_output:
-  - meta
-  - empty_summary
-  - execution_info
-
-# Global settings
 colors: true
 
-# Pre-commit hooks
 pre-commit:
   parallel: true
   
@@ -34,8 +25,8 @@ pre-commit:
       fail_text: "❌ Linting failed. Please fix code style issues before committing."
     
     - name: "Security Audit"
-      run: bun run deps:audit
-      fail_text: "❌ Security vulnerabilities found. Please fix before committing."
+      run: bun audit --audit-level high
+      fail_text: "❌ High/critical security vulnerabilities found. Please fix before committing."
     
     - name: "Project Validation"
       run: bun run validate
@@ -49,15 +40,10 @@ pre-commit:
       run: bun run update-package-manager
       fail_text: "❌ Failed to update package manager version."
     
-    - name: "Basic Validation"
-      run: echo "✅ Basic validation passed!"
-      fail_text: "❌ Basic validation failed."
-    
     - name: "Dependency Check"
       run: bun run deps:check
       fail_text: "❌ Dependency check failed. Please review outdated packages."
 
-# Pre-push hooks
 pre-push:
   parallel: true
   follow: true

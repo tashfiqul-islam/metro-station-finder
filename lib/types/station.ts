@@ -16,14 +16,8 @@ import {
   STATION_CONSTANTS,
   STATION_STATUSES,
   VALIDATION_PATTERNS,
-} from "@/lib/constants";
-import type {
-  Coordinates,
-  Meters,
-  Milliseconds,
-  Minutes,
-  StationId,
-} from "@/lib/types";
+} from "@/lib/config/constants";
+import type { Coordinates, Meters, Milliseconds, Minutes, StationId } from "@/lib/types";
 
 /**
  * Station status enumeration with strict patterns
@@ -31,8 +25,7 @@ import type {
  * Represents the operational status of a metro station.
  * Used to determine availability and service levels.
  */
-export type StationStatus =
-  (typeof STATION_STATUSES)[keyof typeof STATION_STATUSES];
+export type StationStatus = (typeof STATION_STATUSES)[keyof typeof STATION_STATUSES];
 
 /**
  * Metro line identifier with strict patterns
@@ -45,12 +38,10 @@ export type MetroLine = (typeof METRO_LINES)[keyof typeof METRO_LINES];
 /**
  * Template literal types for station operations
  */
-export type StationOperation =
-  `station:${"create" | "update" | "delete" | "search" | "filter"}`;
+export type StationOperation = `station:${"create" | "update" | "delete" | "search" | "filter"}`;
 export type StationEventType =
   `station:${"created" | "updated" | "deleted" | "searched" | "filtered"}`;
-export type StationStatusChange =
-  `station:${"opened" | "closed" | "maintenance" | "planned"}`;
+export type StationStatusChange = `station:${"opened" | "closed" | "maintenance" | "planned"}`;
 
 /**
  * Branded types for station operations
@@ -372,9 +363,7 @@ export type StationStatistics = {
 export function isStationStatus(value: unknown): value is StationStatus {
   return (
     typeof value === "string" &&
-    (value === "operational" ||
-      value === "under-construction" ||
-      value === "planned")
+    (value === "operational" || value === "under-construction" || value === "planned")
   );
 }
 
@@ -460,10 +449,7 @@ export function isStation(value: unknown): value is Station {
 export function isMatchType(value: unknown): value is MatchType {
   return (
     typeof value === "string" &&
-    (value === "exact" ||
-      value === "fuzzy" ||
-      value === "prefix" ||
-      value === "substring")
+    (value === "exact" || value === "fuzzy" || value === "prefix" || value === "substring")
   );
 }
 
@@ -534,9 +520,7 @@ export function matchesSearchQuery(station: Station, query: string): boolean {
     return false;
   }
 
-  const searchableText = [station.name, ...station.aliases]
-    .join(" ")
-    .toLowerCase();
+  const searchableText = [station.name, ...station.aliases].join(" ").toLowerCase();
 
   return searchableText.includes(normalizedQuery);
 }
@@ -576,9 +560,7 @@ export function calculateAmenitiesScore(station: Station): number {
  * @param stations Array of stations to sort
  * @returns Sorted stations array
  */
-export function sortStationsByOrder(
-  stations: readonly Station[]
-): readonly Station[] {
+export function sortStationsByOrder(stations: readonly Station[]): readonly Station[] {
   return [...stations].sort((a, b) => a.order - b.order);
 }
 
@@ -687,9 +669,7 @@ export const createStationRequestId = (): StationRequestId =>
 
 export const createStationVersion = (version: string): StationVersion => {
   if (!VALIDATION_PATTERNS.semver.test(version)) {
-    throw new Error(
-      "Invalid version format. Expected semantic version (e.g., '1.0.0')"
-    );
+    throw new Error("Invalid version format. Expected semantic version (e.g., '1.0.0')");
   }
   return version as StationVersion;
 };
@@ -699,9 +679,7 @@ export const createStationHash = (data: string): StationHash => {
   let hash = 0;
   for (let i = 0; i < data.length; i++) {
     const char = data.charCodeAt(i);
-    hash =
-      (hash * STATION_CONSTANTS.hashMultiplier + char) %
-      STATION_CONSTANTS.hashModulo;
+    hash = (hash * STATION_CONSTANTS.hashMultiplier + char) % STATION_CONSTANTS.hashModulo;
   }
   return Math.abs(hash).toString(STATION_CONSTANTS.hashBase) as StationHash;
 };
@@ -764,18 +742,14 @@ export const createStationCollection = (
  */
 export const createStationFactory = (config: StationConfig) => ({
   createStation: (
-    data: Omit<
-      Station,
-      "createdAt" | "updatedAt" | "version" | "hash" | "state"
-    >
+    data: Omit<Station, "createdAt" | "updatedAt" | "version" | "hash" | "state">
   ): Station => createStation(data),
   createCollection: (
     stations: readonly Station[],
     options?: Parameters<typeof createStationCollection>[1]
   ): StationCollection => createStationCollection(stations, options),
   createRequestId: (): StationRequestId => createStationRequestId(),
-  createVersion: (version: string): StationVersion =>
-    createStationVersion(version),
+  createVersion: (version: string): StationVersion => createStationVersion(version),
   createHash: (data: string): StationHash => createStationHash(data),
   config,
 });
@@ -811,24 +785,18 @@ export type StationPrivacyUtils = {
 /**
  * Advanced utility types for stations
  */
-export type ExtractStationField<
-  T extends Station,
-  K extends keyof Station,
-> = T[K];
+export type ExtractStationField<T extends Station, K extends keyof Station> = T[K];
 export type PartialStation<T extends readonly (keyof Station)[]> = {
   readonly [K in T[number]]?: Station[K];
 };
-export type StationWithAmenities<T extends Partial<StationAmenities>> =
-  Station & {
-    readonly amenities: StationAmenities & T;
-  };
+export type StationWithAmenities<T extends Partial<StationAmenities>> = Station & {
+  readonly amenities: StationAmenities & T;
+};
 
 /**
  * Station validation functions
  */
-export function validateStationRequestId(
-  value: string
-): value is StationRequestId {
+export function validateStationRequestId(value: string): value is StationRequestId {
   return (
     typeof value === "string" &&
     value.startsWith("station_req_") &&
@@ -842,9 +810,7 @@ export function validateStationVersion(value: string): value is StationVersion {
 
 export function validateStationHash(value: string): value is StationHash {
   return (
-    typeof value === "string" &&
-    VALIDATION_PATTERNS.hashPattern.test(value) &&
-    value.length > 0
+    typeof value === "string" && VALIDATION_PATTERNS.hashPattern.test(value) && value.length > 0
   );
 }
 
@@ -853,28 +819,20 @@ export function validateStationHash(value: string): value is StationHash {
  */
 export function isValidStationStatus(value: unknown): value is StationStatus {
   return (
-    typeof value === "string" &&
-    Object.values(STATION_STATUSES).includes(value as StationStatus)
+    typeof value === "string" && Object.values(STATION_STATUSES).includes(value as StationStatus)
   );
 }
 
 export function isValidMetroLine(value: unknown): value is MetroLine {
-  return (
-    typeof value === "string" &&
-    Object.values(METRO_LINES).includes(value as MetroLine)
-  );
+  return typeof value === "string" && Object.values(METRO_LINES).includes(value as MetroLine);
 }
 
 export function isValidMatchType(value: unknown): value is MatchType {
-  return (
-    typeof value === "string" &&
-    Object.values(MATCH_TYPES).includes(value as MatchType)
-  );
+  return typeof value === "string" && Object.values(MATCH_TYPES).includes(value as MatchType);
 }
 
 export function isValidAmenityKey(value: unknown): value is AmenityKey {
   return (
-    typeof value === "string" &&
-    (Object.values(AMENITY_TYPES) as readonly string[]).includes(value)
+    typeof value === "string" && (Object.values(AMENITY_TYPES) as readonly string[]).includes(value)
   );
 }

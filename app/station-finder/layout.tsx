@@ -15,8 +15,7 @@ export const metadata: Metadata = {
   ],
   openGraph: {
     title: "Station Finder - Find Dhaka Metro Stations",
-    description:
-      "Discover the nearest metro station with interactive maps and search",
+    description: "Discover the nearest metro station with interactive maps and search",
     type: "website",
   },
   alternates: {
@@ -24,10 +23,6 @@ export const metadata: Metadata = {
   },
 };
 
-export default function StationFinderLayout({
-  children,
-}: {
-  readonly children: React.ReactNode;
-}) {
+export default function StationFinderLayout({ children }: { readonly children: React.ReactNode }) {
   return <div className="min-h-full">{children}</div>;
 }

@@ -15,13 +15,8 @@ import {
   ID_CONSTANTS,
   PLACE_FIELDS,
   QUOTA_CONSTANTS,
-} from "@/lib/constants";
-import type {
-  Coordinates,
-  GooglePlacesErrorCode,
-  Meters,
-  Milliseconds,
-} from "@/lib/types";
+} from "@/lib/config/constants";
+import type { Coordinates, GooglePlacesErrorCode, Meters, Milliseconds } from "@/lib/types";
 
 /**
  * Template literal types for Google Places operations
@@ -50,8 +45,7 @@ export type PlaceField = (typeof PLACE_FIELDS)[keyof typeof PLACE_FIELDS];
 /**
  * Google Maps API status codes
  */
-export type GoogleMapsStatus =
-  (typeof GOOGLE_MAPS_STATUS)[keyof typeof GOOGLE_MAPS_STATUS];
+export type GoogleMapsStatus = (typeof GOOGLE_MAPS_STATUS)[keyof typeof GOOGLE_MAPS_STATUS];
 
 /**
  * Place prediction from Google Places Autocomplete API
@@ -307,10 +301,7 @@ export function createPlacesRequestId(): PlacesRequestId {
   const timestamp = Date.now().toString(ID_CONSTANTS.base36);
   const random = Math.random()
     .toString(ID_CONSTANTS.base36)
-    .slice(
-      ID_CONSTANTS.idStartIndex,
-      ID_CONSTANTS.idStartIndex + ID_CONSTANTS.idLength
-    );
+    .slice(ID_CONSTANTS.idStartIndex, ID_CONSTANTS.idStartIndex + ID_CONSTANTS.idLength);
   return `places_${timestamp}_${random}` as PlacesRequestId;
 }
 
@@ -321,10 +312,7 @@ export function createPlacesSessionId(): PlacesSessionId {
   const timestamp = Date.now().toString(ID_CONSTANTS.base36);
   const random = Math.random()
     .toString(ID_CONSTANTS.base36)
-    .slice(
-      ID_CONSTANTS.idStartIndex,
-      ID_CONSTANTS.idStartIndex + ID_CONSTANTS.idLength
-    );
+    .slice(ID_CONSTANTS.idStartIndex, ID_CONSTANTS.idStartIndex + ID_CONSTANTS.idLength);
   return `session_${timestamp}_${random}` as PlacesSessionId;
 }
 
@@ -347,9 +335,7 @@ export function createPlacesCacheKey(
 /**
  * Validate PlacesRequestId
  */
-export function validatePlacesRequestId(
-  value: string
-): value is PlacesRequestId {
+export function validatePlacesRequestId(value: string): value is PlacesRequestId {
   return (
     typeof value === "string" &&
     value.startsWith("places_") &&
@@ -360,9 +346,7 @@ export function validatePlacesRequestId(
 /**
  * Validate PlacesSessionId
  */
-export function validatePlacesSessionId(
-  value: string
-): value is PlacesSessionId {
+export function validatePlacesSessionId(value: string): value is PlacesSessionId {
   return (
     typeof value === "string" &&
     value.startsWith("session_") &&
@@ -443,21 +427,15 @@ export function getTimeUntilQuotaReset(quotaInfo: ApiQuotaInfo): Milliseconds {
  * Convert Google Places API response to internal format
  */
 export function convertGooglePlacesPrediction(apiPrediction: {
-  // biome-ignore lint/style/useNamingConvention: Google Places API uses snake_case
   place_id: string;
   description: string;
-  // biome-ignore lint/style/useNamingConvention: Google Places API uses snake_case
   structured_formatting: {
-    // biome-ignore lint/style/useNamingConvention: Google Places API uses snake_case
     main_text: string;
-    // biome-ignore lint/style/useNamingConvention: Google Places API uses snake_case
     main_text_matched_substrings?: readonly {
       offset: number;
       length: number;
     }[];
-    // biome-ignore lint/style/useNamingConvention: Google Places API uses snake_case
     secondary_text: string;
-    // biome-ignore lint/style/useNamingConvention: Google Places API uses snake_case
     secondary_text_matched_substrings?: readonly {
       offset: number;
       length: number;
@@ -465,10 +443,8 @@ export function convertGooglePlacesPrediction(apiPrediction: {
   };
   terms: readonly { offset: number; value: string }[];
   types: readonly string[];
-  // biome-ignore lint/style/useNamingConvention: Google Places API uses snake_case
   matched_substrings?: readonly { offset: number; length: number }[];
   reference?: string;
-  // biome-ignore lint/style/useNamingConvention: Google Places API uses snake_case
   distance_meters?: number;
 }): PlacePrediction {
   return {
@@ -480,8 +456,7 @@ export function convertGooglePlacesPrediction(apiPrediction: {
         apiPrediction.structured_formatting.main_text_matched_substrings ?? [],
       secondaryText: apiPrediction.structured_formatting.secondary_text,
       secondaryTextMatchedSubstrings:
-        apiPrediction.structured_formatting.secondary_text_matched_substrings ??
-        [],
+        apiPrediction.structured_formatting.secondary_text_matched_substrings ?? [],
     },
     terms: apiPrediction.terms,
     types: apiPrediction.types,
@@ -497,10 +472,8 @@ export function convertGooglePlacesPrediction(apiPrediction: {
  * Convert Google Places API details to internal format
  */
 export function convertGooglePlacesDetails(apiDetails: {
-  // biome-ignore lint/style/useNamingConvention: Google Places API uses snake_case
   place_id: string;
   name: string;
-  // biome-ignore lint/style/useNamingConvention: Google Places API uses snake_case
   formatted_address: string;
   geometry: {
     location: Coordinates;
@@ -508,53 +481,36 @@ export function convertGooglePlacesDetails(apiDetails: {
   };
   types: readonly string[];
   rating?: number;
-  // biome-ignore lint/style/useNamingConvention: Google Places API uses snake_case
   user_ratings_total?: number;
-  // biome-ignore lint/style/useNamingConvention: Google Places API uses snake_case
   price_level?: number;
-  // biome-ignore lint/style/useNamingConvention: Google Places API uses snake_case
   opening_hours?: {
-    // biome-ignore lint/style/useNamingConvention: Google Places API uses snake_case
     open_now: boolean;
-    // biome-ignore lint/style/useNamingConvention: Google Places API uses snake_case
     weekday_text: readonly string[];
   };
   photos?: readonly {
     height: number;
-    // biome-ignore lint/style/useNamingConvention: Google Places API uses snake_case
     html_attributions: readonly string[];
-    // biome-ignore lint/style/useNamingConvention: Google Places API uses snake_case
     photo_reference: string;
     width: number;
   }[];
   reviews?: readonly {
-    // biome-ignore lint/style/useNamingConvention: Google Places API uses snake_case
     author_name: string;
-    // biome-ignore lint/style/useNamingConvention: Google Places API uses snake_case
     author_url: string;
     language: string;
-    // biome-ignore lint/style/useNamingConvention: Google Places API uses snake_case
     profile_photo_url: string;
     rating: number;
-    // biome-ignore lint/style/useNamingConvention: Google Places API uses snake_case
     relative_time_description: string;
     text: string;
     time: number;
   }[];
   website?: string;
-  // biome-ignore lint/style/useNamingConvention: Google Places API uses snake_case
   international_phone_number?: string;
-  // biome-ignore lint/style/useNamingConvention: Google Places API uses snake_case
   formatted_phone_number?: string;
-  // biome-ignore lint/style/useNamingConvention: Google Places API uses snake_case
   address_components?: readonly {
-    // biome-ignore lint/style/useNamingConvention: Google Places API uses snake_case
     long_name: string;
-    // biome-ignore lint/style/useNamingConvention: Google Places API uses snake_case
     short_name: string;
     types: readonly string[];
   }[];
-  // biome-ignore lint/style/useNamingConvention: Google Places API uses snake_case
   utc_offset?: number;
   vicinity?: string;
   url?: string;
@@ -675,9 +631,7 @@ export function isPlaceDetails(value: unknown): value is PlaceDetails {
 /**
  * Type guard for GooglePlacesError
  */
-export function isGooglePlacesError(
-  value: unknown
-): value is GooglePlacesError {
+export function isGooglePlacesError(value: unknown): value is GooglePlacesError {
   if (typeof value !== "object" || value === null) {
     return false;
   }
@@ -725,9 +679,7 @@ export function isQuotaStatus(value: unknown): value is QuotaStatus {
 /**
  * Create default Google Places service configuration
  */
-export function createDefaultGooglePlacesConfig(
-  apiKey: string
-): GooglePlacesServiceConfig {
+export function createDefaultGooglePlacesConfig(apiKey: string): GooglePlacesServiceConfig {
   return {
     apiKey: apiKey as PlacesApiKey,
     rateLimit: {
@@ -817,12 +769,7 @@ export function extractCoordinates(details: PlaceDetails): Coordinates {
  */
 export function isTransitStation(details: PlaceDetails): boolean {
   return details.types.some((type) =>
-    [
-      "transit_station",
-      "subway_station",
-      "train_station",
-      "bus_station",
-    ].includes(type)
+    ["transit_station", "subway_station", "train_station", "bus_station"].includes(type)
   );
 }
 
@@ -831,10 +778,7 @@ export function isTransitStation(details: PlaceDetails): boolean {
  */
 const DEFAULT_MIN_RATING = 4.0;
 
-export function hasGoodRating(
-  details: PlaceDetails,
-  minRating = DEFAULT_MIN_RATING
-): boolean {
+export function hasGoodRating(details: PlaceDetails, minRating = DEFAULT_MIN_RATING): boolean {
   return details.rating !== undefined && details.rating >= minRating;
 }
 
@@ -885,20 +829,10 @@ export function sortPlacePredictions(
   return [...predictions].sort((a, b) => {
     // Prioritize transit stations
     const aIsTransit = a.types.some((type) =>
-      [
-        "transit_station",
-        "subway_station",
-        "train_station",
-        "bus_station",
-      ].includes(type)
+      ["transit_station", "subway_station", "train_station", "bus_station"].includes(type)
     );
     const bIsTransit = b.types.some((type) =>
-      [
-        "transit_station",
-        "subway_station",
-        "train_station",
-        "bus_station",
-      ].includes(type)
+      ["transit_station", "subway_station", "train_station", "bus_station"].includes(type)
     );
 
     if (aIsTransit && !bIsTransit) {
@@ -972,19 +906,13 @@ export function parsePlaceSearchQuery(queryString: string): {
   const locationParam = params.get("location");
   const location = locationParam
     ? {
-        lat: Number.parseFloat(
-          locationParam.split(",")[0] ?? "0"
-        ) as Coordinates["lat"],
-        lng: Number.parseFloat(
-          locationParam.split(",")[1] ?? "0"
-        ) as Coordinates["lng"],
+        lat: Number.parseFloat(locationParam.split(",")[0] ?? "0") as Coordinates["lat"],
+        lng: Number.parseFloat(locationParam.split(",")[1] ?? "0") as Coordinates["lng"],
       }
     : undefined;
 
   const radiusParam = params.get("radius");
-  const radius = radiusParam
-    ? (Number.parseInt(radiusParam, 10) as Meters)
-    : undefined;
+  const radius = radiusParam ? (Number.parseInt(radiusParam, 10) as Meters) : undefined;
 
   const typesParam = params.get("types");
   const types = typesParam ? typesParam.split("|") : undefined;
@@ -1021,13 +949,8 @@ export function validatePlaceSearchParams(params: {
 }): { isValid: boolean; errors: string[] } {
   const errors: string[] = [];
 
-  if (
-    !params.query ||
-    params.query.length < GOOGLE_PLACES_CONSTANTS.minQueryLength
-  ) {
-    errors.push(
-      `Query must be at least ${GOOGLE_PLACES_CONSTANTS.minQueryLength} characters long`
-    );
+  if (!params.query || params.query.length < GOOGLE_PLACES_CONSTANTS.minQueryLength) {
+    errors.push(`Query must be at least ${GOOGLE_PLACES_CONSTANTS.minQueryLength} characters long`);
   }
 
   const LatitudeMin = -90;
@@ -1036,19 +959,11 @@ export function validatePlaceSearchParams(params: {
   const LongitudeMax = 180;
 
   if (params.location) {
-    if (
-      params.location.lat < LatitudeMin ||
-      params.location.lat > LatitudeMax
-    ) {
+    if (params.location.lat < LatitudeMin || params.location.lat > LatitudeMax) {
       errors.push(`Latitude must be between ${LatitudeMin} and ${LatitudeMax}`);
     }
-    if (
-      params.location.lng < LongitudeMin ||
-      params.location.lng > LongitudeMax
-    ) {
-      errors.push(
-        `Longitude must be between ${LongitudeMin} and ${LongitudeMax}`
-      );
+    if (params.location.lng < LongitudeMin || params.location.lng > LongitudeMax) {
+      errors.push(`Longitude must be between ${LongitudeMin} and ${LongitudeMax}`);
     }
   }
 
@@ -1058,9 +973,7 @@ export function validatePlaceSearchParams(params: {
   }
 
   if (params.types) {
-    const invalidTypes = params.types.filter(
-      (type) => !validatePlaceField(type)
-    );
+    const invalidTypes = params.types.filter((type) => !validatePlaceField(type));
     if (invalidTypes.length > 0) {
       errors.push(`Invalid place types: ${invalidTypes.join(", ")}`);
     }
@@ -1088,10 +1001,7 @@ export function createPlaceSearchFactory(config: GooglePlacesServiceConfig) {
       });
     },
 
-    getDetails: (
-      _placeId: string,
-      _options?: Partial<GooglePlacesRequestConfig>
-    ) => {
+    getDetails: (_placeId: string, _options?: Partial<GooglePlacesRequestConfig>) => {
       // Implementation would go here
       return Promise.resolve({
         success: true,
@@ -1146,10 +1056,7 @@ export function createPlaceCacheManager(config: PlacesCacheConfig) {
           data,
           timestamp: Date.now(),
         };
-        localStorage.setItem(
-          `${config.storageKey}_${key}`,
-          JSON.stringify(cacheEntry)
-        );
+        localStorage.setItem(`${config.storageKey}_${key}`, JSON.stringify(cacheEntry));
       } catch {
         // Storage quota exceeded or other error
       }

@@ -20,14 +20,8 @@
  * ```
  */
 
-import { DHAKA_SERVICE_AREA, GEOLOCATION_CONSTANTS } from "@/lib/constants";
-import type {
-  Coordinates,
-  Kilometers,
-  Meters,
-  Milliseconds,
-  Minutes,
-} from "@/lib/types";
+import { DHAKA_SERVICE_AREA, GEOLOCATION_CONSTANTS } from "@/lib/config/constants";
+import type { Coordinates, Kilometers, Meters, Milliseconds, Minutes } from "@/lib/types";
 
 /**
  * Distance calculation method types using template literals
@@ -63,11 +57,7 @@ type DistanceCalculationResult =
  * Added VALIDATION_ERROR for better error granularity
  */
 type DistanceCalculationError = {
-  readonly code:
-    | "INVALID_COORDINATES"
-    | "VALIDATION_ERROR"
-    | "CALCULATION_ERROR"
-    | "OUT_OF_BOUNDS";
+  readonly code: "INVALID_COORDINATES" | "VALIDATION_ERROR" | "CALCULATION_ERROR" | "OUT_OF_BOUNDS";
   readonly message: string;
   readonly details?: unknown;
 };
@@ -268,14 +258,9 @@ function isValidCoordinates(value: unknown): value is Coordinates {
  * @param context - Context for error message
  * @throws {Error} If value is not valid Coordinates
  */
-function assertValidCoordinates(
-  value: unknown,
-  context: string
-): asserts value is Coordinates {
+function assertValidCoordinates(value: unknown, context: string): asserts value is Coordinates {
   if (!isValidCoordinates(value)) {
-    throw new Error(
-      `Invalid coordinates in ${context}: ${JSON.stringify(value)}`
-    );
+    throw new Error(`Invalid coordinates in ${context}: ${JSON.stringify(value)}`);
   }
 }
 
@@ -301,10 +286,7 @@ function validateCoordinates(coords: unknown): CoordinateValidation {
     errors.push("Latitude must be a number");
   } else if (!Number.isFinite(c.lat)) {
     errors.push("Latitude must be finite");
-  } else if (
-    c.lat < VALIDATION_BOUNDS.latitudeMin ||
-    c.lat > VALIDATION_BOUNDS.latitudeMax
-  ) {
+  } else if (c.lat < VALIDATION_BOUNDS.latitudeMin || c.lat > VALIDATION_BOUNDS.latitudeMax) {
     errors.push(
       `Latitude must be between ${VALIDATION_BOUNDS.latitudeMin} and ${VALIDATION_BOUNDS.latitudeMax}`
     );
@@ -316,10 +298,7 @@ function validateCoordinates(coords: unknown): CoordinateValidation {
     errors.push("Longitude must be a number");
   } else if (!Number.isFinite(c.lng)) {
     errors.push("Longitude must be finite");
-  } else if (
-    c.lng < VALIDATION_BOUNDS.longitudeMin ||
-    c.lng > VALIDATION_BOUNDS.longitudeMax
-  ) {
+  } else if (c.lng < VALIDATION_BOUNDS.longitudeMin || c.lng > VALIDATION_BOUNDS.longitudeMax) {
     errors.push(
       `Longitude must be between ${VALIDATION_BOUNDS.longitudeMin} and ${VALIDATION_BOUNDS.longitudeMax}`
     );
@@ -374,11 +353,7 @@ function convertDistance(meters: Meters, unit: DistanceUnit): number {
  * console.log(`Distance: ${distance}m`);
  * ```
  */
-function calculateHaversineMeters(
-  a: Coordinates,
-  b: Coordinates,
-  useCache = true
-): Meters {
+function calculateHaversineMeters(a: Coordinates, b: Coordinates, useCache = true): Meters {
   // Check cache first
   if (useCache) {
     const cached = distanceCache.get({ a, b, method: "haversine" });
@@ -397,8 +372,7 @@ function calculateHaversineMeters(
   const sinDLat = Math.sin(dLat / 2);
   const sinDLng = Math.sin(dLng / 2);
 
-  const h =
-    sinDLat * sinDLat + Math.cos(lat1) * Math.cos(lat2) * sinDLng * sinDLng;
+  const h = sinDLat * sinDLat + Math.cos(lat1) * Math.cos(lat2) * sinDLng * sinDLng;
   const c = 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
 
   const distance = Math.round(EARTH_CONSTANTS.radiusMeters * c) as Meters;
@@ -429,9 +403,7 @@ function metersToKilometers(distance: Meters): Kilometers {
  * @returns Walking time in minutes (rounded up)
  */
 function estimateWalkingMinutes(distance: Meters): Minutes {
-  return Math.ceil(
-    distance / GEOLOCATION_CONSTANTS.walkingSpeedMPerMin
-  ) as Minutes;
+  return Math.ceil(distance / GEOLOCATION_CONSTANTS.walkingSpeedMPerMin) as Minutes;
 }
 
 /**
@@ -502,12 +474,9 @@ export function calculateDistance(
     }
 
     // Check cache before calculation
-    const cached = enableCache
-      ? distanceCache.get({ a, b, method })
-      : undefined;
+    const cached = enableCache ? distanceCache.get({ a, b, method }) : undefined;
 
-    const distanceMeters =
-      cached ?? calculateHaversineMeters(a, b, enableCache);
+    const distanceMeters = cached ?? calculateHaversineMeters(a, b, enableCache);
     const distanceKilometers = metersToKilometers(distanceMeters);
     const walkingTimeMinutes = estimateWalkingMinutes(distanceMeters);
     const distance = convertDistance(distanceMeters, unit);
@@ -528,8 +497,7 @@ export function calculateDistance(
       success: false,
       error: {
         code: "CALCULATION_ERROR",
-        message:
-          error instanceof Error ? error.message : "Unknown calculation error",
+        message: error instanceof Error ? error.message : "Unknown calculation error",
         details: error,
       },
       method,
@@ -557,10 +525,7 @@ export function isWithinServiceArea(coordinates: Coordinates): boolean {
     return false;
   }
 
-  const distance = calculateHaversineMeters(
-    coordinates,
-    DHAKA_SERVICE_AREA.centroid
-  );
+  const distance = calculateHaversineMeters(coordinates, DHAKA_SERVICE_AREA.centroid);
   return distance <= DHAKA_SERVICE_AREA.radiusMeters;
 }
 
@@ -618,15 +583,10 @@ type BoundingBox = {
  * @param radiusMeters - Radius in meters
  * @returns Bounding box
  */
-function computeBoundingBox(
-  center: Coordinates,
-  radiusMeters: Meters
-): BoundingBox {
-  const latDelta =
-    (radiusMeters as number) / EARTH_CONSTANTS.metersPerDegreeLat;
+function computeBoundingBox(center: Coordinates, radiusMeters: Meters): BoundingBox {
+  const latDelta = (radiusMeters as number) / EARTH_CONSTANTS.metersPerDegreeLat;
   const latRad = toRadians(center.lat);
-  const metersPerDegreeLng =
-    Math.cos(latRad) * EARTH_CONSTANTS.metersPerDegreeLat || 1;
+  const metersPerDegreeLng = Math.cos(latRad) * EARTH_CONSTANTS.metersPerDegreeLat || 1;
   const lngDelta = (radiusMeters as number) / metersPerDegreeLng;
 
   return {
@@ -714,10 +674,7 @@ export function findNearestCoordinate(
   for (const candidate of candidates) {
     const result = calculateDistance(origin, candidate);
 
-    if (
-      result.success &&
-      (nearest === undefined || result.distanceMeters < nearest.distance)
-    ) {
+    if (result.success && (nearest === undefined || result.distanceMeters < nearest.distance)) {
       nearest = {
         coordinate: candidate,
         distance: result.distanceMeters,
@@ -753,8 +710,7 @@ export function calculateDistancePure(a: Coordinates, b: Coordinates): Meters {
   const sinDLat = Math.sin(dLat / 2);
   const sinDLng = Math.sin(dLng / 2);
 
-  const h =
-    sinDLat * sinDLat + Math.cos(lat1) * Math.cos(lat2) * sinDLng * sinDLng;
+  const h = sinDLat * sinDLat + Math.cos(lat1) * Math.cos(lat2) * sinDLng * sinDLng;
   const c = 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
 
   return Math.round(EARTH_CONSTANTS.radiusMeters * c) as Meters;
@@ -768,10 +724,7 @@ export function calculateDistancePure(a: Coordinates, b: Coordinates): Meters {
  * @param b - Second coordinate
  * @returns Distance in kilometers
  */
-export function calculateDistanceKilometersPure(
-  a: Coordinates,
-  b: Coordinates
-): Kilometers {
+export function calculateDistanceKilometersPure(a: Coordinates, b: Coordinates): Kilometers {
   const distanceMeters = calculateDistancePure(a, b);
   return metersToKilometers(distanceMeters);
 }
@@ -795,16 +748,11 @@ export function calculateDistanceKilometersPure(
  * calculator.clearCache();
  * ```
  */
-export function createDistanceCalculator(
-  config?: DistanceCalculatorConfig
-): DistanceCalculator {
+export function createDistanceCalculator(config?: DistanceCalculatorConfig): DistanceCalculator {
   const localCache = new LRUCache<
     { a: Coordinates; b: Coordinates; method: CalculationMethod },
     Meters
-  >(
-    config?.cacheSize ?? CACHE_CONFIG.maxSize,
-    config?.cacheTTL ?? CACHE_CONFIG.maxAge
-  );
+  >(config?.cacheSize ?? CACHE_CONFIG.maxSize, config?.cacheTTL ?? CACHE_CONFIG.maxAge);
 
   const calculateHaversineWithCache = (
     a: Coordinates,
@@ -844,10 +792,7 @@ export function createDistanceCalculator(
           success: false,
           error: {
             code: "CALCULATION_ERROR",
-            message:
-              error instanceof Error
-                ? error.message
-                : "Unknown calculation error",
+            message: error instanceof Error ? error.message : "Unknown calculation error",
             details: error,
           },
           method,
@@ -857,12 +802,7 @@ export function createDistanceCalculator(
     },
 
     calculateDistanceKilometers: (a, b, enableCache = true) => {
-      const distanceMeters = calculateHaversineWithCache(
-        a,
-        b,
-        enableCache,
-        "haversine"
-      );
+      const distanceMeters = calculateHaversineWithCache(a, b, enableCache, "haversine");
       return metersToKilometers(distanceMeters);
     },
 
@@ -876,12 +816,7 @@ export function createDistanceCalculator(
         return false;
       }
 
-      const distance = calculateHaversineWithCache(
-        center,
-        point,
-        true,
-        "haversine"
-      );
+      const distance = calculateHaversineWithCache(center, point, true, "haversine");
       return distance <= radiusMeters;
     },
 

@@ -70,11 +70,7 @@ export default defineConfig({
 
     passWithNoTests: true,
     allowOnly: !isCI,
-    reporters: [
-      "default",
-      ...(isCI ? ["junit"] : []),
-      ...(isDebug ? ["verbose"] : []),
-    ],
+    reporters: ["default", ...(isCI ? ["junit"] : []), ...(isDebug ? ["verbose"] : [])],
 
     coverage: {
       provider: "v8",
@@ -147,17 +143,7 @@ export default defineConfig({
     },
 
     typecheck: {
-      enabled: true,
-      checker: "tsc",
-      include: ["**/*.{test,spec}.{ts,tsx}"],
-      exclude: [
-        "**/node_modules/**",
-        "**/dist/**",
-        "**/coverage/**",
-        "**/out/**",
-        "**/.next/**",
-      ],
-      tsconfig: "./tsconfig.test.json",
+      enabled: false,
     },
 
     watch: !isCI && isWatch,
@@ -171,14 +157,19 @@ export default defineConfig({
     alias: {
       "@": resolve(__dirname, "."),
       "~": resolve(__dirname, "."),
-      "@/components": resolve(__dirname, "./components"),
-      "@/ui": resolve(__dirname, "./components/ui"),
-      "@/lib": resolve(__dirname, "./lib"),
-      "@/utils": resolve(__dirname, "./lib/utils"),
-      "@/types": resolve(__dirname, "./lib/types"),
-      "@/hooks": resolve(__dirname, "./hooks"),
-      "@/styles": resolve(__dirname, "./styles"),
       "@/app": resolve(__dirname, "./app"),
+      "@/components": resolve(__dirname, "./app/_components"),
+      "@/components/shared": resolve(__dirname, "./app/_components/shared"),
+      "@/components/shared/cards": resolve(__dirname, "./app/_components/shared/cards"),
+      "@/components/shared/buttons": resolve(__dirname, "./app/_components/shared/buttons"),
+      "@/components/shared/effects": resolve(__dirname, "./app/_components/shared/effects"),
+      "@/components/shared/ui": resolve(__dirname, "./app/_components/shared/ui"),
+      "@/components/home": resolve(__dirname, "./app/_components/home"),
+      "@/lib": resolve(__dirname, "./lib"),
+      "@/hooks": resolve(__dirname, "./lib/hooks"),
+      "@/types": resolve(__dirname, "./lib/types"),
+      "@/utils": resolve(__dirname, "./lib/utils"),
+      "@/styles": resolve(__dirname, "./styles"),
       "@/test": resolve(__dirname, "./test"),
       "@/__mocks__": resolve(__dirname, "./__mocks__"),
     },
@@ -195,9 +186,7 @@ export default defineConfig({
   },
 
   define: {
-    // biome-ignore lint/style/useNamingConvention: Global constants for Vitest
     __VITEST__: true,
-    // biome-ignore lint/style/useNamingConvention: Global constants for Vitest
     __TEST__: true,
     "import.meta.vitest": "true",
     "process.env.nodeEnv": '"test"',

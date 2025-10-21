@@ -36,24 +36,20 @@ const validations = [
     name: "Next.js Configuration",
     validate: () => {
       const nextConfig = readFileSync("next.config.ts", "utf8");
-      return (
-        nextConfig.includes("NextConfig") && nextConfig.includes("turbopack")
-      );
+      return nextConfig.includes("NextConfig") && nextConfig.includes("turbopack");
     },
   },
   {
     name: "Ultracite Configuration",
     validate: () => {
       const biome = JSON.parse(readFileSync("biome.jsonc", "utf8"));
-      return (
-        biome.extends?.includes("ultracite") && biome.linter?.enabled === true
-      );
+      return biome.extends?.includes("ultracite") && biome.linter?.enabled === true;
     },
   },
   {
     name: "Project Structure",
     validate: () => {
-      const requiredDirs = ["app", "lib", "types", "scripts"];
+      const requiredDirs = ["app", "lib", "scripts"];
       const requiredFiles = ["next.config.ts", "tsconfig.json", "biome.jsonc"];
 
       return (

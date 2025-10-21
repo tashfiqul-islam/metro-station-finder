@@ -6,10 +6,19 @@
     box-sizing: border-box;
   }
 
+  /* Force Ropa Sans font loading with highest specificity */
+  html,
+  body,
+  * {
+    font-family:
+      var(--font-ropa-sans), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+      sans-serif !important;
+  }
+
   html {
     font-family:
-      var(--font-ropa-sans), system-ui, -apple-system, BlinkMacSystemFont,
-      "Segoe UI", Roboto, sans-serif;
+      var(--font-ropa-sans), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+      sans-serif !important;
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -17,6 +26,9 @@
   }
 
   body {
+    font-family:
+      var(--font-ropa-sans), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+      sans-serif !important;
     margin: 0;
     background-color: transparent;
     color: hsl(var(--foreground));
@@ -33,6 +45,23 @@
   h5,
   h6 {
     font-display: swap;
+    font-family:
+      var(--font-ropa-sans), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+      sans-serif !important;
+  }
+
+  /* Ensure all text elements use Ropa Sans */
+  p,
+  span,
+  div,
+  a,
+  button,
+  input,
+  textarea,
+  label {
+    font-family:
+      var(--font-ropa-sans), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+      sans-serif !important;
   }
 
   /* Critical container styles to prevent stretching */
@@ -74,6 +103,16 @@
     background-color: hsl(var(--background));
     border-bottom: 1px solid hsl(var(--border));
     backdrop-filter: blur(8px);
+  }
+
+  /* Prevent layout shifts during navigation */
+  header {
+    contain: layout style paint;
+    will-change: auto;
+  }
+
+  nav {
+    contain: layout style;
   }
 
   .navbar-container {

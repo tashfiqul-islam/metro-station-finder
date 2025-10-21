@@ -175,8 +175,7 @@ export default {
       issuePrefixes: ["#", "gh-", "metro-"],
       noteKeywords: ["BREAKING CHANGE", "BREAKING CHANGES"],
       fieldPattern: /^-(.*?)-$/,
-      revertPattern:
-        /^(?:Revert|revert:)\s"?([\s\S]*?)"?\s*This reverts commit (\w*)\./i,
+      revertPattern: /^(?:Revert|revert:)\s"?([\s\S]*?)"?\s*This reverts commit (\w*)\./i,
       revertCorrespondence: ["header", "hash"],
       warn() {
         // No-op warning function
@@ -191,8 +190,7 @@ export default {
   // ============================================================================
 
   // Help URL
-  helpUrl:
-    "https://github.com/conventional-changelog/commitlint/#what-is-commitlint",
+  helpUrl: "https://github.com/conventional-changelog/commitlint/#what-is-commitlint",
 
   // Ignore patterns
   ignores: [

@@ -14,20 +14,9 @@ import {
   MATCH_TYPES,
   SEARCH_CONSTANTS,
   SEARCH_SCORING,
-} from "@/lib/constants";
-import type {
-  Coordinates,
-  Meters,
-  Milliseconds,
-  Minutes,
-  StationErrorCode,
-} from "@/lib/types";
-import type {
-  MetroLine,
-  Station,
-  StationAmenities,
-  StationStatus,
-} from "@/lib/types/station";
+} from "@/lib/config/constants";
+import type { Coordinates, Meters, Milliseconds, Minutes, StationErrorCode } from "@/lib/types";
+import type { MetroLine, Station, StationAmenities, StationStatus } from "@/lib/types/station";
 
 /**
  * Search relevance scoring constants
@@ -39,7 +28,7 @@ import type {
  * Describes how a search query matched a station.
  * Used for ranking and highlighting search results.
  */
-import type { MatchType } from "@/lib/constants";
+import type { MatchType } from "@/lib/config/constants";
 
 /**
  * Branded types for better type safety
@@ -266,11 +255,7 @@ export type SearchContext = {
  *
  * Indicates how the search was initiated.
  */
-export type SearchSource =
-  | "user-input"
-  | "geolocation"
-  | "autocomplete"
-  | "manual";
+export type SearchSource = "user-input" | "geolocation" | "autocomplete" | "manual";
 
 /**
  * Template literal types for search events
@@ -349,10 +334,7 @@ export type SearchServiceState = {
  * @param station Station that was matched
  * @returns Relevance score between 0 and 1
  */
-export function calculateRelevanceScore(
-  match: SearchMatch,
-  station: Station
-): number {
+export function calculateRelevanceScore(match: SearchMatch, station: Station): number {
   let score: number;
 
   // Base score by match type with exhaustive checking
@@ -391,10 +373,7 @@ export function calculateRelevanceScore(
   }
 
   // Penalty for edit distance in fuzzy matches
-  if (
-    match.matchType === MATCH_TYPES.fuzzy &&
-    match.editDistance !== undefined
-  ) {
+  if (match.matchType === MATCH_TYPES.fuzzy && match.editDistance !== undefined) {
     score *= 1 - match.editDistance * SEARCH_SCORING.editDistancePenalty;
   }
 
@@ -448,10 +427,7 @@ export function sortSearchResults(
  * @param filter Filter criteria to apply
  * @returns True if station matches all filter criteria
  */
-function matchesStatusFilter(
-  station: Station,
-  statuses: readonly StationStatus[]
-): boolean {
+function matchesStatusFilter(station: Station, statuses: readonly StationStatus[]): boolean {
   return statuses.includes(station.status);
 }
 
@@ -462,10 +438,7 @@ function matchesStatusFilter(
  * @param lines Lines to filter by
  * @returns True if station is on one of the specified lines
  */
-function matchesLineFilter(
-  station: Station,
-  lines: readonly MetroLine[]
-): boolean {
+function matchesLineFilter(station: Station, lines: readonly MetroLine[]): boolean {
   return lines.includes(station.line);
 }
 
@@ -476,10 +449,7 @@ function matchesLineFilter(
  * @param maxDistance Maximum allowed distance
  * @returns True if station is within the specified distance
  */
-function matchesDistanceFilter(
-  result: SearchResult,
-  maxDistance: Meters
-): boolean {
+function matchesDistanceFilter(result: SearchResult, maxDistance: Meters): boolean {
   return result.distance === undefined || result.distance <= maxDistance;
 }
 
@@ -531,10 +501,7 @@ export function filterSearchResults(
     const { station } = result;
 
     // Status filter
-    if (
-      filter.status !== undefined &&
-      !matchesStatusFilter(station, filter.status)
-    ) {
+    if (filter.status !== undefined && !matchesStatusFilter(station, filter.status)) {
       return false;
     }
 
@@ -544,18 +511,12 @@ export function filterSearchResults(
     }
 
     // Distance filter
-    if (
-      filter.maxDistance !== undefined &&
-      !matchesDistanceFilter(result, filter.maxDistance)
-    ) {
+    if (filter.maxDistance !== undefined && !matchesDistanceFilter(result, filter.maxDistance)) {
       return false;
     }
 
     // Amenities filter
-    if (
-      filter.amenities !== undefined &&
-      !matchesAmenitiesFilter(station, filter.amenities)
-    ) {
+    if (filter.amenities !== undefined && !matchesAmenitiesFilter(station, filter.amenities)) {
       return false;
     }
 
@@ -609,8 +570,7 @@ export function createSearchMatch(matchData: {
  * Enhanced type guards with better inference
  */
 export const isValidMatchType = <T>(value: T): value is T & MatchType =>
-  typeof value === "string" &&
-  Object.values(MATCH_TYPES).includes(value as MatchType);
+  typeof value === "string" && Object.values(MATCH_TYPES).includes(value as MatchType);
 
 /**
  * Type guard for MatchType (legacy support)
@@ -644,11 +604,7 @@ type UpdateSearchState<T extends Record<string, unknown>> = <K extends keyof T>(
   value: T[K]
 ) => T;
 
-export const updateSearchState: UpdateSearchState<SearchServiceState> = (
-  state,
-  key,
-  value
-) => ({
+export const updateSearchState: UpdateSearchState<SearchServiceState> = (state, key, value) => ({
   ...state,
   [key]: value,
 });
@@ -660,10 +616,7 @@ export const updateSearchState: UpdateSearchState<SearchServiceState> = (
  * @returns True if value is a valid MatchedField
  */
 export function isMatchedField(value: unknown): value is MatchedField {
-  return (
-    typeof value === "string" &&
-    (value === "name" || value === "alias" || value === "line")
-  );
+  return typeof value === "string" && (value === "name" || value === "alias" || value === "line");
 }
 
 /**
@@ -702,24 +655,15 @@ export function isSearchOptions(value: unknown): value is SearchOptions {
   };
 
   // Check optional properties with proper type checking
-  if (
-    options.maxResults !== undefined &&
-    typeof options.maxResults !== "number"
-  ) {
+  if (options.maxResults !== undefined && typeof options.maxResults !== "number") {
     return false;
   }
 
-  if (
-    options.minRelevanceScore !== undefined &&
-    typeof options.minRelevanceScore !== "number"
-  ) {
+  if (options.minRelevanceScore !== undefined && typeof options.minRelevanceScore !== "number") {
     return false;
   }
 
-  if (
-    options.includePlanned !== undefined &&
-    typeof options.includePlanned !== "boolean"
-  ) {
+  if (options.includePlanned !== undefined && typeof options.includePlanned !== "boolean") {
     return false;
   }
 
@@ -730,10 +674,7 @@ export function isSearchOptions(value: unknown): value is SearchOptions {
     return false;
   }
 
-  if (
-    options.sortByRelevance !== undefined &&
-    typeof options.sortByRelevance !== "boolean"
-  ) {
+  if (options.sortByRelevance !== undefined && typeof options.sortByRelevance !== "boolean") {
     return false;
   }
 
@@ -826,10 +767,7 @@ function calculateSimpleDistance(str1: string, str2: string): number {
   return distance;
 }
 
-export function calculateLevenshteinDistance(
-  str1: string,
-  str2: string
-): number {
+export function calculateLevenshteinDistance(str1: string, str2: string): number {
   // Handle edge cases
   if (str1.length === 0) {
     return str2.length;
@@ -854,10 +792,7 @@ export function calculateLevenshteinDistance(
  * @param maxDistance Maximum distance for scoring
  * @returns Distance score (0-1, lower is better)
  */
-export function calculateDistanceScore(
-  distance: Meters,
-  maxDistance: Meters
-): number {
+export function calculateDistanceScore(distance: Meters, maxDistance: Meters): number {
   if (distance >= maxDistance) {
     return SEARCH_CONSTANTS.distanceScoreMax;
   }
@@ -969,9 +904,7 @@ export const searchConfig = createEnvironmentConfig({
  * @param overrides Optional property overrides
  * @returns Complete SearchOptions object
  */
-export function createDefaultSearchOptions(
-  overrides?: Partial<SearchOptions>
-): SearchOptions {
+export function createDefaultSearchOptions(overrides?: Partial<SearchOptions>): SearchOptions {
   return {
     maxResults: SEARCH_CONSTANTS.maxResultsDefault,
     minRelevanceScore: 0.1,

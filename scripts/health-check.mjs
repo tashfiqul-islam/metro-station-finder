@@ -13,8 +13,7 @@ console.log("🏥 Running health check...");
 const checks = [
   {
     name: "TypeScript Configuration",
-    check: () =>
-      existsSync("tsconfig.json") && existsSync("tsconfig.scripts.json"),
+    check: () => existsSync("tsconfig.json") && existsSync("tsconfig.scripts.json"),
     fix: "Ensure tsconfig.json and tsconfig.scripts.json exist",
   },
   {

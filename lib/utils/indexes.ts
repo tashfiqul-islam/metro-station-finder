@@ -22,10 +22,7 @@ export function buildStationIndexes(stations: readonly Station[]): {
 }
 
 /** Typed map getter that fails with a controlled error ApiResponse code. */
-export function mapGetRequired<K, V>(
-  map: ReadonlyMap<K, V>,
-  key: K
-): V | undefined {
+export function mapGetRequired<K, V>(map: ReadonlyMap<K, V>, key: K): V | undefined {
   const v = map.get(key);
   return v;
 }

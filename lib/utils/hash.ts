@@ -1,4 +1,4 @@
-import { STATION_CONSTANTS } from "@/lib/constants";
+import { STATION_CONSTANTS } from "@/lib/config/constants";
 
 /**
  * Simple, fast non-cryptographic hash for ETag-like strings without bitwise ops.
