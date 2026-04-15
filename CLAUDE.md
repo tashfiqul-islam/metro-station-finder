@@ -6,7 +6,7 @@ This project's full agent instructions live in **[AGENTS.md](./AGENTS.md)**. Rea
 
 - **Behavior contract** — AGENTS.md §2 encodes the Karpathy coding-behavior framework (think before coding, simplicity first, surgical changes, goal-driven execution, push back when warranted). Every tool call and every response follows those rules. When they conflict with default instincts, the framework wins.
 
-- **Session handoff** — every session starts by reading `docs/HANDOFF.md` (short, ~400 words, overwritten each sprint) to get the current state, active sprint, and next action. Every session ends by updating it. If a sprint boundary was reached, append a paragraph to `docs/SPRINT_LOG.md` and tag `sprint-N-done`. Full protocol + model routing: `docs/IMPLEMENTATION_PLAN.md` Appendix F.
+- **Session handoff** — every session starts by reading `docs/HANDOFF.md` (short, ~400 words, overwritten each sprint) to get the current state, active sprint, and next action. Every session ends by updating it. If a sprint boundary was reached, append a paragraph to `docs/SPRINT_LOG.md` recording the merge commit SHA. Version tags are owned by semantic-release — never create manual sprint or milestone tags. Full protocol + model routing: `docs/IMPLEMENTATION_PLAN.md` Appendix F.
 
 - **Memory system** — persistent notes for this project live under `C:\Users\Tashfiq\.claude\projects\D--Projects-metro-station-finder-v1\memory\`. Write to `MEMORY.md` (index) + individual `.md` files when a user preference, feedback item, or durable project fact surfaces. Never duplicate what AGENTS.md already says — memory is for things that aren't in the repo.
 

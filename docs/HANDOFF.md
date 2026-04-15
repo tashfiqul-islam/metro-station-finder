@@ -11,8 +11,7 @@ Short snapshot of current project state. Overwritten at every sprint boundary. K
 **Primary model for this sprint:** Sonnet 4.6 (Opus 4.6 for Valibot schema design + DMTCL fare-matrix audit; Haiku 4.5 for test fixtures)
 
 **Last-completed sprint:** Sprint 0 — Foundation & Guardrails
-**Last `sprint-*-done` tag:** `sprint-0-done`
-**Last commit:** see `git log --oneline -1`
+**Last commit on `main`:** `0fb4a66` — `chore: initialize project toolchain, docs, and ci/cd`
 
 ## Next action
 
@@ -44,13 +43,13 @@ Baseline CI was not green on first pass — Ultracite flagged `.claude/settings.
 1. Read `AGENTS.md` + `CLAUDE.md` — rules + Claude-specific notes.
 2. Read **this file** (`docs/HANDOFF.md`) for current state.
 3. Read `docs/IMPLEMENTATION_PLAN.md` §"Sprint 1" for the active sprint.
-4. `git log --oneline -20` and `git tag --list 'sprint-*-done'`.
+4. `git log --oneline -20` for recent history and the current SHA.
 5. Begin work. Surface assumptions before any non-trivial change (AGENTS.md §2.1).
 
 ## Session end protocol
 
 1. Overwrite this file with updated state.
-2. If a sprint boundary was reached: append to `docs/SPRINT_LOG.md` and tag `sprint-N-done`.
+2. If a sprint boundary was reached: append to `docs/SPRINT_LOG.md` recording the merge commit SHA. semantic-release owns version tag creation.
 3. Commit via `bun run commit`.
 4. If a non-obvious decision was made: write an ADR.
 

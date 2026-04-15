@@ -7,7 +7,7 @@ Append-only log of what shipped, what was deferred, and what surprised us per sp
 ```
 ## Sprint N — Title
 **Dates:** YYYY-MM-DD → YYYY-MM-DD
-**Tag:** sprint-N-done @ <commit-sha>
+**Commit:** `<short-sha>` — subject line of the merge commit
 **Primary model used:** Opus 4.6 | Sonnet 4.6 | Haiku 4.5 (+ supporting)
 
 **Shipped:** one or two sentences on what merged.
@@ -24,7 +24,7 @@ _Entries appear below in chronological order as sprints complete._
 
 ## Sprint 0 — Foundation & Guardrails
 
-**Tag:** `sprint-0-done`
+**Commit:** `0fb4a66` — `chore: initialize project toolchain, docs, and ci/cd`
 **Primary model used:** Opus 4.6 (this session ran on Opus rather than the Haiku-primary routing in Appendix F.4 — deliberate pragmatic call for session continuity; the volume of coordination in Sprint 0 made subagent delegation more expensive than inline work; flagged in real time).
 
 **Shipped:**

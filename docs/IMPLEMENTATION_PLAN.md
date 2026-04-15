@@ -17,7 +17,7 @@ This plan is divided into 15 sprints (Sprint 0 baseline + 14 feature sprints). E
 - **Sprint = one shippable vertical slice**. One PR per sprint. Branch naming: `sprint-N/<slug>`. Merge target: `main`.
 - **Test-driven**: write failing tests for the smallest verifiable unit first, then implement, then refactor. No untested logic ships.
 - **Commit cadence**: Conventional Commits via `bun run commit`. No `--no-verify`, no unsigned commits.
-- **Handoff**: a git tag `sprint-N-done` on the merge commit, a one-paragraph entry in `docs/SPRINT_LOG.md`, and the next sprint does not start until the current gate is green.
+- **Handoff**: a one-paragraph entry in `docs/SPRINT_LOG.md` recording the merge commit SHA, and the next sprint does not start until the current gate is green. Version tags are owned by semantic-release; never create manual sprint/milestone tags.
 - **Scope discipline** (AGENTS.md §2.3): if a sprint wants to touch something outside its declared deliverables, it files a follow-up issue, not a drive-by edit.
 - **Karpathy §2.1** every sprint: before any non-trivial change, state assumptions. If multiple interpretations exist, list them. Don't pick silently.
 
@@ -194,7 +194,7 @@ Features to exploit where they simplify code. Do not paste fetched docs into sou
 
 ### Exit criteria
 
-- Tag `sprint-0-done` on the merge commit.
+- Commit merged to `main`; no release cut (chore-only change).
 - PR merged to `main`, Actions green.
 - `docs/SPRINT_LOG.md` has its first entry.
 
@@ -251,7 +251,7 @@ Features to exploit where they simplify code. Do not paste fetched docs into sou
 - All 17 stations + full fare matrix present and validated.
 - `mrt6-line.geojson` has a continuous `LineString` covering all 17 stops.
 - Coverage report shows 100% on the new logic files.
-- Tag `sprint-1-done`.
+- Merge to `main`; semantic-release cuts the next version tag on feat/fix commits.
 
 ---
 
@@ -309,7 +309,7 @@ Features to exploit where they simplify code. Do not paste fetched docs into sou
 ### Exit criteria
 
 - Scratch render at `/` shows both theme variants correctly, no FOUC.
-- Tag `sprint-2-done`.
+- Merge to `main`; semantic-release cuts the next version tag on feat/fix commits.
 
 ---
 
@@ -382,7 +382,7 @@ Features to exploit where they simplify code. Do not paste fetched docs into sou
 ### Exit criteria
 
 - Visit `/`, see navbar + empty body, theme toggle works, mobile menu works, no FOUC.
-- Tag `sprint-3-done`.
+- Merge to `main`; semantic-release cuts the next version tag on feat/fix commits.
 
 ---
 
@@ -444,7 +444,7 @@ Features to exploit where they simplify code. Do not paste fetched docs into sou
 
 - Home page is visually close to the legacy site with all copy and tech deltas applied.
 - Lighthouse budgets green.
-- Tag `sprint-4-done`.
+- Merge to `main`; semantic-release cuts the next version tag on feat/fix commits.
 
 ---
 
@@ -494,7 +494,7 @@ Features to exploit where they simplify code. Do not paste fetched docs into sou
 ### Exit criteria
 
 - All 5 top-level routes reachable, correctly titled, SEO-complete.
-- Tag `sprint-5-done`.
+- Merge to `main`; semantic-release cuts the next version tag on feat/fix commits.
 
 ---
 
@@ -551,7 +551,7 @@ Features to exploit where they simplify code. Do not paste fetched docs into sou
 ### Exit criteria
 
 - Open `/station-finder`, see the full MRT-6 line with 17 markers. Click Motijheel marker, see popup.
-- Tag `sprint-6-done`.
+- Merge to `main`; semantic-release cuts the next version tag on feat/fix commits.
 
 ---
 
@@ -625,7 +625,7 @@ Features to exploit where they simplify code. Do not paste fetched docs into sou
 - Real end-to-end nearest-station flow works against the real ORS API in dev.
 - Offline fallback works.
 - No secret leak.
-- Tag `sprint-7-done`.
+- Merge to `main`; semantic-release cuts the next version tag on feat/fix commits.
 
 ---
 
@@ -676,7 +676,7 @@ Features to exploit where they simplify code. Do not paste fetched docs into sou
 ### Exit criteria
 
 - Fare lookup works; URLs are bookmarkable; a11y clean.
-- Tag `sprint-8-done`.
+- Merge to `main`; semantic-release cuts the next version tag on feat/fix commits.
 
 ---
 
@@ -729,7 +729,7 @@ Features to exploit where they simplify code. Do not paste fetched docs into sou
 ### Exit criteria
 
 - Trip planning works end-to-end, segment visualization clean, time estimates reasonable.
-- Tag `sprint-9-done`.
+- Merge to `main`; semantic-release cuts the next version tag on feat/fix commits.
 
 ---
 
@@ -786,7 +786,7 @@ Features to exploit where they simplify code. Do not paste fetched docs into sou
 
 - App is installable on Chrome and iOS Safari.
 - Works offline on previously visited routes.
-- Tag `sprint-10-done`.
+- Merge to `main`; semantic-release cuts the next version tag on feat/fix commits.
 
 ---
 
@@ -848,7 +848,7 @@ Features to exploit where they simplify code. Do not paste fetched docs into sou
 ### Exit criteria
 
 - NL finder lives at `/ask`, works for 10 hand-picked test queries, degrades gracefully.
-- Tag `sprint-11-done`.
+- Merge to `main`; semantic-release cuts the next version tag on feat/fix commits.
 
 ---
 
@@ -909,7 +909,7 @@ Features to exploit where they simplify code. Do not paste fetched docs into sou
 
 - Per-station pages are prerendered and indexable.
 - MCP server callable from Claude Desktop.
-- Tag `sprint-12-done`.
+- Merge to `main`; semantic-release cuts the next version tag on feat/fix commits.
 
 ---
 
@@ -963,7 +963,7 @@ Features to exploit where they simplify code. Do not paste fetched docs into sou
 
 - Every page hits all Lighthouse targets.
 - A11y report committed.
-- Tag `sprint-13-done`.
+- Merge to `main`; semantic-release cuts the next version tag on feat/fix commits.
 
 ---
 
@@ -1026,7 +1026,7 @@ Features to exploit where they simplify code. Do not paste fetched docs into sou
 - Production site live at the custom domain.
 - v1.0.0 published via semantic-release.
 - Changelog committed.
-- Tag `sprint-14-done`.
+- Merge to `main`; semantic-release cuts the next version tag on feat/fix commits.
 
 ---
 
@@ -1116,13 +1116,13 @@ Every dep add requires user approval per AGENTS.md §10. Requesting in sprint or
 
 Shared context lives on the filesystem under version control. Any model — Opus, Sonnet, or Haiku — can reconstruct full state by reading these files. No external DB, no session store, no provider-specific memory.
 
-| Layer      | Files                                             | Change rate | Read when                      |
-| ---------- | ------------------------------------------------- | ----------- | ------------------------------ |
-| Rules      | `AGENTS.md`, `CLAUDE.md`                          | rare        | every session start            |
-| Plan       | `docs/IMPLEMENTATION_PLAN.md`                     | per sprint  | active sprint section only     |
-| Live state | `docs/HANDOFF.md`, `docs/SPRINT_LOG.md`, git tags | per sprint  | every session start            |
-| Decisions  | `docs/ADRs/*.md`                                  | sparse      | on demand when referenced      |
-| Personal   | `~/.claude/projects/.../memory/`                  | on feedback | Claude only, non-authoritative |
+| Layer      | Files                                              | Change rate | Read when                      |
+| ---------- | -------------------------------------------------- | ----------- | ------------------------------ |
+| Rules      | `AGENTS.md`, `CLAUDE.md`                           | rare        | every session start            |
+| Plan       | `docs/IMPLEMENTATION_PLAN.md`                      | per sprint  | active sprint section only     |
+| Live state | `docs/HANDOFF.md`, `docs/SPRINT_LOG.md`, `git log` | per sprint  | every session start            |
+| Decisions  | `docs/ADRs/*.md`                                   | sparse      | on demand when referenced      |
+| Personal   | `~/.claude/projects/.../memory/`                   | on feedback | Claude only, non-authoritative |
 
 ### F.2 Session startup protocol (all models)
 
@@ -1130,9 +1130,8 @@ Shared context lives on the filesystem under version control. Any model — Opus
 1. Read AGENTS.md + CLAUDE.md               (~3 k tokens, cache-warm after first read)
 2. Read docs/HANDOFF.md                     (~400 tokens)
 3. Read IMPLEMENTATION_PLAN.md §"Sprint N"  (~1.5 k tokens, active sprint only)
-4. git log --oneline -20
-5. git tag --list 'sprint-*-done'
-6. Begin work — surface assumptions before any non-trivial change (AGENTS.md §2.1).
+4. git log --oneline -20                    (recent history and current SHA)
+5. Begin work — surface assumptions before any non-trivial change (AGENTS.md §2.1).
 ```
 
 Floor: ~5 k tokens cold-start per session. The prompt cache (5-minute TTL) amortizes the rules + plan reads across subsequent turns within one session.
@@ -1142,8 +1141,8 @@ Floor: ~5 k tokens cold-start per session. The prompt cache (5-minute TTL) amort
 ```
 1. Overwrite docs/HANDOFF.md with updated state (active sprint, next action, blockers, decisions).
 2. If a sprint boundary was reached:
-     - Append a paragraph to docs/SPRINT_LOG.md.
-     - Create git tag sprint-N-done on the merge commit.
+     - Append a paragraph to docs/SPRINT_LOG.md recording the merge commit SHA.
+     - semantic-release will cut a version tag automatically on feat/fix merges; never create manual tags.
 3. Commit via `bun run commit` (Conventional Commits, no --no-verify).
 4. If a non-obvious architectural decision was made:
      - Write an ADR under docs/ADRs/NNN-kebab-title.md.
