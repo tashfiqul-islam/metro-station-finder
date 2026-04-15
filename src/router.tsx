@@ -1,20 +1,21 @@
-import { createRouter as createTanStackRouter } from "@tanstack/react-router"
-import { routeTree } from "./routeTree.gen"
+import { createRouter as createTanStackRouter } from "@tanstack/react-router";
 
-export function getRouter() {
+import { routeTree } from "./routeTree.gen";
+
+export const getRouter = () => {
   const router = createTanStackRouter({
-    routeTree,
-
-    scrollRestoration: true,
     defaultPreload: "intent",
     defaultPreloadStaleTime: 0,
-  })
+    routeTree,
+    scrollRestoration: true,
+  });
 
-  return router
-}
+  return router;
+};
 
 declare module "@tanstack/react-router" {
+  // biome-ignore lint/style/useNamingConvention: TanStack Router module augmentation requires this exact interface name
   interface Register {
-    router: ReturnType<typeof getRouter>
+    router: ReturnType<typeof getRouter>;
   }
 }

@@ -1,3 +1,30 @@
+# Oxfmt reads `.prettierignore` by default. Files listed here are skipped
+# by the formatter. This is separate from `oxlint.config.ts` `ignorePatterns`
+# (which only affects the linter).
+
+# Auto-generated files
+src/routeTree.gen.ts
+
+# Build output
+dist/
+.output/
+.nitro/
+.tanstack/
+.wrangler/
+
+# Coverage / test artifacts
+coverage/
+playwright-report/
+test-results/
+
+# Dependencies
+node_modules/
+
+# Lock files
+bun.lock
 package-lock.json
 pnpm-lock.yaml
 yarn.lock
+
+# Claude Code local state
+.claude/

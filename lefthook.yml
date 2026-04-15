@@ -1,0 +1,44 @@
+# Lefthook — Fast, parallel Git hooks manager.
+# https://lefthook.dev/configuration/
+#
+# This project uses the modern `jobs` syntax (Lefthook 2.x) over the
+# legacy `commands` syntax. Jobs run in parallel by default when
+# `parallel: true` is set at the hook level.
+#
+# Developer-local overrides can be placed in `lefthook-local.yml`
+# (already gitignored). They merge on top of this file.
+
+assert_lefthook_installed: true
+colors: true
+no_tty: false
+skip_output:
+  - meta
+  - summary
+  - execution
+  - execution_out
+
+pre-commit:
+  parallel: true
+  jobs:
+    - name: format
+      glob: "*.{ts,tsx,js,jsx,json,jsonc,css,md}"
+      run: bunx ultracite fix {staged_files}
+      stage_fixed: true
+    - name: typecheck
+      glob: "*.{ts,tsx}"
+      run: bun run typecheck
+
+pre-push:
+  parallel: true
+  jobs:
+    - name: lint
+      run: bun run lint
+    - name: typecheck
+      run: bun run typecheck
+    - name: test-unit
+      run: bun run test:unit
+
+commit-msg:
+  jobs:
+    - name: commitlint
+      run: bunx commitlint --edit {1}

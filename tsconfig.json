@@ -1,28 +1,86 @@
 {
-  "include": ["**/*.ts", "**/*.tsx", "eslint.config.js", "prettier.config.js", "vite.config.js"],
-
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "include": [
+    "src",
+    "tests",
+    "vite.config.ts",
+    "vitest.config.ts",
+    "playwright.config.ts",
+    "commitlint.config.ts",
+    "release.config.ts",
+    "oxlint.config.ts",
+    "oxfmt.config.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    ".output",
+    ".tanstack",
+    ".nitro",
+    "coverage",
+    "playwright-report",
+    "test-results"
+  ],
   "compilerOptions": {
-    "target": "ES2022",
-    "jsx": "react-jsx",
-    "module": "ESNext",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "types": ["vite/client"],
-
-    /* Bundler mode */
+    /* ──────────────────────────────────────────────────────────
+     * Language & output
+     * Most of these match TS 6.0 defaults; kept explicit for clarity.
+     * ────────────────────────────────────────────────────────── */
+    "target": "ES2024",
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "module": "preserve",
     "moduleResolution": "bundler",
+    "moduleDetection": "force",
+    "jsx": "react-jsx",
+    "useDefineForClassFields": true,
+
+    /* ──────────────────────────────────────────────────────────
+     * Bundler + runtime ergonomics
+     *
+     * `verbatimModuleSyntax` is intentionally OMITTED:
+     * TanStack Start's official guidance is that enabling it causes
+     * server bundles to leak into client bundles. See
+     * https://tanstack.com/start/latest/docs/framework/react/build-from-scratch
+     *
+     * `erasableSyntaxOnly` enforces that every file can be erased
+     * to plain JS by Bun / Node --experimental-strip-types, without
+     * runtime code generation (no enums, no namespaces, no decorators).
+     * ────────────────────────────────────────────────────────── */
     "allowImportingTsExtensions": true,
-    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
     "noEmit": true,
 
-    /* Linting */
-    "skipLibCheck": true,
+    /* ──────────────────────────────────────────────────────────
+     * Strictness — non-negotiable per project constitution
+     * ────────────────────────────────────────────────────────── */
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
-    "allowJs": true,
-    "baseUrl": ".",
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noPropertyAccessFromIndexSignature": true,
+
+    /* ──────────────────────────────────────────────────────────
+     * Perf & interop
+     * ────────────────────────────────────────────────────────── */
+    "skipLibCheck": true,
+
+    /* ──────────────────────────────────────────────────────────
+     * Types — explicit, no global @types sweep
+     * ────────────────────────────────────────────────────────── */
+    "types": ["vite/client", "vite-plugin-pwa/client", "@testing-library/jest-dom"],
+
+    /* ──────────────────────────────────────────────────────────
+     * Path aliases — kept in sync with vite.config.ts `resolve.alias`
+     * baseUrl removed (deprecated in TS 6)
+     * ────────────────────────────────────────────────────────── */
     "paths": {
       "@/*": ["./src/*"]
     }
