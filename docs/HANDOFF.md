@@ -6,24 +6,29 @@ Short snapshot of current project state. Overwritten at every sprint boundary. K
 
 ## Current state
 
-**Active sprint:** Sprint 1 — Data & Pure Logic
+**Active sprint:** Sprint 2 — Design System & Theme
 **Status:** not started
-**Primary model for this sprint:** Sonnet 4.6 (Opus 4.6 for Valibot schema design + DMTCL fare-matrix audit; Haiku 4.5 for test fixtures)
+**Primary model for this sprint:** Sonnet 4.6 primary — Opus 4.6 for `@theme inline` consolidation design and CVA decorator check; Haiku 4.5 for `shadcn add` runs + mechanical imports.
 
-**Last-completed sprint:** Sprint 0 — Foundation & Guardrails
-**Last commit on `main`:** `0fb4a66` — `chore: initialize project toolchain, docs, and ci/cd`
+**Last-completed sprint:** Sprint 1 — Data & Pure Logic
+**Last commit on `main`:** pending Sprint 1 commit (branch: master)
 
 ## Next action
 
-Begin Sprint 1 per `docs/IMPLEMENTATION_PLAN.md` §"Sprint 1". TDD, in this order:
+Begin Sprint 2 per `docs/IMPLEMENTATION_PLAN.md` §"Sprint 2". Key tasks:
 
-1. Write Valibot schemas for `Station` and the fare matrix in `src/lib/validation.ts` (+ shared helpers).
-2. Write failing unit tests for haversine, findNearest, calculateFare, planTrip/clipLineToSegment, and all schema rejection cases. Colocate where natural, `tests/unit/` otherwise.
-3. Implement `src/data/stations.ts` (17 stations, `const` + Valibot-validated at module load), `src/data/fares.ts` (17×17 matrix, symmetry + diagonal asserted at load), `src/data/mrt6-line.geojson` (LineString, source from OSM Overpass or hand-trace).
-4. Implement `src/features/*/logic.ts` — haversine, findNearest, calculateFare, planTrip — until tests pass.
-5. Verify 100% coverage on the new files.
+1. Consolidate `src/styles.css` with `@theme inline`, oklch primary, glassmorphism utility, font imports.
+2. Add shadcn primitives via `bunx shadcn@latest add` (ask user before install).
+3. Port `glass-card.tsx`, `section-wrapper.tsx`, `unified-background.tsx` from legacy.
+4. Port `animation-constants.ts`, `animated-badge.tsx`, `highlight.tsx`.
+5. Add `motion` dependency (ask first). Verify CVA has no runtime decorators.
+6. Write integration tests for each new component.
 
-**Open research item:** The MRT-6 OSM relation via Overpass needs verification. If the data is incomplete or noisy, fall back to hand-tracing from the station coordinates in `src/data/stations.ts`.
+## Sprint 1 retro (1 line)
+
+All 17 stations, 17×17 fare matrix, MRT-6 geojson, and all pure logic (haversine, findNearest, calculateFare, planTrip, clipLineToSegment) implemented TDD, 58 tests passing, 0 lint errors, bun run ci exit 0.
+
+**Note:** `mrt6-line.geojson` is hand-traced from station coordinates (17-point LineString). OSM Overpass verification deferred — can replace the typed `src/data/mrt6-line.ts` export when better data is sourced.
 
 ## In-flight decisions
 
@@ -34,15 +39,11 @@ Begin Sprint 1 per `docs/IMPLEMENTATION_PLAN.md` §"Sprint 1". TDD, in this orde
 
 None.
 
-## Sprint 0 retro (1 line)
-
-Baseline CI was not green on first pass — Ultracite flagged `.claude/settings.local.json` (editor-local state). Fixed by excluding `.claude/` from `.gitignore`, `.prettierignore`, and `oxlint.config.ts` `ignorePatterns`. All 9 deliverables shipped; `bun run ci` green with 4/4 tests.
-
 ## Session startup protocol
 
 1. Read `AGENTS.md` + `CLAUDE.md` — rules + Claude-specific notes.
 2. Read **this file** (`docs/HANDOFF.md`) for current state.
-3. Read `docs/IMPLEMENTATION_PLAN.md` §"Sprint 1" for the active sprint.
+3. Read `docs/IMPLEMENTATION_PLAN.md` §"Sprint 2" for the active sprint.
 4. `git log --oneline -20` for recent history and the current SHA.
 5. Begin work. Surface assumptions before any non-trivial change (AGENTS.md §2.1).
 

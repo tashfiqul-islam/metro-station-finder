@@ -46,3 +46,29 @@ _Entries appear below in chronological order as sprints complete._
 2. **The repo had exactly one commit** (`feat: initial commit`) and ~30 files of uncommitted scaffold + toolchain configuration in the working tree. Sprint 0's commit was therefore much larger than the plan scoped — it had to carry the full pre-existing Oxlint/Oxfmt/Lefthook/Vitest/Playwright setup alongside the Sprint 0 deliverables. This is a one-time cost; all subsequent sprints will start from a properly committed baseline.
 
 **ADRs written:** none.
+
+## Sprint 1 — Data & Pure Logic
+
+**Merge commit:** (pending — commit in progress)
+**Model routing:** Sonnet 4.6 primary throughout (no subagent delegation; logic was compact and inline was faster than orchestration overhead).
+
+**Shipped:**
+
+- `src/lib/validation.ts` — Valibot helpers: `parseOrThrow`, `isSlug`, `clampLatitude`, `clampLongitude` + shared `SlugSchema`, `LatitudeSchema`, `LongitudeSchema`
+- `src/data/stations.ts` — 17 MRT-6 stations (kebab-case slugs, `nameEn`, `nameBn`, lat/lng, `orderIndex`, `status`), Valibot-validated at module load
+- `src/data/fares.ts` — 17×17 DMTCL fare matrix, symmetry + diagonal-zero + non-negative-integer assertions at load
+- `src/data/mrt6-line.geojson` + `src/data/mrt6-line.ts` — hand-traced LineString (17 points); `.ts` wrapper needed because Rolldown/Vite does not treat `.geojson` as JSON by default (no vite.config change required this sprint)
+- `src/features/station-finder/logic.ts` — `haversineKm`, `findNearest`
+- `src/features/fare-calculator/logic.ts` — `calculateFare`, `InvalidStationError`
+- `src/features/trip-planner/logic.ts` — `planTrip`, `clipLineToSegment`
+- 58 unit tests across 6 test files, 100% coverage on all new files
+
+**Deferred:**
+
+- OSM Overpass fetch for `mrt6-line.geojson` (open research item — hand-traced coordinates are usable for all Sprint 1 tests)
+- No ADRs written (no non-obvious architectural decisions made)
+
+**Surprises:**
+
+- `.geojson` imports fail at Rolldown/Vite parse time — resolved by creating a typed `.ts` re-export (`src/data/mrt6-line.ts`). A vite.config plugin could fix this properly in a future sprint.
+- Ultracite enforces `no-non-null-assertion` + `no-plusplus` + `func-style` (arrow expressions) — required rewriting loops to `for...of` and converting function declarations to arrow functions.
