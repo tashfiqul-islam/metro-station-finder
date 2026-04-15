@@ -20,9 +20,16 @@ skip_output:
 pre-commit:
   parallel: true
   jobs:
+    # Matches upstream ultracite/lefthook recommendation: run `ultracite fix`
+    # on the whole project with no glob filter. The previous scaffold passed
+    # `{staged_files}` and included `.md` in the glob, which caused ultracite
+    # to invoke oxlint on markdown-only batches. Oxlint exits non-zero when
+    # no files match its supported types (.ts/.tsx/.js/.jsx + a few others),
+    # breaking docs-only commits. Bare `ultracite fix` runs in ~400 ms on
+    # this project, handles every file type ultracite supports, and never
+    # fails on empty type sets.
     - name: format
-      glob: "*.{ts,tsx,js,jsx,json,jsonc,css,md}"
-      run: bunx ultracite fix {staged_files}
+      run: bunx ultracite fix
       stage_fixed: true
     - name: typecheck
       glob: "*.{ts,tsx}"
