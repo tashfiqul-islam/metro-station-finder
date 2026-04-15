@@ -49,7 +49,7 @@ _Entries appear below in chronological order as sprints complete._
 
 ## Sprint 1 — Data & Pure Logic
 
-**Merge commit:** (pending — commit in progress)
+**Merge commit:** `bdab88d`
 **Model routing:** Sonnet 4.6 primary throughout (no subagent delegation; logic was compact and inline was faster than orchestration overhead).
 
 **Shipped:**

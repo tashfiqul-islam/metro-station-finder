@@ -11,7 +11,7 @@ Short snapshot of current project state. Overwritten at every sprint boundary. K
 **Primary model for this sprint:** Sonnet 4.6 primary — Opus 4.6 for `@theme inline` consolidation design and CVA decorator check; Haiku 4.5 for `shadcn add` runs + mechanical imports.
 
 **Last-completed sprint:** Sprint 1 — Data & Pure Logic
-**Last commit on `main`:** pending Sprint 1 commit (branch: master)
+\*\*Last commit on `main`: `bdab88d` — `feat: implement sprint 1 — data model and pure logic layer`
 
 ## Next action
 
