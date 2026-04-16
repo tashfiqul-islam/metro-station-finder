@@ -179,3 +179,40 @@ _Entries appear below in chronological order as sprints complete._
 - Timeline's `getByText` queries failed with "multiple elements" because the component renders text in both a badge `<span>` and a heading `<h3>` — switched to `getAllByText(...).length >= 1`.
 
 **ADRs written:** none.
+
+## Sprint 5: Routing Stubs & About Page — Completed 2026-04-17
+
+**Merge commit:** `4c54bd1` — `feat: add e2e tests for meta tags and seo validation`
+
+**Completed deliverables:**
+
+- About page (664 LOC) ported from legacy project (`D:/Projects/metro-station-finder/src/routes/about.tsx`)
+  - All lucide-react icons → @phosphor-icons/react (including Sparkles → Sparkle fix)
+  - Removed "use client" directive for TanStack Start SSR compatibility
+  - Updated Google Maps → MapLibre in privacy section
+  - Fixed Base UI Accordion API (removed type/collapsible, added multiple={false})
+  - Converted function declaration to const arrow function per linting rules
+- Per-route head() meta implementation
+  - Created `src/lib/head-meta.ts` utility: generateHeadConfig(), generateRouteMeta(), generateWebPageSchema()
+  - Added head() to all 5 routes (home, about, station-finder, station-fares, trip-planner)
+  - Each route has: title (with | separator), description, canonical link, OG tags, Twitter Card, JSON-LD WebPage
+  - JSON-LD schema validated against schema.org
+- NotFoundComponent upgraded
+  - Added WarningCircleIcon (Phosphor) filled in yellow-600/dark:yellow-500, 4rem size
+  - Maintains "404", "Page not found", "Go home" link structure
+- Test coverage
+  - `tests/integration/about.test.tsx` — 5 tests (privacy tab, accordion, feature cards, badges, CTA)
+  - `tests/e2e/meta.spec.ts` — 6 tests (5 routes + prerender verification)
+  - All 116 tests passing, bun run ci green
+
+**Deferred:**
+
+None — all 7 Sprint 5 tasks completed.
+
+**Surprised us:**
+
+- v1 Accordion uses @base-ui/react, not Radix UI — API differs significantly (type → multiple, no collapsible)
+- TanStack Start head() API accepts meta/links/scripts properties directly, not wrapped in a head return object
+- Prerendered HTML in `.output/public/` is compressed/binary — verified meta tags via live dev server E2E tests instead
+
+**ADRs written:** none.

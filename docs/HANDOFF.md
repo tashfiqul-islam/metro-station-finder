@@ -6,28 +6,29 @@ Short snapshot of current project state. Overwritten at every sprint boundary. K
 
 ## Current state
 
-**Active sprint:** Sprint 5 — Routing Stubs & About Page
+**Active sprint:** Sprint 6 — Maps Foundation
 **Status:** not started
-**Primary model for this sprint:** Haiku 4.5 primary — Sonnet 4.6 for per-route meta authoring and About page content review.
+**Primary model for this sprint:** Opus 4.6 primary (top-risk sprint). Sonnet 4.6 for markers and metro-line layer.
 
-**Last-completed sprint:** Sprint 4 — Home Page Port
-**Last commit on `master`:** `084db88` — `style: apply oxfmt tailwind v4 utility normalization`
+**Last-completed sprint:** Sprint 5 — Routing Stubs & About Page
+**Last commit on `master`:** `4c54bd1` — `feat: add e2e tests for meta tags and seo validation`
 
 ## Next action
 
-Begin Sprint 5 per `docs/IMPLEMENTATION_PLAN.md` §"Sprint 5". Key tasks:
+Begin Sprint 6 per `docs/IMPLEMENTATION_PLAN.md` §"Sprint 6". Key tasks:
 
-1. Port `/about` page from legacy (`D:/Projects/metro-station-finder/src/routes/about.tsx`, 664 LOC). Strip `"use client"`, replace Lucide with Phosphor icons. Uses Tabs + Accordion + Badge + Separator (all already added via shadcn in Sprint 2).
-2. Add per-route `head()` meta to every route: title (with site suffix), description, canonical `<link>`, Open Graph tags, Twitter Card tags.
-3. Add JSON-LD `WebPage` block to every route via `head()`.
-4. Flesh out the `notFoundComponent` in `__root.tsx` with a Phosphor warning icon and a link home (currently a basic centered 404).
-5. Stub routes for `/station-finder`, `/station-fares`, `/trip-planner` already exist from Sprint 4 — verify they have correct headings and meta, upgrade if needed.
-6. Integration tests for About page content (tabs switch, accordion expands).
-7. E2E test: every route has `<title>`, `<meta name="description">`, `<link rel="canonical">`, valid JSON-LD.
+1. Install mapcn (ask user first per AGENTS.md §10): `bunx shadcn@latest add @mapcn/map`
+2. Create `src/components/common/map-canvas.tsx` — React.lazy SSR-safe wrapper around mapcn Map
+3. Render skeleton during lazy load, error boundary for window-less prerender
+4. Create `src/features/station-finder/components/station-markers.tsx` — map 17 stations as markers
+5. Create `src/features/station-finder/components/metro-line-layer.tsx` — GeoJSON metro-6 line layer
+6. Wire preview into `/station-finder` route
+7. Tests: integration (map-canvas renders skeleton), E2E (markers load, offline overlay, no crash)
+8. Verification: bun run ci passes, bundle analysis confirms chunk-split, prerender doesn't crash.
 
-## Sprint 4 retro (1 line)
+## Sprint 5 retro (1 line)
 
-All 6 home sections ported with Phosphor icons and updated tech stack copy. InfiniteSlider, ProgressiveBlur, and Timeline UI components ported. 111 tests passing, bun run ci exit 0. Deprecated Phosphor icon aliases required 3 fix commits.
+About page (664 LOC) ported with Phosphor icons and Base UI Accordion. Per-route head() meta, canonical, OG/Twitter Card, JSON-LD WebPage added to all 5 routes. NotFoundComponent upgraded with warning icon. 116 tests passing (5 integration About + 6 E2E meta), bun run ci green, all routes prerendered with correct SEO.
 
 ## In-flight decisions
 
@@ -42,7 +43,7 @@ None.
 
 1. Read `AGENTS.md` + `CLAUDE.md` — rules + Claude-specific notes.
 2. Read **this file** (`docs/HANDOFF.md`) for current state.
-3. Read `docs/IMPLEMENTATION_PLAN.md` §"Sprint 5" for the active sprint.
+3. Read `docs/IMPLEMENTATION_PLAN.md` §"Sprint 6" for the active sprint.
 4. `git log --oneline -20` for recent history and the current SHA.
 5. Begin work. Surface assumptions before any non-trivial change (AGENTS.md §2.1).
 
