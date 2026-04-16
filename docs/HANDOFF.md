@@ -11,7 +11,7 @@ Short snapshot of current project state. Overwritten at every sprint boundary. K
 **Primary model for this sprint:** Opus 4.6 primary (top-risk sprint). Sonnet 4.6 for markers and metro-line layer.
 
 **Last-completed sprint:** Sprint 5 — Routing Stubs & About Page
-**Last commit on `master`:** `f490eaa` — `fix: correct last commit sha in handoff.md`
+**Last commit on `master`:** `e3e2893` — `fix: update handoff.md with correct final commit sha f490eaa`
 
 ## Next action
 

@@ -26,6 +26,7 @@ describe("AnimatedBadge", () => {
     await waitFor(() => {
       expect(screen.getByText("MRT-6 Live")).toBeDefined();
     });
+    await waitFor(() => {}, { timeout: 500 });
   });
 
   it("renders an anchor element when href is provided", async () => {
@@ -37,6 +38,7 @@ describe("AnimatedBadge", () => {
       expect(anchor).not.toBeNull();
       expect(anchor?.getAttribute("href")).toBe("/station-finder");
     });
+    await waitFor(() => {}, { timeout: 500 });
   });
 
   it("does not render an anchor when href is omitted", async () => {
@@ -45,6 +47,7 @@ describe("AnimatedBadge", () => {
       const anchor = container.querySelector("a");
       expect(anchor).toBeNull();
     });
+    await waitFor(() => {}, { timeout: 500 });
   });
 
   it("applies shimmer-spin animation via inline style on the conic gradient div", async () => {
@@ -53,5 +56,6 @@ describe("AnimatedBadge", () => {
       const shimmerEl = container.querySelector<HTMLElement>('[style*="shimmer-spin"]');
       expect(shimmerEl).not.toBeNull();
     });
+    await waitFor(() => {}, { timeout: 500 });
   });
 });

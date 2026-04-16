@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import {
   createMemoryHistory,
   createRootRoute,
@@ -25,6 +25,7 @@ describe("HeroSection", () => {
     await renderHeroSection();
     const heading = screen.getByRole("heading", { level: 1 });
     expect(heading.textContent).toContain("Precision");
+    await waitFor(() => {}, { timeout: 500 });
   });
 
   it("renders primary CTA linking to /station-finder", async () => {
@@ -33,6 +34,7 @@ describe("HeroSection", () => {
     const primary = links.find((l) => l.textContent?.includes("Find Station"));
     expect(primary).toBeDefined();
     expect(primary?.getAttribute("href")).toBe("/station-finder");
+    await waitFor(() => {}, { timeout: 500 });
   });
 
   it("renders secondary CTA linking to /station-fares", async () => {
@@ -41,10 +43,12 @@ describe("HeroSection", () => {
     const secondary = links.find((l) => l.textContent?.includes("Calculate Fare"));
     expect(secondary).toBeDefined();
     expect(secondary?.getAttribute("href")).toBe("/station-fares");
+    await waitFor(() => {}, { timeout: 500 });
   });
 
   it("renders the animated badge", async () => {
     await renderHeroSection();
     expect(screen.getByText("Introducing v1.0.0")).toBeDefined();
+    await waitFor(() => {}, { timeout: 500 });
   });
 });

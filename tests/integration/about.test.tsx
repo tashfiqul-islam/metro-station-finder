@@ -28,6 +28,7 @@ describe("About Page", () => {
       },
       { timeout: 3000 },
     );
+    await waitFor(() => {}, { timeout: 500 });
   });
 
   it("renders accordion items in how it works section", async () => {
@@ -38,6 +39,7 @@ describe("About Page", () => {
       },
       { timeout: 3000 },
     );
+    await waitFor(() => {}, { timeout: 500 });
   });
 
   it("displays feature cards", async () => {
@@ -50,6 +52,7 @@ describe("About Page", () => {
       },
       { timeout: 3000 },
     );
+    await waitFor(() => {}, { timeout: 500 });
   });
 
   it("renders badges section", async () => {
@@ -60,6 +63,7 @@ describe("About Page", () => {
       },
       { timeout: 3000 },
     );
+    await waitFor(() => {}, { timeout: 500 });
   });
 
   it("renders CTA section", async () => {
@@ -70,5 +74,6 @@ describe("About Page", () => {
       },
       { timeout: 3000 },
     );
+    await waitFor(() => {}, { timeout: 500 });
   });
 });

@@ -30,6 +30,7 @@ describe("NavBar", () => {
       expect(screen.getByText("Trip Planner")).toBeDefined();
       expect(screen.getByText("About")).toBeDefined();
     });
+    await waitFor(() => {}, { timeout: 500 });
   });
 
   it("home link has aria-current=page when at /", async () => {
@@ -43,6 +44,7 @@ describe("NavBar", () => {
       const activeLink = homeLinks.find((el) => el.getAttribute("aria-current") === "page");
       expect(activeLink).toBeDefined();
     });
+    await waitFor(() => {}, { timeout: 500 });
   });
 
   it("logo renders full name and short abbreviation", async () => {
@@ -52,6 +54,7 @@ describe("NavBar", () => {
       expect(screen.getByText("Metro Station Finder")).toBeDefined();
       expect(screen.getByText("MSF")).toBeDefined();
     });
+    await waitFor(() => {}, { timeout: 500 });
   });
 
   it("mobile hamburger opens the menu", async () => {
@@ -63,6 +66,7 @@ describe("NavBar", () => {
     await waitFor(() => {
       expect(screen.getByRole("navigation", { name: /mobile navigation/i })).toBeDefined();
     });
+    await waitFor(() => {}, { timeout: 500 });
   });
 
   it("mobile menu closes on Escape key", async () => {
@@ -78,6 +82,7 @@ describe("NavBar", () => {
     await waitFor(() => {
       expect(screen.queryByRole("navigation", { name: /mobile navigation/i })).toBeNull();
     });
+    await waitFor(() => {}, { timeout: 500 });
   });
 
   it("mobile menu closes on outside click", async () => {
@@ -93,5 +98,6 @@ describe("NavBar", () => {
     await waitFor(() => {
       expect(screen.queryByRole("navigation", { name: /mobile navigation/i })).toBeNull();
     });
+    await waitFor(() => {}, { timeout: 500 });
   });
 });
