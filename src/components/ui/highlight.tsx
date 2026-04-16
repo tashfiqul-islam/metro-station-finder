@@ -191,6 +191,7 @@ const useHighlightItemEffect = ({
     setActiveClassName,
     forceUpdateBounds,
     contextForceUpdateBounds,
+    localRef,
   ]);
 };
 
