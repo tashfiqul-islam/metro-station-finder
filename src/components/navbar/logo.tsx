@@ -1,4 +1,4 @@
-import { Train } from "@phosphor-icons/react";
+import { TrainIcon } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
 
 import { cn } from "@/lib/utils";
@@ -15,7 +15,7 @@ export const Logo = () => (
     )}
     to="/"
   >
-    <Train aria-hidden="true" className="h-6 w-6 shrink-0 text-foreground" weight="duotone" />
+    <TrainIcon aria-hidden="true" className="h-6 w-6 shrink-0 text-foreground" weight="duotone" />
     <span className="hidden sm:inline">Metro Station Finder</span>
     <span className="sm:hidden">MSF</span>
   </Link>

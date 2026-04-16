@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { CalculatorIcon, MapPin, NavigationArrowIcon } from "@phosphor-icons/react";
+import { CalculatorIcon, MapPinIcon, NavigationArrowIcon } from "@phosphor-icons/react";
 import { motion, useReducedMotion } from "motion/react";
 import { memo } from "react";
 
@@ -140,7 +140,7 @@ export const HeroSection = memo((): React.ReactElement => {
 
                 <div className="space-y-4">
                   <div className="glass-card group flex h-12 w-full items-center rounded-lg px-4 transition-all duration-300 hover:border-white/25 hover:shadow-lg dark:hover:border-white/20 dark:hover:bg-white/10">
-                    <MapPin className="mr-3 h-5 w-5 text-muted-foreground transition-all duration-300 group-hover:text-primary" />
+                    <MapPinIcon className="mr-3 h-5 w-5 text-muted-foreground transition-all duration-300 group-hover:text-primary" />
                     <span className="text-muted-foreground transition-all duration-300 group-hover:text-primary">
                       Search for a station...
                     </span>

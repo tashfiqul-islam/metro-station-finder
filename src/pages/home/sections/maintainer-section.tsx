@@ -4,7 +4,7 @@ import {
   ArrowSquareOut,
   Briefcase,
   GraduationCap,
-  MapPin,
+  MapPinIcon,
 } from "@phosphor-icons/react";
 import { motion, useInView, useReducedMotion } from "motion/react";
 import { memo, useRef } from "react";
@@ -39,7 +39,7 @@ const socialLinks: SocialLinkData[] = [
 const keyInfo = [
   { icon: Briefcase, label: "Role", value: "Product Manager @ Field Nation" },
   { icon: GraduationCap, label: "Education", value: "CSE, NSU" },
-  { icon: MapPin, label: "Location", value: "Dhaka, Bangladesh" },
+  { icon: MapPinIcon, label: "Location", value: "Dhaka, Bangladesh" },
 ];
 
 const SocialLink = memo(({ href, label, iconPath, index }: SocialLinkData & { index: number }) => {

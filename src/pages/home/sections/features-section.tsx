@@ -4,7 +4,7 @@ import {
   DeviceMobile,
   Globe,
   Lightning,
-  MapPin,
+  MapPinIcon,
   NavigationArrowIcon,
   Rocket,
   Star,
@@ -46,7 +46,7 @@ const features: Feature[] = [
   {
     description:
       "MapLibre + OpenFreeMap tiles + OpenRouteService walking routes with custom markers and real-time updates.",
-    icon: MapPin,
+    icon: MapPinIcon,
     iconBg: "bg-linear-to-r from-teal-600 to-teal-500 dark:from-teal-500 dark:to-teal-400",
     id: "interactive-maps",
     stats: "17 stations",

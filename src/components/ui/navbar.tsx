@@ -1,4 +1,13 @@
-import { CalculatorIcon, House, Info, List, MapPin, Path, Train, X } from "@phosphor-icons/react";
+import {
+  CalculatorIcon,
+  HouseIcon,
+  InfoIcon,
+  ListIcon,
+  MapPinIcon,
+  Path,
+  TrainIcon,
+  XIcon,
+} from "@phosphor-icons/react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { memo, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -15,11 +24,11 @@ interface NavigationItem {
 }
 
 const NAVIGATION_ITEMS: readonly NavigationItem[] = [
-  { href: "/", icon: House, label: "Home" },
-  { href: "/station-finder", icon: MapPin, label: "Station Finder" },
+  { href: "/", icon: HouseIcon, label: "Home" },
+  { href: "/station-finder", icon: MapPinIcon, label: "Station Finder" },
   { href: "/station-fares", icon: CalculatorIcon, label: "Station Fares" },
   { href: "/trip-planner", icon: Path, label: "Trip Planner" },
-  { href: "/about", icon: Info, label: "About" },
+  { href: "/about", icon: InfoIcon, label: "About" },
 ] as const;
 
 type NavLinkProps = NavigationItem & { isActive: boolean };
@@ -145,7 +154,7 @@ export const NavBar = (): React.ReactElement => {
               )}
               to="/"
             >
-              <Train aria-hidden="true" className="h-6 w-6 shrink-0" weight="duotone" />
+              <TrainIcon aria-hidden="true" className="h-6 w-6 shrink-0" weight="duotone" />
               <span className="hidden sm:inline">Metro Station Finder</span>
               <span className="sm:hidden">MSF</span>
             </Link>
@@ -200,12 +209,12 @@ export const NavBar = (): React.ReactElement => {
                 type="button"
               >
                 {isMobileMenuOpen ? (
-                  <X
+                  <XIcon
                     aria-hidden="true"
                     className="h-4 w-4 transition-all duration-200 group-hover:scale-110"
                   />
                 ) : (
-                  <List
+                  <ListIcon
                     aria-hidden="true"
                     className="h-4 w-4 transition-all duration-200 group-hover:scale-110"
                   />

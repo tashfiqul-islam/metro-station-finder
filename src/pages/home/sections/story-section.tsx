@@ -1,4 +1,4 @@
-import { CheckCircle, Lightbulb, MapPin, Target, Users } from "@phosphor-icons/react";
+import { CheckCircle, Lightbulb, MapPinIcon, Target, Users } from "@phosphor-icons/react";
 import { motion, useReducedMotion } from "motion/react";
 import { memo } from "react";
 
@@ -29,7 +29,7 @@ const storySteps: StoryStep[] = [
       "Inconsistent station data",
       "Difficulty calculating distances",
     ],
-    icon: MapPin,
+    icon: MapPinIcon,
     id: "frustration",
     title: "The Daily Struggle",
   },
