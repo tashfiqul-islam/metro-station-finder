@@ -5,7 +5,7 @@ import {
   Globe,
   Lightning,
   MapPin,
-  NavigationArrow,
+  NavigationArrowIcon,
   Rocket,
   Star,
   Users,
@@ -50,7 +50,7 @@ const features: Feature[] = [
     iconBg: "bg-linear-to-r from-teal-600 to-teal-500 dark:from-teal-500 dark:to-teal-400",
     id: "interactive-maps",
     stats: "17 stations",
-    statsIcon: NavigationArrow,
+    statsIcon: NavigationArrowIcon,
     title: "Interactive Maps",
   },
   {
@@ -91,7 +91,7 @@ interface Stat {
 }
 
 const stats: Stat[] = [
-  { icon: NavigationArrow, label: "Stations", value: "17" },
+  { icon: NavigationArrowIcon, label: "Stations", value: "17" },
   { icon: Rocket, label: "Response Time", value: "<100ms" },
   { icon: Users, label: "Users", value: "1000+" },
 ];

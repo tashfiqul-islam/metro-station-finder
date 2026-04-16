@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Calculator, MapPin, NavigationArrow } from "@phosphor-icons/react";
+import { CalculatorIcon, MapPin, NavigationArrowIcon } from "@phosphor-icons/react";
 import { motion, useReducedMotion } from "motion/react";
 import { memo } from "react";
 
@@ -150,7 +150,7 @@ export const HeroSection = memo((): React.ReactElement => {
                     <div className="glass-card group rounded-lg p-4 transition-all duration-300 hover:border-white/25 hover:shadow-lg dark:hover:border-white/20 dark:hover:bg-white/10">
                       <div className="flex items-center gap-3">
                         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border/50 bg-card shadow-md transition-all duration-300 group-hover:border-primary/50 group-hover:bg-primary/25 dark:border-white/20 dark:bg-white/10 dark:shadow-lg">
-                          <NavigationArrow className="h-4 w-4 text-foreground transition-all duration-300 group-hover:text-primary" />
+                          <NavigationArrowIcon className="h-4 w-4 text-foreground transition-all duration-300 group-hover:text-primary" />
                         </div>
                         <div className="flex min-w-0 flex-col text-left">
                           <div className="font-semibold text-foreground transition-all duration-300 group-hover:text-primary">
@@ -166,7 +166,7 @@ export const HeroSection = memo((): React.ReactElement => {
                     <div className="glass-card group rounded-lg p-4 transition-all duration-300 hover:border-white/25 hover:shadow-lg dark:hover:border-white/20 dark:hover:bg-white/10">
                       <div className="flex items-center gap-3">
                         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border/50 bg-card shadow-md transition-all duration-300 group-hover:border-primary/50 group-hover:bg-primary/25 dark:border-white/20 dark:bg-white/10 dark:shadow-lg">
-                          <Calculator className="h-4 w-4 text-foreground transition-all duration-300 group-hover:text-primary" />
+                          <CalculatorIcon className="h-4 w-4 text-foreground transition-all duration-300 group-hover:text-primary" />
                         </div>
                         <div className="flex min-w-0 flex-col text-left">
                           <div className="font-semibold text-foreground transition-all duration-300 group-hover:text-primary">

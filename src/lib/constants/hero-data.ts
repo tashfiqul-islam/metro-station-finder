@@ -1,16 +1,16 @@
-import { Calculator, NavigationArrow } from "@phosphor-icons/react";
+import { CalculatorIcon, NavigationArrowIcon } from "@phosphor-icons/react";
 
 export const HERO_DATA = {
   badge: "Metro Station Finder",
   cta: {
     primary: {
       href: "/station-finder",
-      icon: NavigationArrow,
+      icon: NavigationArrowIcon,
       text: "Find Station",
     },
     secondary: {
       href: "/station-fares",
-      icon: Calculator,
+      icon: CalculatorIcon,
       text: "Calculate Fare",
     },
   },

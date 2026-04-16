@@ -1,4 +1,4 @@
-import { Calculator, House, Info, List, MapPin, Path, Train, X } from "@phosphor-icons/react";
+import { CalculatorIcon, House, Info, List, MapPin, Path, Train, X } from "@phosphor-icons/react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { memo, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -17,7 +17,7 @@ interface NavigationItem {
 const NAVIGATION_ITEMS: readonly NavigationItem[] = [
   { href: "/", icon: House, label: "Home" },
   { href: "/station-finder", icon: MapPin, label: "Station Finder" },
-  { href: "/station-fares", icon: Calculator, label: "Station Fares" },
+  { href: "/station-fares", icon: CalculatorIcon, label: "Station Fares" },
   { href: "/trip-planner", icon: Path, label: "Trip Planner" },
   { href: "/about", icon: Info, label: "About" },
 ] as const;
