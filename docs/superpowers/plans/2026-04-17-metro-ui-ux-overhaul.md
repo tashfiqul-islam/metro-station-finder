@@ -206,7 +206,7 @@ At the end of `src/styles.css`, after the last `}` in `@layer components`, add:
       box-shadow: 0 0 0 0 var(--color-primary);
     }
     50% {
-      box-shadow: 0 0 0 6px oklch(from var(--color-primary) l c h / 0%);
+      box-shadow: 0 0 0 6px oklch(0.64 0.2 145 / 0%);
     }
   }
 
