@@ -144,7 +144,7 @@ _Entries appear below in chronological order as sprints complete._
 
 ## Sprint 4 — Home Page Port
 
-**Merge commit:** `PLACEHOLDER` — `feat: implement sprint 4 — home page port`
+**Merge commit:** `a0af66e` — `feat: implement sprint 4 — home page port`
 **Model routing:** Sonnet 4.6 primary throughout.
 
 **Shipped:**
