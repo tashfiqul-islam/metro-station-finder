@@ -53,3 +53,4 @@ count.txt
 
 # Claude Code local state — ignored at both lint and commit layers
 .claude/
+.worktrees/
