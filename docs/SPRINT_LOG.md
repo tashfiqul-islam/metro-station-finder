@@ -109,7 +109,7 @@ _Entries appear below in chronological order as sprints complete._
 
 ## Sprint 3 — Navigation & Root Shell
 
-**Merge commit:** _(to be set after commit)_
+**Merge commit:** `60656c7`
 **Model routing:** Sonnet 4.6 primary throughout.
 
 **Shipped:**
