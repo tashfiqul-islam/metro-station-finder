@@ -97,9 +97,9 @@ export const Theme = () => {
         <Menu.Positioner>
           <Menu.Popup
             className={cn(
-              "min-w-[7rem] rounded-lg border border-border p-1 shadow-md",
+              "min-w-28 rounded-lg border border-border p-1 shadow-md",
               "bg-background text-foreground",
-              "z-[9999]",
+              "z-9999",
             )}
             style={{
               backgroundColor: "var(--color-background)",
@@ -113,7 +113,7 @@ export const Theme = () => {
                     "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm",
                     "transition-colors duration-150 hover:bg-accent/50",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                    "data-[highlighted]:bg-accent/50",
+                    "data-highlighted:bg-accent/50",
                   )}
                   key={value}
                   value={value}

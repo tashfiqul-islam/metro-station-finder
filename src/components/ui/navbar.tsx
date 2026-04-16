@@ -232,7 +232,7 @@ export const NavBar = (): React.ReactElement => {
         createPortal(
           <nav
             aria-label="Mobile navigation"
-            className="fixed top-[calc(var(--header-height)+0.5rem)] right-4 z-[9999] min-w-[200px] rounded-xl border border-white/17 p-2 shadow-lg backdrop-blur-[5.7px] md:hidden dark:border-white/10 dark:bg-black/30 dark:backdrop-blur-2xl"
+            className="fixed top-[calc(var(--header-height)+0.5rem)] right-4 z-9999 min-w-50 rounded-xl border border-white/17 p-2 shadow-lg backdrop-blur-[5.7px] md:hidden dark:border-white/10 dark:bg-black/30 dark:backdrop-blur-2xl"
             id="mobile-menu"
             ref={menuRef}
             style={{

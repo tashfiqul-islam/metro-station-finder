@@ -209,7 +209,7 @@ export const Timeline = ({ data, showHeader = true }: TimelineProps) => {
 
       <div className="relative mx-auto max-w-7xl pb-20" ref={ref}>
         <div
-          className="md:-translate-x-1/2 absolute top-0 left-[calc(1rem+1.25rem-1px)] z-0 w-[2px] overflow-hidden md:left-1/2"
+          className="md:-translate-x-1/2 absolute top-0 left-[calc(1rem+1.25rem-1px)] z-0 w-0.5 overflow-hidden md:left-1/2"
           style={{
             WebkitMaskImage:
               "linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%)",
@@ -219,11 +219,11 @@ export const Timeline = ({ data, showHeader = true }: TimelineProps) => {
           }}
         >
           <div
-            className="absolute inset-x-0 top-0 z-0 w-[2px] bg-linear-to-b from-transparent via-primary/10 to-transparent dark:via-primary/5"
+            className="absolute inset-x-0 top-0 z-0 w-0.5 bg-linear-to-b from-transparent via-primary/10 to-transparent dark:via-primary/5"
             style={{ height: `${height}px` }}
           />
           <motion.div
-            className="absolute inset-x-0 top-0 z-10 w-[2px] rounded-full"
+            className="absolute inset-x-0 top-0 z-10 w-0.5 rounded-full"
             style={{
               backgroundImage:
                 "linear-gradient(to top, var(--color-primary) 0%, oklch(from var(--color-primary) min(calc(l + 0.15), 0.95) c h) 10%, transparent 100%)",
