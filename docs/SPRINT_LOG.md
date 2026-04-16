@@ -72,3 +72,37 @@ _Entries appear below in chronological order as sprints complete._
 
 - `.geojson` imports fail at Rolldown/Vite parse time — resolved by creating a typed `.ts` re-export (`src/data/mrt6-line.ts`). A vite.config plugin could fix this properly in a future sprint.
 - Ultracite enforces `no-non-null-assertion` + `no-plusplus` + `func-style` (arrow expressions) — required rewriting loops to `for...of` and converting function declarations to arrow functions.
+
+## Sprint 2 — Design System & Theme
+
+**Merge commit:** `e8a0a4c`
+**Model routing:** Sonnet 4.6 primary throughout.
+
+**Shipped:**
+
+- `src/styles.css` — glassmorphism utilities (`.glass-card`), `--header-height`/`--footer-height` custom properties, `@property --angle`, `@keyframes shimmer-spin`
+- `src/lib/color.ts` — `hexToRgba`, `withAlpha` color helpers
+- `src/components/ui/animation-constants.ts` — motion design tokens; fixed legacy `COMPLEX_OPACITY_VALUES.*` from arrays to scalars (array values crash `useTransform`)
+- `src/components/common/glass-card.tsx` — thin div wrapper applying `.glass-card` CSS class
+- `src/components/common/section-wrapper.tsx` — scroll-driven `motion.section` with `useInView` and reduced-motion support
+- `src/components/common/unified-background.tsx` — scroll-driven blob animations using `useTransform`
+- `src/components/ui/animated-badge.tsx` — conic gradient shimmer badge with optional anchor; `ChevronRight` (lucide) → `CaretRight` (Phosphor)
+- `src/components/ui/highlight.tsx` — full `Highlight`/`HighlightItem` compound system; extracted `useHighlightItemEffect` custom hook and `buildCommonHandlers` helper to satisfy oxlint; `// eslint-disable-next-line complexity` on `HighlightItem` (inherent multi-mode polymorphic branching)
+- shadcn primitives added and converted to arrow expressions: accordion, badge, card, hover-card, separator, sheet, tabs
+- `src/components/ui/button.tsx` — added `variant="primary"` and `asChild` via Base UI `render` prop
+- `src/routes/__root.tsx` — `UnifiedBackground` mounted in root layout
+- 15 integration tests (glass-card, section-wrapper, animated-badge, highlight); `tests/setup.ts` split into shared + `tests/setup.integration.ts`
+- 73 total tests passing, `bun run ci` exit 0
+
+**Deferred:**
+
+- Visual sanity check (scratch page with `<GlassCard><AnimatedBadge /></GlassCard>`) — deferred; `bun run ci` verifies structural correctness; visual pass belongs in Sprint 3 browser smoke test
+
+**Surprises:**
+
+- `"use client"` directives in shadcn-generated files must be stripped (TanStack Start, not Next.js).
+- shadcn@latest emits `function` declarations; all 7 component files manually converted to arrow expressions for ultracite `func-style` compliance.
+- `tests/setup.ts` runs in both Node and jsdom environments; `Object.defineProperty(window, ...)` throws in Node — required splitting browser stubs into a separate `tests/setup.integration.ts`.
+- oxlint `complexity` max is 20; `HighlightItem` (ported from a multi-mode UI library) hits 32 even after extracting hooks and helpers — suppressed with inline disable comment.
+
+**ADRs written:** none.
