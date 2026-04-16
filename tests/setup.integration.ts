@@ -1,5 +1,29 @@
 import { vi } from "vitest";
 
+// Stub localStorage — jsdom's localstorage-file flag may leave it non-functional
+const localStorageMap = new Map<string, string>();
+const localStorageMock: Storage = {
+  clear: () => {
+    localStorageMap.clear();
+  },
+  getItem: (key: string) => localStorageMap.get(key) ?? null,
+  key: (index: number) => [...localStorageMap.keys()][index] ?? null,
+  get length() {
+    return localStorageMap.size;
+  },
+  removeItem: (key: string) => {
+    localStorageMap.delete(key);
+  },
+  setItem: (key: string, value: string) => {
+    localStorageMap.set(key, value);
+  },
+};
+Object.defineProperty(window, "localStorage", {
+  configurable: true,
+  value: localStorageMock,
+  writable: true,
+});
+
 // Stub IntersectionObserver — not implemented in jsdom
 class MockIntersectionObserver {
   observe = vi.fn();

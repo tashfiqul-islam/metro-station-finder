@@ -106,3 +106,38 @@ _Entries appear below in chronological order as sprints complete._
 - oxlint `complexity` max is 20; `HighlightItem` (ported from a multi-mode UI library) hits 32 even after extracting hooks and helpers — suppressed with inline disable comment.
 
 **ADRs written:** none.
+
+## Sprint 3 — Navigation & Root Shell
+
+**Merge commit:** _(to be set after commit)_
+**Model routing:** Sonnet 4.6 primary throughout.
+
+**Shipped:**
+
+- `src/routes/__root.tsx` — full port: FOUC-blocking inline `<script>` (minified iife, verbatim logic from legacy), `QueryClientProvider` with 6 named time-constant helpers matching legacy, `UnifiedBackground`, `NavBar`, `<main>` with `paddingTop: var(--header-height)`, dev-gated `TanStackDevtools`/`ReactQueryDevtools`, `notFoundComponent` with home link, `head()` with title/description/viewport/charset/stylesheet
+- `src/lib/web-vitals.ts` — CLS/FCP/INP/LCP/TTFB reporting (dev-console only)
+- `src/components/ui/navbar.tsx` — 5 nav items (Home/Station Finder/Station Fares/Trip Planner/About), Phosphor icons (`House`, `MapPin`, `Calculator`, `Path`, `Info`, `List`, `X`), `Highlight`/`HighlightItem` desktop pill, `createPortal` mobile dropdown with click-outside + Escape, `aria-current="page"` via TanStack Router `activeProps`
+- `src/components/navbar/logo.tsx` — `Train` (Phosphor duotone), responsive `Metro Station Finder` / `MSF`
+- `src/components/navbar/github.tsx` — `GithubLogo` (Phosphor), accessible anchor
+- `src/components/navbar/theme.tsx` — 3-state (`light | dark | system`), Base UI `Menu.RadioGroup` dropdown, `localStorage`-backed, `applyTheme` sets `data-theme` + `classList`
+- `tests/integration/navbar.test.tsx` — 6 tests: all 5 nav items render, home link `aria-current`, logo responsive spans, hamburger opens/closes (Escape + outside click)
+- `tests/integration/theme.test.tsx` — 4 tests: trigger renders, Dark/System/Light selections update `localStorage` and `html` class
+- `tests/e2e/navigation.spec.ts` — desktop nav items, page title, SPA no-reload, mobile menu
+- `tests/e2e/theme-no-fouc.spec.ts` — dark system preference → `.dark` class before paint, light preference, stored theme overrides system
+- `tests/setup.integration.ts` — localStorage stub via `Map` (jsdom's `--localstorage-file` flag breaks native `Storage`)
+- 83 total tests, `bun run ci` exit 0
+
+**Deferred:**
+
+- Lighthouse `≥95` audit and `@axe-core/playwright` a11y pass — deferred to a dedicated browser smoke test session after Sprint 4 (app needs content to be meaningful)
+- Visual browser smoke test — same deferral
+
+**Surprises:**
+
+- jsdom's `--localstorage-file` flag renders the built-in `localStorage` non-functional in integration tests; resolved with a `Map`-backed `Storage` stub in `tests/setup.integration.ts`.
+- Base UI `Menu.RadioItem` renders with `role="menuitemradio"`, not `"menuitem"` — initial test query `findByRole("menuitem")` failed.
+- `data-[status=active]` is TanStack Router's Link activation class; `activeProps={{ "aria-current": "page" }}` is the idiomatic way to wire accessible active state.
+- oxlint `no-plusplus` bans `++` in E2E tests — must use `+= 1`.
+- Ultracite reformats `dataset.theme = x` to `dataset["theme"] = x` (TypeScript `noPropertyAccessFromIndexSignature` + formatting consistency).
+
+**ADRs written:** none.

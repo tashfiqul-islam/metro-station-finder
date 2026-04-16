@@ -6,34 +6,34 @@ Short snapshot of current project state. Overwritten at every sprint boundary. K
 
 ## Current state
 
-**Active sprint:** Sprint 3 — Map Integration (MapLibre GL + OpenFreeMap tiles)
+**Active sprint:** Sprint 4 — Home Page Port
 **Status:** not started
-**Primary model for this sprint:** Sonnet 4.6 primary
+**Primary model for this sprint:** Sonnet 4.6 primary — Haiku 4.5 for icon rename + `techLogos` + glass-card call-site rewrites; Opus 4.6 for post-refactor review
 
-**Last-completed sprint:** Sprint 2 — Design System & Theme
-**Last commit on `master`:** _(see git log — Sprint 2 merge)_
+**Last-completed sprint:** Sprint 3 — Navigation & Root Shell
+**Last commit on `master`:** _(see git log — Sprint 3 merge)_
 
 ## Next action
 
-Begin Sprint 3 per `docs/IMPLEMENTATION_PLAN.md` §"Sprint 3". Key tasks:
+Begin Sprint 4 per `docs/IMPLEMENTATION_PLAN.md` §"Sprint 4". Key tasks:
 
-1. Add `maplibre-gl` and `@maplibre/maplibre-gl-style-spec` dependencies.
-2. Implement `MapView` component with MapLibre GL canvas, OpenFreeMap tile source.
-3. Overlay MRT-6 line geojson (`src/data/mrt6-line.ts`) as a GeoJSON layer.
-4. Add station markers with click-to-select behaviour.
-5. Write integration tests for the map component.
+1. Port all 6 home sections from legacy (`hero`, `tech-stack`, `architecture`, `features`, `journey`, `cta`).
+2. Apply 2026 deltas: Phosphor icons, updated tech stack logos, MapLibre copy, journey v1.0.0 rebuild entry.
+3. Rewrite all `glass-card` call-sites to use `<GlassCard>` component.
+4. Write integration tests for each home section.
+5. E2E: smoke test that `/` renders all sections.
 
-## Sprint 2 retro (1 line)
+## Sprint 3 retro (1 line)
 
-Design system and shell components implemented: glassmorphism CSS utilities, animation tokens, color helpers, `GlassCard`, `SectionWrapper`, `UnifiedBackground`, `AnimatedBadge`, `Highlight` compound system, all shadcn primitives (accordion, badge, card, hover-card, separator, sheet, tabs) converted to arrow-expression style, 15 integration tests passing, 73 total tests, `bun run ci` exit 0.
+Navigation & Root Shell implemented: full `__root.tsx` port with FOUC-blocking inline script, QueryClientProvider with named constants, `NavBar` with 5 Phosphor-icon nav items, `Theme` Base UI Menu dropdown, `Logo`, `GithubLink`, mobile hamburger (portal + click-outside + Escape), 25 integration + 83 total tests, `bun run ci` exit 0.
 
 **Key decisions / surprises:**
 
-- `COMPLEX_OPACITY_VALUES.*` changed from arrays to scalars (legacy bug); array values crash `useTransform`.
-- `"use client"` directives stripped from all ported files (TanStack Start, not Next.js).
-- shadcn@latest generates `function` declarations; all converted to arrow expressions to satisfy ultracite `func-style` rule.
-- `HighlightItem` complexity (34) above oxlint max (20); suppressed inline with `// eslint-disable-next-line complexity` — the component is a direct port of a multi-mode polymorphic UI primitive.
-- `tests/setup.ts` split into shared + `tests/setup.integration.ts` to avoid `window is not defined` in the Node unit test environment.
+- `@testing-library/user-event` not installed — used `fireEvent` throughout; sufficient for all test cases.
+- jsdom's `--localstorage-file` flag leaves `localStorage` non-functional; replaced with a `Map`-backed stub in `tests/setup.integration.ts`.
+- Base UI `Menu.RadioItem` has `role="menuitemradio"` (not `"menuitem"`) — tests updated accordingly.
+- `data-[status=active]` is TanStack Router's Link active class; `activeProps={{ "aria-current": "page" }}` provides the correct ARIA attribute.
+- `no-plusplus` oxlint rule bans `++`; E2E tests must use `+= 1`.
 
 ## In-flight decisions
 
@@ -48,7 +48,7 @@ None.
 
 1. Read `AGENTS.md` + `CLAUDE.md` — rules + Claude-specific notes.
 2. Read **this file** (`docs/HANDOFF.md`) for current state.
-3. Read `docs/IMPLEMENTATION_PLAN.md` §"Sprint 3" for the active sprint.
+3. Read `docs/IMPLEMENTATION_PLAN.md` §"Sprint 4" for the active sprint.
 4. `git log --oneline -20` for recent history and the current SHA.
 5. Begin work. Surface assumptions before any non-trivial change (AGENTS.md §2.1).
 
