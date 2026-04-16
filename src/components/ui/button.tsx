@@ -32,6 +32,8 @@ const buttonVariants = cva(
         link: "text-primary underline-offset-4 hover:underline",
         outline:
           "border-border hover:bg-input/50 hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:bg-input/30",
+        primary:
+          "bg-primary text-primary-foreground shadow hover:bg-primary/90 focus-visible:ring-primary/30",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80 aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
       },
@@ -39,15 +41,23 @@ const buttonVariants = cva(
   },
 );
 
+type ButtonProps = ButtonPrimitive.Props &
+  VariantProps<typeof buttonVariants> & {
+    /** Render the button as a custom element via Base UI's render prop. */
+    asChild?: React.ReactElement;
+  };
+
 const Button = ({
   className,
   size = "default",
   variant = "default",
+  asChild,
   ...props
-}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) => (
+}: ButtonProps) => (
   <ButtonPrimitive
     className={cn(buttonVariants({ className, size, variant }))}
     data-slot="button"
+    render={asChild}
     {...props}
   />
 );

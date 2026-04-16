@@ -48,6 +48,7 @@ export default defineConfig({
           environment: "jsdom",
           include: ["tests/integration/**/*.{test,spec}.{ts,tsx}"],
           name: "integration",
+          setupFiles: ["./tests/setup.ts", "./tests/setup.integration.ts"],
         },
       },
     ],

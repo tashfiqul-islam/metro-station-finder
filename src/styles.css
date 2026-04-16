@@ -7,6 +7,8 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
+  --header-height: 4rem;
+  --footer-height: 0;
   --background: oklch(1 0 0);
   --foreground: oklch(0.141 0.005 285.823);
   --card: oklch(1 0 0);
@@ -118,6 +120,18 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+@property --angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes shimmer-spin {
+  to {
+    --angle: 360deg;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -127,5 +141,12 @@
   }
   html {
     @apply font-sans;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply border border-white/17 backdrop-blur-[5.7px];
+    @apply dark:border-white/10 dark:bg-black/30 dark:backdrop-blur-2xl;
   }
 }
