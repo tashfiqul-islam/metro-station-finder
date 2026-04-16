@@ -11,8 +11,19 @@ import { defineConfig } from "vite";
 // https://tanstack.com/start/latest/docs/framework/react/guide/static-prerendering
 export default defineConfig({
   build: {
+    chunkSizeWarningLimit: 600,
     cssMinify: "lightningcss",
     reportCompressedSize: false,
+    rolldownOptions: {
+      output: {
+        assetFileNames: "assets/[name]-[hash][extname]",
+        chunkFileNames: "assets/[name]-[hash].js",
+        entryFileNames: "assets/[name]-[hash].js",
+        // 2026 best practice: Rolldown's automatic balanced code splitting
+        // Ensures vendor libs (React, Base UI, Framer Motion) load in parallel
+        // with application code, optimizing for both caching and LCP metrics
+      },
+    },
     sourcemap: true,
     target: "es2024",
   },
