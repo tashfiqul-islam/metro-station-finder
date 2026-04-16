@@ -93,7 +93,7 @@ export const HeroSection = memo((): React.ReactElement => {
           >
             <Button
               asChild={
-                <Link to={HERO_DATA.cta.primary.href as string}>
+                <Link to={HERO_DATA.cta.primary.href}>
                   <HERO_DATA.cta.primary.icon />
                   {HERO_DATA.cta.primary.text}
                 </Link>
@@ -104,7 +104,7 @@ export const HeroSection = memo((): React.ReactElement => {
             />
             <Button
               asChild={
-                <Link to={HERO_DATA.cta.secondary.href as string}>
+                <Link to={HERO_DATA.cta.secondary.href}>
                   <HERO_DATA.cta.secondary.icon />
                   {HERO_DATA.cta.secondary.text}
                 </Link>

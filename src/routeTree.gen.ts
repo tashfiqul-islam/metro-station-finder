@@ -9,8 +9,32 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TripPlannerRouteImport } from './routes/trip-planner'
+import { Route as StationFinderRouteImport } from './routes/station-finder'
+import { Route as StationFaresRouteImport } from './routes/station-fares'
+import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 
+const TripPlannerRoute = TripPlannerRouteImport.update({
+  id: '/trip-planner',
+  path: '/trip-planner',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StationFinderRoute = StationFinderRouteImport.update({
+  id: '/station-finder',
+  path: '/station-finder',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StationFaresRoute = StationFaresRouteImport.update({
+  id: '/station-fares',
+  path: '/station-fares',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -19,28 +43,83 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/station-fares': typeof StationFaresRoute
+  '/station-finder': typeof StationFinderRoute
+  '/trip-planner': typeof TripPlannerRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/station-fares': typeof StationFaresRoute
+  '/station-finder': typeof StationFinderRoute
+  '/trip-planner': typeof TripPlannerRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/station-fares': typeof StationFaresRoute
+  '/station-finder': typeof StationFinderRoute
+  '/trip-planner': typeof TripPlannerRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/about'
+    | '/station-fares'
+    | '/station-finder'
+    | '/trip-planner'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/about' | '/station-fares' | '/station-finder' | '/trip-planner'
+  id:
+    | '__root__'
+    | '/'
+    | '/about'
+    | '/station-fares'
+    | '/station-finder'
+    | '/trip-planner'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AboutRoute: typeof AboutRoute
+  StationFaresRoute: typeof StationFaresRoute
+  StationFinderRoute: typeof StationFinderRoute
+  TripPlannerRoute: typeof TripPlannerRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/trip-planner': {
+      id: '/trip-planner'
+      path: '/trip-planner'
+      fullPath: '/trip-planner'
+      preLoaderRoute: typeof TripPlannerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/station-finder': {
+      id: '/station-finder'
+      path: '/station-finder'
+      fullPath: '/station-finder'
+      preLoaderRoute: typeof StationFinderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/station-fares': {
+      id: '/station-fares'
+      path: '/station-fares'
+      fullPath: '/station-fares'
+      preLoaderRoute: typeof StationFaresRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -53,6 +132,10 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AboutRoute: AboutRoute,
+  StationFaresRoute: StationFaresRoute,
+  StationFinderRoute: StationFinderRoute,
+  TripPlannerRoute: TripPlannerRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
