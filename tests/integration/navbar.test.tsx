@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import {
   createMemoryHistory,
   createRootRoute,
@@ -10,13 +10,16 @@ import { describe, expect, it } from "vitest";
 import { NavBar } from "@/components/ui/navbar";
 
 const renderNavBar = async (initialPath = "/") => {
-  const rootRoute = createRootRoute({ component: NavBar });
-  const router = createRouter({
-    history: createMemoryHistory({ initialEntries: [initialPath] }),
-    routeTree: rootRoute,
+  const result = await act(async () => {
+    const rootRoute = createRootRoute({ component: NavBar });
+    const router = createRouter({
+      history: createMemoryHistory({ initialEntries: [initialPath] }),
+      routeTree: rootRoute,
+    });
+    const renderResult = render(<RouterProvider router={router} />);
+    await router.load();
+    return renderResult;
   });
-  const result = render(<RouterProvider router={router} />);
-  await router.load();
   return result;
 };
 

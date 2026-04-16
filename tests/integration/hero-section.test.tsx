@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import {
   createMemoryHistory,
   createRootRoute,
@@ -10,13 +10,16 @@ import { describe, expect, it } from "vitest";
 import { HeroSection } from "@/pages/home/sections/hero-section";
 
 const renderHeroSection = async () => {
-  const rootRoute = createRootRoute({ component: HeroSection });
-  const router = createRouter({
-    history: createMemoryHistory({ initialEntries: ["/"] }),
-    routeTree: rootRoute,
+  const result = await act(async () => {
+    const rootRoute = createRootRoute({ component: HeroSection });
+    const router = createRouter({
+      history: createMemoryHistory({ initialEntries: ["/"] }),
+      routeTree: rootRoute,
+    });
+    const renderResult = render(<RouterProvider router={router} />);
+    await router.load();
+    return renderResult;
   });
-  const result = render(<RouterProvider router={router} />);
-  await router.load();
   return result;
 };
 

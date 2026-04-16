@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import {
   createMemoryHistory,
   createRootRoute,
@@ -10,13 +10,16 @@ import { describe, expect, it } from "vitest";
 import AnimatedBadge from "@/components/ui/animated-badge";
 
 const renderWithRouter = async (ui: React.ReactElement) => {
-  const rootRoute = createRootRoute({ component: () => ui });
-  const router = createRouter({
-    history: createMemoryHistory(),
-    routeTree: rootRoute,
+  const result = await act(async () => {
+    const rootRoute = createRootRoute({ component: () => ui });
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routeTree: rootRoute,
+    });
+    const renderResult = render(<RouterProvider router={router} />);
+    await router.load();
+    return renderResult;
   });
-  const result = render(<RouterProvider router={router} />);
-  await router.load();
   return result;
 };
 
