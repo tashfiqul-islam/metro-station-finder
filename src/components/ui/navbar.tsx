@@ -4,7 +4,7 @@ import {
   InfoIcon,
   ListIcon,
   MapPinIcon,
-  Path,
+  PathIcon,
   TrainIcon,
   XIcon,
 } from "@phosphor-icons/react";
@@ -27,7 +27,7 @@ const NAVIGATION_ITEMS: readonly NavigationItem[] = [
   { href: "/", icon: HouseIcon, label: "Home" },
   { href: "/station-finder", icon: MapPinIcon, label: "Station Finder" },
   { href: "/station-fares", icon: CalculatorIcon, label: "Station Fares" },
-  { href: "/trip-planner", icon: Path, label: "Trip Planner" },
+  { href: "/trip-planner", icon: PathIcon, label: "Trip Planner" },
   { href: "/about", icon: InfoIcon, label: "About" },
 ] as const;
 
