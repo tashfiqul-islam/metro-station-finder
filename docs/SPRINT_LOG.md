@@ -141,3 +141,41 @@ _Entries appear below in chronological order as sprints complete._
 - Ultracite reformats `dataset.theme = x` to `dataset["theme"] = x` (TypeScript `noPropertyAccessFromIndexSignature` + formatting consistency).
 
 **ADRs written:** none.
+
+## Sprint 4 — Home Page Port
+
+**Merge commit:** `PLACEHOLDER` — `feat: implement sprint 4 — home page port`
+**Model routing:** Sonnet 4.6 primary throughout.
+
+**Shipped:**
+
+- `src/lib/constants/hero-data.ts` — Phosphor icon refs (`NavigationArrow`, `Calculator`) for CTA buttons
+- `src/pages/home/home-page.tsx` — root home page assembling all 6 sections with hydration guard
+- `src/pages/home/sections/hero-section.tsx` — hero with Base UI Button render-prop pattern, `.glass-card`, Phosphor icons
+- `src/pages/home/sections/story-section.tsx` — story cards with `.glass-card`, Phosphor icons (`CheckCircle`, `Lightbulb`, `MapPin`, `Target`, `Users`)
+- `src/pages/home/sections/tech-stack-section.tsx` — `TECH_LOGOS` array (Google Maps/Zod removed; MapLibre/Valibot/mapcn added), `InfiniteSlider` + `ProgressiveBlur`
+- `src/pages/home/sections/features-section.tsx` — features grid; "Interactive Maps" copy updated to MapLibre + OpenFreeMap + OpenRouteService
+- `src/pages/home/sections/journey-section.tsx` — `Timeline` with new `v1.0.0 — 2026 Rebuild` entry (TanStack Start migration)
+- `src/pages/home/sections/maintainer-section.tsx` — maintainer card with Phosphor icons (`ArrowSquareOut`, `Briefcase`, `GraduationCap`, `MapPin`)
+- `src/components/ui/infinite-slider.tsx` — ported from legacy (stripped "use client", converted to arrow function)
+- `src/components/ui/progressive-blur.tsx` — ported from legacy (stripped "use client", converted to arrow function)
+- `src/components/ui/timeline.tsx` — ported from legacy (stripped "use client")
+- `src/styles.css` — `.glass-card` extended with light-mode `background-color`, `box-shadow`, `-webkit-backdrop-filter`
+- `tests/integration/hero-section.test.tsx`, `story-section.test.tsx`, `tech-stack-section.test.tsx`, `features-section.test.tsx`, `journey-section.test.tsx`, `maintainer-section.test.tsx` — integration tests for all 6 sections
+- `tests/e2e/home.spec.ts` — smoke test: all section IDs visible, h1 "Precision", no console errors, primary CTA href
+- Public assets migrated: 17 tech-stack SVGs, social SVGs, `tashfiq.png`; `react-use-measure` installed
+- 111 total tests, `bun run ci` exit 0
+
+**Deferred:**
+
+- `as string` casts on `<Link to=...>` for unregistered routes — will be removed in Sprint 5/6 when those routes are registered in `routeTree.gen.ts`
+- Visual browser smoke test and Lighthouse audit — deferred to after Sprint 5
+
+**Surprised us:**
+
+- Base UI `Button.asChild` is `React.ReactElement` (render prop), not a Radix UI boolean — every CTA call-site required rewriting to `asChild={<Link to={...}>...</Link>}`.
+- `vi.fn().mockImplementation(() => ({...}))` cannot be used as a constructor; `@floating-ui/dom autoUpdate` activates ResizeObserver when it's defined (even as a mock), breaking Theme tests. Resolution: leave ResizeObserver undefined globally; mock `@/components/ui/timeline` locally in the journey-section test only.
+- Ultracite `func-style` rule flagged `export function Foo(...)` declarations in ported components — all converted to `export const Foo = (...): React.ReactElement =>`.
+- Timeline's `getByText` queries failed with "multiple elements" because the component renders text in both a badge `<span>` and a heading `<h3>` — switched to `getAllByText(...).length >= 1`.
+
+**ADRs written:** none.

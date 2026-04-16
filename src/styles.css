@@ -147,6 +147,9 @@
 @layer components {
   .glass-card {
     @apply border border-white/17 backdrop-blur-[5.7px];
+    background-color: rgba(255, 255, 255, 0.19);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+    -webkit-backdrop-filter: blur(5.7px);
     @apply dark:border-white/10 dark:bg-black/30 dark:backdrop-blur-2xl;
   }
 }

@@ -6,34 +6,33 @@ Short snapshot of current project state. Overwritten at every sprint boundary. K
 
 ## Current state
 
-**Active sprint:** Sprint 4 — Home Page Port
+**Active sprint:** Sprint 5 — Station Finder UI
 **Status:** not started
-**Primary model for this sprint:** Sonnet 4.6 primary — Haiku 4.5 for icon rename + `techLogos` + glass-card call-site rewrites; Opus 4.6 for post-refactor review
+**Primary model for this sprint:** Sonnet 4.6 primary
 
-**Last-completed sprint:** Sprint 3 — Navigation & Root Shell
-**Last commit on `master`:** _(see git log — Sprint 3 merge)_
+**Last-completed sprint:** Sprint 4 — Home Page Port
+**Last commit on `master`:** _(see git log — Sprint 4 merge)_
 
 ## Next action
 
-Begin Sprint 4 per `docs/IMPLEMENTATION_PLAN.md` §"Sprint 4". Key tasks:
+Begin Sprint 5 per `docs/IMPLEMENTATION_PLAN.md` §"Sprint 5". Key tasks:
 
-1. Port all 6 home sections from legacy (`hero`, `tech-stack`, `architecture`, `features`, `journey`, `cta`).
-2. Apply 2026 deltas: Phosphor icons, updated tech stack logos, MapLibre copy, journey v1.0.0 rebuild entry.
-3. Rewrite all `glass-card` call-sites to use `<GlassCard>` component.
-4. Write integration tests for each home section.
-5. E2E: smoke test that `/` renders all sections.
+1. Build `/station-finder` route and page shell.
+2. Integrate MapLibre GL JS with OpenFreeMap tiles.
+3. Implement `findNearest` UI: geolocation button, nearest-station card.
+4. Add `mapcn` map component wiring.
+5. Integration + E2E tests; `bun run ci` must be green.
 
-## Sprint 3 retro (1 line)
+## Sprint 4 retro (1 line)
 
-Navigation & Root Shell implemented: full `__root.tsx` port with FOUC-blocking inline script, QueryClientProvider with named constants, `NavBar` with 5 Phosphor-icon nav items, `Theme` Base UI Menu dropdown, `Logo`, `GithubLink`, mobile hamburger (portal + click-outside + Escape), 25 integration + 83 total tests, `bun run ci` exit 0.
+Home Page Port: all 6 sections ported with 2026 deltas (Phosphor icons, MapLibre/Valibot/mapcn copy, v1.0.0 rebuild timeline entry), InfiniteSlider/ProgressiveBlur/Timeline UI components ported, 111 tests, `bun run ci` exit 0.
 
 **Key decisions / surprises:**
 
-- `@testing-library/user-event` not installed — used `fireEvent` throughout; sufficient for all test cases.
-- jsdom's `--localstorage-file` flag leaves `localStorage` non-functional; replaced with a `Map`-backed stub in `tests/setup.integration.ts`.
-- Base UI `Menu.RadioItem` has `role="menuitemradio"` (not `"menuitem"`) — tests updated accordingly.
-- `data-[status=active]` is TanStack Router's Link active class; `activeProps={{ "aria-current": "page" }}` provides the correct ARIA attribute.
-- `no-plusplus` oxlint rule bans `++`; E2E tests must use `+= 1`.
+- Base UI `Button` uses `asChild?: React.ReactElement` render prop (not Radix UI boolean `asChild`) — legacy code pattern required full rewrite at every call-site.
+- TanStack Router typed `to` prop rejects unregistered routes (`/station-finder`, `/station-fares`, etc.) — cast to `as string` until Sprint 5/6 register those routes in `routeTree.gen.ts`.
+- `vi.fn().mockImplementation(() => ({...}))` with arrow function body cannot be used as a constructor; `@floating-ui/dom autoUpdate` checks `typeof ResizeObserver === 'function'` and calls `new ResizeObserver(callback)` when defined — adding any ResizeObserver mock to `setup.integration.ts` broke Theme tests. Solution: leave ResizeObserver undefined globally; mock `@/components/ui/timeline` locally in `journey-section.test.tsx`.
+- `export function Foo(...)` syntax flagged by ultracite `func-style`; all ported components converted to `export const Foo = (...): React.ReactElement =>`.
 
 ## In-flight decisions
 
@@ -48,7 +47,7 @@ None.
 
 1. Read `AGENTS.md` + `CLAUDE.md` — rules + Claude-specific notes.
 2. Read **this file** (`docs/HANDOFF.md`) for current state.
-3. Read `docs/IMPLEMENTATION_PLAN.md` §"Sprint 4" for the active sprint.
+3. Read `docs/IMPLEMENTATION_PLAN.md` §"Sprint 5" for the active sprint.
 4. `git log --oneline -20` for recent history and the current SHA.
 5. Begin work. Surface assumptions before any non-trivial change (AGENTS.md §2.1).
 
