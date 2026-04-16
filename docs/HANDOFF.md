@@ -6,38 +6,33 @@ Short snapshot of current project state. Overwritten at every sprint boundary. K
 
 ## Current state
 
-**Active sprint:** Sprint 5 — Station Finder UI
+**Active sprint:** Sprint 5 — Routing Stubs & About Page
 **Status:** not started
-**Primary model for this sprint:** Sonnet 4.6 primary
+**Primary model for this sprint:** Haiku 4.5 primary — Sonnet 4.6 for per-route meta authoring and About page content review.
 
 **Last-completed sprint:** Sprint 4 — Home Page Port
-**Last commit on `master`:** _(see git log — Sprint 4 merge)_
+**Last commit on `master`:** `084db88` — `style: apply oxfmt tailwind v4 utility normalization`
 
 ## Next action
 
 Begin Sprint 5 per `docs/IMPLEMENTATION_PLAN.md` §"Sprint 5". Key tasks:
 
-1. Build `/station-finder` route and page shell.
-2. Integrate MapLibre GL JS with OpenFreeMap tiles.
-3. Implement `findNearest` UI: geolocation button, nearest-station card.
-4. Add `mapcn` map component wiring.
-5. Integration + E2E tests; `bun run ci` must be green.
+1. Port `/about` page from legacy (`D:/Projects/metro-station-finder/src/routes/about.tsx`, 664 LOC). Strip `"use client"`, replace Lucide with Phosphor icons. Uses Tabs + Accordion + Badge + Separator (all already added via shadcn in Sprint 2).
+2. Add per-route `head()` meta to every route: title (with site suffix), description, canonical `<link>`, Open Graph tags, Twitter Card tags.
+3. Add JSON-LD `WebPage` block to every route via `head()`.
+4. Flesh out the `notFoundComponent` in `__root.tsx` with a Phosphor warning icon and a link home (currently a basic centered 404).
+5. Stub routes for `/station-finder`, `/station-fares`, `/trip-planner` already exist from Sprint 4 — verify they have correct headings and meta, upgrade if needed.
+6. Integration tests for About page content (tabs switch, accordion expands).
+7. E2E test: every route has `<title>`, `<meta name="description">`, `<link rel="canonical">`, valid JSON-LD.
 
 ## Sprint 4 retro (1 line)
 
-Home Page Port: all 6 sections ported with 2026 deltas (Phosphor icons, MapLibre/Valibot/mapcn copy, v1.0.0 rebuild timeline entry), InfiniteSlider/ProgressiveBlur/Timeline UI components ported, 111 tests, `bun run ci` exit 0.
-
-**Key decisions / surprises:**
-
-- Base UI `Button` uses `asChild?: React.ReactElement` render prop (not Radix UI boolean `asChild`) — legacy code pattern required full rewrite at every call-site.
-- TanStack Router typed `to` prop rejects unregistered routes (`/station-finder`, `/station-fares`, etc.) — cast to `as string` until Sprint 5/6 register those routes in `routeTree.gen.ts`.
-- `vi.fn().mockImplementation(() => ({...}))` with arrow function body cannot be used as a constructor; `@floating-ui/dom autoUpdate` checks `typeof ResizeObserver === 'function'` and calls `new ResizeObserver(callback)` when defined — adding any ResizeObserver mock to `setup.integration.ts` broke Theme tests. Solution: leave ResizeObserver undefined globally; mock `@/components/ui/timeline` locally in `journey-section.test.tsx`.
-- `export function Foo(...)` syntax flagged by ultracite `func-style`; all ported components converted to `export const Foo = (...): React.ReactElement =>`.
+All 6 home sections ported with Phosphor icons and updated tech stack copy. InfiniteSlider, ProgressiveBlur, and Timeline UI components ported. 111 tests passing, bun run ci exit 0. Deprecated Phosphor icon aliases required 3 fix commits.
 
 ## In-flight decisions
 
-- **LLM provider for Sprint 11** — deferred until Sprint 11. ADR `001-llm-provider.md` to be written then.
-- **Tile fallback** — OpenFreeMap only unless runtime smoke tests in Sprint 6 show problems.
+- **LLM provider for Sprint 11** — research spike deferred until Sprint 11 begins.
+- **Tile fallback** — OpenFreeMap only unless runtime issues surface in Sprint 6.
 
 ## Blockers
 

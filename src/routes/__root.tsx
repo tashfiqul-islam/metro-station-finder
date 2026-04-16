@@ -1,6 +1,7 @@
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { WarningCircleIcon } from "@phosphor-icons/react";
 import { createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { useEffect, useState } from "react";
@@ -21,9 +22,9 @@ const GC_TIME_DAYS = 1;
 const QUERY_RETRY_COUNT = 2;
 const MUTATION_RETRY_COUNT = 1;
 
-// ─── 404 component ────────────────────────────────────────────────────────────
 const NotFoundComponent = () => (
   <div className="flex min-h-screen flex-col items-center justify-center gap-4">
+    <WarningCircleIcon className="h-16 w-16 text-yellow-600 dark:text-yellow-500" weight="fill" />
     <h1 className="font-bold text-4xl">404</h1>
     <p className="text-lg text-muted-foreground">Page not found</p>
     <a className="text-primary underline hover:no-underline" href="/">
