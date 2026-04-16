@@ -1,8 +1,8 @@
 import {
-  Clock,
-  Code,
-  DeviceMobile,
-  Globe,
+  ClockIcon,
+  CodeIcon,
+  DeviceMobileIcon,
+  GlobeIcon,
   Lightning,
   MapPinIcon,
   NavigationArrowIcon,
@@ -40,7 +40,7 @@ const features: Feature[] = [
     iconBg: "bg-linear-to-r from-primary to-primary/80",
     id: "real-time-search",
     stats: "<100ms response",
-    statsIcon: Clock,
+    statsIcon: ClockIcon,
     title: "Real-time Search",
   },
   {
@@ -55,31 +55,31 @@ const features: Feature[] = [
   },
   {
     description: "Accurate fare calculation between any two metro stations with dynamic pricing.",
-    icon: Code,
+    icon: CodeIcon,
     iconBg: "bg-linear-to-r from-green-500 to-emerald-500",
     id: "fare-calculation",
     stats: "100% accurate",
-    statsIcon: Code,
+    statsIcon: CodeIcon,
     title: "Smart Fare Calculation",
   },
   {
     description:
       "Works seamlessly underground with advanced caching and progressive web app capabilities.",
-    icon: Globe,
+    icon: GlobeIcon,
     iconBg: "bg-linear-to-r from-purple-500 to-violet-500",
     id: "offline-support",
     stats: "100% offline",
-    statsIcon: Globe,
+    statsIcon: GlobeIcon,
     title: "Offline Support",
   },
   {
     description:
       "Optimized for mobile commuters with touch-friendly interfaces and gesture navigation.",
-    icon: DeviceMobile,
+    icon: DeviceMobileIcon,
     iconBg: "bg-linear-to-r from-pink-500 to-rose-500",
     id: "mobile-first",
     stats: "Touch optimized",
-    statsIcon: DeviceMobile,
+    statsIcon: DeviceMobileIcon,
     title: "Mobile First",
   },
 ];
@@ -93,7 +93,7 @@ interface Stat {
 const stats: Stat[] = [
   { icon: NavigationArrowIcon, label: "Stations", value: "17" },
   { icon: RocketIcon, label: "Response Time", value: "<100ms" },
-  { icon: UsersIcon, label: "UsersIcon", value: "1000+" },
+  { icon: UsersIcon, label: "Users", value: "1000+" },
 ];
 
 export const FeaturesSection = memo((): React.ReactElement => {

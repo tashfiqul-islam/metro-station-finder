@@ -52,7 +52,7 @@ const storySteps: StoryStep[] = [
     ],
     icon: LightbulbIcon,
     id: "inspiration",
-    title: "The LightbulbIcon Moment",
+    title: "The Lightbulb Moment",
   },
   {
     bgColor: "bg-green-500",
