@@ -113,20 +113,7 @@ export const FeaturesSection = memo((): React.ReactElement => {
           whileInView={shouldReduceMotion ? {} : { opacity: 1, y: 0 }}
         >
           <h2 className="mb-4 font-bold text-3xl text-foreground sm:text-4xl lg:text-5xl xl:text-6xl">
-            Features{" "}
-            <span
-              className="bg-clip-text font-extrabold text-transparent"
-              style={{
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
-                backgroundImage:
-                  "linear-gradient(135deg, var(--color-primary) 0%, oklch(from var(--color-primary) min(calc(l + 0.2), 0.95) c h) 50%, var(--color-primary) 100%)",
-                color: "var(--color-primary)",
-              }}
-            >
-              That Matter
-            </span>
+            Features <span className="gradient-text font-extrabold">That Matter</span>
           </h2>
           <p className="mx-auto max-w-2xl text-base text-muted-foreground leading-relaxed sm:text-lg lg:text-xl">
             Every feature is designed with the commuter in mind, ensuring reliability and ease of

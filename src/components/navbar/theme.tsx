@@ -1,6 +1,5 @@
-import { Menu } from "@base-ui/react";
-import { MoonIcon, MonitorIcon, SunIcon } from "@phosphor-icons/react";
-import { useEffect, useState } from "react";
+import { MonitorIcon, MoonIcon, SunIcon } from "@phosphor-icons/react";
+import { useEffect, useLayoutEffect, useState } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -10,8 +9,8 @@ const THEME_KEY = "theme";
 
 const THEME_OPTIONS = [
   { icon: SunIcon, label: "Light", value: "light" as const },
-  { icon: MoonIcon, label: "Dark", value: "dark" as const },
   { icon: MonitorIcon, label: "System", value: "system" as const },
+  { icon: MoonIcon, label: "Dark", value: "dark" as const },
 ] as const;
 
 const getStoredTheme = (): ThemeValue => {
@@ -45,87 +44,77 @@ export const applyTheme = (theme: ThemeValue): void => {
   html.classList.add(effective);
 };
 
+// Runs synchronously before paint on the client, falls back to useEffect on server.
+const useIsomorphicLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
+
 export const Theme = () => {
-  const [theme, setTheme] = useState<ThemeValue>(getStoredTheme);
+  const [theme, setTheme] = useState<ThemeValue>("system");
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
+    const stored = getStoredTheme();
+    setTheme(stored);
     setMounted(true);
-    applyTheme(theme);
-  }, [theme]);
+  }, []);
 
-  const handleChange = (newValue: ThemeValue | null) => {
-    if (!newValue) {
+  // Re-apply when system preference changes while "system" mode is active.
+  useEffect(() => {
+    if (typeof window === "undefined") {
       return;
     }
-    setTheme(newValue);
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const onChange = () => {
+      if (getStoredTheme() === "system") {
+        applyTheme("system");
+      }
+    };
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  const handleTheme = (value: ThemeValue) => {
+    setTheme(value);
     try {
-      localStorage.setItem(THEME_KEY, newValue);
+      localStorage.setItem(THEME_KEY, value);
     } catch {
       // localStorage unavailable
     }
-    applyTheme(newValue);
+    applyTheme(value);
   };
 
-  if (!mounted) {
-    return null;
-  }
-
-  const CurrentIcon = THEME_OPTIONS.find((o) => o.value === theme)?.icon ?? MonitorIcon;
-
   return (
-    <Menu.Root>
-      <Menu.Trigger
-        aria-label="Change theme"
-        className={cn(
-          "group relative flex h-9 w-9 items-center justify-center rounded-full",
-          "border border-input bg-background",
-          "transition-all duration-200 hover:bg-accent/50",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-        )}
-        style={{
-          backgroundColor: "var(--color-background)",
-          borderColor: "var(--color-border)",
-        }}
-      >
-        <CurrentIcon
-          aria-hidden="true"
-          className="h-4 w-4 transition-all duration-200 group-hover:scale-110"
-        />
-      </Menu.Trigger>
-      <Menu.Portal>
-        <Menu.Positioner>
-          <Menu.Popup
+    <div
+      aria-label="Theme selector"
+      className="flex h-8 items-center gap-0.5 rounded-full border border-border/60 bg-background/60 p-0.5 shadow-sm backdrop-blur-sm"
+      role="group"
+      suppressHydrationWarning
+    >
+      {THEME_OPTIONS.map(({ icon: Icon, label, value }) => {
+        const isActive = mounted && theme === value;
+        return (
+          <button
+            aria-label={`${label} theme`}
+            aria-pressed={isActive}
             className={cn(
-              "min-w-28 rounded-lg border border-border p-1 shadow-md",
-              "bg-background text-foreground",
-              "z-9999",
+              "relative flex h-7 w-7 items-center justify-center rounded-full transition-all duration-200",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+              isActive
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:bg-accent hover:text-foreground",
             )}
-            style={{
-              backgroundColor: "var(--color-background)",
-              borderColor: "var(--color-border)",
-            }}
+            key={value}
+            onClick={() => handleTheme(value)}
+            suppressHydrationWarning
+            type="button"
           >
-            <Menu.RadioGroup value={theme} onValueChange={handleChange}>
-              {THEME_OPTIONS.map(({ label, value, icon: Icon }) => (
-                <Menu.RadioItem
-                  className={cn(
-                    "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm",
-                    "transition-colors duration-150 hover:bg-accent/50",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                    "data-highlighted:bg-accent/50",
-                  )}
-                  key={value}
-                  value={value}
-                >
-                  <Icon aria-hidden="true" className="h-3.5 w-3.5" />
-                  {label}
-                </Menu.RadioItem>
-              ))}
-            </Menu.RadioGroup>
-          </Menu.Popup>
-        </Menu.Positioner>
-      </Menu.Portal>
-    </Menu.Root>
+            <Icon
+              aria-hidden="true"
+              className="h-3.5 w-3.5"
+              weight={isActive ? "fill" : "regular"}
+            />
+          </button>
+        );
+      })}
+    </div>
   );
 };

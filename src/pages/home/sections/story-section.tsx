@@ -102,19 +102,7 @@ const DescriptionWithHighlight = ({
   return (
     <>
       {parts[0]}
-      <span
-        className="bg-clip-text font-semibold text-transparent"
-        style={{
-          WebkitBackgroundClip: "text",
-          WebkitTextFillColor: "transparent",
-          backgroundClip: "text",
-          backgroundImage:
-            "linear-gradient(135deg, var(--color-primary) 0%, oklch(from var(--color-primary) min(calc(l + 0.2), 0.95) c h) 50%, var(--color-primary) 100%)",
-          color: "var(--color-primary)",
-        }}
-      >
-        {highlightText}
-      </span>
+      <span className="gradient-text font-semibold">{highlightText}</span>
       {parts[1]}
     </>
   );
@@ -200,20 +188,7 @@ export const StorySection = memo((): React.ReactElement => {
           whileInView={shouldReduceMotion ? {} : { opacity: 1, y: 0 }}
         >
           <h2 className="mb-4 font-bold text-3xl text-foreground sm:text-4xl lg:text-5xl">
-            The Story Behind{" "}
-            <span
-              className="bg-clip-text text-transparent"
-              style={{
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
-                backgroundImage:
-                  "linear-gradient(135deg, var(--color-primary) 0%, oklch(from var(--color-primary) min(calc(l + 0.2), 0.95) c h) 50%, var(--color-primary) 100%)",
-                color: "var(--color-primary)",
-              }}
-            >
-              Metro Station Finder
-            </span>
+            The Story Behind <span className="gradient-text">Metro Station Finder</span>
           </h2>
           <p className="mx-auto max-w-2xl text-base text-muted-foreground leading-relaxed sm:text-lg">
             From a personal frustration to a solution that helps thousands of commuters navigate

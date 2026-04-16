@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import { Theme } from "@/components/navbar/theme";
 
@@ -10,20 +10,19 @@ beforeEach(() => {
 });
 
 describe("Theme", () => {
-  it("renders the theme trigger button", async () => {
+  it("renders all three theme buttons", async () => {
     render(<Theme />);
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: /change theme/i })).toBeDefined();
+      expect(screen.getByRole("button", { name: /light theme/i })).toBeDefined();
+      expect(screen.getByRole("button", { name: /system theme/i })).toBeDefined();
+      expect(screen.getByRole("button", { name: /dark theme/i })).toBeDefined();
     });
   });
 
-  it("clicking Dark option writes to localStorage and adds .dark class to html", async () => {
+  it("clicking Dark button writes to localStorage and adds .dark class to html", async () => {
     render(<Theme />);
-    const trigger = await screen.findByRole("button", { name: /change theme/i });
-    fireEvent.click(trigger);
-
-    const darkItem = await screen.findByRole("menuitemradio", { name: /dark/i });
-    fireEvent.click(darkItem);
+    const darkBtn = await screen.findByRole("button", { name: /dark theme/i });
+    fireEvent.click(darkBtn);
 
     await waitFor(() => {
       expect(localStorage.getItem("theme")).toBe("dark");
@@ -31,29 +30,22 @@ describe("Theme", () => {
     });
   });
 
-  it("clicking System option writes to localStorage", async () => {
+  it("clicking System button writes to localStorage", async () => {
     render(<Theme />);
-    const trigger = await screen.findByRole("button", { name: /change theme/i });
-    fireEvent.click(trigger);
-
-    const systemItem = await screen.findByRole("menuitemradio", { name: /system/i });
-    fireEvent.click(systemItem);
+    const systemBtn = await screen.findByRole("button", { name: /system theme/i });
+    fireEvent.click(systemBtn);
 
     await waitFor(() => {
       expect(localStorage.getItem("theme")).toBe("system");
     });
   });
 
-  it("clicking Light option writes to localStorage and adds .light class to html", async () => {
-    // Start in dark mode
+  it("clicking Light button writes to localStorage and adds .light class to html", async () => {
     localStorage.setItem("theme", "dark");
     render(<Theme />);
 
-    const trigger = await screen.findByRole("button", { name: /change theme/i });
-    fireEvent.click(trigger);
-
-    const lightItem = await screen.findByRole("menuitemradio", { name: /light/i });
-    fireEvent.click(lightItem);
+    const lightBtn = await screen.findByRole("button", { name: /light theme/i });
+    fireEvent.click(lightBtn);
 
     await waitFor(() => {
       expect(localStorage.getItem("theme")).toBe("light");

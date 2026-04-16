@@ -127,14 +127,8 @@ export const NavBar = (): React.ReactElement => {
   return (
     <>
       <header
-        className="fixed top-0 right-0 left-0 z-50 w-full border border-white/17 border-b backdrop-blur-[5.7px] dark:border-white/10 dark:bg-black/30 dark:backdrop-blur-2xl"
-        style={{
-          WebkitBackdropFilter: "blur(5.7px)",
-          backgroundColor: "rgba(255, 255, 255, 0.19)",
-          boxShadow: "0 4px 30px rgba(0, 0, 0, 0.1)",
-          height: "var(--header-height)",
-          overflow: "visible",
-        }}
+        className="nav-glass fixed top-0 right-0 left-0 z-50 w-full"
+        style={{ height: "var(--header-height)", overflow: "visible" }}
       >
         <nav
           aria-label="Main navigation"
@@ -162,14 +156,7 @@ export const NavBar = (): React.ReactElement => {
 
           {/* Desktop nav */}
           <div className="hidden items-center gap-1 md:flex">
-            <div
-              className="relative isolate flex items-center justify-center rounded-full border border-border/40 p-1"
-              style={{
-                backgroundColor: "var(--color-background)",
-                borderColor: "var(--color-border)",
-                borderRadius: "9999px",
-              }}
-            >
+            <div className="relative isolate flex items-center justify-center rounded-full border border-border/40 bg-background/70 p-1">
               <Highlight
                 className="inset-0 rounded-full"
                 click={false}
@@ -199,13 +186,9 @@ export const NavBar = (): React.ReactElement => {
                 aria-controls="mobile-menu"
                 aria-expanded={isMobileMenuOpen}
                 aria-label="Toggle mobile menu"
-                className="group relative flex h-9 w-9 items-center justify-center rounded-full border border-input bg-background transition-all duration-200 hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                className="group relative flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background transition-all duration-200 hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 onClick={toggleMobileMenu}
                 ref={menuButtonRef}
-                style={{
-                  backgroundColor: "var(--color-background)",
-                  borderColor: "var(--color-border)",
-                }}
                 type="button"
               >
                 {isMobileMenuOpen ? (
@@ -232,15 +215,9 @@ export const NavBar = (): React.ReactElement => {
         createPortal(
           <nav
             aria-label="Mobile navigation"
-            className="fixed top-[calc(var(--header-height)+0.5rem)] right-4 z-9999 min-w-50 rounded-xl border border-white/17 p-2 shadow-lg backdrop-blur-[5.7px] md:hidden dark:border-white/10 dark:bg-black/30 dark:backdrop-blur-2xl"
+            className="glass-card fixed top-[calc(var(--header-height)+0.5rem)] right-4 z-9999 min-w-50 rounded-xl p-2 md:hidden"
             id="mobile-menu"
             ref={menuRef}
-            style={{
-              WebkitBackdropFilter: "blur(5.7px)",
-              backdropFilter: "blur(5.7px)",
-              backgroundColor: "rgba(255, 255, 255, 0.19)",
-              boxShadow: "0 4px 30px rgba(0, 0, 0, 0.1)",
-            }}
           >
             <div className="flex flex-col gap-1">
               {NAVIGATION_ITEMS.map((item) => {

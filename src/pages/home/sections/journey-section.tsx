@@ -64,20 +64,7 @@ export const JourneySection = memo((): React.ReactElement => {
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
         <div className="mb-12 text-center sm:mb-16 lg:mb-20">
           <h2 className="mb-4 font-bold text-3xl text-foreground sm:text-4xl lg:text-5xl">
-            And the{" "}
-            <span
-              className="bg-clip-text font-extrabold text-transparent"
-              style={{
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
-                backgroundImage:
-                  "linear-gradient(135deg, var(--color-primary) 0%, oklch(from var(--color-primary) min(calc(l + 0.2), 0.95) c h) 50%, var(--color-primary) 100%)",
-                color: "var(--color-primary)",
-              }}
-            >
-              Journey Began
-            </span>
+            And the <span className="gradient-text font-extrabold">Journey Began</span>
           </h2>
           <p className="mx-auto max-w-2xl text-base text-muted-foreground leading-relaxed sm:text-lg">
             From concept to reality - the journey of building Metro Station Finder

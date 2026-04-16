@@ -52,19 +52,7 @@ export const HeroSection = memo((): React.ReactElement => {
             }}
           >
             Navigate Dhaka's Metro Stations with{" "}
-            <span
-              className="bg-clip-text font-extrabold text-transparent"
-              style={{
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
-                backgroundImage:
-                  "linear-gradient(135deg, var(--color-primary) 0%, oklch(from var(--color-primary) min(calc(l + 0.2), 0.95) c h) 50%, var(--color-primary) 100%)",
-                color: "var(--color-primary)",
-              }}
-            >
-              Precision
-            </span>
+            <span className="gradient-text font-extrabold">Precision</span>
           </motion.h1>
 
           <motion.p

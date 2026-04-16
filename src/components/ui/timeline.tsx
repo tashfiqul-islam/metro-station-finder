@@ -226,7 +226,7 @@ export const Timeline = ({ data, showHeader = true }: TimelineProps) => {
             className="absolute inset-x-0 top-0 z-10 w-0.5 rounded-full"
             style={{
               backgroundImage:
-                "linear-gradient(to top, var(--color-primary) 0%, oklch(from var(--color-primary) min(calc(l + 0.15), 0.95) c h) 10%, transparent 100%)",
+                "linear-gradient(to top, var(--color-primary) 0%, var(--color-primary) 10%, transparent 100%)",
               height: heightTransform,
               maxHeight: "100%",
               opacity: opacityTransform,
