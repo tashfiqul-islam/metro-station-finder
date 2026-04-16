@@ -1,4 +1,10 @@
-import { CheckCircle, Lightbulb, MapPinIcon, Target, Users } from "@phosphor-icons/react";
+import {
+  CheckCircleIcon,
+  LightbulbIcon,
+  MapPinIcon,
+  TargetIcon,
+  UsersIcon,
+} from "@phosphor-icons/react";
 import { motion, useReducedMotion } from "motion/react";
 import { memo } from "react";
 
@@ -44,9 +50,9 @@ const storySteps: StoryStep[] = [
       "Designed for simplicity and speed",
       "Focused on Dhaka's unique challenges",
     ],
-    icon: Lightbulb,
+    icon: LightbulbIcon,
     id: "inspiration",
-    title: "The Lightbulb Moment",
+    title: "The LightbulbIcon Moment",
   },
   {
     bgColor: "bg-green-500",
@@ -60,7 +66,7 @@ const storySteps: StoryStep[] = [
       "Instant fare estimation",
       "Interactive map visualization",
     ],
-    icon: Target,
+    icon: TargetIcon,
     id: "solution",
     title: "The Solution",
   },
@@ -76,7 +82,7 @@ const storySteps: StoryStep[] = [
       "Sub-100ms response times",
       "Zero maintenance overhead",
     ],
-    icon: Users,
+    icon: UsersIcon,
     id: "impact",
     title: "The Impact",
   },
@@ -164,7 +170,7 @@ const StoryStepCard = memo(({ step, index }: { step: StoryStep; index: number })
           <ul className="space-y-2.5">
             {step.highlights.map((highlight) => (
               <li className="flex items-start gap-3" key={highlight}>
-                <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-green-600 dark:text-green-400" />
+                <CheckCircleIcon className="mt-0.5 h-4 w-4 shrink-0 text-green-600 dark:text-green-400" />
                 <span className="text-muted-foreground text-sm leading-relaxed">{highlight}</span>
               </li>
             ))}

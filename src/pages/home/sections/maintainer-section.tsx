@@ -1,9 +1,9 @@
 import { Link } from "@tanstack/react-router";
 import {
-  ArrowRight,
-  ArrowSquareOut,
-  Briefcase,
-  GraduationCap,
+  ArrowRightIcon,
+  ArrowSquareOutIcon,
+  BriefcaseIcon,
+  GraduationCapIcon,
   MapPinIcon,
 } from "@phosphor-icons/react";
 import { motion, useInView, useReducedMotion } from "motion/react";
@@ -37,8 +37,8 @@ const socialLinks: SocialLinkData[] = [
 ];
 
 const keyInfo = [
-  { icon: Briefcase, label: "Role", value: "Product Manager @ Field Nation" },
-  { icon: GraduationCap, label: "Education", value: "CSE, NSU" },
+  { icon: BriefcaseIcon, label: "Role", value: "Product Manager @ Field Nation" },
+  { icon: GraduationCapIcon, label: "Education", value: "CSE, NSU" },
   { icon: MapPinIcon, label: "Location", value: "Dhaka, Bangladesh" },
 ];
 
@@ -255,14 +255,14 @@ export const MaintainerSection = memo((): React.ReactElement => {
                     width={20}
                   />
                   <span>GitHub</span>
-                  <ArrowSquareOut className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <ArrowSquareOutIcon className="h-3 w-3 sm:h-4 sm:w-4" />
                 </a>
                 <Link
                   className="group flex flex-1 items-center justify-center gap-2 rounded-xl border border-primary/20 bg-primary px-6 py-3 font-medium text-primary-foreground text-sm shadow-sm transition-all duration-300 hover:border-primary/30 hover:bg-primary/90 hover:shadow-lg sm:px-7 sm:py-3.5 sm:text-base dark:border-primary dark:bg-primary/80 dark:hover:border-primary dark:hover:bg-primary/70"
                   to={"/station-finder" as string}
                 >
                   <span>Try the App</span>
-                  <ArrowRight className="h-3 w-3 transition-transform duration-300 group-hover:translate-x-1 sm:h-4 sm:w-4" />
+                  <ArrowRightIcon className="h-3 w-3 transition-transform duration-300 group-hover:translate-x-1 sm:h-4 sm:w-4" />
                 </Link>
               </motion.div>
             </motion.div>

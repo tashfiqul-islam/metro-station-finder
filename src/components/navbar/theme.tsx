@@ -1,5 +1,5 @@
 import { Menu } from "@base-ui/react";
-import { Moon, Monitor, Sun } from "@phosphor-icons/react";
+import { MoonIcon, MonitorIcon, SunIcon } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 
 import { cn } from "@/lib/utils";
@@ -9,9 +9,9 @@ type ThemeValue = "light" | "dark" | "system";
 const THEME_KEY = "theme";
 
 const THEME_OPTIONS = [
-  { icon: Sun, label: "Light", value: "light" as const },
-  { icon: Moon, label: "Dark", value: "dark" as const },
-  { icon: Monitor, label: "System", value: "system" as const },
+  { icon: SunIcon, label: "Light", value: "light" as const },
+  { icon: MoonIcon, label: "Dark", value: "dark" as const },
+  { icon: MonitorIcon, label: "System", value: "system" as const },
 ] as const;
 
 const getStoredTheme = (): ThemeValue => {
@@ -71,7 +71,7 @@ export const Theme = () => {
     return null;
   }
 
-  const CurrentIcon = THEME_OPTIONS.find((o) => o.value === theme)?.icon ?? Monitor;
+  const CurrentIcon = THEME_OPTIONS.find((o) => o.value === theme)?.icon ?? MonitorIcon;
 
   return (
     <Menu.Root>

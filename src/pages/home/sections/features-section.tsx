@@ -6,9 +6,9 @@ import {
   Lightning,
   MapPinIcon,
   NavigationArrowIcon,
-  Rocket,
-  Star,
-  Users,
+  RocketIcon,
+  StarIcon,
+  UsersIcon,
 } from "@phosphor-icons/react";
 import { motion, useReducedMotion } from "motion/react";
 import { memo } from "react";
@@ -92,8 +92,8 @@ interface Stat {
 
 const stats: Stat[] = [
   { icon: NavigationArrowIcon, label: "Stations", value: "17" },
-  { icon: Rocket, label: "Response Time", value: "<100ms" },
-  { icon: Users, label: "Users", value: "1000+" },
+  { icon: RocketIcon, label: "Response Time", value: "<100ms" },
+  { icon: UsersIcon, label: "UsersIcon", value: "1000+" },
 ];
 
 export const FeaturesSection = memo((): React.ReactElement => {
@@ -242,7 +242,7 @@ export const FeaturesSection = memo((): React.ReactElement => {
                     {feature.featured && (
                       <div className="flex items-center gap-1">
                         {Array.from({ length: 5 }, (_, i) => (
-                          <Star
+                          <StarIcon
                             className="h-4 w-4 fill-yellow-400 text-yellow-400"
                             key={`star-${feature.id}-${i + 1}`}
                             weight="fill"

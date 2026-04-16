@@ -1,4 +1,4 @@
-import { GithubLogo } from "@phosphor-icons/react";
+import { GithubLogoIcon } from "@phosphor-icons/react";
 
 import { cn } from "@/lib/utils";
 
@@ -19,7 +19,7 @@ export const GithubLink = () => (
     }}
     target="_blank"
   >
-    <GithubLogo
+    <GithubLogoIcon
       aria-hidden="true"
       className="h-4 w-4 transition-all duration-200 group-hover:scale-110"
     />

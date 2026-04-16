@@ -1,4 +1,4 @@
-import { CaretRight } from "@phosphor-icons/react";
+import { CaretRightIcon } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
 import { motion } from "motion/react";
 
@@ -72,7 +72,7 @@ const AnimatedBadge = ({
         <span className="relative whitespace-nowrap text-neutral-900 dark:text-zinc-300">
           {text}
         </span>
-        <CaretRight className="relative h-3.5 w-3.5 text-neutral-600 transition-transform duration-200 group-hover:translate-x-0.5 dark:text-neutral-500" />
+        <CaretRightIcon className="relative h-3.5 w-3.5 text-neutral-600 transition-transform duration-200 group-hover:translate-x-0.5 dark:text-neutral-500" />
       </span>
     </motion.span>
   );
