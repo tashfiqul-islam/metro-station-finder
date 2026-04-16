@@ -11,7 +11,7 @@ Short snapshot of current project state. Overwritten at every sprint boundary. K
 **Primary model for this sprint:** Opus 4.6 primary (top-risk sprint). Sonnet 4.6 for markers and metro-line layer.
 
 **Last-completed sprint:** Sprint 5 — Routing Stubs & About Page
-**Last commit on `master`:** `4c54bd1` — `feat: add e2e tests for meta tags and seo validation`
+**Last commit on `master`:** `3fa5cad` — `docs: update handoff and sprint log for sprint 5 completion`
 
 ## Next action
 
