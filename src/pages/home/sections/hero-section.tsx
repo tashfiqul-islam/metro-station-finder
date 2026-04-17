@@ -84,40 +84,20 @@ export const HeroSection = () => {
             </div>
           </ViewportAnimation>
 
-          {/* Headline — editorial scale contrast */}
+          {/* Headline */}
           <ViewportAnimation delay={0.07}>
-            <h1 className="font-heading tracking-tighter">
-              {/* Small intro word */}
-              <span className="block text-[clamp(1.4rem,3.5vw,3.25rem)] font-light leading-tight text-muted-foreground/80">
-                Navigate
-              </span>
-              {/* MASSIVE city name */}
-              <span className="block text-[clamp(5.5rem,19vw,17rem)] font-black leading-[0.80]">
-                <span className="text-foreground">Dhaka</span>
-                <span
-                  style={{
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                    backgroundClip: "text",
-                    backgroundImage:
-                      "linear-gradient(135deg, oklch(0.74 0.18 145) 0%, oklch(0.56 0.22 145) 60%, oklch(0.76 0.16 70) 100%)",
-                  }}
-                >
-                  .
-                </span>
-              </span>
-              {/* Gradient subtitle */}
+            <h1 className="font-heading text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl">
+              Navigate Dhaka&apos;s Metro Stations with{" "}
               <span
-                className="block text-[clamp(1.25rem,3.2vw,2.8rem)] font-semibold leading-snug"
                 style={{
                   WebkitBackgroundClip: "text",
                   WebkitTextFillColor: "transparent",
                   backgroundClip: "text",
                   backgroundImage:
-                    "linear-gradient(90deg, oklch(0.72 0.18 145) 0%, oklch(0.58 0.22 145) 55%, oklch(0.74 0.16 70) 100%)",
+                    "linear-gradient(135deg, oklch(0.72 0.18 145) 0%, oklch(0.58 0.22 145) 50%, oklch(0.74 0.16 70) 100%)",
                 }}
               >
-                Mass Rapid Transit
+                Precision
               </span>
             </h1>
           </ViewportAnimation>
