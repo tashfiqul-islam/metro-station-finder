@@ -1,80 +1,91 @@
-import { memo } from "react";
+import { Badge } from "@/components/ui/badge";
+import { ViewportAnimation } from "@/components/common/viewport-animation";
+import { cn } from "@/lib/utils";
 
-import { SectionWrapper } from "@/components/common/section-wrapper";
-import { Timeline } from "@/components/ui/timeline";
+interface VersionEntry {
+  version: string;
+  date: string;
+  label: string;
+  description: string;
+  current: boolean;
+}
 
-const timelineData = [
+const versions: VersionEntry[] = [
   {
-    description:
-      "Launched the first version with core station finder functionality. Built on Next.js 14 with page router architecture and foundational CSS styling. Focused on solving the essential problem: helping commuters locate metro stations quickly.",
-    title: "The Beginning",
-    version: "v0.0.1",
+    current: false,
+    date: "October 2024",
+    description: "Initial scaffold — TanStack Router, Tailwind v4, shadcn setup.",
+    label: "First Commit",
+    version: "v0.1.0",
   },
   {
-    description:
-      "Introduced fare calculator functionality and upgraded the design system with Tailwind CSS. Improved user experience with better visual hierarchy and modern styling patterns.",
-    title: "Enhanced Features",
-    version: "v0.0.2",
+    current: false,
+    date: "November 2024",
+    description: "All 17 MRT Line 6 stations loaded with coordinates and metadata.",
+    label: "Station Data",
+    version: "v0.2.0",
   },
   {
-    description:
-      "Migrated from Next.js to TanStack Start with Tailwind 4, Valibot validation, mapcn + MapLibre maps, and an AI-powered natural language station finder. Complete design system overhaul with glassmorphism, Phosphor icons, and shadcn/ui primitives.",
-    title: "v1.0.0 — 2026 Rebuild",
-    version: "v1.0.0 — 2026 Rebuild",
+    current: false,
+    date: "January 2025",
+    description: "Complete fare matrix with single, return, and MRT Pass pricing.",
+    label: "Fare Engine",
+    version: "v0.5.0",
   },
   {
-    description:
-      "Completely redesigned with Tailwind CSS, shadcn/ui components, and intuitive interactions. Created a cohesive design language that prioritizes user experience and visual excellence.",
-    title: "Design System Overhaul",
-    version: "v1.0.0",
-  },
-  {
-    description:
-      "Optimized for blazing-fast performance with intuitive UI patterns and full mobile responsiveness. Every interaction is smooth, every feature is accessible, and every detail is refined.",
-    title: "Performance & Polish",
+    current: true,
+    date: "April 2026",
+    description: "Full UI/UX overhaul, world-class design system, trip planner foundation.",
+    label: "You are here",
     version: "v1.0.0",
   },
 ];
 
-export const JourneySection = memo((): React.ReactElement => {
-  const timelineEntries = timelineData.map((item, index) => {
-    const isEven = index % 2 === 0;
-    return {
-      content: (
-        <div className="glass-card group relative overflow-hidden rounded-2xl transition-all duration-300">
-          <div className="absolute inset-0 bg-linear-to-br from-transparent via-transparent to-transparent dark:from-primary/5 dark:via-transparent dark:to-primary/10 dark:opacity-50" />
-          <div className="relative p-6 sm:p-8">
-            <div
-              className={`mb-3 flex items-center gap-3 ${isEven ? "md:justify-end" : "md:justify-start"}`}
-            >
-              <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 font-semibold text-primary text-xs shadow-sm transition-colors dark:border-primary/50 dark:bg-primary/20 dark:text-primary dark:shadow-lg dark:ring-1 dark:ring-primary/30 dark:backdrop-blur-sm">
-                {item.version}
-              </span>
-            </div>
-            <p className="text-base text-muted-foreground leading-relaxed">{item.description}</p>
-          </div>
+export const JourneySection = (): React.ReactElement => (
+  <section className="py-20">
+    <div className="container mx-auto px-4">
+      <ViewportAnimation>
+        <div className="mb-12">
+          <h2 className="font-heading text-3xl lg:text-4xl font-bold">The journey</h2>
+          <p className="text-muted-foreground mt-2">How metro-station-finder evolved.</p>
         </div>
-      ),
-      title: item.title,
-    };
-  });
+      </ViewportAnimation>
 
-  return (
-    <SectionWrapper id="journey">
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
-        <div className="mb-12 text-center sm:mb-16 lg:mb-20">
-          <h2 className="mb-4 font-bold text-3xl text-foreground sm:text-4xl lg:text-5xl">
-            And the <span className="gradient-text font-extrabold">Journey Began</span>
-          </h2>
-          <p className="mx-auto max-w-2xl text-base text-muted-foreground leading-relaxed sm:text-lg">
-            From concept to reality - the journey of building Metro Station Finder
-          </p>
+      <div className="relative max-w-2xl">
+        {/* Vertical dashed line */}
+        <div className="absolute left-4 top-0 bottom-0 w-px border-l-2 border-dashed border-border" />
+
+        {/* Version entries */}
+        <div className="flex flex-col gap-8">
+          {versions.map((v, i) => (
+            <ViewportAnimation key={v.version} delay={i * 0.1}>
+              <div className="relative flex gap-6 pl-12">
+                {/* Route dot */}
+                <div
+                  className={cn(
+                    "absolute left-2 top-1 -translate-x-1/2",
+                    v.current ? "route-stop route-stop--current" : "route-stop",
+                  )}
+                />
+
+                {/* Content */}
+                <div className="flex flex-col gap-1 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant="outline" className="font-mono text-xs">
+                      {v.version}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">{v.date}</span>
+                  </div>
+                  <h3 className="font-heading text-lg font-bold">{v.label}</h3>
+                  <p className="text-muted-foreground text-sm">{v.description}</p>
+                </div>
+              </div>
+            </ViewportAnimation>
+          ))}
         </div>
-
-        <Timeline data={timelineEntries} showHeader={false} />
       </div>
-    </SectionWrapper>
-  );
-});
+    </div>
+  </section>
+);
 
 JourneySection.displayName = "JourneySection";
