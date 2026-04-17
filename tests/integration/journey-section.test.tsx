@@ -12,6 +12,8 @@ vi.mock("motion/react", () => ({
   },
   useInView: () => true,
   useReducedMotion: () => false,
+  useScroll: () => ({ scrollYProgress: { get: () => 0 } }),
+  useTransform: (_v: unknown, _i: unknown, output: unknown[]) => output[0],
 }));
 
 describe("JourneySection", () => {
