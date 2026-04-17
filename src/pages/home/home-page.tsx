@@ -3,7 +3,7 @@ import { memo, useEffect, useState } from "react";
 import { FeaturesSection } from "./sections/features-section";
 import { HeroSection } from "./sections/hero-section";
 import { JourneySection } from "./sections/journey-section";
-import { MaintainerSection } from "./sections/maintainer-section";
+import { CtaSection } from "./sections/cta-section";
 import { StorySection } from "./sections/story-section";
 import { TechStackSection } from "./sections/tech-stack-section";
 
@@ -25,7 +25,7 @@ export const HomePage = memo((): React.ReactElement => {
       <TechStackSection />
       <FeaturesSection />
       <JourneySection />
-      <MaintainerSection />
+      <CtaSection />
     </div>
   );
 });

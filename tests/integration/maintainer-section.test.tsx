@@ -7,11 +7,11 @@ import {
 } from "@tanstack/react-router";
 import { describe, expect, it } from "vitest";
 
-import { MaintainerSection } from "@/pages/home/sections/maintainer-section";
+import { CtaSection } from "@/pages/home/sections/cta-section";
 
-const renderMaintainerSection = async () => {
+const renderCtaSection = async () => {
   const result = await act(async () => {
-    const rootRoute = createRootRoute({ component: MaintainerSection });
+    const rootRoute = createRootRoute({ component: CtaSection });
     const router = createRouter({
       history: createMemoryHistory({ initialEntries: ["/"] }),
       routeTree: rootRoute,
@@ -23,43 +23,42 @@ const renderMaintainerSection = async () => {
   return result;
 };
 
-describe("MaintainerSection", () => {
+describe("CtaSection", () => {
   it("renders without crashing", async () => {
-    const { container } = await renderMaintainerSection();
+    const { container } = await renderCtaSection();
     expect(container).toBeDefined();
     await waitFor(() => {}, { timeout: 500 });
   });
 
-  it("has data-testid maintainer-card", async () => {
-    await renderMaintainerSection();
-    expect(screen.getByTestId("maintainer-card")).toBeDefined();
+  it('renders "Ready to ride smarter?" heading', async () => {
+    await renderCtaSection();
+    expect(screen.getByText("Ready to ride smarter?")).toBeDefined();
     await waitFor(() => {}, { timeout: 500 });
   });
 
-  it("renders the maintainer name", async () => {
-    await renderMaintainerSection();
-    expect(screen.getByText("Tashfiqul Islam")).toBeDefined();
+  it("renders all three stats", async () => {
+    await renderCtaSection();
+    expect(screen.getByText("16")).toBeDefined();
+    expect(screen.getByText("120+")).toBeDefined();
+    expect(screen.getByText("Free")).toBeDefined();
     await waitFor(() => {}, { timeout: 500 });
   });
 
-  it("renders Creator & Maintainer label", async () => {
-    await renderMaintainerSection();
-    expect(screen.getByText("Creator & Maintainer")).toBeDefined();
-    await waitFor(() => {}, { timeout: 500 });
-  });
-
-  it("renders GitHub button link", async () => {
-    await renderMaintainerSection();
-    const githubLink = screen
+  it("renders Find a Station link to /station-finder", async () => {
+    await renderCtaSection();
+    const link = screen
       .getAllByRole("link")
-      .find((l) => l.getAttribute("href") === "https://github.com/tashfiqul-islam");
-    expect(githubLink).toBeDefined();
+      .find((l) => l.getAttribute("href") === "/station-finder");
+    expect(link).toBeDefined();
     await waitFor(() => {}, { timeout: 500 });
   });
 
-  it("renders avatar fallback with TI initials", async () => {
-    await renderMaintainerSection();
-    expect(screen.getByText("TI")).toBeDefined();
+  it("renders Check Fares link to /station-fares", async () => {
+    await renderCtaSection();
+    const link = screen
+      .getAllByRole("link")
+      .find((l) => l.getAttribute("href") === "/station-fares");
+    expect(link).toBeDefined();
     await waitFor(() => {}, { timeout: 500 });
   });
 });

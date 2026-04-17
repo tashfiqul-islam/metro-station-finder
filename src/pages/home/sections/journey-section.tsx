@@ -44,7 +44,7 @@ const versions: VersionEntry[] = [
     description:
       "A complete rebuild under the hood — faster, more reliable, and the foundation for everything that followed. The app got sharper without changing what commuters relied on.",
     label: "Tech Stack Evolution",
-    version: "v0.9.0",
+    version: "prerelease",
   },
   {
     accent: "oklch(0.64 0.2 145 / 0.18)",
