@@ -79,7 +79,7 @@ export const CtaSection = memo(
               />
 
               {/* Stats row */}
-              <div className="relative grid grid-cols-3 border-b border-white/[0.07]">
+              <div className="relative grid grid-cols-3 border-b border-border/50">
                 {STATS.map((stat, i) => {
                   const Icon = stat.icon;
                   return (
@@ -87,7 +87,7 @@ export const CtaSection = memo(
                       key={stat.label}
                       className={cn(
                         "group flex flex-col items-center gap-2.5 px-4 py-6 text-center sm:px-8",
-                        i < STATS.length - 1 && "border-r border-white/[0.07]",
+                        i < STATS.length - 1 && "border-r border-border/50",
                       )}
                     >
                       {/* Icon badge */}
@@ -139,14 +139,11 @@ export const CtaSection = memo(
 
                 {/* Eyebrow */}
                 <div className="relative mb-6 flex items-center justify-center gap-3">
-                  <div className="h-px w-8" style={{ background: "oklch(0.64 0.2 145 / 0.5)" }} />
-                  <span
-                    className="text-xs font-semibold uppercase tracking-widest"
-                    style={{ color: "oklch(0.64 0.2 145 / 0.7)" }}
-                  >
+                  <div className="h-px w-8 bg-primary/50" />
+                  <span className="text-xs font-semibold uppercase tracking-widest text-primary/70">
                     MRT Line 6 · Dhaka
                   </span>
-                  <div className="h-px w-8" style={{ background: "oklch(0.64 0.2 145 / 0.5)" }} />
+                  <div className="h-px w-8 bg-primary/50" />
                 </div>
 
                 {/* Heading */}
@@ -156,7 +153,7 @@ export const CtaSection = memo(
                     WebkitBackgroundClip: "text",
                     WebkitTextFillColor: "transparent",
                     background:
-                      "linear-gradient(160deg, oklch(0.92 0.02 145) 0%, oklch(0.72 0.18 145) 40%, oklch(0.60 0.22 145) 100%)",
+                      "linear-gradient(135deg, oklch(0.52 0.12 145), oklch(0.64 0.20 145) 45%, oklch(0.58 0.22 145))",
                     backgroundClip: "text",
                   }}
                 >
