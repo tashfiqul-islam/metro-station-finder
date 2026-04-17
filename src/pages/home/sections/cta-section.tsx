@@ -67,27 +67,11 @@ export const CtaSection = memo(
                 "linear-gradient(145deg, oklch(0.57 0.19 249 / 0.5) 0%, oklch(0.64 0.2 145 / 0.7) 55%, oklch(0.61 0.23 299 / 0.4) 100%)",
             }}
           >
-            {/* Card — elevated above page bg (0.115) with a subtle green tint */}
+            {/* Card — neutral dark, clearly above page bg (0.115) */}
             <div
               className="relative overflow-hidden rounded-[calc(1.5rem-1px)]"
-              style={{
-                background:
-                  "linear-gradient(145deg, oklch(0.20) 0%, oklch(0.195 0.012 145) 60%, oklch(0.19 0.008 249) 100%)",
-              }}
+              style={{ background: "oklch(0.19)" }}
             >
-              {/* Ambient inner glow — top-left blue */}
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute -left-20 -top-20 h-64 w-64 rounded-full blur-3xl"
-                style={{ background: "oklch(0.57 0.19 249 / 0.12)" }}
-              />
-              {/* Ambient inner glow — bottom-right green */}
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute -bottom-20 -right-20 h-64 w-64 rounded-full blur-3xl"
-                style={{ background: "oklch(0.64 0.2 145 / 0.14)" }}
-              />
-
               {/* Top shimmer line */}
               <div
                 aria-hidden="true"
