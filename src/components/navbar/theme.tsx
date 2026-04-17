@@ -1,4 +1,5 @@
 import { MonitorIcon, MoonIcon, SunIcon } from "@phosphor-icons/react";
+import { motion } from "motion/react";
 import { useEffect, useLayoutEffect, useState } from "react";
 
 import { cn } from "@/lib/utils";
@@ -85,7 +86,7 @@ export const Theme = () => {
   return (
     <div
       aria-label="Theme selector"
-      className="flex h-8 items-center gap-0.5 rounded-full border border-border/60 bg-background/60 p-0.5 shadow-sm backdrop-blur-sm"
+      className="relative flex h-9 items-center justify-center rounded-full border border-border bg-background p-1 shadow-sm"
       role="group"
       suppressHydrationWarning
     >
@@ -96,20 +97,30 @@ export const Theme = () => {
             aria-label={`${label} theme`}
             aria-pressed={isActive}
             className={cn(
-              "relative flex h-7 w-7 items-center justify-center rounded-full transition-all duration-200",
+              "group relative flex h-6 w-6 items-center justify-center rounded-full",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
-              isActive
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-muted-foreground hover:bg-accent hover:text-foreground",
             )}
             key={value}
             onClick={() => handleTheme(value)}
             suppressHydrationWarning
             type="button"
           >
+            {isActive && (
+              <motion.div
+                className="absolute inset-0 rounded-full bg-muted shadow-sm"
+                layoutId="activeTheme"
+                transition={{ duration: 0.5, type: "spring" }}
+              />
+            )}
             <Icon
               aria-hidden="true"
-              className="h-3.5 w-3.5"
+              className={cn(
+                "relative z-10 h-3.5 w-3.5 transition-all duration-200",
+                isActive ? "scale-110" : "group-hover:scale-110",
+              )}
+              style={{
+                color: isActive ? "var(--color-primary)" : "var(--color-muted-foreground)",
+              }}
               weight={isActive ? "fill" : "regular"}
             />
           </button>
