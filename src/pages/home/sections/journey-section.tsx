@@ -95,7 +95,7 @@ export const JourneySection = (): React.ReactElement => {
               The journey
             </h2>
             <p className="mt-3 text-muted-foreground">
-              From a Next.js prototype to a world-class transit companion.
+              How a commuter's frustration became Dhaka's go-to MRT guide.
             </p>
           </div>
         </ViewportAnimation>
