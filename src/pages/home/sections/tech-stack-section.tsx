@@ -32,14 +32,17 @@ interface TechItemCardProps {
 
 const TechItemCard = memo(
   ({ color, name }: TechItemCardProps): React.ReactElement => (
-    <div className="group mx-2 flex cursor-default items-center gap-2.5 rounded-full border border-border/50 bg-card/30 px-5 py-2.5 transition-all duration-300 hover:bg-card/80 hover:shadow-sm">
-      {/* Brand-color dot — glows on hover via currentColor shadow */}
+    <div
+      className="group mx-2 flex cursor-default items-center gap-3 rounded-2xl border border-border/50 bg-card/40 px-5 py-3 backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-border/80 hover:bg-card/70 hover:shadow-[0_6px_24px_var(--tech-glow)]"
+      style={{ "--tech-glow": `${color.replace(")", " / 0.22)")}` } as React.CSSProperties}
+    >
+      {/* Color swatch — rounded square with brand hue */}
       <span
         aria-hidden
-        className="h-2 w-2 flex-shrink-0 rounded-full transition-all duration-300 group-hover:scale-110 group-hover:shadow-[0_0_8px_currentColor]"
-        style={{ background: color, color }}
+        className="h-3 w-3 flex-shrink-0 rounded-sm transition-all duration-300 group-hover:scale-110 group-hover:shadow-[0_0_10px_var(--tech-glow)]"
+        style={{ background: color }}
       />
-      <span className="whitespace-nowrap text-sm font-medium text-muted-foreground transition-colors duration-300 group-hover:text-foreground">
+      <span className="whitespace-nowrap text-sm font-semibold text-muted-foreground transition-colors duration-300 group-hover:text-foreground">
         {name}
       </span>
     </div>
@@ -47,6 +50,12 @@ const TechItemCard = memo(
 );
 
 TechItemCard.displayName = "TechItemCard";
+
+const EDGE_MASK = {
+  WebkitMaskImage:
+    "linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)",
+  maskImage: "linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)",
+} as React.CSSProperties;
 
 export const TechStackSection = memo((): React.ReactElement => {
   const shouldReduceMotion = useReducedMotion();
@@ -57,19 +66,27 @@ export const TechStackSection = memo((): React.ReactElement => {
       <div className="container mx-auto mb-16 px-4">
         <ViewportAnimation>
           <div className="flex flex-col items-center gap-3 text-center">
-            {/* Eyebrow */}
             <div className="flex items-center gap-3">
-              <div className="h-px w-8 bg-primary/50" aria-hidden />
-              <span className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
+              <div aria-hidden className="h-px w-8 bg-primary/50" />
+              <span className="text-xs font-semibold uppercase tracking-[0.22em] text-primary/70">
                 The Stack
               </span>
-              <div className="h-px w-8 bg-primary/50" aria-hidden />
+              <div aria-hidden className="h-px w-8 bg-primary/50" />
             </div>
-            {/* Heading */}
-            <h2 className="font-heading text-4xl font-black tracking-tight lg:text-5xl xl:text-6xl">
+
+            <h2
+              className="font-heading text-4xl font-black tracking-tight lg:text-5xl xl:text-6xl"
+              style={{
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                background:
+                  "linear-gradient(135deg, oklch(0.52 0.12 145), oklch(0.72 0.18 145) 45%, oklch(0.58 0.22 145))",
+                backgroundClip: "text",
+              }}
+            >
               Powered by
             </h2>
-            {/* Description */}
+
             <p className="mt-1 max-w-sm text-base text-muted-foreground">
               Open-source tools, meticulously chosen for performance and developer experience.
             </p>
@@ -77,18 +94,23 @@ export const TechStackSection = memo((): React.ReactElement => {
         </ViewportAnimation>
       </div>
 
-      {/* ── Marquee rows ── */}
-      <div className="flex flex-col gap-5">
-        <InfiniteSlider speed={shouldReduceMotion ? 0.01 : 60}>
-          {row1Items.map((item) => (
-            <TechItemCard color={item.color} key={item.name} name={item.name} />
-          ))}
-        </InfiniteSlider>
-        <InfiniteSlider reverse speed={shouldReduceMotion ? 0.01 : 40}>
-          {row2Items.map((item) => (
-            <TechItemCard color={item.color} key={item.name} name={item.name} />
-          ))}
-        </InfiniteSlider>
+      {/* ── Marquee rows with edge fade masks ── */}
+      <div className="flex flex-col gap-4">
+        <div style={EDGE_MASK}>
+          <InfiniteSlider speed={shouldReduceMotion ? 0.01 : 60}>
+            {row1Items.map((item) => (
+              <TechItemCard color={item.color} key={item.name} name={item.name} />
+            ))}
+          </InfiniteSlider>
+        </div>
+
+        <div style={EDGE_MASK}>
+          <InfiniteSlider reverse speed={shouldReduceMotion ? 0.01 : 40}>
+            {row2Items.map((item) => (
+              <TechItemCard color={item.color} key={item.name} name={item.name} />
+            ))}
+          </InfiniteSlider>
+        </div>
       </div>
     </section>
   );
