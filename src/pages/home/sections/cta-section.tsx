@@ -67,11 +67,7 @@ export const CtaSection = memo(
                 "linear-gradient(145deg, oklch(0.57 0.19 249 / 0.5) 0%, oklch(0.64 0.2 145 / 0.7) 55%, oklch(0.61 0.23 299 / 0.4) 100%)",
             }}
           >
-            {/* Card — neutral dark, clearly above page bg (0.115) */}
-            <div
-              className="relative overflow-hidden rounded-[calc(1.5rem-1px)]"
-              style={{ background: "oklch(0.19)" }}
-            >
+            <div className="bg-card relative overflow-hidden rounded-[calc(1.5rem-1px)]">
               {/* Top shimmer line */}
               <div
                 aria-hidden="true"
