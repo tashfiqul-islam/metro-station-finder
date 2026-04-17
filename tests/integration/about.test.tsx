@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import {
   createMemoryHistory,
   createRootRoute,
@@ -23,60 +23,79 @@ const renderWithRouter = async (ui: React.ReactElement) => {
 };
 
 describe("About Page", () => {
-  it("renders privacy policy tab", async () => {
+  it("renders without crashing", async () => {
     await renderWithRouter(<About />);
-    await waitFor(
-      () => {
-        expect(screen.getByText("Privacy Policy")).toBeInTheDocument();
-      },
-      { timeout: 3000 },
-    );
-    await waitFor(() => {}, { timeout: 500 });
+    expect(screen.getByRole("heading", { level: 1, name: "About" })).toBeInTheDocument();
   });
 
-  it("renders accordion items in how it works section", async () => {
+  it("displays the About heading and subtitle", async () => {
     await renderWithRouter(<About />);
-    await waitFor(
-      () => {
-        expect(screen.getByText("How do I find a station?")).toBeInTheDocument();
-      },
-      { timeout: 3000 },
-    );
-    await waitFor(() => {}, { timeout: 500 });
+    expect(screen.getByText("About")).toBeInTheDocument();
+    expect(screen.getByText("The story behind metro-station-finder.")).toBeInTheDocument();
   });
 
-  it("displays feature cards", async () => {
+  it("renders sidebar nav buttons for all four sections", async () => {
     await renderWithRouter(<About />);
-    await waitFor(
-      () => {
-        expect(screen.getByText("Coverage")).toBeInTheDocument();
-        expect(screen.getByText("Data Source")).toBeInTheDocument();
-        expect(screen.getByText("Open Source")).toBeInTheDocument();
-      },
-      { timeout: 3000 },
-    );
-    await waitFor(() => {}, { timeout: 500 });
+    // Both desktop sidebar and mobile pill buttons are in DOM (hidden via CSS only)
+    const sectionButtons = screen.getAllByRole("button");
+    const labels = sectionButtons.map((b) => b.textContent?.trim().toLowerCase());
+    expect(labels).toContain("overview");
+    expect(labels).toContain("mission");
+    expect(labels).toContain("tech stack");
+    expect(labels).toContain("contact");
   });
 
-  it("renders badges section", async () => {
+  it("shows overview content by default", async () => {
     await renderWithRouter(<About />);
-    await waitFor(
-      () => {
-        expect(screen.getByText("MIT Licensed")).toBeInTheDocument();
-      },
-      { timeout: 3000 },
-    );
-    await waitFor(() => {}, { timeout: 500 });
+    expect(screen.getByText("Overview")).toBeInTheDocument();
+    expect(screen.getByText(/Bangladesh.s first metro rail system/)).toBeInTheDocument();
   });
 
-  it("renders CTA section", async () => {
+  it("shows mission content when mission button is clicked", async () => {
     await renderWithRouter(<About />);
-    await waitFor(
-      () => {
-        expect(screen.getByText("Contribute & Support")).toBeInTheDocument();
-      },
-      { timeout: 3000 },
-    );
-    await waitFor(() => {}, { timeout: 500 });
+
+    // Use data-section attribute to find the desktop sidebar button specifically
+    const [missionButton] = screen.getAllByRole("button", { name: /mission/i }) as HTMLElement[];
+    expect(missionButton).toBeDefined();
+    fireEvent.click(missionButton as HTMLElement);
+
+    await waitFor(() => {
+      expect(screen.getByText("Mission")).toBeInTheDocument();
+      expect(screen.getByText(/Every commuter deserves to know their fare/)).toBeInTheDocument();
+    });
+  });
+
+  it("shows tech stack content when tech-stack button is clicked", async () => {
+    await renderWithRouter(<About />);
+
+    const [techButton] = screen.getAllByRole("button", { name: /tech stack/i }) as HTMLElement[];
+    expect(techButton).toBeDefined();
+    fireEvent.click(techButton as HTMLElement);
+
+    await waitFor(() => {
+      expect(screen.getByText("Tech Stack")).toBeInTheDocument();
+      expect(screen.getByText("React 19")).toBeInTheDocument();
+      expect(screen.getByText("TypeScript")).toBeInTheDocument();
+    });
+  });
+
+  it("shows contact content when contact button is clicked", async () => {
+    await renderWithRouter(<About />);
+
+    const [contactButton] = screen.getAllByRole("button", { name: /contact/i }) as HTMLElement[];
+    expect(contactButton).toBeDefined();
+    fireEvent.click(contactButton as HTMLElement);
+
+    await waitFor(() => {
+      expect(screen.getByText("Contact")).toBeInTheDocument();
+      expect(screen.getByText("Open an Issue")).toBeInTheDocument();
+    });
+  });
+
+  it("renders content immediately without mounted guard delay", async () => {
+    // Component must render content on first render — no null/empty shell
+    await renderWithRouter(<About />);
+    // If a mounted guard existed, the h1 heading would not appear synchronously
+    expect(screen.getByRole("heading", { level: 1, name: "About" })).toBeInTheDocument();
   });
 });
