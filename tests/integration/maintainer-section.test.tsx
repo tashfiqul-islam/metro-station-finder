@@ -32,7 +32,7 @@ describe("CtaSection", () => {
 
   it('renders "Ready to ride smarter?" heading', async () => {
     await renderCtaSection();
-    expect(screen.getByText("Ready to ride smarter?")).toBeDefined();
+    expect(screen.getByRole("heading", { name: /ready to ride smarter/i })).toBeDefined();
     await waitFor(() => {}, { timeout: 500 });
   });
 
