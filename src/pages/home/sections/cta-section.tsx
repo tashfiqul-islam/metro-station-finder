@@ -67,10 +67,13 @@ export const CtaSection = memo(
                 "linear-gradient(145deg, oklch(0.57 0.19 249 / 0.5) 0%, oklch(0.64 0.2 145 / 0.7) 55%, oklch(0.61 0.23 299 / 0.4) 100%)",
             }}
           >
-            {/* Card — solid bg-card so it's always visible in dark mode */}
+            {/* Card — elevated above page bg (0.115) with a subtle green tint */}
             <div
               className="relative overflow-hidden rounded-[calc(1.5rem-1px)]"
-              style={{ background: "oklch(0.165)" }}
+              style={{
+                background:
+                  "linear-gradient(145deg, oklch(0.20) 0%, oklch(0.195 0.012 145) 60%, oklch(0.19 0.008 249) 100%)",
+              }}
             >
               {/* Ambient inner glow — top-left blue */}
               <div
