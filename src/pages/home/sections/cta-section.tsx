@@ -15,7 +15,6 @@ const STATS = [
   {
     color: "oklch(0.48 0.20 249)",
     colorBg: "oklch(0.48 0.20 249 / 0.10)",
-    colorGrad: "linear-gradient(135deg, oklch(0.38 0.20 249), oklch(0.54 0.18 249))",
     icon: MapTrifold,
     label: "Stations mapped",
     sublabel: "All of MRT Line 6",
@@ -24,7 +23,6 @@ const STATS = [
   {
     color: "oklch(0.58 0.17 75)",
     colorBg: "oklch(0.58 0.17 75 / 0.10)",
-    colorGrad: "linear-gradient(135deg, oklch(0.48 0.17 75), oklch(0.62 0.15 75))",
     icon: CurrencyCircleDollar,
     label: "Fare routes",
     sublabel: "Every station pair",
@@ -33,7 +31,6 @@ const STATS = [
   {
     color: "oklch(0.50 0.18 145)",
     colorBg: "oklch(0.50 0.18 145 / 0.10)",
-    colorGrad: "linear-gradient(135deg, oklch(0.40 0.16 145), oklch(0.56 0.20 145))",
     icon: CheckCircle,
     label: "Always free",
     sublabel: "No login required",
@@ -63,7 +60,7 @@ export const CtaSection = memo(
             className="mx-auto max-w-2xl rounded-3xl p-px"
             style={{
               background:
-                "linear-gradient(145deg, oklch(0.48 0.20 249 / 0.45), oklch(0.50 0.18 145 / 0.60) 55%, oklch(0.52 0.20 299 / 0.35))",
+                "linear-gradient(145deg, oklch(0.48 0.20 249 / 0.30), oklch(0.50 0.18 145 / 0.40) 55%, oklch(0.52 0.20 299 / 0.25))",
             }}
           >
             <div className="bg-card relative overflow-hidden rounded-[calc(1.5rem-1px)]">
@@ -101,15 +98,7 @@ export const CtaSection = memo(
                         />
                       </div>
 
-                      <span
-                        className="font-heading text-3xl font-black leading-none lg:text-4xl"
-                        style={{
-                          WebkitBackgroundClip: "text",
-                          WebkitTextFillColor: "transparent",
-                          background: stat.colorGrad,
-                          backgroundClip: "text",
-                        }}
-                      >
+                      <span className="font-heading text-3xl font-black leading-none text-foreground lg:text-4xl">
                         {stat.value}
                       </span>
 
