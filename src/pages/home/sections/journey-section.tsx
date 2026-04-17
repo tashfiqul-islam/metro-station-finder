@@ -62,7 +62,7 @@ export const JourneySection = (): React.ReactElement => {
   const timelineRef = useRef<HTMLDivElement>(null);
 
   const { scrollYProgress } = useScroll({
-    offset: ["start 80%", "end 20%"],
+    offset: ["start 55%", "end 90%"],
     target: timelineRef,
   });
 
@@ -100,25 +100,28 @@ export const JourneySection = (): React.ReactElement => {
           </div>
         </ViewportAnimation>
 
-        {/* ── Timeline ── */}
-        <div className="relative mx-auto max-w-2xl" ref={timelineRef}>
-          {/* Static background track */}
+        {/* ── Timeline ──
+            Mobile: left track at left-5, all cards on the right (pl-14)
+            Desktop: centered track at md:left-1/2, cards alternate left/right
+            Container uses max-w-3xl so each half-card has ~352px at 768px */}
+        <div className="relative mx-auto max-w-3xl" ref={timelineRef}>
+          {/* Track wrapper — left-5 mobile → left-1/2 desktop */}
           <div
             aria-hidden="true"
-            className="absolute bottom-0 left-5 top-0 w-px -translate-x-1/2 overflow-hidden"
+            className="absolute bottom-0 left-5 top-0 w-px -translate-x-1/2 overflow-hidden md:left-1/2"
             style={{
               WebkitMaskImage:
-                "linear-gradient(to bottom, transparent 0%, black 8%, black 92%, transparent 100%)",
+                "linear-gradient(to bottom, transparent 0%, black 6%, black 94%, transparent 100%)",
               maskImage:
-                "linear-gradient(to bottom, transparent 0%, black 8%, black 92%, transparent 100%)",
+                "linear-gradient(to bottom, transparent 0%, black 6%, black 94%, transparent 100%)",
             }}
           >
-            {/* Faint static rail */}
+            {/* Faint static rail always visible */}
             <div
               className="absolute inset-0 w-px"
-              style={{ background: "oklch(0.64 0.2 145 / 0.14)" }}
+              style={{ background: "oklch(0.64 0.2 145 / 0.13)" }}
             />
-            {/* Scroll-driven fill */}
+            {/* Scroll-driven color fill */}
             <motion.div
               aria-hidden="true"
               className="absolute top-0 w-px origin-top"
@@ -131,107 +134,141 @@ export const JourneySection = (): React.ReactElement => {
             />
           </div>
 
-          <div className="flex flex-col gap-8">
-            {versions.map((v, i) => (
-              <ViewportAnimation key={v.version} delay={i * 0.1}>
-                <div className="relative flex items-start gap-5 pl-14">
-                  {/* Node — centered at left-5 (20px), matches track center */}
-                  <div
-                    className={cn(
-                      "absolute left-5 top-5 -translate-x-1/2",
-                      v.current ? "route-stop route-stop--current" : "route-stop",
-                    )}
-                  />
+          <div className="flex flex-col gap-8 md:gap-12">
+            {versions.map((v, i) => {
+              const isLeft = i % 2 === 0;
 
-                  {/* Card — solid bg-card ensures visibility over page background */}
+              return (
+                <ViewportAnimation key={v.version} delay={i * 0.1}>
+                  {/* Mobile: pl-14 with left-track node
+                      Desktop: flex row (or reverse), card takes half width, center node */}
                   <div
                     className={cn(
-                      "group relative flex-1 overflow-hidden rounded-2xl border shadow-sm transition-all duration-300",
-                      "hover:-translate-y-0.5",
-                      v.current
-                        ? "border-primary/35 bg-card hover:border-primary/55 hover:shadow-[0_8px_32px_oklch(0.64_0.2_145/0.14)]"
-                        : "border-border bg-card hover:shadow-md",
+                      "relative flex items-start pl-14",
+                      "md:items-center md:pl-0",
+                      isLeft ? "md:flex-row" : "md:flex-row-reverse",
                     )}
                   >
-                    {/* Colored left accent stripe */}
+                    {/* Mobile-only node — hidden on desktop */}
                     <div
-                      aria-hidden="true"
-                      className="absolute left-0 top-0 h-full w-0.5"
-                      style={{
-                        background: v.accentSolid,
-                        opacity: v.current ? 0.75 : 0.45,
-                      }}
+                      className={cn(
+                        "absolute left-5 top-5 -translate-x-1/2 z-10 md:hidden",
+                        v.current ? "route-stop route-stop--current" : "route-stop",
+                      )}
                     />
 
-                    {/* Top shimmer — left-anchored */}
+                    {/* Card — full width mobile, half width desktop */}
                     <div
-                      aria-hidden="true"
-                      className="pointer-events-none absolute inset-x-0 top-0 h-px"
-                      style={{
-                        background: `linear-gradient(90deg, ${v.accentSolid}, transparent 55%)`,
-                        opacity: v.current ? 0.55 : 0.3,
-                      }}
-                    />
-
-                    {/* Corner bloom */}
-                    <div
-                      aria-hidden="true"
-                      className="pointer-events-none absolute -top-8 left-0 h-16 w-28 rounded-full blur-2xl"
-                      style={{ background: v.accent }}
-                    />
-
-                    <div className="relative z-10 p-5 sm:p-6">
-                      {/* Meta row */}
-                      <div className="mb-3 flex flex-wrap items-center gap-2">
-                        <Badge
-                          className="font-mono text-xs"
-                          style={{
-                            backgroundColor: `${v.accentSolid}18`,
-                            borderColor: `${v.accentSolid}45`,
-                            color: v.accentSolid,
-                          }}
-                          variant="outline"
-                        >
-                          {v.version}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground/70">{v.date}</span>
-                        {v.current && (
-                          <span
-                            className="ml-auto inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
-                            style={{
-                              background: "oklch(0.64 0.2 145 / 0.12)",
-                              border: "1px solid oklch(0.64 0.2 145 / 0.25)",
-                              color: "oklch(0.64 0.2 145)",
-                            }}
-                          >
-                            <span className="relative flex h-1.5 w-1.5">
-                              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-70" />
-                              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
-                            </span>
-                            Live
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Label */}
-                      <h3
+                      className={cn(
+                        "group relative flex-1 overflow-hidden rounded-2xl border shadow-sm transition-all duration-300",
+                        "hover:-translate-y-0.5",
+                        "md:flex-none md:w-[calc(50%-2rem)]",
+                        v.current
+                          ? "border-primary/35 bg-card hover:border-primary/55 hover:shadow-[0_8px_32px_oklch(0.64_0.2_145/0.14)]"
+                          : "border-border bg-card hover:shadow-md",
+                      )}
+                    >
+                      {/* Accent stripe — always on left on mobile.
+                          On desktop flips to face the center line:
+                          left-side cards get right stripe, right-side cards keep left stripe */}
+                      <div
+                        aria-hidden="true"
                         className={cn(
-                          "font-heading mb-2 text-lg font-bold",
-                          v.current ? "text-primary" : "text-foreground",
+                          "absolute top-0 h-full w-0.5",
+                          "left-0",
+                          isLeft ? "md:left-auto md:right-0" : "md:left-0",
                         )}
-                      >
-                        {v.label}
-                      </h3>
+                        style={{
+                          background: v.accentSolid,
+                          opacity: v.current ? 0.75 : 0.45,
+                        }}
+                      />
 
-                      {/* Description */}
-                      <p className="text-sm leading-relaxed text-muted-foreground">
-                        {v.description}
-                      </p>
+                      {/* Top shimmer — flips direction on left-side desktop cards */}
+                      <div
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-x-0 top-0 h-px"
+                        style={{
+                          background: isLeft
+                            ? `linear-gradient(270deg, ${v.accentSolid}, transparent 55%)`
+                            : `linear-gradient(90deg, ${v.accentSolid}, transparent 55%)`,
+                          opacity: v.current ? 0.55 : 0.3,
+                        }}
+                      />
+
+                      {/* Corner bloom — inner corner toward center line */}
+                      <div
+                        aria-hidden="true"
+                        className={cn(
+                          "pointer-events-none absolute -top-8 h-16 w-28 rounded-full blur-2xl",
+                          isLeft ? "right-0" : "left-0",
+                        )}
+                        style={{ background: v.accent }}
+                      />
+
+                      <div className="relative z-10 p-5 sm:p-6">
+                        {/* Meta row */}
+                        <div className="mb-3 flex flex-wrap items-center gap-2">
+                          <Badge
+                            className="font-mono text-xs"
+                            style={{
+                              backgroundColor: `${v.accentSolid}18`,
+                              borderColor: `${v.accentSolid}45`,
+                              color: v.accentSolid,
+                            }}
+                            variant="outline"
+                          >
+                            {v.version}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground/70">{v.date}</span>
+                          {v.current && (
+                            <span
+                              className="ml-auto inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
+                              style={{
+                                background: "oklch(0.64 0.2 145 / 0.12)",
+                                border: "1px solid oklch(0.64 0.2 145 / 0.25)",
+                                color: "oklch(0.64 0.2 145)",
+                              }}
+                            >
+                              <span className="relative flex h-1.5 w-1.5">
+                                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-70" />
+                                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
+                              </span>
+                              Live
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Label */}
+                        <h3
+                          className={cn(
+                            "font-heading mb-2 text-lg font-bold",
+                            v.current ? "text-primary" : "text-foreground",
+                          )}
+                        >
+                          {v.label}
+                        </h3>
+
+                        {/* Description */}
+                        <p className="text-sm leading-relaxed text-muted-foreground">
+                          {v.description}
+                        </p>
+                      </div>
                     </div>
+
+                    {/* Desktop-only center node — w-16 keeps it exactly at 50% of container */}
+                    <div className="hidden md:flex md:w-16 md:shrink-0 md:items-center md:justify-center md:z-10">
+                      <div
+                        className={cn(v.current ? "route-stop route-stop--current" : "route-stop")}
+                      />
+                    </div>
+
+                    {/* Desktop spacer — fills the opposite half */}
+                    <div className="hidden md:block md:w-[calc(50%-2rem)] md:flex-none" />
                   </div>
-                </div>
-              </ViewportAnimation>
-            ))}
+                </ViewportAnimation>
+              );
+            })}
           </div>
         </div>
       </div>
