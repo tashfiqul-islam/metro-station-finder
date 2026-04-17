@@ -33,8 +33,8 @@ export const InfiniteSlider = ({
     let controls: ReturnType<typeof animate> | undefined;
     const size = direction === "horizontal" ? width : height;
     const contentSize = size + gap;
-    const from = reverse ? -(3 * contentSize) / 4 : -contentSize / 4;
-    const to = reverse ? -contentSize / 4 : -(3 * contentSize) / 4;
+    const from = reverse ? -contentSize / 4 : 0;
+    const to = reverse ? 0 : -contentSize / 4;
 
     const distanceToTravel = Math.abs(to - from);
     const duration = distanceToTravel / currentSpeed;
@@ -92,6 +92,8 @@ export const InfiniteSlider = ({
         }}
         {...hoverProps}
       >
+        {children}
+        {children}
         {children}
         {children}
       </motion.div>
