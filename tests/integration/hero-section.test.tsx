@@ -1,57 +1,55 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
-import {
-  createMemoryHistory,
-  createRootRoute,
-  createRouter,
-  RouterProvider,
-} from "@tanstack/react-router";
-import { describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
 import { HeroSection } from "@/pages/home/sections/hero-section";
 
-const renderHeroSection = async () => {
-  const result = await act(async () => {
-    const rootRoute = createRootRoute({ component: HeroSection });
-    const router = createRouter({
-      history: createMemoryHistory({ initialEntries: ["/"] }),
-      routeTree: rootRoute,
-    });
-    const renderResult = render(<RouterProvider router={router} />);
-    await router.load();
-    return renderResult;
-  });
-  return result;
-};
+vi.mock("@tanstack/react-router", () => ({
+  Link: ({ children, ...props }: { children: React.ReactNode; [key: string]: unknown }) => (
+    <a {...(props as React.AnchorHTMLAttributes<HTMLAnchorElement>)}>{children}</a>
+  ),
+}));
 
 describe("HeroSection", () => {
-  it("renders the headline with Precision highlight", async () => {
-    await renderHeroSection();
+  it("renders without crashing", () => {
+    render(<HeroSection />);
+    expect(screen.getByRole("region")).toBeDefined();
+  });
+
+  it('renders heading text "Navigate"', () => {
+    render(<HeroSection />);
     const heading = screen.getByRole("heading", { level: 1 });
-    expect(heading.textContent).toContain("Precision");
-    await waitFor(() => {}, { timeout: 500 });
+    expect(heading.textContent).toContain("Navigate");
   });
 
-  it("renders primary CTA linking to /station-finder", async () => {
-    await renderHeroSection();
-    const links = screen.getAllByRole("link");
-    const primary = links.find((l) => l.textContent?.includes("Find Station"));
-    expect(primary).toBeDefined();
-    expect(primary?.getAttribute("href")).toBe("/station-finder");
-    await waitFor(() => {}, { timeout: 500 });
+  it('renders "Dhaka\'s" in the heading', () => {
+    render(<HeroSection />);
+    const heading = screen.getByRole("heading", { level: 1 });
+    expect(heading.textContent).toContain("Dhaka's");
   });
 
-  it("renders secondary CTA linking to /station-fares", async () => {
-    await renderHeroSection();
-    const links = screen.getAllByRole("link");
-    const secondary = links.find((l) => l.textContent?.includes("Calculate Fare"));
-    expect(secondary).toBeDefined();
-    expect(secondary?.getAttribute("href")).toBe("/station-fares");
-    await waitFor(() => {}, { timeout: 500 });
+  it('renders "Explore Stations" CTA', () => {
+    render(<HeroSection />);
+    expect(screen.getByText("Explore Stations")).toBeDefined();
   });
 
-  it("renders the animated badge", async () => {
-    await renderHeroSection();
-    expect(screen.getByText("Introducing v1.0.0")).toBeDefined();
-    await waitFor(() => {}, { timeout: 500 });
+  it('renders "Plan Your Journey" CTA', () => {
+    render(<HeroSection />);
+    expect(screen.getByText("Plan Your Journey")).toBeDefined();
+  });
+
+  it("renders 3 stat cards", () => {
+    render(<HeroSection />);
+    const statCards = screen.getAllByTestId("stat-card");
+    expect(statCards).toHaveLength(3);
+  });
+
+  it("renders the route map SVG", () => {
+    render(<HeroSection />);
+    expect(screen.getByTestId("route-map-svg")).toBeDefined();
+  });
+
+  it('renders badge with "MRT Line 6"', () => {
+    render(<HeroSection />);
+    expect(screen.getByText("MRT Line 6 · Dhaka Metro")).toBeDefined();
   });
 });
