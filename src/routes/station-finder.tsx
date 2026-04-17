@@ -1,12 +1,26 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Info, MagnifyingGlass, MapPin, MapTrifold } from "@phosphor-icons/react";
 
+import { FeaturePreviewPage } from "@/components/common/feature-preview-page";
 import { generateHeadConfig } from "@/lib/head-meta";
 
-const StationFinderPage = (): React.ReactElement => (
-  <main className="flex min-h-dvh items-center justify-center">
-    <p className="text-muted-foreground">Station Finder — coming soon</p>
-  </main>
-);
+const StationFinderPage = (): React.ReactElement => {
+  const features = [
+    { icon: <MagnifyingGlass size={16} weight="duotone" />, label: "Name Search" },
+    { icon: <MapPin size={16} weight="duotone" />, label: "Location View" },
+    { icon: <Info size={16} weight="duotone" />, label: "Station Details" },
+    { icon: <MapTrifold size={16} weight="duotone" />, label: "Interactive Map" },
+  ];
+  return (
+    <FeaturePreviewPage
+      title="Station Finder"
+      description="Search and explore all 17 MRT Line 6 stations with interactive maps, location details, and nearby landmark information."
+      features={features}
+      progress={65}
+      eta="Coming Q3 2026"
+    />
+  );
+};
 
 export const Route = createFileRoute("/station-finder")({
   component: StationFinderPage,
