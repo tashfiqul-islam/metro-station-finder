@@ -78,9 +78,9 @@ describe("TechStackSection — rendering", () => {
     render(<TechStackSection />);
   });
 
-  it('renders "Built with" heading', () => {
+  it('renders "Powered by" heading', () => {
     render(<TechStackSection />);
-    expect(screen.getByText("Built with")).toBeInTheDocument();
+    expect(screen.getByText("Powered by")).toBeInTheDocument();
   });
 
   it('renders "React" item text', () => {
