@@ -7,6 +7,7 @@
       "dependencies": {
         "@base-ui/react": "^1.4.0",
         "@fontsource-variable/oxanium": "^5.2.8",
+        "@fontsource-variable/plus-jakarta-sans": "^5.2.8",
         "@fontsource-variable/space-grotesk": "^5.2.10",
         "@phosphor-icons/react": "^2.1.10",
         "@tailwindcss/vite": "^4.2.2",
@@ -416,6 +417,8 @@
     "@floating-ui/utils": ["@floating-ui/utils@0.2.11", "", {}, "sha512-RiB/yIh78pcIxl6lLMG0CgBXAZ2Y0eVHqMPYugu+9U0AeT6YBeiJpf7lbdJNIugFP5SIjwNRgo4DhR1Qxi26Gg=="],
 
     "@fontsource-variable/oxanium": ["@fontsource-variable/oxanium@5.2.8", "", {}, "sha512-W3HWxRLXVB6yox3dgm1DIGOp98pz8KglwiM6/2BsMopvZrg98mXI9citFWz2pUX0FOOLwf8fmHxX+KrIn+6BoA=="],
+
+    "@fontsource-variable/plus-jakarta-sans": ["@fontsource-variable/plus-jakarta-sans@5.2.8", "", {}, "sha512-iQecBizIdZxezODNHzOn4SvvRMrZL/S8k4MEXGDynCmUrImVW0VmX+tIAMqnADwH4haXlHSXqMgU6+kcfBQJdw=="],
 
     "@fontsource-variable/space-grotesk": ["@fontsource-variable/space-grotesk@5.2.10", "", {}, "sha512-yJQO/o35/hAP3CFnpdFTwQku2yzJOae2HIpBmqkOVoxhhXJaQP3g+b6Jrz7u+eI7A5ZdCIf88uMWpBJdFiGr5w=="],
 
