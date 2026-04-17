@@ -148,7 +148,7 @@ export const NavBar = (): React.ReactElement => {
       >
         <nav
           aria-label="Main navigation"
-          className="container mx-auto flex h-full items-center justify-between px-4 sm:px-6 lg:px-8"
+          className="container mx-auto flex h-full items-center justify-between px-4"
           style={{ overflow: "visible" }}
         >
           {/* ── Logo ── */}
