@@ -22,7 +22,7 @@ const versions: VersionEntry[] = [
     current: false,
     date: "October 2024",
     description:
-      "Launched the first version on Next.js 14 with page router architecture. Focused on solving the core problem: helping Dhaka commuters locate MRT Line 6 stations quickly with accurate data.",
+      "The first working version — find any MRT Line 6 station by name or location in seconds, with accurate data built for Dhaka commuters from day one.",
     label: "The Beginning",
     version: "v0.1.0",
   },
@@ -32,7 +32,7 @@ const versions: VersionEntry[] = [
     current: false,
     date: "November 2024",
     description:
-      "Introduced the fare calculator with a complete single/return/MRT Pass pricing matrix. Upgraded the design system with Tailwind CSS for improved visual hierarchy and a modern look.",
+      "Added the fare calculator — look up exact prices for single trips, return journeys, and MRT Pass rides without hunting through outdated PDFs.",
     label: "Enhanced Features",
     version: "v0.2.0",
   },
@@ -42,7 +42,7 @@ const versions: VersionEntry[] = [
     current: false,
     date: "January 2026",
     description:
-      "Migrated the entire codebase from Next.js to TanStack Start. Rebuilt routing, data-fetching, and component architecture from the ground up with shadcn/ui and modern React patterns.",
+      "A complete rebuild under the hood — faster, more reliable, and the foundation for everything that followed. The app got sharper without changing what commuters relied on.",
     label: "Tech Stack Evolution",
     version: "v0.9.0",
   },
@@ -206,9 +206,14 @@ export const JourneySection = (): React.ReactElement => {
                         style={{ background: v.accent }}
                       />
 
-                      <div className="relative z-10 p-5 sm:p-6">
+                      <div className={cn("relative z-10 p-5 sm:p-6", isLeft && "md:text-right")}>
                         {/* Meta row */}
-                        <div className="mb-3 flex flex-wrap items-center gap-2">
+                        <div
+                          className={cn(
+                            "mb-3 flex flex-wrap items-center gap-2",
+                            isLeft && "md:justify-end",
+                          )}
+                        >
                           <Badge
                             className="font-mono text-xs"
                             style={{
@@ -223,7 +228,10 @@ export const JourneySection = (): React.ReactElement => {
                           <span className="text-xs text-muted-foreground/70">{v.date}</span>
                           {v.current && (
                             <span
-                              className="ml-auto inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
+                              className={cn(
+                                "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider",
+                                isLeft ? "md:ml-0" : "ml-auto",
+                              )}
                               style={{
                                 background: "oklch(0.64 0.2 145 / 0.12)",
                                 border: "1px solid oklch(0.64 0.2 145 / 0.25)",
