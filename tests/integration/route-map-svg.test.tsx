@@ -18,7 +18,7 @@ const MRT_STATIONS = [
   "Kawran Bazar",
   "Shahbag",
   "Dhaka University",
-  "Bangladesh Secretariat",
+  "Secretariat",
   "Motijheel",
   "Kamalapur",
 ];
