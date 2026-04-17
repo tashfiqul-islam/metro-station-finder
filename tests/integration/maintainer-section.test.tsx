@@ -24,40 +24,42 @@ const renderMaintainerSection = async () => {
 };
 
 describe("MaintainerSection", () => {
+  it("renders without crashing", async () => {
+    const { container } = await renderMaintainerSection();
+    expect(container).toBeDefined();
+    await waitFor(() => {}, { timeout: 500 });
+  });
+
+  it("has data-testid maintainer-card", async () => {
+    await renderMaintainerSection();
+    expect(screen.getByTestId("maintainer-card")).toBeDefined();
+    await waitFor(() => {}, { timeout: 500 });
+  });
+
   it("renders the maintainer name", async () => {
     await renderMaintainerSection();
     expect(screen.getByText("Tashfiqul Islam")).toBeDefined();
     await waitFor(() => {}, { timeout: 500 });
   });
 
-  it("renders the section heading", async () => {
+  it("renders Creator & Maintainer label", async () => {
     await renderMaintainerSection();
-    expect(screen.getByText("Meet the")).toBeDefined();
-    expect(screen.getByText("Maintainer")).toBeDefined();
+    expect(screen.getByText("Creator & Maintainer")).toBeDefined();
     await waitFor(() => {}, { timeout: 500 });
   });
 
-  it("renders LinkedIn social link", async () => {
-    await renderMaintainerSection();
-    const linkedinLink = screen
-      .getAllByRole("link")
-      .find((l) => l.getAttribute("href")?.includes("linkedin"));
-    expect(linkedinLink).toBeDefined();
-    await waitFor(() => {}, { timeout: 500 });
-  });
-
-  it("renders GitHub link", async () => {
+  it("renders GitHub button link", async () => {
     await renderMaintainerSection();
     const githubLink = screen
       .getAllByRole("link")
-      .find((l) => l.getAttribute("href")?.includes("github"));
+      .find((l) => l.getAttribute("href") === "https://github.com/tashfiqul-islam");
     expect(githubLink).toBeDefined();
     await waitFor(() => {}, { timeout: 500 });
   });
 
-  it("renders Try the App CTA", async () => {
+  it("renders avatar fallback with TI initials", async () => {
     await renderMaintainerSection();
-    expect(screen.getByText("Try the App")).toBeDefined();
+    expect(screen.getByText("TI")).toBeDefined();
     await waitFor(() => {}, { timeout: 500 });
   });
 });
