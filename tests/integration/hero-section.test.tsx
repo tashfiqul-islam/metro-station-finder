@@ -15,16 +15,16 @@ describe("HeroSection", () => {
     expect(screen.getByRole("region")).toBeDefined();
   });
 
-  it('renders heading text "Navigate"', () => {
+  it('renders "Navigate" in the heading', () => {
     render(<HeroSection />);
     const heading = screen.getByRole("heading", { level: 1 });
     expect(heading.textContent).toContain("Navigate");
   });
 
-  it('renders "Dhaka\'s" in the heading', () => {
+  it("renders the main location name in the heading", () => {
     render(<HeroSection />);
     const heading = screen.getByRole("heading", { level: 1 });
-    expect(heading.textContent).toContain("Dhaka's");
+    expect(heading.textContent).toContain("Dhaka");
   });
 
   it('renders "Explore Stations" CTA', () => {
@@ -37,10 +37,11 @@ describe("HeroSection", () => {
     expect(screen.getByText("Plan Your Journey")).toBeDefined();
   });
 
-  it("renders 3 stat cards", () => {
+  it("renders inline stats with correct values", () => {
     render(<HeroSection />);
-    const statCards = screen.getAllByTestId("stat-card");
-    expect(statCards).toHaveLength(3);
+    expect(screen.getByText("17")).toBeDefined();
+    expect(screen.getByText("20.1 km")).toBeDefined();
+    expect(screen.getByText("Line 6")).toBeDefined();
   });
 
   it("renders the route map SVG", () => {
@@ -48,8 +49,14 @@ describe("HeroSection", () => {
     expect(screen.getByTestId("route-map-svg")).toBeDefined();
   });
 
-  it('renders badge with "MRT Line 6"', () => {
+  it('renders eyebrow with "MRT Line 6 · Dhaka Metro"', () => {
     render(<HeroSection />);
     expect(screen.getByText("MRT Line 6 · Dhaka Metro")).toBeDefined();
+  });
+
+  it("renders terminus labels in floating badges", () => {
+    render(<HeroSection />);
+    expect(screen.getAllByText("Uttara North").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Kamalapur").length).toBeGreaterThan(0);
   });
 });
