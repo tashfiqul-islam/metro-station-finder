@@ -14,7 +14,7 @@ interface VersionEntry {
 
 const versions: VersionEntry[] = [
   {
-    accent: "oklch(0.57 0.19 249 / 0.12)",
+    accent: "oklch(0.57 0.19 249 / 0.18)",
     accentSolid: "oklch(0.60 0.18 249)",
     current: false,
     date: "October 2024",
@@ -24,7 +24,7 @@ const versions: VersionEntry[] = [
     version: "v0.1.0",
   },
   {
-    accent: "oklch(0.78 0.13 75 / 0.12)",
+    accent: "oklch(0.78 0.13 75 / 0.18)",
     accentSolid: "oklch(0.74 0.15 75)",
     current: false,
     date: "November 2024",
@@ -34,17 +34,17 @@ const versions: VersionEntry[] = [
     version: "v0.2.0",
   },
   {
-    accent: "oklch(0.61 0.23 299 / 0.12)",
+    accent: "oklch(0.61 0.23 299 / 0.18)",
     accentSolid: "oklch(0.63 0.21 299)",
     current: false,
-    date: "January 2025",
+    date: "January 2026",
     description:
       "Migrated the entire codebase from Next.js to TanStack Start. Rebuilt routing, data-fetching, and component architecture from the ground up with shadcn/ui and modern React patterns.",
     label: "Tech Stack Evolution",
-    version: "v0.5.0",
+    version: "v0.9.0",
   },
   {
-    accent: "oklch(0.64 0.2 145 / 0.12)",
+    accent: "oklch(0.64 0.2 145 / 0.18)",
     accentSolid: "oklch(0.64 0.2 145)",
     current: true,
     date: "April 2026",
@@ -88,51 +88,59 @@ export const JourneySection = (): React.ReactElement => (
 
       {/* ── Timeline ── */}
       <div className="relative mx-auto max-w-2xl">
-        {/* Track line */}
+        {/* Track line — centered at left-5 (20px), matching node centers */}
         <div
           aria-hidden="true"
-          className="absolute bottom-0 left-4.75 top-2 w-px"
+          className="absolute bottom-0 left-5 top-3 w-px -translate-x-1/2"
           style={{
             background:
-              "linear-gradient(to bottom, transparent 0%, oklch(0.57 0.19 249 / 0.4) 10%, oklch(0.61 0.23 299 / 0.35) 50%, oklch(0.64 0.2 145 / 0.6) 90%, transparent 100%)",
+              "linear-gradient(to bottom, transparent 0%, oklch(0.57 0.19 249 / 0.5) 10%, oklch(0.61 0.23 299 / 0.4) 50%, oklch(0.64 0.2 145 / 0.7) 90%, transparent 100%)",
           }}
         />
 
-        <div className="flex flex-col gap-10">
+        <div className="flex flex-col gap-8">
           {versions.map((v, i) => (
             <ViewportAnimation key={v.version} delay={i * 0.1}>
-              <div className="relative flex gap-6 pl-12">
-                {/* Timeline node */}
+              <div className="relative flex items-start gap-5 pl-14">
+                {/* Timeline node — centered at left-5, matches track */}
                 <div
                   className={cn(
-                    "absolute left-2.75 top-4.5 -translate-x-1/2",
+                    "absolute left-5 top-5 -translate-x-1/2",
                     v.current ? "route-stop route-stop--current" : "route-stop",
                   )}
                 />
 
-                {/* Card */}
+                {/* Card — solid bg-card ensures visibility on dark backgrounds */}
                 <div
                   className={cn(
-                    "group relative flex-1 overflow-hidden rounded-2xl border backdrop-blur-sm transition-all duration-300",
-                    "hover:-translate-y-0.5 hover:shadow-lg",
+                    "group relative flex-1 overflow-hidden rounded-2xl border shadow-sm transition-all duration-300",
+                    "hover:-translate-y-0.5",
                     v.current
-                      ? "border-primary/30 bg-primary/5 hover:border-primary/50 hover:shadow-primary/10"
-                      : "border-border/50 bg-card/40 hover:border-border/80 hover:shadow-black/8",
+                      ? "border-primary/35 bg-card hover:border-primary/55 hover:shadow-[0_8px_32px_oklch(0.64_0.2_145/0.14)]"
+                      : "border-border bg-card hover:shadow-md",
                   )}
                 >
-                  {/* Top shimmer */}
+                  {/* Colored left accent stripe */}
                   <div
                     aria-hidden="true"
-                    className="pointer-events-none absolute inset-x-0 top-0 h-px opacity-70"
+                    className="absolute left-0 top-0 h-full w-0.5"
+                    style={{ background: v.accentSolid, opacity: v.current ? 0.75 : 0.45 }}
+                  />
+
+                  {/* Top shimmer — left-anchored */}
+                  <div
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-x-0 top-0 h-px"
                     style={{
-                      background: `linear-gradient(90deg, transparent, ${v.accentSolid}, transparent)`,
+                      background: `linear-gradient(90deg, ${v.accentSolid}, transparent 55%)`,
+                      opacity: v.current ? 0.55 : 0.3,
                     }}
                   />
 
-                  {/* Bloom */}
+                  {/* Corner bloom */}
                   <div
                     aria-hidden="true"
-                    className="pointer-events-none absolute -top-12 left-1/2 h-24 w-40 -translate-x-1/2 rounded-full blur-2xl"
+                    className="pointer-events-none absolute -top-8 left-0 h-16 w-28 rounded-full blur-2xl"
                     style={{ background: v.accent }}
                   />
 

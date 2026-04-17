@@ -34,12 +34,16 @@ const TechItemCard = memo(
   ({ color, name }: TechItemCardProps): React.ReactElement => (
     <div
       className="group mx-2 flex cursor-default items-center gap-3 rounded-2xl border border-border/50 bg-card/40 px-5 py-3 backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-border/80 hover:bg-card/70 hover:shadow-[0_6px_24px_var(--tech-glow)]"
-      style={{ "--tech-glow": `${color.replace(")", " / 0.22)")}` } as React.CSSProperties}
+      style={
+        {
+          "--tech-glow": `${color.replace(")", " / 0.22)")}`,
+        } as React.CSSProperties
+      }
     >
       {/* Color swatch — rounded square with brand hue */}
       <span
         aria-hidden
-        className="h-3 w-3 flex-shrink-0 rounded-sm transition-all duration-300 group-hover:scale-110 group-hover:shadow-[0_0_10px_var(--tech-glow)]"
+        className="h-3 w-3 shrink-0 rounded-sm transition-all duration-300 group-hover:scale-110 group-hover:shadow-[0_0_10px_var(--tech-glow)]"
         style={{ background: color }}
       />
       <span className="whitespace-nowrap text-sm font-semibold text-muted-foreground transition-colors duration-300 group-hover:text-foreground">

@@ -29,7 +29,7 @@ describe("JourneySection", () => {
     render(<JourneySection />);
     expect(screen.getByText("v0.1.0")).toBeDefined();
     expect(screen.getByText("v0.2.0")).toBeDefined();
-    expect(screen.getByText("v0.5.0")).toBeDefined();
+    expect(screen.getByText("v0.9.0")).toBeDefined();
     expect(screen.getByText("v1.0.0")).toBeDefined();
   });
 
