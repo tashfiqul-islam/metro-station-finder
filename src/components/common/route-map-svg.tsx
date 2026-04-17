@@ -7,31 +7,31 @@ interface RouteMapSvgProps {
 const METRO_GREEN = "oklch(0.64 0.2 145)";
 const METRO_GREEN_DIM = "oklch(0.64 0.2 145 / 0.15)";
 
-// Each station: position along the S-curve, interchange flag, label side
+// x coords mirror the real route: big leftward kinks at Kazipara & Bijoy Sarani,
+// then a continuous rightward sweep down to Kamalapur.
 const STATIONS = [
-  { interchange: false, name: "Uttara North", side: "right", x: 138, y: 22 },
-  { interchange: false, name: "Uttara Center", side: "right", x: 138, y: 66 },
-  { interchange: false, name: "Uttara South", side: "right", x: 137, y: 110 },
-  { interchange: false, name: "Pallabi", side: "right", x: 136, y: 154 },
-  { interchange: false, name: "Mirpur 11", side: "right", x: 134, y: 198 },
-  { interchange: true, name: "Mirpur 10", side: "right", x: 130, y: 242 },
-  { interchange: false, name: "Kazipara", side: "left", x: 112, y: 294 },
-  { interchange: false, name: "Shewrapara", side: "right", x: 116, y: 336 },
-  { interchange: false, name: "Agargaon", side: "right", x: 126, y: 372 },
-  { interchange: false, name: "Bijoy Sarani", side: "left", x: 116, y: 408 },
-  { interchange: false, name: "Farmgate", side: "right", x: 136, y: 448 },
-  { interchange: true, name: "Kawran Bazar", side: "right", x: 152, y: 484 },
-  { interchange: false, name: "Shahbag", side: "right", x: 158, y: 518 },
-  { interchange: false, name: "Bangladesh Secretariat", side: "right", x: 168, y: 550 },
-  { interchange: false, name: "Dhaka University", side: "left", x: 152, y: 578 },
-  { interchange: true, name: "Motijheel", side: "right", x: 172, y: 604 },
-  { interchange: true, name: "Kamalapur", side: "right", x: 200, y: 604 },
+  { interchange: false, name: "Uttara North", side: "right", x: 155, y: 22 },
+  { interchange: false, name: "Uttara Center", side: "right", x: 154, y: 66 },
+  { interchange: false, name: "Uttara South", side: "right", x: 152, y: 110 },
+  { interchange: false, name: "Pallabi", side: "right", x: 150, y: 154 },
+  { interchange: false, name: "Mirpur 11", side: "right", x: 147, y: 198 },
+  { interchange: true, name: "Mirpur 10", side: "right", x: 142, y: 242 },
+  { interchange: false, name: "Kazipara", side: "left", x: 88, y: 304 },
+  { interchange: false, name: "Shewrapara", side: "right", x: 108, y: 350 },
+  { interchange: false, name: "Agargaon", side: "right", x: 128, y: 386 },
+  { interchange: false, name: "Bijoy Sarani", side: "left", x: 90, y: 420 },
+  { interchange: false, name: "Farmgate", side: "right", x: 145, y: 458 },
+  { interchange: true, name: "Kawran Bazar", side: "right", x: 162, y: 492 },
+  { interchange: false, name: "Shahbag", side: "right", x: 168, y: 524 },
+  { interchange: false, name: "Bangladesh Secretariat", side: "right", x: 178, y: 552 },
+  { interchange: false, name: "Dhaka University", side: "left", x: 112, y: 578 },
+  { interchange: true, name: "Motijheel", side: "right", x: 185, y: 604 },
+  { interchange: true, name: "Kamalapur", side: "right", x: 222, y: 604 },
 ] as const;
 
-// Build the SVG path points string for the S-curve route line
 const PATH_POINTS = STATIONS.map((s) => `${s.x},${s.y}`).join(" ");
 
-const SVG_WIDTH = 260;
+const SVG_WIDTH = 330;
 const SVG_HEIGHT = 630;
 
 export const RouteMapSvg = ({ className }: RouteMapSvgProps) => (
@@ -45,7 +45,7 @@ export const RouteMapSvg = ({ className }: RouteMapSvgProps) => (
     width={SVG_WIDTH}
     xmlns="http://www.w3.org/2000/svg"
   >
-    {/* Glow layer behind the route line */}
+    {/* Glow layer */}
     <polyline
       fill="none"
       points={PATH_POINTS}
@@ -79,7 +79,6 @@ export const RouteMapSvg = ({ className }: RouteMapSvgProps) => (
 
       return (
         <g key={station.name}>
-          {/* Terminal glow ring */}
           {isTerminal && (
             <circle
               cx={station.x}
@@ -92,7 +91,6 @@ export const RouteMapSvg = ({ className }: RouteMapSvgProps) => (
             />
           )}
 
-          {/* Dot — filled for regular, hollow for interchange */}
           <circle
             cx={station.x}
             cy={station.y}
@@ -101,12 +99,10 @@ export const RouteMapSvg = ({ className }: RouteMapSvgProps) => (
             stroke={METRO_GREEN}
             strokeWidth={station.interchange ? "2" : "1.5"}
           />
-          {/* Inner dot for interchange */}
           {station.interchange && (
             <circle cx={station.x} cy={station.y} fill={METRO_GREEN} r={2.5} />
           )}
 
-          {/* Station label */}
           <text
             dominantBaseline="middle"
             fill="currentColor"
