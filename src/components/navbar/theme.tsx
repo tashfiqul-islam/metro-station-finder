@@ -1,6 +1,6 @@
 import { MonitorIcon, MoonIcon, SunIcon } from "@phosphor-icons/react";
 import { motion } from "motion/react";
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -9,9 +9,9 @@ type ThemeValue = "light" | "dark" | "system";
 const THEME_KEY = "theme";
 
 const THEME_OPTIONS = [
-  { icon: SunIcon, label: "Light", value: "light" as const },
-  { icon: MonitorIcon, label: "System", value: "system" as const },
-  { icon: MoonIcon, label: "Dark", value: "dark" as const },
+  { icon: SunIcon, label: "Light theme", value: "light" as const },
+  { icon: MonitorIcon, label: "System theme", value: "system" as const },
+  { icon: MoonIcon, label: "Dark theme", value: "dark" as const },
 ] as const;
 
 const getStoredTheme = (): ThemeValue => {
@@ -45,20 +45,16 @@ export const applyTheme = (theme: ThemeValue): void => {
   html.classList.add(effective);
 };
 
-// Runs synchronously before paint on the client, falls back to useEffect on server.
-const useIsomorphicLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
-
 export const Theme = () => {
   const [theme, setTheme] = useState<ThemeValue>("system");
   const [mounted, setMounted] = useState(false);
+  const isFirstMount = useRef(true);
 
-  useIsomorphicLayoutEffect(() => {
-    const stored = getStoredTheme();
-    setTheme(stored);
+  useEffect(() => {
+    setTheme(getStoredTheme());
     setMounted(true);
   }, []);
 
-  // Re-apply when system preference changes while "system" mode is active.
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
@@ -74,6 +70,7 @@ export const Theme = () => {
   }, []);
 
   const handleTheme = (value: ThemeValue) => {
+    isFirstMount.current = false;
     setTheme(value);
     try {
       localStorage.setItem(THEME_KEY, value);
@@ -83,18 +80,28 @@ export const Theme = () => {
     applyTheme(value);
   };
 
+  // Stable placeholder — same size as the real control, invisible.
+  // Prevents navbar layout shift while the component hydrates.
+  if (!mounted) {
+    return (
+      <div
+        aria-hidden="true"
+        className="flex h-9 w-24 rounded-full border border-border/60 bg-muted/50 opacity-0"
+      />
+    );
+  }
+
   return (
     <div
       aria-label="Theme selector"
       className="relative flex h-9 items-center gap-0.5 rounded-full border border-border/60 bg-muted/50 p-1 shadow-inner"
       role="group"
-      suppressHydrationWarning
     >
       {THEME_OPTIONS.map(({ icon: Icon, label, value }) => {
-        const isActive = mounted && theme === value;
+        const isActive = theme === value;
         return (
           <button
-            aria-label={`${label} theme`}
+            aria-label={label}
             aria-pressed={isActive}
             className={cn(
               "group relative flex h-7 w-7 items-center justify-center rounded-full",
@@ -102,14 +109,17 @@ export const Theme = () => {
             )}
             key={value}
             onClick={() => handleTheme(value)}
-            suppressHydrationWarning
             type="button"
           >
             {isActive && (
               <motion.div
                 className="absolute inset-0 rounded-full bg-background shadow-md"
                 layoutId="activeTheme"
-                transition={{ damping: 20, duration: 0.4, stiffness: 300, type: "spring" }}
+                transition={
+                  isFirstMount.current
+                    ? { duration: 0 }
+                    : { damping: 20, duration: 0.4, stiffness: 300, type: "spring" }
+                }
               />
             )}
             <Icon
