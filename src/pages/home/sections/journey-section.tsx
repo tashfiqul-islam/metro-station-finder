@@ -62,7 +62,7 @@ export const JourneySection = (): React.ReactElement => {
   const timelineRef = useRef<HTMLDivElement>(null);
 
   const { scrollYProgress } = useScroll({
-    offset: ["start 55%", "end 90%"],
+    offset: ["start 80%", "end 15%"],
     target: timelineRef,
   });
 
