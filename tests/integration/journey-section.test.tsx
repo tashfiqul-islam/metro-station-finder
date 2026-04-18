@@ -3,6 +3,15 @@ import { describe, expect, it, vi } from "vitest";
 
 import { JourneySection } from "@/pages/home/sections/journey-section";
 
+// ResizeObserver is not available in jsdom
+if (typeof window !== "undefined" && !window.ResizeObserver) {
+  window.ResizeObserver = class ResizeObserver {
+    observe = vi.fn();
+    unobserve = vi.fn();
+    disconnect = vi.fn();
+  };
+}
+
 // motion/react is not available in jsdom — stub it before any import resolves it.
 vi.mock("motion/react", () => ({
   motion: {
