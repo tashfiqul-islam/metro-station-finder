@@ -38,7 +38,7 @@ export const row2Items: TechItem[] = [
   makeItem("mapcn", "mapcn.svg"),
   makeItem("Lefthook", "lefthook.svg"),
   makeItem("Semantic Release", "semantic-release-logo.svg"),
-  makeDualItem("Cursor", "cursor_dark.svg", "cursor_light.svg"),
+  makeDualItem("Zed", "zed-logo-dark.svg", "zed-logo-light.svg"),
 ];
 
 interface TechItemCardProps {
@@ -49,18 +49,17 @@ interface TechItemCardProps {
 
 const TechItemCard = memo(
   ({ logoDark, logoLight, name }: TechItemCardProps): React.ReactElement => (
-    <div className="group mx-2 flex cursor-default items-center gap-3 rounded-2xl border border-border/50 bg-card/40 px-5 py-3 backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:bg-card/70 hover:shadow-[0_6px_24px_oklch(0.50_0.18_145_/_0.18)]">
-      {/* Logo — dark/light aware */}
+    <div className="group mx-2 flex cursor-default items-center gap-3 rounded-2xl border border-border/40 bg-card/50 px-5 py-3 shadow-sm backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-card/80 hover:shadow-[0_8px_32px_oklch(0.50_0.18_145_/_0.20)] hover:ring-1 hover:ring-primary/20">
       <img
         alt=""
         aria-hidden="true"
-        className="h-5 w-auto object-contain dark:hidden"
+        className="h-6 w-auto object-contain dark:hidden"
         src={logoLight}
       />
       <img
         alt=""
         aria-hidden="true"
-        className="hidden h-5 w-auto object-contain dark:block"
+        className="hidden h-6 w-auto object-contain dark:block"
         src={logoDark}
       />
       <span className="whitespace-nowrap text-sm font-semibold text-muted-foreground transition-colors duration-300 group-hover:text-foreground">
@@ -74,25 +73,35 @@ TechItemCard.displayName = "TechItemCard";
 
 const EDGE_MASK = {
   WebkitMaskImage:
-    "linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)",
-  maskImage: "linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)",
+    "linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%)",
+  maskImage: "linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%)",
 } as React.CSSProperties;
 
 export const TechStackSection = memo((): React.ReactElement => {
   const shouldReduceMotion = useReducedMotion();
 
   return (
-    <section className="overflow-hidden py-24 lg:py-32">
+    <section className="relative overflow-hidden py-24 lg:py-32">
+      {/* Ambient glow */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(60% 40% at 50% 0%, oklch(0.50 0.18 145 / 0.08), transparent)",
+        }}
+      />
+
       {/* ── Heading block ── */}
-      <div className="container mx-auto mb-16 px-4">
+      <div className="container relative mx-auto mb-16 px-4">
         <ViewportAnimation>
           <div className="flex flex-col items-center gap-3 text-center">
-            <div className="flex items-center gap-3">
-              <div aria-hidden className="h-px w-8 bg-primary/50" />
+            <div className="flex items-center gap-2.5 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5">
+              <div aria-hidden className="h-1.5 w-1.5 rounded-full bg-primary/60" />
               <span className="text-xs font-semibold uppercase tracking-[0.22em] text-primary/70">
                 The Stack
               </span>
-              <div aria-hidden className="h-px w-8 bg-primary/50" />
+              <div aria-hidden className="h-1.5 w-1.5 rounded-full bg-primary/60" />
             </div>
 
             <h2
@@ -116,9 +125,9 @@ export const TechStackSection = memo((): React.ReactElement => {
       </div>
 
       {/* ── Marquee rows with edge fade masks ── */}
-      <div className="flex flex-col gap-4">
+      <div className="relative flex flex-col gap-3">
         <div style={EDGE_MASK}>
-          <InfiniteSlider speed={shouldReduceMotion ? 0.01 : 60}>
+          <InfiniteSlider speed={shouldReduceMotion ? 0.01 : 55}>
             {row1Items.map((item) => (
               <TechItemCard
                 key={item.name}
@@ -131,7 +140,7 @@ export const TechStackSection = memo((): React.ReactElement => {
         </div>
 
         <div style={EDGE_MASK}>
-          <InfiniteSlider reverse speed={shouldReduceMotion ? 0.01 : 40}>
+          <InfiniteSlider reverse speed={shouldReduceMotion ? 0.01 : 38}>
             {row2Items.map((item) => (
               <TechItemCard
                 key={item.name}

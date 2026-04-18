@@ -52,8 +52,8 @@ describe("TechStackSection — item arrays", () => {
     expect(row2Items.map((t) => t.name)).toContain("Lefthook");
   });
 
-  it("row2Items contains Cursor", () => {
-    expect(row2Items.map((t) => t.name)).toContain("Cursor");
+  it("row2Items contains Zed", () => {
+    expect(row2Items.map((t) => t.name)).toContain("Zed");
   });
 
   it("each item has logoDark and logoLight paths", () => {
