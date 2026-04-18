@@ -1,11 +1,10 @@
 export const MetroTrain = (): React.ReactElement => (
   <svg
     aria-hidden="true"
-    className="w-full select-none"
+    className="w-full select-none opacity-80 dark:opacity-55"
     preserveAspectRatio="xMidYMax meet"
     viewBox="0 0 520 47.5"
     xmlns="http://www.w3.org/2000/svg"
-    style={{ opacity: 0.55 }}
   >
     <g>
       <path
