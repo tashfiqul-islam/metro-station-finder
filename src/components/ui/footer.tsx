@@ -100,7 +100,14 @@ export const Footer = memo(
             <span aria-hidden="true" className="text-border">
               ·
             </span>
-            <span>MIT License</span>
+            <a
+              className="transition-colors duration-200 hover:text-foreground"
+              href="https://github.com/tashfiqul-islam/metro-station-finder/blob/main/LICENSE"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              MIT License
+            </a>
           </div>
 
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground/50">
