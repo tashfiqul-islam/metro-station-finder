@@ -1,4 +1,4 @@
-import { ArrowLeft } from "@phosphor-icons/react";
+import { ArrowLeftIcon } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
 import { memo } from "react";
 
@@ -43,7 +43,7 @@ export const LegalPage = memo<LegalPageProps>(
           className="mb-10 inline-flex items-center gap-2 text-xs font-medium text-muted-foreground transition-colors duration-200 hover:text-foreground"
           to="/"
         >
-          <ArrowLeft aria-hidden="true" className="h-3.5 w-3.5" weight="bold" />
+          <ArrowLeftIcon aria-hidden="true" className="h-3.5 w-3.5" weight="bold" />
           Back to home
         </Link>
 

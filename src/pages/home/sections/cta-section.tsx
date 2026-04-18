@@ -1,8 +1,8 @@
 import {
-  CheckCircle,
-  CurrencyCircleDollar,
-  MagnifyingGlass,
-  MapTrifold,
+  CheckCircleIcon,
+  CurrencyCircleDollarIcon,
+  MagnifyingGlassIcon,
+  MapTrifoldIcon,
 } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
 import { memo } from "react";
@@ -16,7 +16,7 @@ const STATS = [
   {
     color: "oklch(0.48 0.20 249)",
     colorBg: "oklch(0.48 0.20 249 / 0.10)",
-    icon: MapTrifold,
+    icon: MapTrifoldIcon,
     label: "Stations mapped",
     sublabel: "All of MRT Line 6",
     value: "16",
@@ -24,7 +24,7 @@ const STATS = [
   {
     color: "oklch(0.58 0.17 75)",
     colorBg: "oklch(0.58 0.17 75 / 0.10)",
-    icon: CurrencyCircleDollar,
+    icon: CurrencyCircleDollarIcon,
     label: "Fare routes",
     sublabel: "Every station pair",
     value: "120+",
@@ -32,7 +32,7 @@ const STATS = [
   {
     color: "oklch(0.50 0.18 145)",
     colorBg: "oklch(0.50 0.18 145 / 0.10)",
-    icon: CheckCircle,
+    icon: CheckCircleIcon,
     label: "Always free",
     sublabel: "No login required",
     value: "Free",
@@ -142,7 +142,7 @@ export const CtaSection = memo(
                   <Button
                     asChild={
                       <Link to="/station-finder">
-                        <MagnifyingGlass
+                        <MagnifyingGlassIcon
                           aria-hidden="true"
                           className="mr-2 h-4 w-4"
                           weight="bold"
@@ -155,7 +155,7 @@ export const CtaSection = memo(
                   <Button
                     asChild={
                       <Link to="/station-fares">
-                        <CurrencyCircleDollar
+                        <CurrencyCircleDollarIcon
                           aria-hidden="true"
                           className="mr-2 h-4 w-4"
                           weight="duotone"

@@ -1,4 +1,4 @@
-import { GitBranch, GithubLogo } from "@phosphor-icons/react";
+import { GitBranchIcon, GithubLogoIcon } from "@phosphor-icons/react";
 import { memo } from "react";
 
 import { ViewportAnimation } from "@/components/common/viewport-animation";
@@ -53,7 +53,7 @@ export const MaintainerSection = memo(
                         target="_blank"
                         rel="noopener noreferrer"
                       >
-                        <GithubLogo size={16} weight="fill" className="mr-2" />
+                        <GithubLogoIcon size={16} weight="fill" className="mr-2" />
                         GitHub
                       </a>
                     }
@@ -67,7 +67,7 @@ export const MaintainerSection = memo(
                         target="_blank"
                         rel="noopener noreferrer"
                       >
-                        <GitBranch size={16} weight="duotone" className="mr-2" />
+                        <GitBranchIcon size={16} weight="duotone" className="mr-2" />
                         Repository
                       </a>
                     }

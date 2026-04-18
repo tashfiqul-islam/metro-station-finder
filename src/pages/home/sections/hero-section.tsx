@@ -1,6 +1,10 @@
+import {
+  CurrencyCircleDollarIcon,
+  MapTrifoldIcon,
+  NavigationArrowIcon,
+} from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
 import { motion, useReducedMotion } from "motion/react";
-import { CurrencyCircleDollar, MapTrifold, NavigationArrow } from "@phosphor-icons/react";
 
 import { RouteMapSvg } from "@/components/common/route-map-svg";
 import { ViewportAnimation } from "@/components/common/viewport-animation";
@@ -13,9 +17,9 @@ const STATS = [
 ] as const;
 
 const FEATURES = [
-  { icon: NavigationArrow, label: "Station Finder" },
-  { icon: CurrencyCircleDollar, label: "Fare Calculator" },
-  { icon: MapTrifold, label: "Trip Planner" },
+  { icon: NavigationArrowIcon, label: "Station Finder" },
+  { icon: CurrencyCircleDollarIcon, label: "Fare Calculator" },
+  { icon: MapTrifoldIcon, label: "Trip Planner" },
 ] as const;
 
 export const HeroSection = () => {
@@ -42,7 +46,12 @@ export const HeroSection = () => {
             background: "radial-gradient(ellipse, oklch(0.58 0.18 145 / 0.13) 0%, transparent 65%)",
           }}
           animate={shouldReduceMotion ? {} : { opacity: [0.45, 0.85, 0.45] }}
-          transition={{ delay: 4, duration: 10, ease: "easeInOut", repeat: Infinity }}
+          transition={{
+            delay: 4,
+            duration: 10,
+            ease: "easeInOut",
+            repeat: Infinity,
+          }}
         />
         {/* Tertiary right bloom */}
         <div

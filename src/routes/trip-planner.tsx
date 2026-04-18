@@ -1,15 +1,26 @@
+import {
+  ArrowsLeftRightIcon,
+  ClockIcon,
+  NavigationArrowIcon,
+  PathIcon,
+} from "@phosphor-icons/react";
 import { createFileRoute } from "@tanstack/react-router";
-import { ArrowsLeftRight, Clock, NavigationArrow, Path } from "@phosphor-icons/react";
 
 import { FeaturePreviewPage } from "@/components/common/feature-preview-page";
 import { generateHeadConfig } from "@/lib/head-meta";
 
 const TripPlannerPage = (): React.ReactElement => {
   const features = [
-    { icon: <Path size={16} weight="duotone" />, label: "Route Planning" },
-    { icon: <Clock size={16} weight="duotone" />, label: "Travel Time" },
-    { icon: <ArrowsLeftRight size={16} weight="duotone" />, label: "Interchanges" },
-    { icon: <NavigationArrow size={16} weight="duotone" />, label: "Turn-by-Turn" },
+    { icon: <PathIcon size={16} weight="duotone" />, label: "Route Planning" },
+    { icon: <ClockIcon size={16} weight="duotone" />, label: "Travel Time" },
+    {
+      icon: <ArrowsLeftRightIcon size={16} weight="duotone" />,
+      label: "Interchanges",
+    },
+    {
+      icon: <NavigationArrowIcon size={16} weight="duotone" />,
+      label: "Turn-by-Turn",
+    },
   ];
   return (
     <FeaturePreviewPage

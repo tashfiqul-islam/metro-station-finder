@@ -1,13 +1,13 @@
 import {
-  CurrencyCircleDollar,
+  CurrencyCircleDollarIcon,
   GithubLogoIcon,
-  House,
-  Info,
-  List,
-  MagnifyingGlass,
-  MapTrifold,
-  TrainSimple,
-  X,
+  HouseIcon,
+  InfoIcon,
+  ListIcon,
+  MagnifyingGlassIcon,
+  MapTrifoldIcon,
+  TrainSimpleIcon,
+  XIcon,
 } from "@phosphor-icons/react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { memo, useEffect, useRef, useState } from "react";
@@ -24,11 +24,19 @@ interface NavigationItem {
 }
 
 const NAVIGATION_ITEMS: readonly NavigationItem[] = [
-  { href: "/", icon: House, label: "Home" },
-  { href: "/station-finder", icon: MagnifyingGlass, label: "Station Finder" },
-  { href: "/station-fares", icon: CurrencyCircleDollar, label: "Station Fares" },
-  { href: "/trip-planner", icon: MapTrifold, label: "Trip Planner" },
-  { href: "/about", icon: Info, label: "About" },
+  { href: "/", icon: HouseIcon, label: "Home" },
+  {
+    href: "/station-finder",
+    icon: MagnifyingGlassIcon,
+    label: "Station Finder",
+  },
+  {
+    href: "/station-fares",
+    icon: CurrencyCircleDollarIcon,
+    label: "Station Fares",
+  },
+  { href: "/trip-planner", icon: MapTrifoldIcon, label: "Trip Planner" },
+  { href: "/about", icon: InfoIcon, label: "About" },
 ] as const;
 
 type NavLinkProps = NavigationItem & { isActive: boolean };
@@ -53,7 +61,7 @@ const NavLink = memo(
       <Icon
         aria-hidden="true"
         className={cn(
-          "relative z-10 h-[15px] w-[15px] shrink-0 transition-all duration-200",
+          "relative z-10 h-3.75 w-3.75 shrink-0 transition-all duration-200",
           "group-hover:scale-110",
           isActive ? "scale-110" : "opacity-60 group-hover:opacity-90",
         )}
@@ -158,7 +166,11 @@ export const NavBar = (): React.ReactElement => {
             to="/"
           >
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 shadow-[inset_0_1px_1px_oklch(1_0_0/12%)] transition-all duration-300 group-hover:border-primary/35 group-hover:bg-primary/15 group-hover:shadow-[0_0_12px_oklch(0.64_0.2_145/0.18)]">
-              <TrainSimple aria-hidden="true" className="h-4 w-4 text-primary" weight="duotone" />
+              <TrainSimpleIcon
+                aria-hidden="true"
+                className="h-4 w-4 text-primary"
+                weight="duotone"
+              />
             </div>
             <div className="flex flex-col justify-center gap-px leading-none">
               <span className="hidden text-sm font-bold tracking-tight text-foreground transition-colors duration-200 group-hover:text-primary sm:block">
@@ -184,7 +196,12 @@ export const NavBar = (): React.ReactElement => {
                 hover={false}
                 mode="children"
                 style={{ backgroundColor: "var(--color-muted)" }}
-                transition={{ damping: 28, duration: 0.4, stiffness: 280, type: "spring" }}
+                transition={{
+                  damping: 28,
+                  duration: 0.4,
+                  stiffness: 280,
+                  type: "spring",
+                }}
                 value={getActiveValue()}
               >
                 {NAVIGATION_ITEMS.map((item) => (
@@ -243,9 +260,9 @@ export const NavBar = (): React.ReactElement => {
               type="button"
             >
               {isMobileMenuOpen ? (
-                <X aria-hidden="true" className="h-4 w-4 transition-all duration-200" />
+                <XIcon aria-hidden="true" className="h-4 w-4 transition-all duration-200" />
               ) : (
-                <List
+                <ListIcon
                   aria-hidden="true"
                   className="h-4 w-4 text-muted-foreground transition-all duration-200 group-hover:text-foreground"
                   weight="regular"
@@ -262,7 +279,7 @@ export const NavBar = (): React.ReactElement => {
         createPortal(
           <nav
             aria-label="Mobile navigation"
-            className="glass-card fixed right-4 z-[9999] w-64 overflow-hidden rounded-2xl shadow-2xl md:hidden"
+            className="glass-card fixed right-4 z-9999 w-64 overflow-hidden rounded-2xl shadow-2xl md:hidden"
             id="mobile-menu"
             ref={menuRef}
             style={{ top: "calc(var(--header-height) + 0.5rem)" }}

@@ -1,4 +1,4 @@
-import { Coffee, GithubLogo, Heart, TrainSimple } from "@phosphor-icons/react";
+import { CoffeeIcon, GithubLogoIcon, HeartIcon, TrainSimpleIcon } from "@phosphor-icons/react";
 import { memo } from "react";
 
 const LEGAL_LINKS = [
@@ -44,7 +44,7 @@ export const Footer = memo(
                 }}
               >
                 <div className="flex h-full w-full items-center justify-center rounded-[calc(0.5rem-1px)] bg-card">
-                  <TrainSimple
+                  <TrainSimpleIcon
                     aria-hidden="true"
                     className="h-4 w-4 text-primary"
                     weight="duotone"
@@ -68,7 +68,7 @@ export const Footer = memo(
               rel="noopener noreferrer"
               target="_blank"
             >
-              <GithubLogo aria-hidden="true" className="h-3.5 w-3.5" weight="fill" />
+              <GithubLogoIcon aria-hidden="true" className="h-3.5 w-3.5" weight="fill" />
               View on GitHub
             </a>
           </div>
@@ -112,9 +112,9 @@ export const Footer = memo(
 
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground/50">
             Built with
-            <Heart aria-hidden="true" className="h-3 w-3 text-red-400/70" weight="fill" />
+            <HeartIcon aria-hidden="true" className="h-3 w-3 text-red-400/70" weight="fill" />
             and
-            <Coffee aria-hidden="true" className="h-3 w-3 text-amber-500/60" weight="duotone" />
+            <CoffeeIcon aria-hidden="true" className="h-3 w-3 text-amber-500/60" weight="duotone" />
             by{" "}
             <a
               className="text-muted-foreground/70 transition-colors duration-200 hover:text-foreground"

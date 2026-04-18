@@ -1,11 +1,11 @@
 import {
-  ArrowsDownUp,
-  CurrencyCircleDollar,
-  MagnifyingGlass,
-  MapTrifold,
-  SpeakerHigh,
-  Wheelchair,
-  WifiHigh,
+  ArrowsDownUpIcon,
+  CurrencyCircleDollarIcon,
+  MagnifyingGlassIcon,
+  MapTrifoldIcon,
+  SpeakerHighIcon,
+  WheelchairIcon,
+  WifiHighIcon,
 } from "@phosphor-icons/react";
 
 import { BentoCard } from "@/components/common/bento-card";
@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 const StationSearchPreview = () => (
   <div className="mt-5 overflow-hidden rounded-xl border border-border/40 bg-background/30">
     <div className="flex items-center gap-2 border-b border-border/30 px-3 py-2.5">
-      <MagnifyingGlass className="h-3.5 w-3.5 text-muted-foreground/60" />
+      <MagnifyingGlassIcon className="h-3.5 w-3.5 text-muted-foreground/60" />
       <span className="text-xs text-muted-foreground/50">Farmgate</span>
       <span className="relative ml-auto flex h-1.5 w-1.5">
         <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-60" />
@@ -158,9 +158,9 @@ const LiveUpdatesPreview = () => (
 const AccessibilityPreview = () => (
   <div className="mt-4 grid grid-cols-3 gap-2">
     {[
-      { icon: Wheelchair, label: "Lifts" },
-      { icon: ArrowsDownUp, label: "Ramps" },
-      { icon: SpeakerHigh, label: "Audio" },
+      { icon: WheelchairIcon, label: "Lifts" },
+      { icon: ArrowsDownUpIcon, label: "Ramps" },
+      { icon: SpeakerHighIcon, label: "Audio" },
     ].map(({ icon: Icon, label }) => (
       <div
         key={label}
@@ -216,7 +216,7 @@ export const FeaturesSection = (): React.ReactElement => (
             size="lg"
             className="md:col-span-2"
             accent="oklch(0.64 0.2 145 / 0.15)"
-            icon={<MagnifyingGlass size={28} weight="duotone" />}
+            icon={<MagnifyingGlassIcon size={28} weight="duotone" />}
             title="Station Search"
             description="Find any of the 17 MRT Line 6 stations instantly. Search by name, get location details, nearby landmarks, and real-time service information."
             visual={<StationSearchPreview />}
@@ -226,7 +226,7 @@ export const FeaturesSection = (): React.ReactElement => (
           <BentoCard
             size="md"
             accent="oklch(0.78 0.13 75 / 0.15)"
-            icon={<CurrencyCircleDollar size={28} weight="duotone" />}
+            icon={<CurrencyCircleDollarIcon size={28} weight="duotone" />}
             title="Fare Calculator"
             description="Calculate exact fares between any two stations. Get single journey, return trip, and MRT Pass pricing in seconds."
             visual={<FareCalculatorPreview />}
@@ -236,7 +236,7 @@ export const FeaturesSection = (): React.ReactElement => (
           <BentoCard
             size="md"
             accent="oklch(0.57 0.19 249 / 0.15)"
-            icon={<MapTrifold size={28} weight="duotone" />}
+            icon={<MapTrifoldIcon size={28} weight="duotone" />}
             title="Trip Planning"
             description="Plan multi-leg journeys with optimal routes, estimated travel times, and interchange guidance across the network."
             visual={<TripPlanningPreview />}
@@ -246,7 +246,7 @@ export const FeaturesSection = (): React.ReactElement => (
           <BentoCard
             size="sm"
             accent="oklch(0.65 0.18 142 / 0.15)"
-            icon={<WifiHigh size={24} weight="duotone" />}
+            icon={<WifiHighIcon size={24} weight="duotone" />}
             title="Live Updates"
             description="Service status and platform information updated in real time."
             visual={<LiveUpdatesPreview />}
@@ -256,7 +256,7 @@ export const FeaturesSection = (): React.ReactElement => (
           <BentoCard
             size="sm"
             accent="oklch(0.61 0.23 299 / 0.15)"
-            icon={<Wheelchair size={24} weight="duotone" />}
+            icon={<WheelchairIcon size={24} weight="duotone" />}
             title="Accessibility"
             description="Lift locations, accessible routes, and mobility aid facilities at every station."
             visual={<AccessibilityPreview />}

@@ -10,14 +10,23 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TripPlannerRouteImport } from './routes/trip-planner'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as StationFinderRouteImport } from './routes/station-finder'
 import { Route as StationFaresRouteImport } from './routes/station-fares'
+import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as DataSourcesRouteImport } from './routes/data-sources'
+import { Route as AccessibilityRouteImport } from './routes/accessibility'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 
 const TripPlannerRoute = TripPlannerRouteImport.update({
   id: '/trip-planner',
   path: '/trip-planner',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const StationFinderRoute = StationFinderRouteImport.update({
@@ -28,6 +37,21 @@ const StationFinderRoute = StationFinderRouteImport.update({
 const StationFaresRoute = StationFaresRouteImport.update({
   id: '/station-fares',
   path: '/station-fares',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DataSourcesRoute = DataSourcesRouteImport.update({
+  id: '/data-sources',
+  path: '/data-sources',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccessibilityRoute = AccessibilityRouteImport.update({
+  id: '/accessibility',
+  path: '/accessibility',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AboutRoute = AboutRouteImport.update({
@@ -44,23 +68,35 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/accessibility': typeof AccessibilityRoute
+  '/data-sources': typeof DataSourcesRoute
+  '/privacy': typeof PrivacyRoute
   '/station-fares': typeof StationFaresRoute
   '/station-finder': typeof StationFinderRoute
+  '/terms': typeof TermsRoute
   '/trip-planner': typeof TripPlannerRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/accessibility': typeof AccessibilityRoute
+  '/data-sources': typeof DataSourcesRoute
+  '/privacy': typeof PrivacyRoute
   '/station-fares': typeof StationFaresRoute
   '/station-finder': typeof StationFinderRoute
+  '/terms': typeof TermsRoute
   '/trip-planner': typeof TripPlannerRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/accessibility': typeof AccessibilityRoute
+  '/data-sources': typeof DataSourcesRoute
+  '/privacy': typeof PrivacyRoute
   '/station-fares': typeof StationFaresRoute
   '/station-finder': typeof StationFinderRoute
+  '/terms': typeof TermsRoute
   '/trip-planner': typeof TripPlannerRoute
 }
 export interface FileRouteTypes {
@@ -68,25 +104,46 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/about'
+    | '/accessibility'
+    | '/data-sources'
+    | '/privacy'
     | '/station-fares'
     | '/station-finder'
+    | '/terms'
     | '/trip-planner'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about' | '/station-fares' | '/station-finder' | '/trip-planner'
+  to:
+    | '/'
+    | '/about'
+    | '/accessibility'
+    | '/data-sources'
+    | '/privacy'
+    | '/station-fares'
+    | '/station-finder'
+    | '/terms'
+    | '/trip-planner'
   id:
     | '__root__'
     | '/'
     | '/about'
+    | '/accessibility'
+    | '/data-sources'
+    | '/privacy'
     | '/station-fares'
     | '/station-finder'
+    | '/terms'
     | '/trip-planner'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
+  AccessibilityRoute: typeof AccessibilityRoute
+  DataSourcesRoute: typeof DataSourcesRoute
+  PrivacyRoute: typeof PrivacyRoute
   StationFaresRoute: typeof StationFaresRoute
   StationFinderRoute: typeof StationFinderRoute
+  TermsRoute: typeof TermsRoute
   TripPlannerRoute: typeof TripPlannerRoute
 }
 
@@ -97,6 +154,13 @@ declare module '@tanstack/react-router' {
       path: '/trip-planner'
       fullPath: '/trip-planner'
       preLoaderRoute: typeof TripPlannerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/station-finder': {
@@ -111,6 +175,27 @@ declare module '@tanstack/react-router' {
       path: '/station-fares'
       fullPath: '/station-fares'
       preLoaderRoute: typeof StationFaresRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/data-sources': {
+      id: '/data-sources'
+      path: '/data-sources'
+      fullPath: '/data-sources'
+      preLoaderRoute: typeof DataSourcesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/accessibility': {
+      id: '/accessibility'
+      path: '/accessibility'
+      fullPath: '/accessibility'
+      preLoaderRoute: typeof AccessibilityRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/about': {
@@ -133,19 +218,14 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
+  AccessibilityRoute: AccessibilityRoute,
+  DataSourcesRoute: DataSourcesRoute,
+  PrivacyRoute: PrivacyRoute,
   StationFaresRoute: StationFaresRoute,
   StationFinderRoute: StationFinderRoute,
+  TermsRoute: TermsRoute,
   TripPlannerRoute: TripPlannerRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}

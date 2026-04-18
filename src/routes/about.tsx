@@ -1,11 +1,11 @@
+import {
+  CurrencyCircleDollarIcon,
+  GithubLogoIcon,
+  MapTrifoldIcon,
+  NavigationArrowIcon,
+} from "@phosphor-icons/react";
 import { createFileRoute } from "@tanstack/react-router";
 import { motion, useReducedMotion } from "motion/react";
-import {
-  CurrencyCircleDollar,
-  GithubLogoIcon,
-  MapTrifold,
-  NavigationArrow,
-} from "@phosphor-icons/react";
 
 import { ViewportAnimation } from "@/components/common/viewport-animation";
 import { Button } from "@/components/ui/button";
@@ -27,19 +27,19 @@ const FEATURES = [
   {
     description:
       "Locate any of the 17 MRT Line 6 stations by name — with exit details and connecting landmarks.",
-    icon: NavigationArrow,
+    icon: NavigationArrowIcon,
     title: "Station Finder",
   },
   {
     description:
       "Calculate exact fares for single, return, and MRT Pass trips — no hunting through outdated PDFs.",
-    icon: CurrencyCircleDollar,
+    icon: CurrencyCircleDollarIcon,
     title: "Fare Calculator",
   },
   {
     description:
       "Plan trips across the full 20.1 km network with station-by-station route breakdowns.",
-    icon: MapTrifold,
+    icon: MapTrifoldIcon,
     title: "Trip Planner",
   },
 ] as const;

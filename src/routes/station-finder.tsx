@@ -1,15 +1,21 @@
+import { InfoIcon, MagnifyingGlassIcon, MapPinIcon, MapTrifoldIcon } from "@phosphor-icons/react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Info, MagnifyingGlass, MapPin, MapTrifold } from "@phosphor-icons/react";
 
 import { FeaturePreviewPage } from "@/components/common/feature-preview-page";
 import { generateHeadConfig } from "@/lib/head-meta";
 
 const StationFinderPage = (): React.ReactElement => {
   const features = [
-    { icon: <MagnifyingGlass size={16} weight="duotone" />, label: "Name Search" },
-    { icon: <MapPin size={16} weight="duotone" />, label: "Location View" },
-    { icon: <Info size={16} weight="duotone" />, label: "Station Details" },
-    { icon: <MapTrifold size={16} weight="duotone" />, label: "Interactive Map" },
+    {
+      icon: <MagnifyingGlassIcon size={16} weight="duotone" />,
+      label: "Name Search",
+    },
+    { icon: <MapPinIcon size={16} weight="duotone" />, label: "Location View" },
+    { icon: <InfoIcon size={16} weight="duotone" />, label: "Station Details" },
+    {
+      icon: <MapTrifoldIcon size={16} weight="duotone" />,
+      label: "Interactive Map",
+    },
   ];
   return (
     <FeaturePreviewPage

@@ -1,4 +1,4 @@
-import { CheckCircle, Lightbulb, SmileySad, Wrench } from "@phosphor-icons/react";
+import { CheckCircleIcon, LightbulbIcon, SmileySadIcon, WrenchIcon } from "@phosphor-icons/react";
 import type { ReactElement } from "react";
 
 import { ViewportAnimation } from "@/components/common/viewport-animation";
@@ -25,7 +25,7 @@ const STORIES: StoryItem[] = [
     description:
       "Navigating Dhaka's new MRT Line 6 meant hunting through scattered PDFs, outdated maps, and unofficial fare tables — every commute a small research project.",
     glow: "oklch(0.72 0.16 55 / 0.12)",
-    icon: SmileySad,
+    icon: SmileySadIcon,
     ordinal: "01",
     title: "Frustration",
   },
@@ -35,7 +35,7 @@ const STORIES: StoryItem[] = [
     description:
       "A simple idea: one tool that answers every MRT question instantly. Stations, fares, routes — all in one clean interface built for real commuters.",
     glow: "oklch(0.74 0.15 75 / 0.12)",
-    icon: Lightbulb,
+    icon: LightbulbIcon,
     ordinal: "02",
     title: "Inspiration",
   },
@@ -45,7 +45,7 @@ const STORIES: StoryItem[] = [
     description:
       "Built metro-station-finder with real fare data, interactive maps, and trip planning — a purpose-built tool that respects the commuter's time.",
     glow: "oklch(0.60 0.18 249 / 0.12)",
-    icon: Wrench,
+    icon: WrenchIcon,
     ordinal: "03",
     title: "Solution",
   },
@@ -55,7 +55,7 @@ const STORIES: StoryItem[] = [
     description:
       "Thousands of Dhaka commuters now plan their MRT journeys faster. No more guessing fares or missing stations — just clear, reliable transit information.",
     glow: "oklch(0.64 0.2 145 / 0.12)",
-    icon: CheckCircle,
+    icon: CheckCircleIcon,
     ordinal: "04",
     title: "Impact",
   },
