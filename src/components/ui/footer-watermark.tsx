@@ -1,0 +1,339 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+
+const TrainSvg = ({
+  className,
+  style,
+}: {
+  className?: string;
+  style?: React.CSSProperties;
+}): React.ReactElement => (
+  <svg
+    aria-hidden="true"
+    className={className}
+    preserveAspectRatio="xMidYMax meet"
+    style={style}
+    viewBox="0 0 520 47.5"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <g id="train">
+      {/* Locomotive (right, aerodynamic front) */}
+      <path
+        d="M348.4,4.3v31.1c0,.2,0,.3,0,.5.1,2.2.9,4.2,2.2,5.8,2.1,2.7,5.6,4.4,9.4,4.4h112.8c3.8,0,6.8-1.9,8.4-4.4,1.1-1.7,1.6-3.8,1.3-5.8-.1-.9-.4-1.7-.8-2.6-.5-1-1.2-1.9-2.2-2.8l-2.9-2.5-28.6-24.6-4-3.5h-91c-2.5,0-4.6,1.9-4.6,4.3ZM370.6,25.1c0,1.6-1.4,3-3.2,3h-9.9c-1.8,0-3.2-1.3-3.2-3V6.4c0-1.6,1.4-3,3.2-3h9.9c1.8,0,3.2,1.3,3.2,3v18.6ZM408.8,25.1c0,1.6-1.4,3-3.2,3h-26.1c-1.8,0-3.2-1.3-3.2-3V6.4c0-1.6,1.4-3,3.2-3h26.1c1.8,0,3.2,1.3,3.2,3v18.6Z"
+        fill="#efefef"
+      />
+      {/* Carriage 3 wheels */}
+      <g>
+        <path
+          d="M134.9,45.2c0,1.5,1.3,2.7,3,2.7s3-1.2,3-2.7-1.3-2.7-3-2.7-3,1.2-3,2.7Z"
+          fill="#636865"
+        />
+        <path
+          d="M123.8,45.2c0,1.5,1.3,2.7,3,2.7s3-1.2,3-2.7-1.3-2.7-3-2.7-3,1.2-3,2.7Z"
+          fill="#636865"
+        />
+        <rect fill="#636865" height="1.9" width="9.9" x="127.1" y="45" />
+        <path
+          d="M157.9,45.2c0,1.5,1.3,2.7,3,2.7s3-1.2,3-2.7-1.3-2.7-3-2.7-3,1.2-3,2.7Z"
+          fill="#414442"
+        />
+        <path
+          d="M146.8,45.2c0,1.5,1.3,2.7,3,2.7s3-1.2,3-2.7-1.3-2.7-3-2.7-3,1.2-3,2.7Z"
+          fill="#414442"
+        />
+        <rect fill="#414442" height="1.9" width="9.9" x="150.1" y="45" />
+      </g>
+      {/* Cab wheels */}
+      <g>
+        <path
+          d="M46.7,45.2c0,1.5,1.3,2.7,3,2.7s3-1.2,3-2.7-1.3-2.7-3-2.7-3,1.2-3,2.7Z"
+          fill="#636865"
+        />
+        <path
+          d="M35.5,45.2c0,1.5,1.3,2.7,3,2.7s3-1.2,3-2.7-1.3-2.7-3-2.7-3,1.2-3,2.7Z"
+          fill="#636865"
+        />
+        <rect fill="#636865" height="1.9" width="9.9" x="38.9" y="45" />
+        <path
+          d="M69.6,45.2c0,1.5,1.3,2.7,2.9,2.7s3-1.2,3-2.7-1.3-2.7-3-2.7-2.9,1.2-2.9,2.7Z"
+          fill="#414442"
+        />
+        <path
+          d="M58.5,45.2c0,1.5,1.3,2.7,3,2.7s3-1.2,3-2.7-1.3-2.7-3-2.7-3,1.2-3,2.7Z"
+          fill="#414442"
+        />
+        <rect fill="#414442" height="1.9" width="9.9" x="61.8" y="45" />
+      </g>
+      {/* Carriage 1 body */}
+      <path
+        d="M34,0h131.1c3.3,0,6.1,2.5,6.1,5.6v27.7H56.2V6.4c0-1.6-1.4-3-3.2-3h-15.8c-1.8,0-3.2,1.3-3.2,3v35.3h-5.9c0-.4-.1-.8-.1-1.2V5.6c0-3.1,2.7-5.6,6.1-5.6ZM115.2,28h26.1c1.8,0,3.2-1.3,3.2-3V6.4c0-1.6-1.4-3-3.2-3h-26.1c-1.8,0-3.2,1.3-3.2,3v18.6c0,1.6,1.4,3,3.2,3ZM153.4,28h9.9c1.8,0,3.2-1.3,3.2-3V6.4c0-1.6-1.4-3-3.2-3h-9.9c-1.8,0-3.2,1.3-3.2,3v18.6c0,1.6,1.4,3,3.2,3Z"
+        fill="#cecece"
+      />
+      <path d="M34,41.7h-5.9c.6,2.5,3,4.4,5.9,4.4v-4.4Z" fill="#3b4d57" />
+      <polygon
+        fill="#767d85"
+        points="53.7 46.2 56.2 46.2 56.2 41.7 34 41.7 34 46.2 47.1 46.2 53.7 46.2"
+      />
+      <path
+        d="M34,6.8v39.4h22.2V6.8c0-1.8-1.4-3.3-3.2-3.3h-15.8c-1.8,0-3.2,1.5-3.2,3.3Z"
+        fill="#3b4d57"
+      />
+      <path d="M145.4,46.2h19.7c2.9,0,5.4-1.9,5.9-4.4H56.2v4.4h89.2Z" fill="#3b4d57" />
+      {/* Brand green stripe - carriage 1 */}
+      <path d="M56.2,35.9v5.8h114.9c0-.4.1-.8.1-1.2v-4.7H56.2Z" fill="#22c55e" />
+      <rect fill="#4a4e51" height="2.6" width="115" x="56.2" y="33.3" />
+      {/* Blue windows - carriage 1 */}
+      <path
+        d="M112,6.4v18.6c0,1.6,1.4,3,3.2,3h26.1c1.8,0,3.2-1.3,3.2-3V6.4c0-1.6-1.4-3-3.2-3h-26.1c-1.8,0-3.2,1.3-3.2,3Z"
+        fill="#1b8ec1"
+      />
+      <path
+        d="M150.2,6.4v18.6c0,1.6,1.4,3,3.2,3h9.9c1.8,0,3.2-1.3,3.2-3V6.4c0-1.6-1.4-3-3.2-3h-9.9c-1.8,0-3.2,1.3-3.2,3Z"
+        fill="#1b8ec1"
+      />
+      <path
+        d="M67.9,6.4v18.6c0,1.6,1.4,3,3.2,3h26.1c1.8,0,3.2-1.3,3.2-3V6.4c0-1.6-1.4-3-3.2-3h-26.1c-1.8,0-3.2,1.3-3.2,3Z"
+        fill="#1b8ec1"
+      />
+      <rect fill="#414442" height="29.4" width="4.9" x="171.3" y="7.9" />
+      {/* Carriage 2 wheels */}
+      <g>
+        <path
+          d="M282.9,45.2c0,1.5,1.3,2.7,3,2.7s3-1.2,3-2.7-1.3-2.7-3-2.7-3,1.2-3,2.7Z"
+          fill="#636865"
+        />
+        <path
+          d="M271.7,45.2c0,1.5,1.3,2.7,3,2.7s3-1.2,3-2.7-1.3-2.7-3-2.7-3,1.2-3,2.7Z"
+          fill="#636865"
+        />
+        <rect fill="#636865" height="1.9" width="9.9" x="275.1" y="45" />
+        <path
+          d="M305.8,45.2c0,1.5,1.3,2.7,3,2.7s3-1.2,3-2.7-1.3-2.7-3-2.7-3,1.2-3,2.7Z"
+          fill="#414442"
+        />
+        <path
+          d="M294.7,45.2c0,1.5,1.3,2.7,3,2.7s3-1.2,3-2.7-1.3-2.7-3-2.7-3,1.2-3,2.7Z"
+          fill="#414442"
+        />
+        <rect fill="#414442" height="1.9" width="9.9" x="298" y="45" />
+      </g>
+      <g>
+        <path
+          d="M194.6,45.2c0,1.5,1.3,2.7,3,2.7s3-1.2,3-2.7-1.3-2.7-3-2.7-3,1.2-3,2.7Z"
+          fill="#636865"
+        />
+        <path
+          d="M183.5,45.2c0,1.5,1.3,2.7,3,2.7s3-1.2,3-2.7-1.3-2.7-3-2.7-3,1.2-3,2.7Z"
+          fill="#636865"
+        />
+        <rect fill="#636865" height="1.9" width="9.9" x="186.8" y="45" />
+        <path
+          d="M217.6,45.2c0,1.5,1.3,2.7,3,2.7s3-1.2,3-2.7-1.3-2.7-3-2.7-3,1.2-3,2.7Z"
+          fill="#414442"
+        />
+        <path
+          d="M206.4,45.2c0,1.5,1.3,2.7,3,2.7s3-1.2,3-2.7-1.3-2.7-3-2.7-3,1.2-3,2.7Z"
+          fill="#414442"
+        />
+        <rect fill="#414442" height="1.9" width="9.9" x="209.8" y="45" />
+      </g>
+      {/* Carriage 2 body */}
+      <path
+        d="M181.9,0h131.1c3.3,0,6.1,2.5,6.1,5.6v27.7h-115V6.4c0-1.6-1.4-3-3.2-3h-15.8c-1.8,0-3.2,1.3-3.2,3v35.3h-5.9c0-.4-.1-.8-.1-1.2V5.6c0-3.1,2.7-5.6,6.1-5.6ZM263.1,28h26.1c1.8,0,3.2-1.3,3.2-3V6.4c0-1.6-1.4-3-3.2-3h-26.1c-1.8,0-3.2,1.3-3.2,3v18.6c0,1.6,1.4,3,3.2,3ZM301.3,28h9.9c1.8,0,3.2-1.3,3.2-3V6.4c0-1.6-1.4-3-3.2-3h-9.9c-1.8,0-3.2,1.3-3.2,3v18.6c0,1.6,1.4,3,3.2,3Z"
+        fill="#cecece"
+      />
+      <path d="M181.9,41.7h-5.9c.6,2.5,3,4.4,5.9,4.4v-4.4Z" fill="#3b4d57" />
+      <polygon
+        fill="#767d85"
+        points="201.7 46.2 204.1 46.2 204.1 41.7 181.9 41.7 181.9 46.2 195.1 46.2 201.7 46.2"
+      />
+      <path
+        d="M181.9,6.8v39.4h22.2V6.8c0-1.8-1.4-3.3-3.2-3.3h-15.8c-1.8,0-3.2,1.5-3.2,3.3Z"
+        fill="#3b4d57"
+      />
+      <path d="M293.3,46.2h19.7c2.9,0,5.4-1.9,5.9-4.4h-114.9v4.4h89.2Z" fill="#3b4d57" />
+      {/* Brand green stripe - carriage 2 */}
+      <path d="M204.1,35.9v5.8h114.9c0-.4.1-.8.1-1.2v-4.7h-115Z" fill="#22c55e" />
+      <rect fill="#4a4e51" height="2.6" width="115" x="204.1" y="33.3" />
+      {/* Blue windows - carriage 2 */}
+      <path
+        d="M259.9,6.4v18.6c0,1.6,1.4,3,3.2,3h26.1c1.8,0,3.2-1.3,3.2-3V6.4c0-1.6-1.4-3-3.2-3h-26.1c-1.8,0-3.2,1.3-3.2,3Z"
+        fill="#1b8ec1"
+      />
+      <path
+        d="M298.1,6.4v18.6c0,1.6,1.4,3,3.2,3h9.9c1.8,0,3.2-1.3,3.2-3V6.4c0-1.6-1.4-3-3.2-3h-9.9c-1.8,0-3.2,1.3-3.2,3Z"
+        fill="#1b8ec1"
+      />
+      <path
+        d="M215.8,6.4v18.6c0,1.6,1.4,3,3.2,3h26.1c1.8,0,3.2-1.3,3.2-3V6.4c0-1.6-1.4-3-3.2-3h-26.1c-1.8,0-3.2,1.3-3.2,3Z"
+        fill="#1b8ec1"
+      />
+      <rect fill="#414442" height="29.4" width="4.9" x="319.2" y="7.9" />
+      {/* Carriage 3 (locomotive end) wheels */}
+      <g>
+        <path
+          d="M418.5,45.2c0,1.5,1.3,2.7,3,2.7s3-1.2,3-2.7-1.3-2.7-3-2.7-3,1.2-3,2.7Z"
+          fill="#636865"
+        />
+        <path
+          d="M407.4,45.2c0,1.5,1.3,2.7,3,2.7s3-1.2,3-2.7-1.3-2.7-3-2.7-3,1.2-3,2.7Z"
+          fill="#636865"
+        />
+        <rect fill="#636865" height="1.9" width="9.9" x="410.7" y="45" />
+        <path
+          d="M441.5,45.2c0,1.5,1.3,2.7,3,2.7s3-1.2,3-2.7-1.3-2.7-3-2.7-3,1.2-3,2.7Z"
+          fill="#414442"
+        />
+        <path
+          d="M430.4,45.2c0,1.5,1.3,2.7,3,2.7s3-1.2,3-2.7-1.3-2.7-3-2.7-3,1.2-3,2.7Z"
+          fill="#414442"
+        />
+        <rect fill="#414442" height="1.9" width="9.9" x="433.7" y="45" />
+      </g>
+      <g>
+        <path
+          d="M346.6,45.2c0,1.5,1.3,2.7,3,2.7s3-1.2,3-2.7-1.3-2.7-3-2.7-3,1.2-3,2.7Z"
+          fill="#636865"
+        />
+        <path
+          d="M335.5,45.2c0,1.5,1.3,2.7,3,2.7s3-1.2,3-2.7-1.3-2.7-3-2.7-3,1.2-3,2.7Z"
+          fill="#636865"
+        />
+        <rect fill="#636865" height="1.9" width="9.9" x="338.8" y="45" />
+        <path
+          d="M369.6,45.2c0,1.5,1.3,2.7,3,2.7s3-1.2,3-2.7-1.3-2.7-3-2.7-3,1.2-3,2.7Z"
+          fill="#414442"
+        />
+        <path
+          d="M358.4,45.2c0,1.5,1.3,2.7,3,2.7s3-1.2,3-2.7-1.3-2.7-3-2.7-3,1.2-3,2.7Z"
+          fill="#414442"
+        />
+        <rect fill="#414442" height="1.9" width="9.9" x="361.8" y="45" />
+      </g>
+      <path d="M323.9,33.3v2.1c0,.2,0,.3,0,.5h134.2c-.1-1.6-.4-1.7-.8-2.6h-133.4Z" fill="#4a4e51" />
+      {/* Locomotive body */}
+      <path
+        d="M328.5,0h91l4,3.5h-27c-2.5,0-4.5,1.9-4.5,4.2v16.2c0,2.3,2,4.2,4.5,4.2h55.6l2.9,2.5c1,.8,1.7,1.8,2.2,2.8h-133.4V4.3c0-2.3,2.1-4.3,4.6-4.3ZM332.9,28h9.9c1.8,0,3.2-1.3,3.2-3V6.4c0-1.6-1.4-3-3.2-3h-9.9c-1.8,0-3.2,1.3-3.2,3v18.6c0,1.6,1.4,3,3.2,3ZM354.9,28h26.1c1.8,0,3.2-1.3,3.2-3V6.4c0-1.6-1.4-3-3.2-3h-26.1c-1.8,0-3.2,1.3-3.2,3v18.6c0,1.6,1.4,3,3.2,3Z"
+        fill="#cecece"
+      />
+      {/* Brand green stripe - locomotive */}
+      <path
+        d="M458.1,35.9h-134.2c.1,2.2.9,4.2,2.2,5.8h130.7c1.1-1.7,1.6-3.8,1.3-5.8Z"
+        fill="#22c55e"
+      />
+      <path
+        d="M425,46.2h23.3c3.8,0,6.8-1.9,8.4-4.4h-130.7c2.1,2.7,5.6,4.4,9.4,4.4h89.5Z"
+        fill="#3b4d57"
+      />
+      {/* Blue windows - locomotive */}
+      <path
+        d="M329.7,6.4v18.6c0,1.6,1.4,3,3.2,3h9.9c1.8,0,3.2-1.3,3.2-3V6.4c0-1.6-1.4-3-3.2-3h-9.9c-1.8,0-3.2,1.3-3.2,3Z"
+        fill="#1b8ec1"
+      />
+      <path
+        d="M351.7,6.4v18.6c0,1.6,1.4,3,3.2,3h26.1c1.8,0,3.2-1.3,3.2-3V6.4c0-1.6-1.4-3-3.2-3h-26.1c-1.8,0-3.2,1.3-3.2,3Z"
+        fill="#1b8ec1"
+      />
+      <path
+        d="M392,7.6v16.2c0,2.3,2,4.2,4.5,4.2h55.6l-28.6-24.6h-27c-2.5,0-4.5,1.9-4.5,4.2Z"
+        fill="#1b8ec1"
+      />
+      {/* Locomotive front window highlight */}
+      <polygon fill="#61c5f2" points="423.5 3.5 448.1 3.5 475.2 26.7 452.1 28 423.5 3.5" />
+      {/* Front nose detail */}
+      <path d="M458.1,35.9l24.4-.4s-.4-1.9-1-2.7l-24.2.6s1,2.1.8,2.6Z" fill="#62676b" />
+      {/* Cab vertical windows */}
+      <path
+        d="M47.9,39.4c0,1.8,1.3,3.4,3,3.4h0c1.7,0,3-1.5,3-3.4V10.7c0-1.9-1.3-3.4-3-3.4h0c-1.7,0-3,1.5-3,3.4v28.7Z"
+        fill="#1b8ec1"
+      />
+      <path
+        d="M37.5,39.4c0,1.8,1.3,3.4,3,3.4h0c1.7,0,3-1.5,3-3.4V10.7c0-1.9-1.3-3.4-3-3.4h0c-1.7,0-3,1.5-3,3.4v28.7Z"
+        fill="#3aaae8"
+      />
+      <rect fill="#252625" height="29.4" width="2" x="173.9" y="7.9" />
+      <rect fill="#252625" height="29.3" width="1.7" x="322.2" y="7.9" />
+      {/* Cab vertical windows - carriage 2 connector */}
+      <path
+        d="M195.4,38.5c0,1.8,1.3,3.4,3,3.4h0c1.7,0,3-1.5,3-3.4V9.9c0-1.9-1.3-3.4-3-3.4h0c-1.7,0-3,1.5-3,3.4v28.7Z"
+        fill="#1b8ec1"
+      />
+      <path
+        d="M185,38.5c0,1.8,1.3,3.4,3,3.4h0c1.7,0,3-1.5,3-3.4V9.9c0-1.9-1.3-3.4-3-3.4h0c-1.7,0-3,1.5-3,3.4v28.7Z"
+        fill="#1b8ec1"
+      />
+      <g>
+        <path d="M40.5,7.2c1.7,0,3,1.5,3,3.4v7l-5.9-7.8c.3-1.5,1.5-2.5,2.9-2.5Z" fill="#1b8ec1" />
+        <path d="M43.5,24.6v14.7c0,1.9-1.3,3.4-3,3.4s-3-1.5-3-3.4v-22.8l6,8.1Z" fill="#1b8ec1" />
+      </g>
+    </g>
+  </svg>
+);
+
+export const FooterWatermark = (): React.ReactElement => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isDark, setIsDark] = useState(true);
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+  const [active, setActive] = useState(false);
+
+  useEffect(() => {
+    const check = () =>
+      setIsDark(
+        document.documentElement.classList.contains("dark") ||
+          document.documentElement.dataset["theme"] === "dark",
+      );
+    check();
+    const observer = new MutationObserver(check);
+    observer.observe(document.documentElement, {
+      attributeFilter: ["class", "data-theme"],
+      attributes: true,
+    });
+    return () => observer.disconnect();
+  }, []);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const container = containerRef.current;
+    if (!container) {
+      return;
+    }
+    const rect = container.getBoundingClientRect();
+    setPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+    setActive(true);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => setActive(false), []);
+
+  return (
+    <div className="pt-10">
+      <div className="container mx-auto px-4">
+        <div
+          ref={containerRef}
+          className="relative w-full cursor-default select-none"
+          onMouseLeave={handleMouseLeave}
+          onMouseMove={handleMouseMove}
+          style={{ height: "clamp(52px, 8.5vw, 110px)" }}
+        >
+          {/* Base train — clearly visible */}
+          <TrainSvg
+            className="absolute inset-0 h-full w-full"
+            style={{
+              filter: isDark ? "none" : "brightness(0.45) saturate(0.6)",
+              opacity: isDark ? 0.55 : 0.6,
+            }}
+          />
+
+          {/* Natural glow — screen blend brightens organically, no hard circle edge */}
+          <div
+            className="pointer-events-none absolute inset-0 transition-opacity duration-200 ease-out"
+            style={{
+              background: `radial-gradient(ellipse 160px 100px at ${pos.x}px ${pos.y}px, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.08) 45%, transparent 75%)`,
+              mixBlendMode: "screen",
+              opacity: active ? 1 : 0,
+            }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+FooterWatermark.displayName = "FooterWatermark";

@@ -1,38 +1,66 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { StorySection } from "@/pages/home/sections/story-section";
 
+// motion/react is not available in jsdom — stub it before any import resolves it.
+vi.mock("motion/react", () => ({
+  motion: {
+    div: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
+      <div {...props}>{children}</div>
+    ),
+    section: ({ children, ...props }: React.HTMLAttributes<HTMLElement>) => (
+      <section {...props}>{children}</section>
+    ),
+  },
+  useInView: () => true,
+  useReducedMotion: () => false,
+}));
+
 describe("StorySection", () => {
-  it("renders 4 story cards", () => {
+  it("renders without crashing", () => {
     render(<StorySection />);
-    const cards = screen
-      .getAllByRole("heading", { level: 3 })
-      .filter((h) =>
-        ["The Daily Struggle", "The Lightbulb Moment", "The Solution", "The Impact"].includes(
-          h.textContent ?? "",
-        ),
-      );
-    expect(cards).toHaveLength(4);
+    expect(screen.getByRole("heading", { level: 2 })).toBeDefined();
   });
 
-  it("renders The Daily Struggle card", () => {
+  it('has "How it started" heading', () => {
     render(<StorySection />);
-    expect(screen.getByText("The Daily Struggle")).toBeDefined();
+    expect(screen.getByText("How it started")).toBeDefined();
   });
 
-  it("renders The Lightbulb Moment card", () => {
+  it("renders 4 story columns with correct titles", () => {
     render(<StorySection />);
-    expect(screen.getByText("The Lightbulb Moment")).toBeDefined();
+    const titles = ["Frustration", "Inspiration", "Solution", "Impact"];
+    for (const title of titles) {
+      expect(screen.getByText(title)).toBeDefined();
+    }
   });
 
-  it("renders The Solution card", () => {
+  it('has "Frustration" story column', () => {
     render(<StorySection />);
-    expect(screen.getByText("The Solution")).toBeDefined();
+    expect(screen.getByRole("heading", { level: 3, name: "Frustration" })).toBeDefined();
   });
 
-  it("renders The Impact card", () => {
+  it('has "Inspiration" story column', () => {
     render(<StorySection />);
-    expect(screen.getByText("The Impact")).toBeDefined();
+    expect(screen.getByRole("heading", { level: 3, name: "Inspiration" })).toBeDefined();
+  });
+
+  it('has "Solution" story column', () => {
+    render(<StorySection />);
+    expect(screen.getByRole("heading", { level: 3, name: "Solution" })).toBeDefined();
+  });
+
+  it('has "Impact" story column', () => {
+    render(<StorySection />);
+    expect(screen.getByRole("heading", { level: 3, name: "Impact" })).toBeDefined();
+  });
+
+  it("renders ordinal numbers 01–04 in the DOM", () => {
+    render(<StorySection />);
+    expect(screen.getByText("01")).toBeDefined();
+    expect(screen.getByText("02")).toBeDefined();
+    expect(screen.getByText("03")).toBeDefined();
+    expect(screen.getByText("04")).toBeDefined();
   });
 });

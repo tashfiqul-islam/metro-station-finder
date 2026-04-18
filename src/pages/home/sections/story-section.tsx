@@ -1,209 +1,202 @@
-import {
-  CheckCircleIcon,
-  LightbulbIcon,
-  MapPinIcon,
-  TargetIcon,
-  UsersIcon,
-} from "@phosphor-icons/react";
-import { motion, useReducedMotion } from "motion/react";
-import { memo } from "react";
+import { CheckCircle, Lightbulb, SmileySad, Wrench } from "@phosphor-icons/react";
+import type { ReactElement } from "react";
 
-import { SectionWrapper } from "@/components/common/section-wrapper";
-import { ANIMATION_CONFIG } from "@/components/ui/animation-constants";
+import { ViewportAnimation } from "@/components/common/viewport-animation";
 import { cn } from "@/lib/utils";
 
-interface StoryStep {
-  id: string;
-  icon: React.ComponentType<{ className?: string }>;
+// ---------------------------------------------------------------------------
+// Data
+// ---------------------------------------------------------------------------
+
+interface StoryItem {
+  ordinal: string;
+  icon: React.ElementType;
   title: string;
   description: string;
-  highlights: string[];
-  color: string;
-  bgColor: string;
-  highlightText?: string;
+  accent: string;
+  accentSolid: string;
+  glow: string;
 }
 
-const storySteps: StoryStep[] = [
+const STORIES: StoryItem[] = [
   {
-    bgColor: "bg-red-500",
-    color: "text-white",
+    accent: "oklch(0.75 0.14 55 / 0.14)",
+    accentSolid: "oklch(0.72 0.16 55)",
     description:
-      "Every day, thousands of Dhaka commuters face the same frustrating question: 'Where's the nearest metro station?' With no centralized information, people waste precious time searching through multiple maps and apps.",
-    highlights: [
-      "No centralized metro information",
-      "Time-consuming manual searches",
-      "Inconsistent station data",
-      "Difficulty calculating distances",
-    ],
-    icon: MapPinIcon,
-    id: "frustration",
-    title: "The Daily Struggle",
+      "Navigating Dhaka's new MRT Line 6 meant hunting through scattered PDFs, outdated maps, and unofficial fare tables — every commute a small research project.",
+    glow: "oklch(0.72 0.16 55 / 0.12)",
+    icon: SmileySad,
+    ordinal: "01",
+    title: "Frustration",
   },
   {
-    bgColor: "bg-amber-500",
-    color: "text-white",
+    accent: "oklch(0.78 0.13 75 / 0.14)",
+    accentSolid: "oklch(0.74 0.15 75)",
     description:
-      "As a developer who experienced this pain firsthand, I realized the solution was simple: create a single, elegant app that puts all metro information at your fingertips.",
-    highlights: [
-      "Personal frustration became motivation",
-      "Identified the core user needs",
-      "Designed for simplicity and speed",
-      "Focused on Dhaka's unique challenges",
-    ],
-    icon: LightbulbIcon,
-    id: "inspiration",
-    title: "The Lightbulb Moment",
+      "A simple idea: one tool that answers every MRT question instantly. Stations, fares, routes — all in one clean interface built for real commuters.",
+    glow: "oklch(0.74 0.15 75 / 0.12)",
+    icon: Lightbulb,
+    ordinal: "02",
+    title: "Inspiration",
   },
   {
-    bgColor: "bg-green-500",
-    color: "text-white",
+    accent: "oklch(0.57 0.19 249 / 0.14)",
+    accentSolid: "oklch(0.60 0.18 249)",
     description:
-      "Metro Station Finder was born - a modern, fast, and intuitive app that transforms the frustrating experience of finding metro stations into something effortless and delightful.",
-    highlightText: "Metro Station Finder",
-    highlights: [
-      "One-click station search",
-      "Real-time distance calculation",
-      "Instant fare estimation",
-      "Interactive map visualization",
-    ],
-    icon: TargetIcon,
-    id: "solution",
-    title: "The Solution",
+      "Built metro-station-finder with real fare data, interactive maps, and trip planning — a purpose-built tool that respects the commuter's time.",
+    glow: "oklch(0.60 0.18 249 / 0.12)",
+    icon: Wrench,
+    ordinal: "03",
+    title: "Solution",
   },
   {
-    bgColor: "bg-blue-500",
-    color: "text-white",
+    accent: "oklch(0.64 0.2 145 / 0.14)",
+    accentSolid: "oklch(0.64 0.2 145)",
     description:
-      "Today, Metro Station Finder helps thousands of commuters navigate Dhaka's metro system with confidence, saving time and reducing the stress of urban transportation.",
-    highlightText: "Metro Station Finder",
-    highlights: [
-      "1000+ active users",
-      "17 metro stations covered",
-      "Sub-100ms response times",
-      "Zero maintenance overhead",
-    ],
-    icon: UsersIcon,
-    id: "impact",
-    title: "The Impact",
+      "Thousands of Dhaka commuters now plan their MRT journeys faster. No more guessing fares or missing stations — just clear, reliable transit information.",
+    glow: "oklch(0.64 0.2 145 / 0.12)",
+    icon: CheckCircle,
+    ordinal: "04",
+    title: "Impact",
   },
 ];
 
-const DescriptionWithHighlight = ({
-  description,
-  highlightText,
-}: {
-  description: string;
-  highlightText?: string;
-}) => {
-  if (highlightText === undefined || !description.includes(highlightText)) {
-    return <>{description}</>;
-  }
-  const parts = description.split(highlightText);
-  return (
-    <>
-      {parts[0]}
-      <span className="gradient-text font-semibold">{highlightText}</span>
-      {parts[1]}
-    </>
-  );
-};
+// ---------------------------------------------------------------------------
+// Section
+// ---------------------------------------------------------------------------
 
-const StoryStepCard = memo(({ step, index }: { step: StoryStep; index: number }) => {
-  const Icon = step.icon;
-  const shouldReduceMotion = useReducedMotion();
-
-  return (
-    <motion.div
-      className="transition-transform duration-300"
-      initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: 30 }}
-      transition={{
-        delay: index * 0.1,
-        duration: ANIMATION_CONFIG.durations.fast,
-        ease: ANIMATION_CONFIG.ease,
-      }}
-      viewport={{ amount: 0.2, once: true }}
-      whileHover={shouldReduceMotion ? {} : { scale: 1.02, y: -4 }}
-      whileInView={shouldReduceMotion ? {} : { opacity: 1, y: 0 }}
-    >
-      <div
-        className={cn(
-          "glass-card group relative h-full overflow-hidden rounded-2xl transition-all duration-300",
-          "flex flex-col",
-          "p-6 sm:p-8",
-        )}
-      >
-        <div className="absolute inset-0 bg-linear-to-br from-transparent via-transparent to-transparent dark:from-primary/5 dark:via-transparent dark:to-primary/10 dark:opacity-50" />
-
-        <div className="relative flex flex-1 flex-col">
-          <div className="mb-6 flex items-center gap-4 sm:gap-6">
-            <div
-              className={cn(
-                "flex shrink-0 items-center justify-center rounded-2xl p-3 shadow-lg transition-transform duration-300 sm:p-4",
-                step.bgColor,
-                "group-hover:scale-110",
-              )}
-            >
-              <Icon className={cn("h-6 w-6 sm:h-8 sm:w-8", step.color)} />
-            </div>
-            <h3 className="font-bold text-foreground text-xl sm:text-2xl">{step.title}</h3>
+export const StorySection = (): ReactElement => (
+  <section aria-label="Our story" className="py-20">
+    <div className="container mx-auto px-4">
+      {/* Section header */}
+      <ViewportAnimation>
+        <div className="mb-16 text-center">
+          <div className="mb-4 flex items-center justify-center gap-3">
+            <div className="h-px w-8 bg-primary/50" />
+            <span className="text-xs font-semibold uppercase tracking-widest text-primary/70">
+              Origin
+            </span>
+            <div className="h-px w-8 bg-primary/50" />
           </div>
-
-          <p className="mb-6 text-base text-muted-foreground leading-relaxed sm:text-base">
-            <DescriptionWithHighlight
-              description={step.description}
-              {...(step.highlightText ? { highlightText: step.highlightText } : {})}
-            />
-          </p>
-
-          <ul className="space-y-2.5">
-            {step.highlights.map((highlight) => (
-              <li className="flex items-start gap-3" key={highlight}>
-                <CheckCircleIcon className="mt-0.5 h-4 w-4 shrink-0 text-green-600 dark:text-green-400" />
-                <span className="text-muted-foreground text-sm leading-relaxed">{highlight}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-    </motion.div>
-  );
-});
-
-StoryStepCard.displayName = "StoryStepCard";
-
-export const StorySection = memo((): React.ReactElement => {
-  const shouldReduceMotion = useReducedMotion();
-
-  return (
-    <SectionWrapper id="story">
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
-        <motion.div
-          className="mb-12 text-center sm:mb-16 lg:mb-20"
-          initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: 20 }}
-          transition={{
-            duration: ANIMATION_CONFIG.durations.fast,
-            ease: ANIMATION_CONFIG.ease,
-          }}
-          viewport={{ amount: 0.3, once: true }}
-          whileInView={shouldReduceMotion ? {} : { opacity: 1, y: 0 }}
-        >
-          <h2 className="mb-4 font-bold text-3xl text-foreground sm:text-4xl lg:text-5xl">
-            The Story Behind <span className="gradient-text">Metro Station Finder</span>
+          <h2
+            className="font-heading text-3xl font-bold lg:text-4xl"
+            style={{
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              background:
+                "linear-gradient(135deg, oklch(0.52 0.12 145), oklch(0.72 0.18 145) 45%, oklch(0.58 0.22 145))",
+              backgroundClip: "text",
+            }}
+          >
+            How it started
           </h2>
-          <p className="mx-auto max-w-2xl text-base text-muted-foreground leading-relaxed sm:text-lg">
-            From a personal frustration to a solution that helps thousands of commuters navigate
-            Dhaka's metro system with confidence.
+          <p className="mt-3 text-muted-foreground">
+            From a daily commuter's frustration to a tool used by thousands.
           </p>
-        </motion.div>
+        </div>
+      </ViewportAnimation>
 
-        <div className="grid grid-cols-1 gap-6 sm:gap-8 md:grid-cols-2">
-          {storySteps.map((step, index) => (
-            <StoryStepCard index={index} key={step.id} step={step} />
+      {/* Step indicators row — desktop */}
+      <div className="relative mb-6 hidden lg:block">
+        <div
+          aria-hidden="true"
+          className="absolute left-0 right-0 top-1/2 -translate-y-1/2"
+          style={{
+            background:
+              "linear-gradient(90deg, transparent 6%, oklch(0.75 0.14 55 / 0.3) 16%, oklch(0.78 0.13 75 / 0.3) 38%, oklch(0.57 0.19 249 / 0.3) 62%, oklch(0.64 0.2 145 / 0.3) 84%, transparent 94%)",
+            height: "1px",
+          }}
+        />
+        <div className="grid grid-cols-4">
+          {STORIES.map((story) => (
+            <div key={story.ordinal} className="flex justify-center">
+              <div
+                className="relative z-10 flex h-9 w-9 items-center justify-center rounded-full border-2 text-xs font-black"
+                style={{
+                  background: `radial-gradient(circle, ${story.accent} 0%, var(--color-background) 70%)`,
+                  borderColor: story.accentSolid,
+                  boxShadow: `0 0 16px ${story.glow}`,
+                  color: story.accentSolid,
+                }}
+              >
+                {story.ordinal}
+              </div>
+            </div>
           ))}
         </div>
       </div>
-    </SectionWrapper>
-  );
-});
 
-StorySection.displayName = "StorySection";
+      {/* Cards grid */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5">
+        {STORIES.map((story, index) => {
+          const Icon = story.icon;
+          return (
+            <ViewportAnimation key={story.ordinal} delay={index * 0.08}>
+              <div
+                className={cn(
+                  "group relative flex h-full flex-col overflow-hidden rounded-2xl",
+                  "border border-border/50 bg-card/40 backdrop-blur-sm",
+                  "transition-all duration-300 hover:-translate-y-0.5 hover:border-border/80",
+                  "hover:shadow-lg hover:shadow-black/8",
+                )}
+              >
+                {/* Top accent shimmer */}
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-x-0 top-0 h-px"
+                  style={{
+                    background: `linear-gradient(90deg, transparent, ${story.accentSolid}, transparent)`,
+                    opacity: 0.6,
+                  }}
+                />
+
+                {/* Radial bloom */}
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute -top-16 left-1/2 h-32 w-44 -translate-x-1/2 rounded-full blur-2xl transition-opacity duration-300 group-hover:opacity-150"
+                  style={{ background: story.accent }}
+                />
+
+                {/* Card body */}
+                <div className="relative z-10 flex flex-1 flex-col p-6">
+                  {/* Icon */}
+                  <div className="mb-5">
+                    <div
+                      className="flex h-11 w-11 items-center justify-center rounded-xl border border-border/40 bg-muted/50 transition-all duration-300 group-hover:scale-105"
+                      style={{
+                        boxShadow: `0 4px 16px ${story.glow}`,
+                      }}
+                    >
+                      <Icon
+                        aria-hidden="true"
+                        className="h-5 w-5"
+                        style={{ color: story.accentSolid }}
+                        weight="duotone"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Text content */}
+                  <h3 className="font-heading mb-2 text-lg font-bold text-foreground">
+                    {story.title}
+                  </h3>
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    {story.description}
+                  </p>
+                </div>
+
+                {/* Bottom accent bar */}
+                <div
+                  className="h-0.5 w-full opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                  style={{
+                    background: `linear-gradient(90deg, transparent, ${story.accentSolid}, transparent)`,
+                  }}
+                />
+              </div>
+            </ViewportAnimation>
+          );
+        })}
+      </div>
+    </div>
+  </section>
+);

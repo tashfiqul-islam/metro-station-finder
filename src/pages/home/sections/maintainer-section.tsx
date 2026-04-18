@@ -1,263 +1,85 @@
-import { Link } from "@tanstack/react-router";
-import {
-  ArrowRightIcon,
-  ArrowSquareOutIcon,
-  BriefcaseIcon,
-  GraduationCapIcon,
-  MapPinIcon,
-} from "@phosphor-icons/react";
-import { motion, useInView, useReducedMotion } from "motion/react";
-import { memo, useRef } from "react";
+import { GitBranch, GithubLogo } from "@phosphor-icons/react";
+import { memo } from "react";
 
-import { SectionWrapper } from "@/components/common/section-wrapper";
-import { ANIMATION_CONFIG } from "@/components/ui/animation-constants";
+import { ViewportAnimation } from "@/components/common/viewport-animation";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 
-interface SocialLinkData {
-  href: string;
-  label: string;
-  iconPath: string;
-}
-
-const socialLinks: SocialLinkData[] = [
-  {
-    href: "https://www.linkedin.com/in/tashfiqulislam/",
-    iconPath: "/socials/linkedin.svg",
-    label: "LinkedIn",
-  },
-  {
-    href: "https://www.instagram.com/_tashfiqulislam/",
-    iconPath: "/socials/instagram.svg",
-    label: "Instagram",
-  },
-  {
-    href: "mailto:tashfiq61@gmail.com",
-    iconPath: "/socials/gmail.svg",
-    label: "Gmail",
-  },
-];
-
-const keyInfo = [
-  { icon: BriefcaseIcon, label: "Role", value: "Product Manager @ Field Nation" },
-  { icon: GraduationCapIcon, label: "Education", value: "CSE, NSU" },
-  { icon: MapPinIcon, label: "Location", value: "Dhaka, Bangladesh" },
-];
-
-const SocialLink = memo(({ href, label, iconPath, index }: SocialLinkData & { index: number }) => {
-  const shouldReduceMotion = useReducedMotion();
-  const ref = useRef<HTMLAnchorElement>(null);
-  const isInView = useInView(ref, { margin: "-50px", once: true });
-
-  return (
-    <motion.a
-      animate={isInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.8 }}
-      className="glass-card group relative flex items-center justify-center rounded-xl p-3 transition-all duration-300 hover:border-primary/40 hover:shadow-lg"
-      href={href}
-      initial={{ opacity: 0, scale: 0.8 }}
-      ref={ref}
-      rel="noopener noreferrer"
-      target="_blank"
-      transition={{
-        delay: index * 0.1,
-        duration: shouldReduceMotion
-          ? ANIMATION_CONFIG.durations.fast
-          : ANIMATION_CONFIG.durations.normal,
-        ease: ANIMATION_CONFIG.ease,
-      }}
-      whileHover={shouldReduceMotion ? {} : { scale: 1.1, y: -2 }}
-    >
-      <img
-        alt={label}
-        className="h-5 w-5 transition-transform duration-300 group-hover:scale-110 sm:h-6 sm:w-6"
-        height={24}
-        src={iconPath}
-        width={24}
-      />
-    </motion.a>
-  );
-});
-
-SocialLink.displayName = "SocialLink";
-
-export const MaintainerSection = memo((): React.ReactElement => {
-  const shouldReduceMotion = useReducedMotion();
-  const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { margin: "-100px", once: true });
-
-  return (
-    <SectionWrapper id="maintainer">
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
-        <motion.div
-          animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-          className="mb-12 text-center sm:mb-16 lg:mb-20"
-          initial={{ opacity: 0, y: 20 }}
-          ref={ref}
-          style={{ willChange: shouldReduceMotion ? "auto" : "transform, opacity" }}
-          transition={{
-            duration: shouldReduceMotion
-              ? ANIMATION_CONFIG.durations.fast
-              : ANIMATION_CONFIG.durations.slow,
-            ease: ANIMATION_CONFIG.ease,
-          }}
-        >
-          <h2 className="mb-4 font-bold text-3xl text-foreground sm:text-4xl lg:text-5xl xl:text-6xl">
-            Meet the <span className="gradient-text font-extrabold">Maintainer</span>
-          </h2>
-          <p className="mx-auto max-w-2xl text-base text-muted-foreground leading-relaxed sm:text-lg lg:text-xl">
-            The vibe coder behind Metro Station Finder. Crafting magical solutions for real-world
-            problems.
-          </p>
-        </motion.div>
-
-        <div className="mx-auto max-w-6xl">
-          <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-12">
-            {/* Profile Card */}
-            <motion.div
-              animate={isInView ? { opacity: 1, x: 0 } : { opacity: 0, x: -30 }}
-              className="relative flex h-full"
-              initial={{ opacity: 0, x: -30 }}
-              style={{ willChange: shouldReduceMotion ? "auto" : "transform, opacity" }}
-              transition={{
-                delay: 0.2,
-                duration: shouldReduceMotion
-                  ? ANIMATION_CONFIG.durations.fast
-                  : ANIMATION_CONFIG.durations.slow,
-                ease: ANIMATION_CONFIG.ease,
-              }}
-            >
-              <div className="glass-card relative flex h-full w-full flex-col items-center overflow-hidden rounded-3xl p-6 transition-all duration-300 hover:border-primary/30 hover:shadow-2xl sm:p-8">
-                <div className="group relative mb-6 flex justify-center">
-                  <div className="absolute inset-0 rounded-3xl bg-linear-to-r from-primary/20 via-primary/30 to-primary/20 opacity-75 blur-2xl transition-opacity duration-300 group-hover:opacity-100 sm:rounded-4xl" />
-                  <div className="relative h-20 w-20 overflow-hidden rounded-3xl border-2 border-primary/40 shadow-xl ring-2 ring-primary/10 transition-transform duration-300 group-hover:scale-105 sm:h-28 sm:w-28 sm:rounded-4xl dark:border-primary/50 dark:ring-primary/20">
-                    <div className="absolute inset-0 rounded-3xl bg-linear-to-br from-primary/5 via-transparent to-primary/10 sm:rounded-4xl" />
-                    <img
-                      alt="Tashfiqul Islam"
-                      className="h-full w-full object-cover object-center"
-                      height={112}
-                      src="/tashfiq.png"
-                      width={112}
-                    />
-                  </div>
-                </div>
-
-                <div className="mb-6 flex flex-col items-center text-center">
-                  <h3 className="mb-2 font-bold text-foreground text-xl sm:text-2xl">
-                    Tashfiqul Islam
-                  </h3>
-                  <p className="mb-4 font-medium text-muted-foreground text-sm sm:text-base">
-                    Product Manager
-                  </p>
-                  <p className="mx-auto max-w-sm text-muted-foreground text-xs leading-relaxed sm:text-sm">
-                    Product leader by day, vibe coder by night. Passionate about building innovative
-                    solutions.
-                  </p>
-                </div>
-
-                <div className="mt-auto flex justify-center gap-3">
-                  {socialLinks.map((link, index) => (
-                    <SocialLink key={link.label} {...link} index={index} />
-                  ))}
+export const MaintainerSection = memo(
+  (): React.ReactElement => (
+    <section className="py-20">
+      <div className="container mx-auto px-4">
+        <ViewportAnimation>
+          <div
+            className="rounded-2xl overflow-hidden border border-border"
+            data-testid="maintainer-card"
+          >
+            <div className="flex flex-col lg:flex-row">
+              {/* Left panel — Metro Green background */}
+              <div className="lg:w-2/5 bg-primary p-10 flex flex-col items-center justify-center gap-6 text-primary-foreground">
+                <Avatar className="h-20 w-20 border-2 border-primary-foreground/30">
+                  <AvatarFallback className="bg-primary-foreground/10 text-primary-foreground font-heading text-2xl font-bold">
+                    TI
+                  </AvatarFallback>
+                </Avatar>
+                <div className="text-center">
+                  <h2 className="font-heading text-3xl lg:text-4xl font-bold">Tashfiqul Islam</h2>
+                  <p className="text-primary-foreground/70 text-sm mt-1">Dhaka, Bangladesh</p>
                 </div>
               </div>
-            </motion.div>
 
-            {/* Info Cards + CTAs */}
-            <motion.div
-              animate={isInView ? { opacity: 1, x: 0 } : { opacity: 0, x: 30 }}
-              className="flex h-full flex-col gap-6"
-              initial={{ opacity: 0, x: 30 }}
-              style={{ willChange: shouldReduceMotion ? "auto" : "transform, opacity" }}
-              transition={{
-                delay: 0.3,
-                duration: shouldReduceMotion
-                  ? ANIMATION_CONFIG.durations.fast
-                  : ANIMATION_CONFIG.durations.slow,
-                ease: ANIMATION_CONFIG.ease,
-              }}
-            >
-              {keyInfo.map((info, index) => {
-                const Icon = info.icon;
-                return (
-                  <motion.div
-                    animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-                    className="flex h-24 w-full"
-                    initial={{ opacity: 0, y: 20 }}
-                    key={info.label}
-                    style={{ willChange: shouldReduceMotion ? "auto" : "transform, opacity" }}
-                    transition={{
-                      delay: 0.4 + index * 0.1,
-                      duration: shouldReduceMotion
-                        ? ANIMATION_CONFIG.durations.fast
-                        : ANIMATION_CONFIG.durations.normal,
-                      ease: ANIMATION_CONFIG.ease,
-                    }}
-                  >
-                    <div className="glass-card group relative flex h-full w-full items-center overflow-hidden rounded-2xl p-6 transition-all duration-300 hover:border-primary/30 hover:shadow-xl">
-                      <div className="flex w-full items-center gap-4">
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 shadow-lg transition-transform duration-300 group-hover:scale-110 dark:bg-primary/20">
-                          <Icon className="h-6 w-6 text-primary" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="mb-1 font-medium text-muted-foreground text-xs uppercase tracking-wide">
-                            {info.label}
-                          </p>
-                          <p className="font-bold text-foreground text-lg">{info.value}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
-
-              <motion.div
-                animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-                className="mt-auto flex flex-col gap-4 sm:flex-row"
-                initial={{ opacity: 0, y: 20 }}
-                style={{ willChange: shouldReduceMotion ? "auto" : "transform, opacity" }}
-                transition={{
-                  delay: 0.7,
-                  duration: shouldReduceMotion
-                    ? ANIMATION_CONFIG.durations.fast
-                    : ANIMATION_CONFIG.durations.normal,
-                  ease: ANIMATION_CONFIG.ease,
-                }}
-              >
-                <a
-                  className="glass-card group flex flex-1 items-center justify-center gap-2 rounded-xl px-6 py-3 font-medium text-foreground text-sm transition-all duration-300 hover:border-primary/40 hover:shadow-lg sm:px-7 sm:py-3.5 sm:text-base"
-                  href="https://github.com/tashfiqul-islam"
-                  rel="noopener noreferrer"
-                  target="_blank"
-                >
-                  <img
-                    alt="GitHub"
-                    className="h-4 w-4 sm:h-5 sm:w-5 dark:hidden"
-                    height={20}
-                    src="/socials/GitHub_light.svg"
-                    width={20}
+              {/* Right panel */}
+              <div className="lg:w-3/5 p-10 flex flex-col justify-center gap-6">
+                <div>
+                  <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                    Creator &amp; Maintainer
+                  </span>
+                  <h3 className="font-heading text-2xl font-bold mt-2">
+                    Building for Dhaka commuters
+                  </h3>
+                </div>
+                <p className="text-muted-foreground leading-relaxed">
+                  Software engineer passionate about solving real-world urban mobility problems.
+                  metro-station-finder started as a personal frustration with fragmented MRT
+                  information and grew into a tool used by thousands of Dhaka commuters daily.
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    asChild={
+                      <a
+                        href="https://github.com/tashfiqul-islam"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <GithubLogo size={16} weight="fill" className="mr-2" />
+                        GitHub
+                      </a>
+                    }
                   />
-                  <img
-                    alt="GitHub"
-                    className="hidden h-4 w-4 sm:h-5 sm:w-5 dark:block"
-                    height={20}
-                    src="/socials/GitHub_dark.svg"
-                    width={20}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    asChild={
+                      <a
+                        href="https://github.com/tashfiqul-islam/metro-station-finder"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <GitBranch size={16} weight="duotone" className="mr-2" />
+                        Repository
+                      </a>
+                    }
                   />
-                  <span>GitHub</span>
-                  <ArrowSquareOutIcon className="h-3 w-3 sm:h-4 sm:w-4" />
-                </a>
-                <Link
-                  className="group flex flex-1 items-center justify-center gap-2 rounded-xl border border-primary/20 bg-primary px-6 py-3 font-medium text-primary-foreground text-sm shadow-sm transition-all duration-300 hover:border-primary/30 hover:bg-primary/90 hover:shadow-lg sm:px-7 sm:py-3.5 sm:text-base dark:border-primary dark:bg-primary/80 dark:hover:border-primary dark:hover:bg-primary/70"
-                  to={"/station-finder" as string}
-                >
-                  <span>Try the App</span>
-                  <ArrowRightIcon className="h-3 w-3 transition-transform duration-300 group-hover:translate-x-1 sm:h-4 sm:w-4" />
-                </Link>
-              </motion.div>
-            </motion.div>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        </ViewportAnimation>
       </div>
-    </SectionWrapper>
-  );
-});
+    </section>
+  ),
+);
 
 MaintainerSection.displayName = "MaintainerSection";

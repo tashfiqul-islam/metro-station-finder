@@ -67,7 +67,7 @@
   "dependencies": {
     "@base-ui/react": "^1.4.0",
     "@fontsource-variable/oxanium": "^5.2.8",
-    "@fontsource-variable/space-grotesk": "^5.2.10",
+    "@fontsource-variable/plus-jakarta-sans": "^5.2.8",
     "@phosphor-icons/react": "^2.1.10",
     "@tailwindcss/vite": "^4.2.2",
     "@tanstack/react-devtools": "^0.10.2",

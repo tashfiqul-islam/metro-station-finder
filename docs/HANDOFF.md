@@ -10,7 +10,7 @@ Short snapshot of current project state. Overwritten at every sprint boundary. K
 **Status:** not started
 **Primary model for this sprint:** Opus 4.6 primary (top-risk sprint). Sonnet 4.6 for markers and metro-line layer.
 
-**Last-completed sprint:** Sprint 5 — Routing Stubs & About Page
+**Last-completed sprint:** Bonus UI Sprint — pre-Sprint 6 UI/UX polish pass
 **Last commit on `master`:** `e08c503` — `refactor: remove verbose comment from vite build config`
 
 _Note: Due to self-referential updates, HANDOFF.md may lag by one commit. Verify via `git log --oneline -1` at session start (step 4 of startup protocol)._
@@ -27,6 +27,10 @@ Begin Sprint 6 per `docs/IMPLEMENTATION_PLAN.md` §"Sprint 6". Key tasks:
 6. Wire preview into `/station-finder` route
 7. Tests: integration (map-canvas renders skeleton), E2E (markers load, offline overlay, no crash)
 8. Verification: bun run ci passes, bundle analysis confirms chunk-split, prerender doesn't crash.
+
+## Bonus UI Sprint retro (1 line)
+
+Pre-Sprint 6 polish pass: TechStackSection overflow-clip fix + Zed swap + card hover glow; JourneySection scroll-driven TimelineDot animation; HeroSection single-column restore with font-sans h1, feature pills, and badge shimmer; About page full redesign from tab-switcher to scroll-storytelling (overview → mission pull-quote → feature cards → tech stack → contact). 193 tests passing, all hooks green.
 
 ## Sprint 5 retro (1 line)
 

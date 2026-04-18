@@ -1,12 +1,21 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import {
   createMemoryHistory,
   createRootRoute,
   createRouter,
   RouterProvider,
 } from "@tanstack/react-router";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { About } from "@/routes/about";
+
+vi.mock("motion/react", () => ({
+  motion: {
+    div: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
+      <div {...props}>{children}</div>
+    ),
+  },
+  useReducedMotion: () => false,
+}));
 
 const renderWithRouter = async (ui: React.ReactElement) => {
   const result = await act(async () => {
@@ -23,60 +32,55 @@ const renderWithRouter = async (ui: React.ReactElement) => {
 };
 
 describe("About Page", () => {
-  it("renders privacy policy tab", async () => {
+  it("renders without crashing", async () => {
     await renderWithRouter(<About />);
-    await waitFor(
-      () => {
-        expect(screen.getByText("Privacy Policy")).toBeInTheDocument();
-      },
-      { timeout: 3000 },
-    );
-    await waitFor(() => {}, { timeout: 500 });
+    expect(screen.getByRole("heading", { level: 1, name: "About" })).toBeInTheDocument();
   });
 
-  it("renders accordion items in how it works section", async () => {
+  it("displays the About heading and subtitle", async () => {
     await renderWithRouter(<About />);
-    await waitFor(
-      () => {
-        expect(screen.getByText("How do I find a station?")).toBeInTheDocument();
-      },
-      { timeout: 3000 },
-    );
-    await waitFor(() => {}, { timeout: 500 });
+    expect(screen.getByRole("heading", { level: 1, name: "About" })).toBeInTheDocument();
+    expect(screen.getByText("The story behind metro-station-finder.")).toBeInTheDocument();
   });
 
-  it("displays feature cards", async () => {
+  it("renders all four section eyebrows without interaction", async () => {
     await renderWithRouter(<About />);
-    await waitFor(
-      () => {
-        expect(screen.getByText("Coverage")).toBeInTheDocument();
-        expect(screen.getByText("Data Source")).toBeInTheDocument();
-        expect(screen.getByText("Open Source")).toBeInTheDocument();
-      },
-      { timeout: 3000 },
-    );
-    await waitFor(() => {}, { timeout: 500 });
+    expect(screen.getByText("Overview")).toBeInTheDocument();
+    expect(screen.getByText("Mission")).toBeInTheDocument();
+    expect(screen.getByText("Tech Stack")).toBeInTheDocument();
+    expect(screen.getByText("Contact")).toBeInTheDocument();
   });
 
-  it("renders badges section", async () => {
+  it("renders overview content", async () => {
     await renderWithRouter(<About />);
-    await waitFor(
-      () => {
-        expect(screen.getByText("MIT Licensed")).toBeInTheDocument();
-      },
-      { timeout: 3000 },
-    );
-    await waitFor(() => {}, { timeout: 500 });
+    expect(screen.getByText(/Bangladesh.s first metro rail system/)).toBeInTheDocument();
   });
 
-  it("renders CTA section", async () => {
+  it("renders mission pull-quote", async () => {
     await renderWithRouter(<About />);
-    await waitFor(
-      () => {
-        expect(screen.getByText("Contribute & Support")).toBeInTheDocument();
-      },
-      { timeout: 3000 },
-    );
-    await waitFor(() => {}, { timeout: 500 });
+    expect(screen.getByText(/Every commuter deserves to know their fare/)).toBeInTheDocument();
+  });
+
+  it("renders all three feature cards", async () => {
+    await renderWithRouter(<About />);
+    expect(screen.getByText("Station Finder")).toBeInTheDocument();
+    expect(screen.getByText("Fare Calculator")).toBeInTheDocument();
+    expect(screen.getByText("Trip Planner")).toBeInTheDocument();
+  });
+
+  it("renders tech stack items", async () => {
+    await renderWithRouter(<About />);
+    expect(screen.getByText("React 19")).toBeInTheDocument();
+    expect(screen.getByText("TypeScript")).toBeInTheDocument();
+  });
+
+  it("renders GitHub contact button", async () => {
+    await renderWithRouter(<About />);
+    expect(screen.getByText("Open an Issue")).toBeInTheDocument();
+  });
+
+  it("renders content immediately without mounted guard delay", async () => {
+    await renderWithRouter(<About />);
+    expect(screen.getByRole("heading", { level: 1, name: "About" })).toBeInTheDocument();
   });
 });

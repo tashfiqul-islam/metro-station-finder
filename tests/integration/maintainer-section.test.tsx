@@ -7,11 +7,11 @@ import {
 } from "@tanstack/react-router";
 import { describe, expect, it } from "vitest";
 
-import { MaintainerSection } from "@/pages/home/sections/maintainer-section";
+import { CtaSection } from "@/pages/home/sections/cta-section";
 
-const renderMaintainerSection = async () => {
+const renderCtaSection = async () => {
   const result = await act(async () => {
-    const rootRoute = createRootRoute({ component: MaintainerSection });
+    const rootRoute = createRootRoute({ component: CtaSection });
     const router = createRouter({
       history: createMemoryHistory({ initialEntries: ["/"] }),
       routeTree: rootRoute,
@@ -23,41 +23,42 @@ const renderMaintainerSection = async () => {
   return result;
 };
 
-describe("MaintainerSection", () => {
-  it("renders the maintainer name", async () => {
-    await renderMaintainerSection();
-    expect(screen.getByText("Tashfiqul Islam")).toBeDefined();
+describe("CtaSection", () => {
+  it("renders without crashing", async () => {
+    const { container } = await renderCtaSection();
+    expect(container).toBeDefined();
     await waitFor(() => {}, { timeout: 500 });
   });
 
-  it("renders the section heading", async () => {
-    await renderMaintainerSection();
-    expect(screen.getByText("Meet the")).toBeDefined();
-    expect(screen.getByText("Maintainer")).toBeDefined();
+  it('renders "Ready to ride smarter?" heading', async () => {
+    await renderCtaSection();
+    expect(screen.getByRole("heading", { name: /ready to ride smarter/i })).toBeDefined();
     await waitFor(() => {}, { timeout: 500 });
   });
 
-  it("renders LinkedIn social link", async () => {
-    await renderMaintainerSection();
-    const linkedinLink = screen
+  it("renders all three stats", async () => {
+    await renderCtaSection();
+    expect(screen.getByText("16")).toBeDefined();
+    expect(screen.getByText("120+")).toBeDefined();
+    expect(screen.getByText("Free")).toBeDefined();
+    await waitFor(() => {}, { timeout: 500 });
+  });
+
+  it("renders Find a Station link to /station-finder", async () => {
+    await renderCtaSection();
+    const link = screen
       .getAllByRole("link")
-      .find((l) => l.getAttribute("href")?.includes("linkedin"));
-    expect(linkedinLink).toBeDefined();
+      .find((l) => l.getAttribute("href") === "/station-finder");
+    expect(link).toBeDefined();
     await waitFor(() => {}, { timeout: 500 });
   });
 
-  it("renders GitHub link", async () => {
-    await renderMaintainerSection();
-    const githubLink = screen
+  it("renders Check Fares link to /station-fares", async () => {
+    await renderCtaSection();
+    const link = screen
       .getAllByRole("link")
-      .find((l) => l.getAttribute("href")?.includes("github"));
-    expect(githubLink).toBeDefined();
-    await waitFor(() => {}, { timeout: 500 });
-  });
-
-  it("renders Try the App CTA", async () => {
-    await renderMaintainerSection();
-    expect(screen.getByText("Try the App")).toBeDefined();
+      .find((l) => l.getAttribute("href") === "/station-fares");
+    expect(link).toBeDefined();
     await waitFor(() => {}, { timeout: 500 });
   });
 });
