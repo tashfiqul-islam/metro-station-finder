@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const VIEWBOX = { height: 100, width: 750 } as const;
-const SPOTLIGHT_RADIUS = 220;
+const SPOTLIGHT_RADIUS = 150;
 
 export const FooterWatermark = (): React.ReactElement => {
   const svgRef = useRef<SVGSVGElement>(null);
-  const textRef = useRef<SVGTextElement>(null);
   const [isDark, setIsDark] = useState(true);
   const [cursorPos, setCursorPos] = useState({
     x: VIEWBOX.width / 2,
@@ -30,35 +29,25 @@ export const FooterWatermark = (): React.ReactElement => {
 
   const handleMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
     const svg = svgRef.current;
-    const textEl = textRef.current;
-    if (!(svg && textEl)) {
+    if (!svg) {
       return;
     }
-
-    const svgRect = svg.getBoundingClientRect();
-    const textBBox = textEl.getBBox();
-    const svgX = ((e.clientX - svgRect.left) / svgRect.width) * VIEWBOX.width;
-    const svgY = ((e.clientY - svgRect.top) / svgRect.height) * VIEWBOX.height;
-
-    const isOverText =
-      svgX >= textBBox.x &&
-      svgX <= textBBox.x + textBBox.width &&
-      svgY >= textBBox.y &&
-      svgY <= textBBox.y + textBBox.height;
-
-    setGlowOpacity(isOverText ? 1 : 0);
-    setCursorPos({ x: svgX, y: svgY });
+    const rect = svg.getBoundingClientRect();
+    setCursorPos({
+      x: ((e.clientX - rect.left) / rect.width) * VIEWBOX.width,
+      y: ((e.clientY - rect.top) / rect.height) * VIEWBOX.height,
+    });
+    setGlowOpacity(1);
   }, []);
 
   const handleMouseLeave = useCallback(() => setGlowOpacity(0), []);
 
-  const glassBase = isDark ? "rgba(255,255,255,0.025)" : "rgba(0,0,0,0.04)";
-  const strokeColor = isDark ? "rgba(255,255,255,0.025)" : "rgba(0,0,0,0.035)";
+  const baseStroke = isDark ? "rgba(255,255,255,0.28)" : "rgba(0,0,0,0.16)";
 
   return (
     <div className="relative block overflow-hidden">
       <div className="container mx-auto px-4">
-        <div className="overflow-hidden" style={{ height: "clamp(36px, 6.5vw, 88px)" }}>
+        <div className="overflow-hidden" style={{ height: "clamp(40px, 7vw, 96px)" }}>
           <svg
             aria-hidden="true"
             className="w-full cursor-default select-none"
@@ -69,12 +58,7 @@ export const FooterWatermark = (): React.ReactElement => {
             viewBox={`0 0 ${VIEWBOX.width} ${VIEWBOX.height}`}
           >
             <defs>
-              <linearGradient id="wm-glass" x1="0" x2="0" y1="0" y2="1">
-                <stop offset="0%" stopColor={glassBase} />
-                <stop offset="100%" stopColor={glassBase} />
-              </linearGradient>
-
-              {/* Metro green spotlight radial gradient */}
+              {/* Neutral white spotlight — Resend-style, no brand tint */}
               <radialGradient
                 cx={cursorPos.x}
                 cy={cursorPos.y}
@@ -84,70 +68,66 @@ export const FooterWatermark = (): React.ReactElement => {
               >
                 <stop
                   offset="0%"
-                  stopColor={isDark ? "rgba(61,214,140,0.22)" : "rgba(40,130,80,0.14)"}
+                  stopColor={isDark ? "rgba(255,255,255,0.78)" : "rgba(0,0,0,0.30)"}
                 />
                 <stop
-                  offset="55%"
-                  stopColor={isDark ? "rgba(61,214,140,0.08)" : "rgba(40,130,80,0.05)"}
+                  offset="35%"
+                  stopColor={isDark ? "rgba(255,255,255,0.38)" : "rgba(0,0,0,0.13)"}
+                />
+                <stop
+                  offset="65%"
+                  stopColor={isDark ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.04)"}
                 />
                 <stop offset="100%" stopColor="rgba(0,0,0,0)" />
               </radialGradient>
 
-              <filter height="140%" id="wm-glass-filter" width="140%" x="-20%" y="-20%">
-                <feGaussianBlur in="SourceAlpha" result="blur" stdDeviation="0.5" />
-                <feOffset dx="0.5" dy="0.5" in="blur" result="offset" />
-                <feComposite in="SourceAlpha" in2="offset" operator="out" result="inner" />
-                <feFlood
-                  floodColor={isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)"}
-                  result="color"
-                />
-                <feComposite in="color" in2="inner" operator="in" />
+              {/* Soft bloom amplifier for the spotlight layer */}
+              <filter height="160%" id="wm-bloom" width="160%" x="-30%" y="-30%">
+                <feGaussianBlur in="SourceGraphic" result="blur" stdDeviation="1.2" />
                 <feMerge>
-                  <feMergeNode />
+                  <feMergeNode in="blur" />
                   <feMergeNode in="SourceGraphic" />
                 </feMerge>
               </filter>
             </defs>
 
-            {/* Glass base layer */}
+            {/* Etched-glass base — visible stroke, transparent fill */}
             <text
               dominantBaseline="alphabetic"
               style={{
-                fill: "url(#wm-glass)",
-                filter: "url(#wm-glass-filter)",
+                fill: "transparent",
                 fontFamily: "var(--font-heading), system-ui, sans-serif",
-                fontSize: "62px",
+                fontSize: "80px",
                 fontWeight: 900,
-                letterSpacing: "-0.02em",
-                stroke: strokeColor,
-                strokeWidth: "0.2px",
+                letterSpacing: "-0.03em",
+                stroke: baseStroke,
+                strokeWidth: "0.5px",
               }}
               textAnchor="middle"
               x={VIEWBOX.width / 2}
-              y="72"
+              y="78"
             >
-              METRO STATION FINDER
+              METRO RAIL
             </text>
 
-            {/* Cursor spotlight layer */}
+            {/* White beam spotlight — sweeps over etched text on hover */}
             <text
-              className="transition-opacity duration-500 ease-out"
+              className="transition-opacity duration-300 ease-out"
               dominantBaseline="alphabetic"
-              ref={textRef}
               style={{
                 fill: "url(#wm-spotlight)",
-                filter: "blur(0.6px)",
+                filter: "url(#wm-bloom)",
                 fontFamily: "var(--font-heading), system-ui, sans-serif",
-                fontSize: "62px",
+                fontSize: "80px",
                 fontWeight: 900,
-                letterSpacing: "-0.02em",
-                opacity: glowOpacity * 0.7,
+                letterSpacing: "-0.03em",
+                opacity: glowOpacity,
               }}
               textAnchor="middle"
               x={VIEWBOX.width / 2}
-              y="72"
+              y="78"
             >
-              METRO STATION FINDER
+              METRO RAIL
             </text>
           </svg>
         </div>

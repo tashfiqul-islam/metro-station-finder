@@ -1,8 +1,11 @@
 import {
+  CalendarBlank,
+  Certificate,
   Coffee,
   CurrencyCircleDollar,
   GithubLogo,
   Heart,
+  LockSimple,
   MagnifyingGlass,
   MapTrifold,
   TrainSimple,
@@ -147,11 +150,37 @@ export const Footer = memo(
               <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground/50">
                 Project
               </h2>
-              <ul className="flex flex-col gap-2.5 text-sm text-muted-foreground">
-                <li>Open source · MIT License</li>
-                <li>MRT Line 6 data accurate as of 2026</li>
-                <li>Covers all 16 stations &amp; 120+ routes</li>
-                <li>No account or login required</li>
+              <ul className="flex flex-col gap-3">
+                {[
+                  {
+                    icon: Certificate,
+                    label: "Open source · MIT License",
+                  },
+                  {
+                    icon: CalendarBlank,
+                    label: "MRT Line 6 data current as of 2026",
+                  },
+                  {
+                    icon: TrainSimple,
+                    label: "All 16 stations · 120+ fare routes",
+                  },
+                  {
+                    icon: LockSimple,
+                    label: "No account or login required",
+                  },
+                ].map(({ icon: Icon, label }) => (
+                  <li
+                    key={label}
+                    className="flex items-center gap-2.5 text-sm text-muted-foreground"
+                  >
+                    <Icon
+                      aria-hidden="true"
+                      className="h-3.5 w-3.5 shrink-0 text-primary/50"
+                      weight="duotone"
+                    />
+                    {label}
+                  </li>
+                ))}
               </ul>
             </div>
           </div>
