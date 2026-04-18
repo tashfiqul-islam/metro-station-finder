@@ -96,12 +96,12 @@ export const TechStackSection = memo((): React.ReactElement => {
       <div className="container relative mx-auto mb-16 px-4">
         <ViewportAnimation>
           <div className="flex flex-col items-center gap-3 text-center">
-            <div className="flex items-center gap-2.5 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5">
-              <div aria-hidden className="h-1.5 w-1.5 rounded-full bg-primary/60" />
+            <div className="flex items-center gap-3">
+              <div aria-hidden className="h-px w-8 bg-primary/50" />
               <span className="text-xs font-semibold uppercase tracking-[0.22em] text-primary/70">
                 The Stack
               </span>
-              <div aria-hidden className="h-1.5 w-1.5 rounded-full bg-primary/60" />
+              <div aria-hidden className="h-px w-8 bg-primary/50" />
             </div>
 
             <h2
