@@ -49,19 +49,22 @@ interface TechItemCardProps {
 
 const TechItemCard = memo(
   ({ logoDark, logoLight, name }: TechItemCardProps): React.ReactElement => (
-    <div className="group mx-2 flex cursor-default items-center gap-3 rounded-2xl border border-border/40 bg-card/50 px-5 py-3 shadow-sm backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-card/80 hover:shadow-[0_8px_32px_oklch(0.50_0.18_145_/_0.20)] hover:ring-1 hover:ring-primary/20">
-      <img
-        alt=""
-        aria-hidden="true"
-        className="h-6 w-auto object-contain dark:hidden"
-        src={logoLight}
-      />
-      <img
-        alt=""
-        aria-hidden="true"
-        className="hidden h-6 w-auto object-contain dark:block"
-        src={logoDark}
-      />
+    <div className="group mx-2 flex cursor-default items-center gap-3 rounded-2xl border border-border/40 bg-card/50 px-4 py-2.5 shadow-sm backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-card/80 hover:shadow-[0_8px_32px_oklch(0.50_0.18_145_/_0.20)] hover:ring-1 hover:ring-primary/20">
+      {/* Logo in a dedicated app-icon container for consistent sizing */}
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border/30 bg-background/70 p-1.5 transition-colors duration-300 group-hover:border-primary/20 group-hover:bg-background">
+        <img
+          alt=""
+          aria-hidden="true"
+          className="h-full w-full object-contain dark:hidden"
+          src={logoLight}
+        />
+        <img
+          alt=""
+          aria-hidden="true"
+          className="hidden h-full w-full object-contain dark:block"
+          src={logoDark}
+        />
+      </div>
       <span className="whitespace-nowrap text-sm font-semibold text-muted-foreground transition-colors duration-300 group-hover:text-foreground">
         {name}
       </span>
