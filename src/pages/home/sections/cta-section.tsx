@@ -184,7 +184,7 @@ export const CtaSection = memo(
             "linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)",
         }}
       >
-        <div className="mx-auto max-w-4xl">
+        <div className="mx-auto max-w-6xl">
           <MetroTrain />
         </div>
       </div>
