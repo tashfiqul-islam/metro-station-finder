@@ -81,7 +81,7 @@ export const InfiniteSlider = ({
     : {};
 
   return (
-    <div className={cn("overflow-hidden", className)}>
+    <div className={cn("overflow-x-hidden", className)}>
       <motion.div
         className="flex w-max"
         ref={ref}
