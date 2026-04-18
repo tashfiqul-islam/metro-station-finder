@@ -58,7 +58,7 @@ export const FooterWatermark = (): React.ReactElement => {
   return (
     <div className="relative block overflow-hidden">
       <div className="container mx-auto px-4">
-        <div className="overflow-hidden" style={{ height: "clamp(40px, 8vw, 108px)" }}>
+        <div className="overflow-hidden" style={{ height: "clamp(36px, 6.5vw, 88px)" }}>
           <svg
             aria-hidden="true"
             className="w-full cursor-default select-none"
@@ -116,7 +116,7 @@ export const FooterWatermark = (): React.ReactElement => {
                 fill: "url(#wm-glass)",
                 filter: "url(#wm-glass-filter)",
                 fontFamily: "var(--font-heading), system-ui, sans-serif",
-                fontSize: "88px",
+                fontSize: "62px",
                 fontWeight: 900,
                 letterSpacing: "-0.02em",
                 stroke: strokeColor,
@@ -124,7 +124,7 @@ export const FooterWatermark = (): React.ReactElement => {
               }}
               textAnchor="middle"
               x={VIEWBOX.width / 2}
-              y="82"
+              y="72"
             >
               METRO STATION FINDER
             </text>
@@ -138,14 +138,14 @@ export const FooterWatermark = (): React.ReactElement => {
                 fill: "url(#wm-spotlight)",
                 filter: "blur(0.6px)",
                 fontFamily: "var(--font-heading), system-ui, sans-serif",
-                fontSize: "88px",
+                fontSize: "62px",
                 fontWeight: 900,
                 letterSpacing: "-0.02em",
                 opacity: glowOpacity * 0.7,
               }}
               textAnchor="middle"
               x={VIEWBOX.width / 2}
-              y="82"
+              y="72"
             >
               METRO STATION FINDER
             </text>

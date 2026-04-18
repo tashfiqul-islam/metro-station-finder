@@ -1,4 +1,5 @@
 import {
+  Coffee,
   CurrencyCircleDollar,
   GithubLogo,
   Heart,
@@ -17,12 +18,6 @@ const LEGAL_LINKS = [
   { href: "/cookies", label: "Cookie Policy" },
   { href: "/accessibility", label: "Accessibility" },
   { href: "/data-sources", label: "Data Sources" },
-] as const;
-
-const BOTTOM_LINKS = [
-  { href: "/privacy", label: "Privacy" },
-  { href: "/terms", label: "Terms" },
-  { href: "/accessibility", label: "Accessibility" },
 ] as const;
 
 export const Footer = memo(
@@ -163,31 +158,49 @@ export const Footer = memo(
 
           {/* ── Bottom bar ── */}
           <div className="mt-10 flex flex-col items-start justify-between gap-3 border-t border-border/40 pt-6 sm:flex-row sm:items-center">
-            {/* Left: copyright + legal links */}
+            {/* Left: copyright + unique links (not duplicated from Legal column) */}
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
-              <span>&copy; 2026 Tashfiqul Islam</span>
-              <span className="text-border" aria-hidden="true">
+              <span>&copy; 2026 Metro Station Finder</span>
+              <span aria-hidden="true" className="text-border">
                 ·
               </span>
-              {BOTTOM_LINKS.map(({ href, label }, i) => (
-                <span key={href} className="inline-flex items-center gap-3">
-                  <a className="transition-colors duration-200 hover:text-foreground" href={href}>
-                    {label}
-                  </a>
-                  {i < BOTTOM_LINKS.length - 1 && (
-                    <span className="text-border" aria-hidden="true">
-                      ·
-                    </span>
-                  )}
-                </span>
-              ))}
+              <Link className="transition-colors duration-200 hover:text-foreground" to="/about">
+                About
+              </Link>
+              <span aria-hidden="true" className="text-border">
+                ·
+              </span>
+              <a className="transition-colors duration-200 hover:text-foreground" href="/changelog">
+                Changelog
+              </a>
+              <span aria-hidden="true" className="text-border">
+                ·
+              </span>
+              <a
+                className="transition-colors duration-200 hover:text-foreground"
+                href="https://github.com/tashfiqul-islam/metro-station-finder"
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                Open Source
+              </a>
             </div>
 
-            {/* Right: built with love */}
+            {/* Right: built with love and coffee */}
             <p className="flex items-center gap-1.5 text-xs text-muted-foreground/50">
               Built with
-              <Heart aria-label="love" className="h-3 w-3 text-red-400/70" weight="fill" />
-              and coffee by Tashfiqul Islam
+              <Heart aria-hidden="true" className="h-3 w-3 text-red-400/70" weight="fill" />
+              and
+              <Coffee aria-hidden="true" className="h-3 w-3 text-amber-500/60" weight="duotone" />
+              by{" "}
+              <a
+                className="text-muted-foreground/70 transition-colors duration-200 hover:text-foreground"
+                href="https://github.com/tashfiqul-islam"
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                Tashfiqul Islam
+              </a>
             </p>
           </div>
         </div>

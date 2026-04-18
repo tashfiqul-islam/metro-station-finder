@@ -59,7 +59,7 @@ describe("Footer", () => {
 
   it("renders copyright text", async () => {
     await renderFooter();
-    expect(screen.getByText(/2026 Tashfiqul Islam/i)).toBeDefined();
+    expect(screen.getByText(/2026 Metro Station Finder/i)).toBeDefined();
   });
 
   it("renders built with love attribution", async () => {
