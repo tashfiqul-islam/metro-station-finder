@@ -53,6 +53,11 @@ describe("Footer", () => {
     expect(screen.getByText("Data Sources")).toBeDefined();
   });
 
+  it("renders MIT license in bottom bar", async () => {
+    await renderFooter();
+    expect(screen.getByText("MIT License")).toBeDefined();
+  });
+
   it("renders copyright text", async () => {
     await renderFooter();
     expect(screen.getByText(/2026 Metro Station Finder/i)).toBeDefined();

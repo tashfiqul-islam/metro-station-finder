@@ -1,22 +1,9 @@
-import {
-  CalendarBlank,
-  Certificate,
-  Coffee,
-  CurrencyCircleDollar,
-  GithubLogo,
-  Heart,
-  LockSimple,
-  MagnifyingGlass,
-  MapTrifold,
-  TrainSimple,
-} from "@phosphor-icons/react";
-import { Link } from "@tanstack/react-router";
+import { Coffee, GithubLogo, Heart, TrainSimple } from "@phosphor-icons/react";
 import { memo } from "react";
 
 const LEGAL_LINKS = [
   { href: "/privacy", label: "Privacy Policy" },
   { href: "/terms", label: "Terms of Use" },
-  { href: "/cookies", label: "Cookie Policy" },
   { href: "/accessibility", label: "Accessibility" },
   { href: "/data-sources", label: "Data Sources" },
 ] as const;
@@ -45,7 +32,7 @@ export const Footer = memo(
       />
 
       <div className="container mx-auto px-4 pb-8 pt-10">
-        <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-3 lg:gap-12">
+        <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 sm:gap-12">
           {/* ── Brand ── */}
           <div className="flex flex-col gap-5">
             <div className="flex items-center gap-2.5">
@@ -74,46 +61,16 @@ export const Footer = memo(
               built for everyday commuters.
             </p>
 
-            <div className="flex flex-wrap items-center gap-3">
-              {/* GitHub pill */}
-              <a
-                aria-label="View source on GitHub"
-                className="inline-flex items-center gap-2 rounded-lg border border-border/60 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors duration-200 hover:border-primary/40 hover:text-foreground"
-                href="https://github.com/tashfiqul-islam/metro-station-finder"
-                rel="noopener noreferrer"
-                target="_blank"
-              >
-                <GithubLogo aria-hidden="true" className="h-3.5 w-3.5" weight="fill" />
-                GitHub
-              </a>
-
-              {/* Fare routes quick link */}
-              <Link
-                className="inline-flex items-center gap-2 rounded-lg border border-border/60 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors duration-200 hover:border-primary/40 hover:text-foreground"
-                to="/station-fares"
-              >
-                <CurrencyCircleDollar aria-hidden="true" className="h-3.5 w-3.5" weight="duotone" />
-                Check Fares
-              </Link>
-
-              {/* Station finder quick link */}
-              <Link
-                className="inline-flex items-center gap-2 rounded-lg border border-border/60 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors duration-200 hover:border-primary/40 hover:text-foreground"
-                to="/station-finder"
-              >
-                <MagnifyingGlass aria-hidden="true" className="h-3.5 w-3.5" weight="duotone" />
-                Find Station
-              </Link>
-
-              {/* Trip planner quick link */}
-              <Link
-                className="inline-flex items-center gap-2 rounded-lg border border-border/60 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors duration-200 hover:border-primary/40 hover:text-foreground"
-                to="/trip-planner"
-              >
-                <MapTrifold aria-hidden="true" className="h-3.5 w-3.5" weight="duotone" />
-                Plan Trip
-              </Link>
-            </div>
+            <a
+              aria-label="View source on GitHub"
+              className="inline-flex w-fit items-center gap-2 rounded-lg border border-border/60 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors duration-200 hover:border-primary/40 hover:text-foreground"
+              href="https://github.com/tashfiqul-islam/metro-station-finder"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              <GithubLogo aria-hidden="true" className="h-3.5 w-3.5" weight="fill" />
+              View on GitHub
+            </a>
           </div>
 
           {/* ── Legal ── */}
@@ -134,75 +91,18 @@ export const Footer = memo(
               ))}
             </ul>
           </div>
-
-          {/* ── Project ── */}
-          <div>
-            <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground/50">
-              Project
-            </h2>
-            <ul className="flex flex-col gap-3">
-              {[
-                {
-                  icon: Certificate,
-                  label: "Open source · MIT License",
-                },
-                {
-                  icon: CalendarBlank,
-                  label: "MRT Line 6 data current as of 2026",
-                },
-                {
-                  icon: TrainSimple,
-                  label: "All 16 stations · 120+ fare routes",
-                },
-                {
-                  icon: LockSimple,
-                  label: "No account or login required",
-                },
-              ].map(({ icon: Icon, label }) => (
-                <li key={label} className="flex items-center gap-2.5 text-sm text-muted-foreground">
-                  <Icon
-                    aria-hidden="true"
-                    className="h-3.5 w-3.5 shrink-0 text-primary/50"
-                    weight="duotone"
-                  />
-                  {label}
-                </li>
-              ))}
-            </ul>
-          </div>
         </div>
 
         {/* ── Bottom bar ── */}
         <div className="mt-10 flex flex-col items-start justify-between gap-3 border-t border-border/40 pt-6 sm:flex-row sm:items-center">
-          {/* Left: copyright + unique links (not duplicated from Legal column) */}
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
             <span>&copy; 2026 Metro Station Finder</span>
             <span aria-hidden="true" className="text-border">
               ·
             </span>
-            <Link className="transition-colors duration-200 hover:text-foreground" to="/about">
-              About
-            </Link>
-            <span aria-hidden="true" className="text-border">
-              ·
-            </span>
-            <a className="transition-colors duration-200 hover:text-foreground" href="/changelog">
-              Changelog
-            </a>
-            <span aria-hidden="true" className="text-border">
-              ·
-            </span>
-            <a
-              className="transition-colors duration-200 hover:text-foreground"
-              href="https://github.com/tashfiqul-islam/metro-station-finder"
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              Open Source
-            </a>
+            <span>MIT License</span>
           </div>
 
-          {/* Right: built with love and coffee */}
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground/50">
             Built with
             <Heart aria-hidden="true" className="h-3 w-3 text-red-400/70" weight="fill" />
