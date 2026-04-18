@@ -1,5 +1,6 @@
 import { memo, useEffect, useState } from "react";
 
+import { Footer } from "@/components/ui/footer";
 import { FeaturesSection } from "./sections/features-section";
 import { HeroSection } from "./sections/hero-section";
 import { JourneySection } from "./sections/journey-section";
@@ -26,6 +27,7 @@ export const HomePage = memo((): React.ReactElement => {
       <FeaturesSection />
       <JourneySection />
       <CtaSection />
+      <Footer />
     </div>
   );
 });
