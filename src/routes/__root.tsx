@@ -73,7 +73,7 @@ const RootDocument = ({ children }: { children: React.ReactNode }) => {
         />
         <HeadContent />
       </head>
-      <body className="relative min-h-screen">
+      <body className="relative min-h-screen bg-background">
         <QueryClientProvider client={queryClient}>
           <UnifiedBackground />
           <NavBar />

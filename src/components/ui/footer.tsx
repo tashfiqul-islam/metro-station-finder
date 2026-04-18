@@ -25,7 +25,7 @@ const LEGAL_LINKS = [
 
 export const Footer = memo(
   (): React.ReactElement => (
-    <div className="relative bg-background">
+    <div className="relative">
       {/* Watermark sits above the footer border */}
       <FooterWatermark />
 

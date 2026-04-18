@@ -302,8 +302,6 @@ export const FooterWatermark = (): React.ReactElement => {
 
   const handleMouseLeave = useCallback(() => setActive(false), []);
 
-  const spotlightMask = `radial-gradient(circle 80px at ${pos.x}px ${pos.y}px, black 0%, black 55%, transparent 85%)`;
-
   return (
     <div className="pt-10">
       <div className="container mx-auto px-4">
@@ -314,7 +312,7 @@ export const FooterWatermark = (): React.ReactElement => {
           onMouseMove={handleMouseMove}
           style={{ height: "clamp(52px, 8.5vw, 110px)" }}
         >
-          {/* Base — clearly visible */}
+          {/* Base train — clearly visible */}
           <TrainSvg
             className="absolute inset-0 h-full w-full"
             style={{
@@ -323,12 +321,12 @@ export const FooterWatermark = (): React.ReactElement => {
             }}
           />
 
-          {/* Tight focused spotlight on hover */}
-          <TrainSvg
-            className="absolute inset-0 h-full w-full transition-opacity duration-150 ease-out"
+          {/* Natural glow — screen blend brightens organically, no hard circle edge */}
+          <div
+            className="pointer-events-none absolute inset-0 transition-opacity duration-200 ease-out"
             style={{
-              WebkitMaskImage: spotlightMask,
-              maskImage: spotlightMask,
+              background: `radial-gradient(ellipse 160px 100px at ${pos.x}px ${pos.y}px, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.08) 45%, transparent 75%)`,
+              mixBlendMode: "screen",
               opacity: active ? 1 : 0,
             }}
           />
