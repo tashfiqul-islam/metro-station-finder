@@ -80,13 +80,15 @@ export const Theme = () => {
     applyTheme(value);
   };
 
-  // Stable placeholder — same size as the real control, invisible.
-  // Prevents navbar layout shift while the component hydrates.
   if (!mounted) {
     return (
       <div
         aria-hidden="true"
-        className="flex h-9 w-24 rounded-full border border-border/60 bg-muted/50 opacity-0"
+        className="h-9 w-[4.75rem] rounded-full opacity-0"
+        style={{
+          backgroundColor: "var(--color-background)",
+          border: "1px solid var(--color-border)",
+        }}
       />
     );
   }
@@ -94,8 +96,12 @@ export const Theme = () => {
   return (
     <div
       aria-label="Theme selector"
-      className="relative flex h-9 items-center gap-0.5 rounded-full border border-border/60 bg-muted/50 p-1 shadow-inner"
+      className="relative isolate flex h-9 items-center justify-center rounded-full p-1"
       role="group"
+      style={{
+        backgroundColor: "var(--color-background)",
+        border: "1px solid var(--color-border)",
+      }}
     >
       {THEME_OPTIONS.map(({ icon: Icon, label, value }) => {
         const isActive = theme === value;
@@ -103,22 +109,19 @@ export const Theme = () => {
           <button
             aria-label={label}
             aria-pressed={isActive}
-            className={cn(
-              "group relative flex h-7 w-7 items-center justify-center rounded-full",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
-            )}
+            className="group relative flex h-7 w-7 items-center justify-center rounded-full"
             key={value}
             onClick={() => handleTheme(value)}
+            style={{ background: "none", border: "none", padding: 0 }}
             type="button"
           >
             {isActive && (
               <motion.div
-                className="absolute inset-0 rounded-full bg-background shadow-md"
+                className="absolute inset-0 rounded-full shadow-sm"
                 layoutId="activeTheme"
+                style={{ backgroundColor: "var(--color-muted)" }}
                 transition={
-                  isFirstMount.current
-                    ? { duration: 0 }
-                    : { damping: 20, duration: 0.4, stiffness: 300, type: "spring" }
+                  isFirstMount.current ? { duration: 0 } : { duration: 0.5, type: "spring" }
                 }
               />
             )}
@@ -126,11 +129,11 @@ export const Theme = () => {
               aria-hidden="true"
               className={cn(
                 "relative z-10 h-4 w-4 transition-all duration-200",
-                isActive
-                  ? "scale-110"
-                  : "text-muted-foreground/60 group-hover:scale-105 group-hover:text-muted-foreground",
+                isActive ? "scale-110" : "group-hover:scale-110",
               )}
-              style={isActive ? { color: "var(--color-primary)" } : undefined}
+              style={{
+                color: isActive ? "var(--color-primary)" : "var(--color-muted-foreground)",
+              }}
               weight={isActive ? "fill" : "regular"}
             />
           </button>
