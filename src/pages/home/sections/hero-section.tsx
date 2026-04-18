@@ -142,8 +142,7 @@ export const HeroSection = () => {
           {/* Description */}
           <ViewportAnimation delay={0.15}>
             <p className="mx-auto mt-7 max-w-xl text-lg leading-relaxed text-muted-foreground/90 sm:text-xl">
-              Your complete guide to Dhaka&apos;s MRT Line 6 — find stations, calculate fares, and
-              plan every journey across 17 stations and 20.1&nbsp;km of rapid transit.
+              Stations, fares, and routes — everything you need for MRT Line 6 in one place.
             </p>
           </ViewportAnimation>
 
