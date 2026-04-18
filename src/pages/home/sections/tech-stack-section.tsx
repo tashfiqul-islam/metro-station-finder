@@ -49,7 +49,7 @@ interface TechItemCardProps {
 
 const TechItemCard = memo(
   ({ logoDark, logoLight, name }: TechItemCardProps): React.ReactElement => (
-    <div className="group mx-2 flex cursor-default items-center gap-3 rounded-2xl border border-border/40 bg-card/50 px-4 py-2.5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-card/80 hover:shadow-[0_8px_32px_oklch(0.50_0.18_145_/_0.20)] hover:ring-1 hover:ring-primary/20">
+    <div className="group mx-2 flex cursor-default items-center gap-3 rounded-2xl border border-border/40 px-4 py-2.5 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-card hover:shadow-[0_8px_32px_oklch(0.50_0.18_145_/_0.20)] hover:ring-1 hover:ring-primary/20">
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border/30 bg-background/70 p-1.5 transition-colors duration-300 group-hover:border-primary/20 group-hover:bg-background">
         <img
           alt=""
