@@ -79,7 +79,7 @@ export const TechStackSection = memo((): React.ReactElement => {
             </div>
 
             <h2
-              className="font-heading text-4xl font-black tracking-tight lg:text-5xl xl:text-6xl"
+              className="font-heading text-3xl font-bold lg:text-4xl"
               style={{
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
