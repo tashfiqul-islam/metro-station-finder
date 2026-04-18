@@ -1,8 +1,8 @@
-import { motion, useScroll, useTransform } from "motion/react";
-import { useRef } from "react";
+import { motion, useMotionValue, useMotionValueEvent, useScroll, useTransform } from "motion/react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-import { Badge } from "@/components/ui/badge";
 import { ViewportAnimation } from "@/components/common/viewport-animation";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 interface VersionEntry {
@@ -58,8 +58,143 @@ const versions: VersionEntry[] = [
   },
 ];
 
+interface TimelineDotProps {
+  accentSolid: string;
+  current: boolean;
+  height: number;
+  scrollYProgress: ReturnType<typeof useScroll>["scrollYProgress"];
+}
+
+const TimelineDot = ({
+  accentSolid,
+  current,
+  height,
+  scrollYProgress,
+}: TimelineDotProps): React.ReactElement => {
+  const dotRef = useRef<HTMLDivElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [dotPosition, setDotPosition] = useState<number | null>(null);
+  const [isReady, setIsReady] = useState(false);
+  const positionRef = useRef<number | null>(null);
+  const heightRef = useRef(0);
+
+  const fillOpacity = useMotionValue(0);
+  const fillScale = useMotionValue(0.6);
+
+  useEffect(() => {
+    positionRef.current = dotPosition;
+  }, [dotPosition]);
+
+  useEffect(() => {
+    heightRef.current = height;
+  }, [height]);
+
+  const measurePosition = useCallback(() => {
+    const container = containerRef.current?.closest("[data-timeline-ref]");
+    const dot = dotRef.current;
+    if (!container || !dot) {
+      return;
+    }
+    const containerRect = container.getBoundingClientRect();
+    const dotRect = dot.getBoundingClientRect();
+    const pos = dotRect.top - containerRect.top + dotRect.height / 2;
+    if (pos > 0) {
+      setDotPosition(pos);
+      requestAnimationFrame(() => requestAnimationFrame(() => setIsReady(true)));
+    }
+  }, []);
+
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => requestAnimationFrame(measurePosition));
+    const ro = new ResizeObserver(() =>
+      requestAnimationFrame(() => requestAnimationFrame(measurePosition)),
+    );
+    if (dotRef.current) {
+      ro.observe(dotRef.current);
+    }
+    return () => {
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+    };
+  }, [measurePosition]);
+
+  useMotionValueEvent(scrollYProgress, "change", (latest) => {
+    const pos = positionRef.current;
+    const h = heightRef.current;
+    if (!isReady || pos === null || h === 0) {
+      fillOpacity.set(0);
+      fillScale.set(0.6);
+      return;
+    }
+    const scrollPx = latest * h;
+    const start = Math.max(0, pos - 12);
+    const end = pos + 12;
+    let t = 0;
+    if (scrollPx >= start) {
+      t = scrollPx > end ? 1 : (scrollPx - start) / (end - start);
+    }
+    fillOpacity.set(t);
+    fillScale.set(0.6 + t * 0.4);
+  });
+
+  return (
+    <div
+      className="relative z-20 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-background"
+      ref={(el) => {
+        dotRef.current = el;
+        containerRef.current = el;
+      }}
+    >
+      {/* Static ring */}
+      <div
+        className="h-3.5 w-3.5 rounded-full border-2"
+        style={{
+          backgroundColor: current ? `${accentSolid.replace(")", " / 0.12)")}` : "transparent",
+          borderColor: current ? accentSolid : "oklch(var(--border))",
+        }}
+      />
+      {/* Scroll-driven fill */}
+      <motion.div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 flex items-center justify-center"
+        style={{ opacity: fillOpacity, scale: fillScale }}
+      >
+        <div className="h-3.5 w-3.5 rounded-full" style={{ backgroundColor: accentSolid }} />
+      </motion.div>
+      {/* Current pulse ring */}
+      {current && (
+        <motion.div
+          aria-hidden="true"
+          className="absolute inset-0 rounded-full"
+          style={{ borderColor: accentSolid, opacity: fillOpacity }}
+          animate={{
+            boxShadow: [
+              `0 0 0 0 ${accentSolid.replace(")", " / 0.4)")}`,
+              `0 0 0 6px ${accentSolid.replace(")", " / 0)")}`,
+            ],
+          }}
+          transition={{ duration: 1.8, ease: "easeInOut", repeat: Infinity }}
+        />
+      )}
+    </div>
+  );
+};
+
 export const JourneySection = (): React.ReactElement => {
   const timelineRef = useRef<HTMLDivElement>(null);
+  const [containerHeight, setContainerHeight] = useState(0);
+
+  useEffect(() => {
+    const el = timelineRef.current;
+    if (!el) {
+      return;
+    }
+    const update = () => setContainerHeight(el.getBoundingClientRect().height);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const { scrollYProgress } = useScroll({
     offset: ["start 80%", "end 15%"],
@@ -100,15 +235,12 @@ export const JourneySection = (): React.ReactElement => {
           </div>
         </ViewportAnimation>
 
-        {/* ── Timeline ──
-            Mobile: left track at left-5, all cards on the right (pl-14)
-            Desktop: centered track at md:left-1/2, cards alternate left/right
-            Container uses max-w-3xl so each half-card has ~352px at 768px */}
-        <div className="relative mx-auto max-w-3xl" ref={timelineRef}>
-          {/* Track wrapper — left-5 mobile → left-1/2 desktop */}
+        {/* ── Timeline ── */}
+        <div className="relative mx-auto max-w-3xl" data-timeline-ref ref={timelineRef}>
+          {/* Track wrapper */}
           <div
             aria-hidden="true"
-            className="absolute bottom-0 left-5 top-0 w-px -translate-x-1/2 overflow-hidden md:left-1/2"
+            className="absolute bottom-0 left-5 top-0 w-px -translate-x-1/2 md:left-1/2"
             style={{
               WebkitMaskImage:
                 "linear-gradient(to bottom, transparent 0%, black 6%, black 94%, transparent 100%)",
@@ -116,12 +248,12 @@ export const JourneySection = (): React.ReactElement => {
                 "linear-gradient(to bottom, transparent 0%, black 6%, black 94%, transparent 100%)",
             }}
           >
-            {/* Faint static rail always visible */}
+            {/* Ghost rail */}
             <div
               className="absolute inset-0 w-px"
               style={{ background: "oklch(0.64 0.2 145 / 0.13)" }}
             />
-            {/* Scroll-driven color fill */}
+            {/* Scroll-driven fill */}
             <motion.div
               aria-hidden="true"
               className="absolute top-0 w-px origin-top"
@@ -139,9 +271,7 @@ export const JourneySection = (): React.ReactElement => {
               const isLeft = i % 2 === 0;
 
               return (
-                <ViewportAnimation key={v.version} delay={i * 0.1}>
-                  {/* Mobile: pl-14 with left-track node
-                      Desktop: flex row (or reverse), card takes half width, center node */}
+                <ViewportAnimation delay={i * 0.1} key={v.version}>
                   <div
                     className={cn(
                       "relative flex items-start pl-14",
@@ -149,15 +279,17 @@ export const JourneySection = (): React.ReactElement => {
                       isLeft ? "md:flex-row" : "md:flex-row-reverse",
                     )}
                   >
-                    {/* Mobile-only node — hidden on desktop */}
-                    <div
-                      className={cn(
-                        "absolute left-5 top-5 -translate-x-1/2 z-10 md:hidden",
-                        v.current ? "route-stop route-stop--current" : "route-stop",
-                      )}
-                    />
+                    {/* Mobile dot */}
+                    <div className="absolute left-5 top-5 -translate-x-1/2 z-10 md:hidden">
+                      <TimelineDot
+                        accentSolid={v.accentSolid}
+                        current={v.current}
+                        height={containerHeight}
+                        scrollYProgress={scrollYProgress}
+                      />
+                    </div>
 
-                    {/* Card — full width mobile, half width desktop */}
+                    {/* Card */}
                     <div
                       className={cn(
                         "group relative flex-1 overflow-hidden rounded-2xl border shadow-sm transition-all duration-300",
@@ -168,9 +300,7 @@ export const JourneySection = (): React.ReactElement => {
                           : "border-border bg-card hover:shadow-md",
                       )}
                     >
-                      {/* Accent stripe — always on left on mobile.
-                          On desktop flips to face the center line:
-                          left-side cards get right stripe, right-side cards keep left stripe */}
+                      {/* Accent stripe */}
                       <div
                         aria-hidden="true"
                         className={cn(
@@ -184,7 +314,7 @@ export const JourneySection = (): React.ReactElement => {
                         }}
                       />
 
-                      {/* Top shimmer — flips direction on left-side desktop cards */}
+                      {/* Top shimmer */}
                       <div
                         aria-hidden="true"
                         className="pointer-events-none absolute inset-x-0 top-0 h-px"
@@ -196,7 +326,7 @@ export const JourneySection = (): React.ReactElement => {
                         }}
                       />
 
-                      {/* Corner bloom — inner corner toward center line */}
+                      {/* Corner bloom */}
                       <div
                         aria-hidden="true"
                         className={cn(
@@ -264,14 +394,17 @@ export const JourneySection = (): React.ReactElement => {
                       </div>
                     </div>
 
-                    {/* Desktop-only center node — w-16 keeps it exactly at 50% of container */}
+                    {/* Desktop center dot */}
                     <div className="hidden md:flex md:w-16 md:shrink-0 md:items-center md:justify-center md:z-10">
-                      <div
-                        className={cn(v.current ? "route-stop route-stop--current" : "route-stop")}
+                      <TimelineDot
+                        accentSolid={v.accentSolid}
+                        current={v.current}
+                        height={containerHeight}
+                        scrollYProgress={scrollYProgress}
                       />
                     </div>
 
-                    {/* Desktop spacer — fills the opposite half */}
+                    {/* Desktop spacer */}
                     <div className="hidden md:block md:w-[calc(50%-2rem)] md:flex-none" />
                   </div>
                 </ViewportAnimation>
