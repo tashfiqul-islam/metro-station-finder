@@ -7,6 +7,7 @@ import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { useEffect, useState } from "react";
 
 import { UnifiedBackground } from "@/components/common/unified-background";
+import { Footer } from "@/components/ui/footer";
 import { NavBar } from "@/components/ui/navbar";
 import { reportWebVitals } from "@/lib/web-vitals";
 import appCss from "../styles.css?url";
@@ -82,6 +83,7 @@ const RootDocument = ({ children }: { children: React.ReactNode }) => {
           >
             {children}
           </main>
+          <Footer />
           {import.meta.env.DEV && (
             <>
               <TanStackDevtools
