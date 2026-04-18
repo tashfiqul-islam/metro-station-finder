@@ -5,46 +5,63 @@ import { ViewportAnimation } from "@/components/common/viewport-animation";
 import { InfiniteSlider } from "@/components/ui/infinite-slider";
 
 interface TechItem {
-  color: string;
+  logoDark: string;
+  logoLight: string;
   name: string;
 }
 
+const makeItem = (name: string, file: string): TechItem => ({
+  logoDark: `/tech-stack/${file}`,
+  logoLight: `/tech-stack/${file}`,
+  name,
+});
+
+const makeDualItem = (name: string, dark: string, light: string): TechItem => ({
+  logoDark: `/tech-stack/${dark}`,
+  logoLight: `/tech-stack/${light}`,
+  name,
+});
+
 export const row1Items: TechItem[] = [
-  { color: "oklch(0.84 0.12 196)", name: "React" },
-  { color: "oklch(0.57 0.19 249)", name: "TypeScript" },
-  { color: "oklch(0.64 0.2 145)", name: "TanStack" },
-  { color: "oklch(0.75 0.14 195)", name: "Tailwind CSS" },
-  { color: "oklch(0.63 0.19 284)", name: "Vite" },
+  makeDualItem("React", "react_dark.svg", "react_light.svg"),
+  makeItem("TypeScript", "typescript.svg"),
+  makeItem("TanStack", "tanstack.svg"),
+  makeItem("Tailwind CSS", "tailwindcss.svg"),
+  makeDualItem("shadcn/ui", "shadcn_dark.svg", "shadcn_light.svg"),
+  makeItem("Bun", "bun.svg"),
+  makeItem("MapLibre", "maplibre.svg"),
 ];
 
 export const row2Items: TechItem[] = [
-  { color: "oklch(0.65 0 0)", name: "shadcn/ui" },
-  { color: "oklch(0.78 0.13 75)", name: "Bun" },
-  { color: "oklch(0.65 0.18 142)", name: "Vitest" },
-  { color: "oklch(0.59 0.19 253)", name: "MapLibre" },
-  { color: "oklch(0.61 0.23 299)", name: "Phosphor" },
+  makeDualItem("Motion", "motion_dark.svg", "Motion_light.svg"),
+  makeItem("Valibot", "valibot.svg"),
+  makeItem("mapcn", "mapcn.svg"),
+  makeItem("Lefthook", "lefthook.svg"),
+  makeItem("Semantic Release", "semantic-release-logo.svg"),
+  makeDualItem("Cursor", "cursor_dark.svg", "cursor_light.svg"),
 ];
 
 interface TechItemCardProps {
-  color: string;
+  logoDark: string;
+  logoLight: string;
   name: string;
 }
 
 const TechItemCard = memo(
-  ({ color, name }: TechItemCardProps): React.ReactElement => (
-    <div
-      className="group mx-2 flex cursor-default items-center gap-3 rounded-2xl border border-border/50 bg-card/40 px-5 py-3 backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-border/80 hover:bg-card/70 hover:shadow-[0_6px_24px_var(--tech-glow)]"
-      style={
-        {
-          "--tech-glow": `${color.replace(")", " / 0.22)")}`,
-        } as React.CSSProperties
-      }
-    >
-      {/* Color swatch — rounded square with brand hue */}
-      <span
-        aria-hidden
-        className="h-3 w-3 shrink-0 rounded-sm transition-all duration-300 group-hover:scale-110 group-hover:shadow-[0_0_10px_var(--tech-glow)]"
-        style={{ background: color }}
+  ({ logoDark, logoLight, name }: TechItemCardProps): React.ReactElement => (
+    <div className="group mx-2 flex cursor-default items-center gap-3 rounded-2xl border border-border/50 bg-card/40 px-5 py-3 backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:bg-card/70 hover:shadow-[0_6px_24px_oklch(0.50_0.18_145_/_0.18)]">
+      {/* Logo — dark/light aware */}
+      <img
+        alt=""
+        aria-hidden="true"
+        className="h-5 w-auto object-contain dark:hidden"
+        src={logoLight}
+      />
+      <img
+        alt=""
+        aria-hidden="true"
+        className="hidden h-5 w-auto object-contain dark:block"
+        src={logoDark}
       />
       <span className="whitespace-nowrap text-sm font-semibold text-muted-foreground transition-colors duration-300 group-hover:text-foreground">
         {name}
@@ -103,7 +120,12 @@ export const TechStackSection = memo((): React.ReactElement => {
         <div style={EDGE_MASK}>
           <InfiniteSlider speed={shouldReduceMotion ? 0.01 : 60}>
             {row1Items.map((item) => (
-              <TechItemCard color={item.color} key={item.name} name={item.name} />
+              <TechItemCard
+                key={item.name}
+                logoDark={item.logoDark}
+                logoLight={item.logoLight}
+                name={item.name}
+              />
             ))}
           </InfiniteSlider>
         </div>
@@ -111,7 +133,12 @@ export const TechStackSection = memo((): React.ReactElement => {
         <div style={EDGE_MASK}>
           <InfiniteSlider reverse speed={shouldReduceMotion ? 0.01 : 40}>
             {row2Items.map((item) => (
-              <TechItemCard color={item.color} key={item.name} name={item.name} />
+              <TechItemCard
+                key={item.name}
+                logoDark={item.logoDark}
+                logoLight={item.logoLight}
+                name={item.name}
+              />
             ))}
           </InfiniteSlider>
         </div>
