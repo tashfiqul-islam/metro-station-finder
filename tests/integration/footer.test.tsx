@@ -6,9 +6,13 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import { act } from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { Footer } from "@/components/ui/footer";
+
+vi.mock("@/components/ui/footer-watermark", () => ({
+  FooterWatermark: () => <div data-testid="footer-watermark" />,
+}));
 
 const renderFooter = async () => {
   const rootRoute = createRootRoute({ component: Footer });
@@ -40,19 +44,32 @@ describe("Footer", () => {
     expect(link.getAttribute("href")).toContain("github.com");
   });
 
-  it("renders all navigation links", async () => {
+  it("renders legal section heading", async () => {
     await renderFooter();
-    const nav = screen.getByRole("navigation", { name: /footer navigation/i });
-    expect(nav).toBeDefined();
-    expect(screen.getByText("Home")).toBeDefined();
-    expect(screen.getByText("Station Finder")).toBeDefined();
-    expect(screen.getByText("Station Fares")).toBeDefined();
-    expect(screen.getByText("Trip Planner")).toBeDefined();
-    expect(screen.getByText("About")).toBeDefined();
+    expect(screen.getByText("Legal")).toBeDefined();
+  });
+
+  it("renders legal links", async () => {
+    await renderFooter();
+    expect(screen.getByText("Privacy Policy")).toBeDefined();
+    expect(screen.getByText("Terms of Use")).toBeDefined();
+    expect(screen.getAllByText("Accessibility").length).toBeGreaterThan(0);
+    expect(screen.getByText("Data Sources")).toBeDefined();
   });
 
   it("renders copyright text", async () => {
     await renderFooter();
     expect(screen.getByText(/2026 Tashfiqul Islam/i)).toBeDefined();
+  });
+
+  it("renders built with love attribution", async () => {
+    await renderFooter();
+    expect(screen.getByText(/built with/i)).toBeDefined();
+    expect(screen.getAllByText(/tashfiqul islam/i).length).toBeGreaterThan(0);
+  });
+
+  it("renders the watermark component", async () => {
+    await renderFooter();
+    expect(document.querySelector("[data-testid='footer-watermark']")).toBeDefined();
   });
 });
