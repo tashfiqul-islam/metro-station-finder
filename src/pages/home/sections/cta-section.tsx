@@ -176,7 +176,7 @@ export const CtaSection = memo(
       {/* Metro train illustration — sits flush on the footer border-t rail */}
       <div
         aria-hidden="true"
-        className="pointer-events-none relative mt-12 w-full overflow-hidden"
+        className="pointer-events-none relative mt-20 w-full overflow-hidden"
         style={{
           WebkitMaskImage:
             "linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)",
@@ -184,7 +184,9 @@ export const CtaSection = memo(
             "linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)",
         }}
       >
-        <MetroTrain />
+        <div className="mx-auto max-w-4xl">
+          <MetroTrain />
+        </div>
       </div>
     </section>
   ),

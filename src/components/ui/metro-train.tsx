@@ -5,7 +5,7 @@ export const MetroTrain = (): React.ReactElement => (
     preserveAspectRatio="xMidYMax meet"
     viewBox="0 0 520 47.5"
     xmlns="http://www.w3.org/2000/svg"
-    style={{ filter: "saturate(0.45) brightness(0.9)", opacity: 0.28 }}
+    style={{ opacity: 0.55 }}
   >
     <g>
       <path
