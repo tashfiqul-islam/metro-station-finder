@@ -302,10 +302,10 @@ export const FooterWatermark = (): React.ReactElement => {
 
   const handleMouseLeave = useCallback(() => setActive(false), []);
 
-  const spotlightMask = `radial-gradient(circle 180px at ${pos.x}px ${pos.y}px, black 0%, black 30%, transparent 65%)`;
+  const spotlightMask = `radial-gradient(circle 80px at ${pos.x}px ${pos.y}px, black 0%, black 55%, transparent 85%)`;
 
   return (
-    <div className="overflow-hidden">
+    <div className="pt-10">
       <div className="container mx-auto px-4">
         <div
           ref={containerRef}
@@ -314,18 +314,18 @@ export const FooterWatermark = (): React.ReactElement => {
           onMouseMove={handleMouseMove}
           style={{ height: "clamp(52px, 8.5vw, 110px)" }}
         >
-          {/* Ghost base — always visible at low opacity */}
+          {/* Base — clearly visible */}
           <TrainSvg
             className="absolute inset-0 h-full w-full"
             style={{
               filter: isDark ? "none" : "brightness(0.45) saturate(0.6)",
-              opacity: isDark ? 0.18 : 0.3,
+              opacity: isDark ? 0.55 : 0.6,
             }}
           />
 
-          {/* Spotlight reveal — full color, masked to cursor circle */}
+          {/* Tight focused spotlight on hover */}
           <TrainSvg
-            className="absolute inset-0 h-full w-full transition-opacity duration-300 ease-out"
+            className="absolute inset-0 h-full w-full transition-opacity duration-150 ease-out"
             style={{
               WebkitMaskImage: spotlightMask,
               maskImage: spotlightMask,
