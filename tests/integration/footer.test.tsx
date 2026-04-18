@@ -6,13 +6,9 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import { act } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { Footer } from "@/components/ui/footer";
-
-vi.mock("@/components/ui/footer-watermark", () => ({
-  FooterWatermark: () => <div data-testid="footer-watermark" />,
-}));
 
 const renderFooter = async () => {
   const rootRoute = createRootRoute({ component: Footer });
@@ -66,10 +62,5 @@ describe("Footer", () => {
     await renderFooter();
     expect(screen.getByText(/built with/i)).toBeDefined();
     expect(screen.getAllByText(/tashfiqul islam/i).length).toBeGreaterThan(0);
-  });
-
-  it("renders the watermark component", async () => {
-    await renderFooter();
-    expect(document.querySelector("[data-testid='footer-watermark']")).toBeDefined();
   });
 });

@@ -9,6 +9,7 @@ import { memo } from "react";
 
 import { ViewportAnimation } from "@/components/common/viewport-animation";
 import { Button } from "@/components/ui/button";
+import { MetroTrain } from "@/components/ui/metro-train";
 import { cn } from "@/lib/utils";
 
 const STATS = [
@@ -40,7 +41,7 @@ const STATS = [
 
 export const CtaSection = memo(
   (): React.ReactElement => (
-    <section aria-label="Get started" className="relative overflow-hidden py-24">
+    <section aria-label="Get started" className="relative overflow-hidden pb-0 pt-24">
       {/* Section-level atmosphere blobs */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-0">
         <div
@@ -170,6 +171,11 @@ export const CtaSection = memo(
             </div>
           </div>
         </ViewportAnimation>
+      </div>
+
+      {/* Metro train illustration — sits flush on the footer border-t rail */}
+      <div aria-hidden="true" className="pointer-events-none relative w-full">
+        <MetroTrain />
       </div>
     </section>
   ),
