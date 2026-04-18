@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { motion, useReducedMotion } from "motion/react";
+import { CurrencyCircleDollar, MapTrifold, NavigationArrow } from "@phosphor-icons/react";
 
 import { RouteMapSvg } from "@/components/common/route-map-svg";
 import { ViewportAnimation } from "@/components/common/viewport-animation";
@@ -7,8 +8,14 @@ import { Button } from "@/components/ui/button";
 
 const STATS = [
   { label: "Stations", value: "17" },
-  { label: "Total Length", value: "20.1 km" },
+  { label: "Route Length", value: "20.1 km" },
   { label: "MRT Network", value: "Line 6" },
+] as const;
+
+const FEATURES = [
+  { icon: NavigationArrow, label: "Station Finder" },
+  { icon: CurrencyCircleDollar, label: "Fare Calculator" },
+  { icon: MapTrifold, label: "Trip Planner" },
 ] as const;
 
 export const HeroSection = () => {
@@ -28,7 +35,7 @@ export const HeroSection = () => {
           animate={shouldReduceMotion ? {} : { opacity: [0.7, 1, 0.7] }}
           transition={{ duration: 8, ease: "easeInOut", repeat: Infinity }}
         />
-        {/* Secondary bottom-left bloom — offset timing */}
+        {/* Secondary bottom-left bloom */}
         <motion.div
           className="absolute -bottom-40 -left-48 h-[500px] w-[500px] rounded-full"
           style={{
@@ -44,7 +51,7 @@ export const HeroSection = () => {
             background: "radial-gradient(ellipse, oklch(0.52 0.20 145 / 0.12) 0%, transparent 68%)",
           }}
         />
-        {/* Line grid — more architectural than dots */}
+        {/* Line grid */}
         <div
           className="absolute inset-0 opacity-[0.028]"
           style={{
@@ -81,14 +88,23 @@ export const HeroSection = () => {
       {/* ── Main content ── */}
       <div className="container mx-auto px-4 py-28 lg:py-36">
         <div className="mx-auto max-w-4xl text-center">
-          {/* Gradient-border shimmer badge */}
+          {/* Live badge */}
           <ViewportAnimation delay={0}>
-            <div
+            <motion.div
               className="mb-10 inline-block rounded-full p-px"
+              animate={
+                shouldReduceMotion
+                  ? {}
+                  : {
+                      backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
+                    }
+              }
               style={{
                 background:
                   "linear-gradient(90deg, oklch(0.64 0.2 145 / 0.55), oklch(0.74 0.16 70 / 0.35), oklch(0.64 0.2 145 / 0.55))",
+                backgroundSize: "200% 200%",
               }}
+              transition={{ duration: 4, ease: "linear", repeat: Infinity }}
             >
               <div className="inline-flex items-center gap-2.5 rounded-full bg-background/90 px-5 py-2 backdrop-blur-sm">
                 <span className="relative flex h-2 w-2">
@@ -99,14 +115,17 @@ export const HeroSection = () => {
                   MRT Line 6 · Dhaka Metro
                 </span>
               </div>
-            </div>
+            </motion.div>
           </ViewportAnimation>
 
           {/* Headline */}
           <ViewportAnimation delay={0.07}>
-            <h1 className="text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl md:text-6xl lg:text-5xl xl:text-6xl">
-              Navigate Dhaka&apos;s Metro Stations with{" "}
+            <h1 className="font-sans text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl md:text-5xl lg:text-6xl">
+              Navigate Dhaka&apos;s Metro
+              <br className="hidden sm:block" />
+              <span className="sm:ml-2">Stations with </span>
               <span
+                className="inline-block"
                 style={{
                   WebkitBackgroundClip: "text",
                   WebkitTextFillColor: "transparent",
@@ -122,15 +141,30 @@ export const HeroSection = () => {
 
           {/* Description */}
           <ViewportAnimation delay={0.15}>
-            <p className="mx-auto mt-8 max-w-xl text-lg leading-relaxed text-muted-foreground/90 sm:text-xl">
+            <p className="mx-auto mt-7 max-w-xl text-lg leading-relaxed text-muted-foreground/90 sm:text-xl">
               Your complete guide to Dhaka&apos;s MRT Line 6 — find stations, calculate fares, and
               plan every journey across 17 stations and 20.1&nbsp;km of rapid transit.
             </p>
           </ViewportAnimation>
 
+          {/* Feature pills */}
+          <ViewportAnimation delay={0.2}>
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+              {FEATURES.map(({ icon: Icon, label }) => (
+                <div
+                  key={label}
+                  className="flex items-center gap-1.5 rounded-full border border-border/50 bg-card/30 px-3.5 py-1.5 text-xs font-medium text-muted-foreground backdrop-blur-sm"
+                >
+                  <Icon aria-hidden className="h-3.5 w-3.5 text-primary/70" weight="duotone" />
+                  {label}
+                </div>
+              ))}
+            </div>
+          </ViewportAnimation>
+
           {/* CTAs */}
-          <ViewportAnimation delay={0.22}>
-            <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <ViewportAnimation delay={0.27}>
+            <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Button
                 asChild={<Link to="/station-finder">Explore Stations</Link>}
                 size="lg"
@@ -143,14 +177,13 @@ export const HeroSection = () => {
                 className="min-w-[180px] font-semibold transition-all duration-300 hover:border-primary/50 hover:bg-primary/5"
               />
             </div>
-            {/* Trust line */}
             <p className="mt-5 text-xs text-muted-foreground/45">
               Free to use · No account required · 17 stations covered
             </p>
           </ViewportAnimation>
 
-          {/* Stats — glassmorphism container */}
-          <ViewportAnimation delay={0.3}>
+          {/* Stats — glassmorphism strip */}
+          <ViewportAnimation delay={0.34}>
             <div className="mx-auto mt-14 inline-block rounded-2xl border border-border/25 bg-card/20 px-2 py-5 backdrop-blur-md">
               <div className="flex items-center divide-x divide-border/40">
                 {STATS.map(({ label, value }) => (
@@ -167,7 +200,7 @@ export const HeroSection = () => {
         </div>
       </div>
 
-      {/* Animated scroll indicator */}
+      {/* Scroll indicator */}
       <motion.div
         aria-hidden
         className="absolute bottom-10 left-1/2 -translate-x-1/2"
