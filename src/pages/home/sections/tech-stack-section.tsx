@@ -128,8 +128,8 @@ export const TechStackSection = memo((): React.ReactElement => {
       </div>
 
       {/* ── Marquee rows with edge fade masks ── */}
-      <div className="relative flex flex-col gap-3">
-        <div style={EDGE_MASK}>
+      <div className="relative flex flex-col gap-1">
+        <div className="py-3" style={EDGE_MASK}>
           <InfiniteSlider speed={shouldReduceMotion ? 0.01 : 55}>
             {row1Items.map((item) => (
               <TechItemCard
@@ -142,7 +142,7 @@ export const TechStackSection = memo((): React.ReactElement => {
           </InfiniteSlider>
         </div>
 
-        <div style={EDGE_MASK}>
+        <div className="py-3" style={EDGE_MASK}>
           <InfiniteSlider reverse speed={shouldReduceMotion ? 0.01 : 38}>
             {row2Items.map((item) => (
               <TechItemCard
