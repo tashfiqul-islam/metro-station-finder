@@ -49,8 +49,7 @@ interface TechItemCardProps {
 
 const TechItemCard = memo(
   ({ logoDark, logoLight, name }: TechItemCardProps): React.ReactElement => (
-    <div className="group mx-2 flex cursor-default items-center gap-3 rounded-2xl border border-border/40 bg-card/50 px-4 py-2.5 shadow-sm backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-card/80 hover:shadow-[0_8px_32px_oklch(0.50_0.18_145_/_0.20)] hover:ring-1 hover:ring-primary/20">
-      {/* Logo in a dedicated app-icon container for consistent sizing */}
+    <div className="group mx-2 flex cursor-default items-center gap-3 rounded-2xl border border-border/40 bg-card/50 px-4 py-2.5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-card/80 hover:shadow-[0_8px_32px_oklch(0.50_0.18_145_/_0.20)] hover:ring-1 hover:ring-primary/20">
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border/30 bg-background/70 p-1.5 transition-colors duration-300 group-hover:border-primary/20 group-hover:bg-background">
         <img
           alt=""
@@ -74,11 +73,29 @@ const TechItemCard = memo(
 
 TechItemCard.displayName = "TechItemCard";
 
-const EDGE_MASK = {
-  WebkitMaskImage:
-    "linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%)",
-  maskImage: "linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%)",
-} as React.CSSProperties;
+const SliderRow = ({
+  children,
+  reverse,
+  speed,
+}: {
+  children: React.ReactNode;
+  reverse?: boolean;
+  speed: number;
+}): React.ReactElement => (
+  <div className="relative py-3">
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-y-0 left-0 z-10 w-24 bg-gradient-to-r from-background to-transparent"
+    />
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-y-0 right-0 z-10 w-24 bg-gradient-to-l from-background to-transparent"
+    />
+    <InfiniteSlider reverse={reverse} speed={speed}>
+      {children}
+    </InfiniteSlider>
+  </div>
+);
 
 export const TechStackSection = memo((): React.ReactElement => {
   const shouldReduceMotion = useReducedMotion();
@@ -127,33 +144,29 @@ export const TechStackSection = memo((): React.ReactElement => {
         </ViewportAnimation>
       </div>
 
-      {/* ── Marquee rows with edge fade masks ── */}
+      {/* ── Marquee rows ── */}
       <div className="relative flex flex-col gap-1">
-        <div className="py-3" style={EDGE_MASK}>
-          <InfiniteSlider speed={shouldReduceMotion ? 0.01 : 55}>
-            {row1Items.map((item) => (
-              <TechItemCard
-                key={item.name}
-                logoDark={item.logoDark}
-                logoLight={item.logoLight}
-                name={item.name}
-              />
-            ))}
-          </InfiniteSlider>
-        </div>
+        <SliderRow speed={shouldReduceMotion ? 0.01 : 55}>
+          {row1Items.map((item) => (
+            <TechItemCard
+              key={item.name}
+              logoDark={item.logoDark}
+              logoLight={item.logoLight}
+              name={item.name}
+            />
+          ))}
+        </SliderRow>
 
-        <div className="py-3" style={EDGE_MASK}>
-          <InfiniteSlider reverse speed={shouldReduceMotion ? 0.01 : 38}>
-            {row2Items.map((item) => (
-              <TechItemCard
-                key={item.name}
-                logoDark={item.logoDark}
-                logoLight={item.logoLight}
-                name={item.name}
-              />
-            ))}
-          </InfiniteSlider>
-        </div>
+        <SliderRow reverse speed={shouldReduceMotion ? 0.01 : 38}>
+          {row2Items.map((item) => (
+            <TechItemCard
+              key={item.name}
+              logoDark={item.logoDark}
+              logoLight={item.logoLight}
+              name={item.name}
+            />
+          ))}
+        </SliderRow>
       </div>
     </section>
   );
