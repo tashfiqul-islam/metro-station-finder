@@ -68,20 +68,20 @@ export const MetroTrain = (): React.ReactElement => (
       <path d="M145.4,46.2h19.7c2.9,0,5.4-1.9,5.9-4.4H56.2v4.4h89.2Z" fill="#3b4d57" />
       <path
         d="M56.2,35.9v5.8h114.9c0-.4.1-.8.1-1.2v-4.7H56.2Z"
-        className="fill-[oklch(0.45_0.10_145)] dark:fill-[#22c55e]"
+        className="fill-[oklch(0.46_0.16_145)] dark:fill-[#22c55e]"
       />
       <rect fill="#4a4e51" height="2.6" width="115" x="56.2" y="33.3" />
       <path
         d="M112,6.4v18.6c0,1.6,1.4,3,3.2,3h26.1c1.8,0,3.2-1.3,3.2-3V6.4c0-1.6-1.4-3-3.2-3h-26.1c-1.8,0-3.2,1.3-3.2,3Z"
-        className="fill-[oklch(0.42_0.09_249)] dark:fill-[oklch(0.58_0.22_249)]"
+        className="fill-[oklch(0.40_0.16_249)] dark:fill-[oklch(0.58_0.22_249)]"
       />
       <path
         d="M150.2,6.4v18.6c0,1.6,1.4,3,3.2,3h9.9c1.8,0,3.2-1.3,3.2-3V6.4c0-1.6-1.4-3-3.2-3h-9.9c-1.8,0-3.2,1.3-3.2,3Z"
-        className="fill-[oklch(0.42_0.09_249)] dark:fill-[oklch(0.58_0.22_249)]"
+        className="fill-[oklch(0.40_0.16_249)] dark:fill-[oklch(0.58_0.22_249)]"
       />
       <path
         d="M67.9,6.4v18.6c0,1.6,1.4,3,3.2,3h26.1c1.8,0,3.2-1.3,3.2-3V6.4c0-1.6-1.4-3-3.2-3h-26.1c-1.8,0-3.2,1.3-3.2,3Z"
-        className="fill-[oklch(0.42_0.09_249)] dark:fill-[oklch(0.58_0.22_249)]"
+        className="fill-[oklch(0.40_0.16_249)] dark:fill-[oklch(0.58_0.22_249)]"
       />
       <rect fill="#414442" height="29.4" width="4.9" x="171.3" y="7.9" />
       <g>
@@ -140,20 +140,20 @@ export const MetroTrain = (): React.ReactElement => (
       <path d="M293.3,46.2h19.7c2.9,0,5.4-1.9,5.9-4.4h-114.9v4.4h89.2Z" fill="#3b4d57" />
       <path
         d="M204.1,35.9v5.8h114.9c0-.4.1-.8.1-1.2v-4.7h-115Z"
-        className="fill-[oklch(0.45_0.10_145)] dark:fill-[#22c55e]"
+        className="fill-[oklch(0.46_0.16_145)] dark:fill-[#22c55e]"
       />
       <rect fill="#4a4e51" height="2.6" width="115" x="204.1" y="33.3" />
       <path
         d="M259.9,6.4v18.6c0,1.6,1.4,3,3.2,3h26.1c1.8,0,3.2-1.3,3.2-3V6.4c0-1.6-1.4-3-3.2-3h-26.1c-1.8,0-3.2,1.3-3.2,3Z"
-        className="fill-[oklch(0.42_0.09_249)] dark:fill-[oklch(0.58_0.22_249)]"
+        className="fill-[oklch(0.40_0.16_249)] dark:fill-[oklch(0.58_0.22_249)]"
       />
       <path
         d="M298.1,6.4v18.6c0,1.6,1.4,3,3.2,3h9.9c1.8,0,3.2-1.3,3.2-3V6.4c0-1.6-1.4-3-3.2-3h-9.9c-1.8,0-3.2,1.3-3.2,3Z"
-        className="fill-[oklch(0.42_0.09_249)] dark:fill-[oklch(0.58_0.22_249)]"
+        className="fill-[oklch(0.40_0.16_249)] dark:fill-[oklch(0.58_0.22_249)]"
       />
       <path
         d="M215.8,6.4v18.6c0,1.6,1.4,3,3.2,3h26.1c1.8,0,3.2-1.3,3.2-3V6.4c0-1.6-1.4-3-3.2-3h-26.1c-1.8,0-3.2,1.3-3.2,3Z"
-        className="fill-[oklch(0.42_0.09_249)] dark:fill-[oklch(0.58_0.22_249)]"
+        className="fill-[oklch(0.40_0.16_249)] dark:fill-[oklch(0.58_0.22_249)]"
       />
       <rect fill="#414442" height="29.4" width="4.9" x="319.2" y="7.9" />
       <g>
@@ -203,7 +203,7 @@ export const MetroTrain = (): React.ReactElement => (
       />
       <path
         d="M458.1,35.9h-134.2c.1,2.2.9,4.2,2.2,5.8h130.7c1.1-1.7,1.6-3.8,1.3-5.8Z"
-        className="fill-[oklch(0.45_0.10_145)] dark:fill-[#22c55e]"
+        className="fill-[oklch(0.46_0.16_145)] dark:fill-[#22c55e]"
       />
       <path
         d="M425,46.2h23.3c3.8,0,6.8-1.9,8.4-4.4h-130.7c2.1,2.7,5.6,4.4,9.4,4.4h89.5Z"
@@ -211,21 +211,21 @@ export const MetroTrain = (): React.ReactElement => (
       />
       <path
         d="M329.7,6.4v18.6c0,1.6,1.4,3,3.2,3h9.9c1.8,0,3.2-1.3,3.2-3V6.4c0-1.6-1.4-3-3.2-3h-9.9c-1.8,0-3.2,1.3-3.2,3Z"
-        className="fill-[oklch(0.42_0.09_249)] dark:fill-[oklch(0.58_0.22_249)]"
+        className="fill-[oklch(0.40_0.16_249)] dark:fill-[oklch(0.58_0.22_249)]"
       />
       <path
         d="M351.7,6.4v18.6c0,1.6,1.4,3,3.2,3h26.1c1.8,0,3.2-1.3,3.2-3V6.4c0-1.6-1.4-3-3.2-3h-26.1c-1.8,0-3.2,1.3-3.2,3Z"
-        className="fill-[oklch(0.42_0.09_249)] dark:fill-[oklch(0.58_0.22_249)]"
+        className="fill-[oklch(0.40_0.16_249)] dark:fill-[oklch(0.58_0.22_249)]"
       />
       <path
         d="M392,7.6v16.2c0,2.3,2,4.2,4.5,4.2h55.6l-28.6-24.6h-27c-2.5,0-4.5,1.9-4.5,4.2Z"
-        className="fill-[oklch(0.42_0.09_249)] dark:fill-[oklch(0.58_0.22_249)]"
+        className="fill-[oklch(0.40_0.16_249)] dark:fill-[oklch(0.58_0.22_249)]"
       />
       <polygon fill="#61c5f2" points="423.5 3.5 448.1 3.5 475.2 26.7 452.1 28 423.5 3.5" />
       <path d="M458.1,35.9l24.4-.4s-.4-1.9-1-2.7l-24.2.6s1,2.1.8,2.6Z" fill="#62676b" />
       <path
         d="M47.9,39.4c0,1.8,1.3,3.4,3,3.4h0c1.7,0,3-1.5,3-3.4V10.7c0-1.9-1.3-3.4-3-3.4h0c-1.7,0-3,1.5-3,3.4v28.7Z"
-        className="fill-[oklch(0.42_0.09_249)] dark:fill-[oklch(0.58_0.22_249)]"
+        className="fill-[oklch(0.40_0.16_249)] dark:fill-[oklch(0.58_0.22_249)]"
       />
       <path
         d="M37.5,39.4c0,1.8,1.3,3.4,3,3.4h0c1.7,0,3-1.5,3-3.4V10.7c0-1.9-1.3-3.4-3-3.4h0c-1.7,0-3,1.5-3,3.4v28.7Z"
@@ -235,20 +235,20 @@ export const MetroTrain = (): React.ReactElement => (
       <rect fill="#252625" height="29.3" width="1.7" x="322.2" y="7.9" />
       <path
         d="M195.4,38.5c0,1.8,1.3,3.4,3,3.4h0c1.7,0,3-1.5,3-3.4V9.9c0-1.9-1.3-3.4-3-3.4h0c-1.7,0-3,1.5-3,3.4v28.7Z"
-        className="fill-[oklch(0.42_0.09_249)] dark:fill-[oklch(0.58_0.22_249)]"
+        className="fill-[oklch(0.40_0.16_249)] dark:fill-[oklch(0.58_0.22_249)]"
       />
       <path
         d="M185,38.5c0,1.8,1.3,3.4,3,3.4h0c1.7,0,3-1.5,3-3.4V9.9c0-1.9-1.3-3.4-3-3.4h0c-1.7,0-3,1.5-3,3.4v28.7Z"
-        className="fill-[oklch(0.42_0.09_249)] dark:fill-[oklch(0.58_0.22_249)]"
+        className="fill-[oklch(0.40_0.16_249)] dark:fill-[oklch(0.58_0.22_249)]"
       />
       <g>
         <path
           d="M40.5,7.2c1.7,0,3,1.5,3,3.4v7l-5.9-7.8c.3-1.5,1.5-2.5,2.9-2.5Z"
-          className="fill-[oklch(0.42_0.09_249)] dark:fill-[oklch(0.58_0.22_249)]"
+          className="fill-[oklch(0.40_0.16_249)] dark:fill-[oklch(0.58_0.22_249)]"
         />
         <path
           d="M43.5,24.6v14.7c0,1.9-1.3,3.4-3,3.4s-3-1.5-3-3.4v-22.8l6,8.1Z"
-          className="fill-[oklch(0.42_0.09_249)] dark:fill-[oklch(0.58_0.22_249)]"
+          className="fill-[oklch(0.40_0.16_249)] dark:fill-[oklch(0.58_0.22_249)]"
         />
       </g>
     </g>
