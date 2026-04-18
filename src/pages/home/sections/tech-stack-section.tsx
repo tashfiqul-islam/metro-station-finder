@@ -84,7 +84,7 @@ export const TechStackSection = memo((): React.ReactElement => {
   const shouldReduceMotion = useReducedMotion();
 
   return (
-    <section className="relative overflow-hidden py-24 lg:py-32">
+    <section className="relative overflow-x-hidden py-24 lg:py-32">
       {/* Ambient glow */}
       <div
         aria-hidden="true"
