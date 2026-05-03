@@ -1,5 +1,5 @@
-import mrt6Line from "@/data/mrt6-line";
 import type { LngLat, Mrt6LineFeature } from "@/data/mrt6-line";
+import mrt6Line from "@/data/mrt6-line";
 import type { Station } from "@/data/stations";
 import { STATIONS, STATIONS_BY_SLUG } from "@/data/stations";
 import { calculateFare } from "@/features/fare-calculator/logic";

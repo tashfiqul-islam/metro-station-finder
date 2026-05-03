@@ -236,10 +236,11 @@
      Separate token so we can tune navbar opacity independently of cards.
   */
   .nav-glass {
-    background: oklch(1 0 0 / 80%);
+    background: oklch(1 0 0 / 92%);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
-    border-bottom: 1px solid oklch(0 0 0 / 6%);
+    border-bottom: 1px solid oklch(0 0 0 / 11%);
+    box-shadow: 0 1px 8px oklch(0 0 0 / 6%);
     @apply dark:border-white/7;
   }
 

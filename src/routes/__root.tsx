@@ -1,7 +1,7 @@
+import { WarningCircleIcon } from "@phosphor-icons/react";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import { WarningCircleIcon } from "@phosphor-icons/react";
 import { createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { useEffect, useState } from "react";
@@ -78,7 +78,10 @@ const RootDocument = ({ children }: { children: React.ReactNode }) => {
           <NavBar />
           <main
             className="relative z-10"
-            style={{ paddingBottom: "var(--footer-height, 0)", paddingTop: "var(--header-height)" }}
+            style={{
+              paddingBottom: "var(--footer-height, 0)",
+              paddingTop: "var(--header-height)",
+            }}
           >
             {children}
           </main>
@@ -86,7 +89,12 @@ const RootDocument = ({ children }: { children: React.ReactNode }) => {
             <>
               <TanStackDevtools
                 config={{ position: "bottom-right" }}
-                plugins={[{ name: "Tanstack Router", render: <TanStackRouterDevtoolsPanel /> }]}
+                plugins={[
+                  {
+                    name: "Tanstack Router",
+                    render: <TanStackRouterDevtoolsPanel />,
+                  },
+                ]}
               />
               <ReactQueryDevtools initialIsOpen={false} />
             </>

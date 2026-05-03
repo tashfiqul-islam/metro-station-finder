@@ -21,7 +21,11 @@ export const SectionWrapper = memo<SectionWrapperProps>(
   ({ children, className, id, snapAlign = "proximity" }): React.ReactElement => {
     const shouldReduceMotion = useReducedMotion();
     const ref = useRef<HTMLElement>(null);
-    const isInView = useInView(ref, { amount: 0.1, margin: "-50px", once: true });
+    const isInView = useInView(ref, {
+      amount: 0.1,
+      margin: "-50px",
+      once: true,
+    });
 
     const snapClass = snapAlign === "proximity" ? "snap-proximity" : `snap-${snapAlign}`;
 

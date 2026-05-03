@@ -84,7 +84,7 @@ export const Theme = () => {
     return (
       <div
         aria-hidden="true"
-        className="h-9 w-[4.75rem] rounded-full opacity-0"
+        className="h-9 w-19 rounded-full opacity-0"
         style={{
           backgroundColor: "var(--color-background)",
           border: "1px solid var(--color-border)",

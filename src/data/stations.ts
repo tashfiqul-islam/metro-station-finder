@@ -1,6 +1,6 @@
 import * as v from "valibot";
 
-import { LatitudeSchema, LongitudeSchema, SlugSchema, parseOrThrow } from "@/lib/validation";
+import { LatitudeSchema, LongitudeSchema, parseOrThrow, SlugSchema } from "@/lib/validation";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

@@ -20,15 +20,20 @@ export const UnifiedBackground = memo((): React.ReactElement => {
       {/* Primary blob — top-left, slow ambient float */}
       <motion.div
         animate={{ x: [0, 50, 0], y: [0, -40, 0] }}
-        className="absolute -top-48 -left-48 h-[640px] w-[640px] rounded-full bg-primary/7 blur-[96px] dark:bg-primary/18"
+        className="absolute -top-48 -left-48 h-160 w-160 rounded-full bg-primary/7 blur-[96px] dark:bg-primary/18"
         transition={{ duration: 22, ease: "easeInOut", repeat: Infinity }}
       />
 
       {/* Secondary blob — bottom-right, slightly faster */}
       <motion.div
         animate={{ x: [0, -40, 0], y: [0, 35, 0] }}
-        className="absolute -right-48 -bottom-32 h-[540px] w-[540px] rounded-full bg-primary/5 blur-[80px] dark:bg-primary/14"
-        transition={{ delay: 4, duration: 28, ease: "easeInOut", repeat: Infinity }}
+        className="absolute -right-48 -bottom-32 h-135 w-135 rounded-full bg-primary/5 blur-[80px] dark:bg-primary/14"
+        transition={{
+          delay: 4,
+          duration: 28,
+          ease: "easeInOut",
+          repeat: Infinity,
+        }}
       />
     </div>
   );

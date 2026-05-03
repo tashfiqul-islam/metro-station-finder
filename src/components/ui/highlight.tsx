@@ -1,5 +1,6 @@
-import { AnimatePresence, motion } from "motion/react";
 import type { Transition } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
+import type { CSSProperties, ElementType, ReactElement, ReactNode, Ref } from "react";
 import React, {
   Children,
   createContext,
@@ -12,7 +13,6 @@ import React, {
   useRef,
   useState,
 } from "react";
-import type { CSSProperties, ElementType, ReactElement, ReactNode, Ref } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -574,7 +574,10 @@ const Highlight = <T extends ElementType = "div">({ ref, ...props }: HighlightPr
   const render = useCallback(
     (renderChildren: ReactNode) => {
       if (mode === "parent") {
-        const motionStyle: Record<string, unknown> = { position: "absolute", zIndex: 0 };
+        const motionStyle: Record<string, unknown> = {
+          position: "absolute",
+          zIndex: 0,
+        };
         if (style) {
           Object.assign(motionStyle, style);
         }

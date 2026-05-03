@@ -1,10 +1,10 @@
 import { memo, useEffect, useState } from "react";
 
 import { Footer } from "@/components/ui/footer";
+import { CtaSection } from "./sections/cta-section";
 import { FeaturesSection } from "./sections/features-section";
 import { HeroSection } from "./sections/hero-section";
 import { JourneySection } from "./sections/journey-section";
-import { CtaSection } from "./sections/cta-section";
 import { StorySection } from "./sections/story-section";
 import { TechStackSection } from "./sections/tech-stack-section";
 
