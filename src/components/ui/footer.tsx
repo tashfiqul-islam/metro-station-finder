@@ -1,4 +1,5 @@
-import { CoffeeIcon, GithubLogoIcon, HeartIcon, TrainSimpleIcon } from "@phosphor-icons/react";
+import { CoffeeIcon, GithubLogoIcon, HeartStraightIcon } from "@phosphor-icons/react";
+import { Link } from "@tanstack/react-router";
 import { memo } from "react";
 
 const LEGAL_LINKS = [
@@ -8,94 +9,115 @@ const LEGAL_LINKS = [
   { href: "/data-sources", label: "Data Sources" },
 ] as const;
 
+const FOOTER_NOTES = ["No sign-up", "Fare clarity", "Built for Dhaka"] as const;
+
 export const Footer = memo(
   (): React.ReactElement => (
-    <footer aria-label="Site footer" className="relative border-t border-border/40 bg-background">
-      {/* Shimmer on top border */}
+    <footer
+      aria-label="Site footer"
+      className="relative overflow-hidden border-t border-border/35 bg-background pt-14 sm:pt-16"
+    >
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(40% 24% at 50% 0%, oklch(0.64 0.2 145 / 0.14), transparent), radial-gradient(28% 18% at 78% 24%, oklch(0.60 0.18 249 / 0.08), transparent)",
+        }}
+      />
+
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 top-0 h-px"
         style={{
           background:
-            "linear-gradient(90deg, transparent 5%, oklch(0.50 0.18 145 / 0.45) 50%, transparent 95%)",
+            "linear-gradient(90deg, transparent 10%, oklch(0.64 0.2 145 / 0.55) 50%, transparent 90%)",
         }}
       />
 
-      {/* Top glow */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 h-28 opacity-20"
-        style={{
-          background:
-            "radial-gradient(50% 100% at 50% 0%, oklch(0.50 0.18 145 / 0.3), transparent)",
-        }}
-      />
-
-      <div className="container mx-auto px-4 pb-8 pt-10">
-        <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 sm:gap-12">
-          {/* ── Brand ── */}
-          <div className="flex flex-col gap-5">
-            <div className="flex items-center gap-2.5">
-              <div
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg p-px"
-                style={{
-                  background:
-                    "linear-gradient(135deg, oklch(0.50 0.18 145 / 0.5), oklch(0.48 0.20 249 / 0.35))",
-                }}
-              >
-                <div className="flex h-full w-full items-center justify-center rounded-[calc(0.5rem-1px)] bg-card">
-                  <TrainSimpleIcon
-                    aria-hidden="true"
-                    className="h-4 w-4 text-primary"
-                    weight="duotone"
-                  />
-                </div>
-              </div>
-              <span className="font-heading text-sm font-bold text-foreground">
-                Metro Station Finder
-              </span>
+      <div className="relative container mx-auto px-4 pb-7">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-start lg:gap-8">
+          <div className="max-w-xl">
+            <div className="mb-4">
+              <span className="sr-only">Metro Station Finder</span>
+              <img
+                alt=""
+                aria-hidden="true"
+                className="h-11 w-auto dark:hidden"
+                src="/brand/logo/logo-primary-light.svg"
+              />
+              <img
+                alt=""
+                aria-hidden="true"
+                className="hidden h-11 w-auto dark:block"
+                src="/brand/logo/logo-primary-dark.svg"
+              />
             </div>
 
-            <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
-              Dhaka's go-to guide for MRT Line 6 — station search, fare lookup, and trip planning
-              built for everyday commuters.
+            <h2 className="font-heading max-w-[12ch] text-2xl font-black tracking-tighter text-foreground sm:text-3xl lg:text-4xl">
+              <span className="footer-headline-glow block">Dhaka moves better</span>
+              <span className="footer-headline-glow block">when the route is clear.</span>
+            </h2>
+
+            <p className="mt-4 max-w-lg text-sm leading-7 text-muted-foreground">
+              Stations, fares, and trip planning for MRT Line 6, built for commuters who need the
+              answer quickly and want the route to feel obvious.
             </p>
 
-            <a
-              aria-label="View source on GitHub"
-              className="inline-flex w-fit items-center gap-2 rounded-lg border border-border/60 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors duration-200 hover:border-primary/40 hover:text-foreground"
-              href="https://github.com/tashfiqul-islam/metro-station-finder"
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              <GithubLogoIcon aria-hidden="true" className="h-3.5 w-3.5" weight="fill" />
-              View on GitHub
-            </a>
+            <div className="mt-5 flex flex-wrap items-center gap-2">
+              {FOOTER_NOTES.map((note) => (
+                <span
+                  className="section-chip px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/75"
+                  key={note}
+                >
+                  {note}
+                </span>
+              ))}
+            </div>
           </div>
 
-          {/* ── Legal ── */}
-          <div>
-            <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground/50">
-              Legal
-            </h2>
-            <ul className="flex flex-col gap-2.5">
+          <div className="section-panel rounded-[1.6rem] p-5">
+            <div className="flex items-center justify-between gap-4 border-b border-border/40 pb-4">
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary/70">
+                  Reference
+                </div>
+                <div className="mt-1 text-sm font-semibold tracking-tight text-foreground">
+                  Legal and source
+                </div>
+              </div>
+
+              <a
+                aria-label="View source on GitHub"
+                className="inline-flex items-center gap-2 rounded-full border border-border/45 bg-background/80 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground transition-colors duration-200 hover:border-primary/35 hover:text-foreground"
+                href="https://github.com/tashfiqul-islam/metro-station-finder"
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                <GithubLogoIcon aria-hidden="true" className="h-3.5 w-3.5" weight="fill" />
+                GitHub
+              </a>
+            </div>
+
+            <div className="mt-4 grid gap-2">
               {LEGAL_LINKS.map(({ href, label }) => (
-                <li key={href}>
-                  <a
-                    className="text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground"
-                    href={href}
-                  >
-                    {label}
-                  </a>
-                </li>
+                <Link
+                  className="group flex items-center justify-between rounded-xl border border-border/35 bg-background/65 px-4 py-2.5 text-sm text-muted-foreground transition-all duration-200 hover:border-primary/25 hover:text-foreground"
+                  key={href}
+                  to={href}
+                >
+                  <span>{label}</span>
+                  <span className="text-xs uppercase tracking-[0.18em] text-muted-foreground/55 transition-colors duration-200 group-hover:text-primary/80">
+                    Open
+                  </span>
+                </Link>
               ))}
-            </ul>
+            </div>
           </div>
         </div>
 
-        {/* ── Bottom bar ── */}
-        <div className="mt-10 flex flex-col items-start justify-between gap-3 border-t border-border/40 pt-6 sm:flex-row sm:items-center">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
+        <div className="mt-6 flex flex-col gap-3 border-t border-border/35 pt-4 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
             <span>&copy; 2026 Metro Station Finder</span>
             <span aria-hidden="true" className="text-border">
               ·
@@ -110,14 +132,18 @@ export const Footer = memo(
             </a>
           </div>
 
-          <p className="flex items-center gap-1.5 text-xs text-muted-foreground/50">
-            Built with
-            <HeartIcon aria-hidden="true" className="h-3 w-3 text-red-400/70" weight="fill" />
-            and
-            <CoffeeIcon aria-hidden="true" className="h-3 w-3 text-amber-500/60" weight="duotone" />
-            by{" "}
+          <p className="inline-flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground/75">
+            <span>Built with</span>
+            <HeartStraightIcon
+              aria-hidden="true"
+              className="h-3.5 w-3.5 text-primary"
+              weight="fill"
+            />
+            <span>and</span>
+            <CoffeeIcon aria-hidden="true" className="h-3.5 w-3.5 text-primary" weight="duotone" />
+            <span>by</span>
             <a
-              className="text-muted-foreground/70 transition-colors duration-200 hover:text-foreground"
+              className="font-medium text-foreground/85 transition-colors duration-200 hover:text-foreground"
               href="https://github.com/tashfiqul-islam"
               rel="noopener noreferrer"
               target="_blank"

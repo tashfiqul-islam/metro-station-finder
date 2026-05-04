@@ -40,10 +40,6 @@ describe("TechStackSection — item arrays", () => {
     expect(row1Items.map((t) => t.name)).toContain("MapLibre");
   });
 
-  it("row2Items contains Motion", () => {
-    expect(row2Items.map((t) => t.name)).toContain("Motion");
-  });
-
   it("row2Items contains Valibot", () => {
     expect(row2Items.map((t) => t.name)).toContain("Valibot");
   });
@@ -67,8 +63,8 @@ describe("TechStackSection — item arrays", () => {
     expect(row1Items).toHaveLength(7);
   });
 
-  it("row2Items has 6 items", () => {
-    expect(row2Items).toHaveLength(6);
+  it("row2Items has 5 items", () => {
+    expect(row2Items).toHaveLength(5);
   });
 });
 

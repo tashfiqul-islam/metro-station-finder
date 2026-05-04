@@ -1,86 +1,88 @@
-import { act, render, screen } from "@testing-library/react";
-import {
-  createMemoryHistory,
-  createRootRoute,
-  createRouter,
-  RouterProvider,
-} from "@tanstack/react-router";
-import { describe, expect, it, vi } from "vitest";
-import { About } from "@/routes/about";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 
-vi.mock("motion/react", () => ({
-  motion: {
-    div: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-      <div {...props}>{children}</div>
-    ),
-  },
-  useReducedMotion: () => false,
-}));
+import { Route } from "@/routes/about";
 
-const renderWithRouter = async (ui: React.ReactElement) => {
-  const result = await act(async () => {
-    const rootRoute = createRootRoute({ component: () => ui });
-    const router = createRouter({
-      history: createMemoryHistory(),
-      routeTree: rootRoute,
-    });
-    const renderResult = render(<RouterProvider router={router} />);
-    await router.load();
-    return renderResult;
-  });
-  return result;
+const AboutPage = Route.options.component;
+
+const renderAbout = () => {
+  if (!AboutPage) {
+    throw new Error("About route component is not defined");
+  }
+
+  return render(<AboutPage />);
 };
 
 describe("About Page", () => {
-  it("renders without crashing", async () => {
-    await renderWithRouter(<About />);
-    expect(screen.getByRole("heading", { level: 1, name: "About" })).toBeInTheDocument();
+  it("renders without crashing", () => {
+    renderAbout();
+    expect(
+      screen.getByRole("heading", {
+        level: 1,
+        name: /Built for Dhaka commuters,shaped by a product owner who ships tools/i,
+      }),
+    ).toBeInTheDocument();
   });
 
-  it("displays the About heading and subtitle", async () => {
-    await renderWithRouter(<About />);
-    expect(screen.getByRole("heading", { level: 1, name: "About" })).toBeInTheDocument();
-    expect(screen.getByText("The story behind metro-station-finder.")).toBeInTheDocument();
+  it("displays the About heading and subtitle", () => {
+    renderAbout();
+    expect(
+      screen.getByRole("heading", {
+        level: 1,
+        name: /Built for Dhaka commuters,shaped by a product owner who ships tools/i,
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Built for Dhaka commuters/)).toBeInTheDocument();
   });
 
-  it("renders all four section eyebrows without interaction", async () => {
-    await renderWithRouter(<About />);
-    expect(screen.getByText("Overview")).toBeInTheDocument();
-    expect(screen.getByText("Mission")).toBeInTheDocument();
-    expect(screen.getByText("Tech Stack")).toBeInTheDocument();
-    expect(screen.getByText("Contact")).toBeInTheDocument();
+  it("renders all four section eyebrows without interaction", () => {
+    renderAbout();
+    expect(screen.getByText("The maintainer")).toBeInTheDocument();
+    expect(screen.getByText("Operating principles")).toBeInTheDocument();
+    expect(screen.getByText("Open source work")).toBeInTheDocument();
+    expect(screen.getByText("Contribute")).toBeInTheDocument();
   });
 
-  it("renders overview content", async () => {
-    await renderWithRouter(<About />);
-    expect(screen.getByText(/Bangladesh.s first metro rail system/)).toBeInTheDocument();
+  it("renders overview content", () => {
+    renderAbout();
+    expect(
+      screen.getByText(/slow to check at the exact moment people needed certainty/),
+    ).toBeInTheDocument();
   });
 
-  it("renders mission pull-quote", async () => {
-    await renderWithRouter(<About />);
-    expect(screen.getByText(/Every commuter deserves to know their fare/)).toBeInTheDocument();
+  it("renders maintainer profile content", () => {
+    renderAbout();
+    expect(
+      screen.getByText(/software that feels practical the moment it is opened/),
+    ).toBeInTheDocument();
   });
 
-  it("renders all three feature cards", async () => {
-    await renderWithRouter(<About />);
-    expect(screen.getByText("Station Finder")).toBeInTheDocument();
-    expect(screen.getByText("Fare Calculator")).toBeInTheDocument();
-    expect(screen.getByText("Trip Planner")).toBeInTheDocument();
+  it("renders maintainer social links", () => {
+    renderAbout();
+    expect(screen.getByText("LinkedIn")).toBeInTheDocument();
+    expect(screen.getByText("Instagram")).toBeInTheDocument();
+    expect(screen.getByText("Reddit")).toBeInTheDocument();
   });
 
-  it("renders tech stack items", async () => {
-    await renderWithRouter(<About />);
-    expect(screen.getByText("React 19")).toBeInTheDocument();
-    expect(screen.getByText("TypeScript")).toBeInTheDocument();
+  it("renders other open source projects", () => {
+    renderAbout();
+    expect(screen.getByText("Profile View Counter")).toBeInTheDocument();
+    expect(screen.getByText("Profile Weather View")).toBeInTheDocument();
   });
 
-  it("renders GitHub contact button", async () => {
-    await renderWithRouter(<About />);
+  it("renders contribution actions", () => {
+    renderAbout();
     expect(screen.getByText("Open an Issue")).toBeInTheDocument();
+    expect(screen.getByText("View Repository")).toBeInTheDocument();
   });
 
-  it("renders content immediately without mounted guard delay", async () => {
-    await renderWithRouter(<About />);
-    expect(screen.getByRole("heading", { level: 1, name: "About" })).toBeInTheDocument();
+  it("renders content immediately without mounted guard delay", () => {
+    renderAbout();
+    expect(
+      screen.getByRole("heading", {
+        level: 1,
+        name: /Built for Dhaka commuters,shaped by a product owner who ships tools/i,
+      }),
+    ).toBeInTheDocument();
   });
 });

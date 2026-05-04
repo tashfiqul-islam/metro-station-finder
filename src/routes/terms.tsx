@@ -86,6 +86,7 @@ const TermsPage = (): React.ReactElement => (
   </LegalPage>
 );
 
+/* v8 ignore next -- framework route registration glue */
 export const Route = createFileRoute("/terms")({
   component: TermsPage,
   head: () =>

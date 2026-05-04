@@ -13,7 +13,9 @@ import { Route as TripPlannerRouteImport } from './routes/trip-planner'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as StationFinderRouteImport } from './routes/station-finder'
 import { Route as StationFaresRouteImport } from './routes/station-fares'
+import { Route as SignupRouteImport } from './routes/signup'
 import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as DataSourcesRouteImport } from './routes/data-sources'
 import { Route as AccessibilityRouteImport } from './routes/accessibility'
 import { Route as AboutRouteImport } from './routes/about'
@@ -39,9 +41,19 @@ const StationFaresRoute = StationFaresRouteImport.update({
   path: '/station-fares',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DataSourcesRoute = DataSourcesRouteImport.update({
@@ -70,7 +82,9 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/accessibility': typeof AccessibilityRoute
   '/data-sources': typeof DataSourcesRoute
+  '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
+  '/signup': typeof SignupRoute
   '/station-fares': typeof StationFaresRoute
   '/station-finder': typeof StationFinderRoute
   '/terms': typeof TermsRoute
@@ -81,7 +95,9 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/accessibility': typeof AccessibilityRoute
   '/data-sources': typeof DataSourcesRoute
+  '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
+  '/signup': typeof SignupRoute
   '/station-fares': typeof StationFaresRoute
   '/station-finder': typeof StationFinderRoute
   '/terms': typeof TermsRoute
@@ -93,7 +109,9 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/accessibility': typeof AccessibilityRoute
   '/data-sources': typeof DataSourcesRoute
+  '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
+  '/signup': typeof SignupRoute
   '/station-fares': typeof StationFaresRoute
   '/station-finder': typeof StationFinderRoute
   '/terms': typeof TermsRoute
@@ -106,7 +124,9 @@ export interface FileRouteTypes {
     | '/about'
     | '/accessibility'
     | '/data-sources'
+    | '/login'
     | '/privacy'
+    | '/signup'
     | '/station-fares'
     | '/station-finder'
     | '/terms'
@@ -117,7 +137,9 @@ export interface FileRouteTypes {
     | '/about'
     | '/accessibility'
     | '/data-sources'
+    | '/login'
     | '/privacy'
+    | '/signup'
     | '/station-fares'
     | '/station-finder'
     | '/terms'
@@ -128,7 +150,9 @@ export interface FileRouteTypes {
     | '/about'
     | '/accessibility'
     | '/data-sources'
+    | '/login'
     | '/privacy'
+    | '/signup'
     | '/station-fares'
     | '/station-finder'
     | '/terms'
@@ -140,7 +164,9 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRoute
   AccessibilityRoute: typeof AccessibilityRoute
   DataSourcesRoute: typeof DataSourcesRoute
+  LoginRoute: typeof LoginRoute
   PrivacyRoute: typeof PrivacyRoute
+  SignupRoute: typeof SignupRoute
   StationFaresRoute: typeof StationFaresRoute
   StationFinderRoute: typeof StationFinderRoute
   TermsRoute: typeof TermsRoute
@@ -177,11 +203,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StationFaresRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/privacy': {
       id: '/privacy'
       path: '/privacy'
       fullPath: '/privacy'
       preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/data-sources': {
@@ -220,7 +260,9 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRoute,
   AccessibilityRoute: AccessibilityRoute,
   DataSourcesRoute: DataSourcesRoute,
+  LoginRoute: LoginRoute,
   PrivacyRoute: PrivacyRoute,
+  SignupRoute: SignupRoute,
   StationFaresRoute: StationFaresRoute,
   StationFinderRoute: StationFinderRoute,
   TermsRoute: TermsRoute,

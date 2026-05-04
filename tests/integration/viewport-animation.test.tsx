@@ -1,17 +1,7 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { ViewportAnimation } from "@/components/common/viewport-animation";
-
-// motion/react is not natively available in jsdom — stub it here.
-// vi.mock is hoisted by Vitest at compile time so this runs before the import above.
-vi.mock("motion/react", () => ({
-  motion: {
-    div: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-      <div {...props}>{children}</div>
-    ),
-  },
-}));
 
 describe("ViewportAnimation", () => {
   it("renders without crashing", () => {

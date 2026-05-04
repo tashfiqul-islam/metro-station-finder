@@ -1,21 +1,7 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { StorySection } from "@/pages/home/sections/story-section";
-
-// motion/react is not available in jsdom — stub it before any import resolves it.
-vi.mock("motion/react", () => ({
-  motion: {
-    div: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-      <div {...props}>{children}</div>
-    ),
-    section: ({ children, ...props }: React.HTMLAttributes<HTMLElement>) => (
-      <section {...props}>{children}</section>
-    ),
-  },
-  useInView: () => true,
-  useReducedMotion: () => false,
-}));
 
 describe("StorySection", () => {
   it("renders without crashing", () => {

@@ -15,9 +15,9 @@ permissions:
 
 jobs:
   ci:
-    name: typecheck · lint · test · build
+    name: typecheck · lint · test · build · e2e
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -35,5 +35,13 @@ jobs:
 
       - name: Run full CI gate
         run: bun run ci
+        env:
+          CI: "true"
+
+      - name: Install Playwright Chromium
+        run: bunx playwright install --with-deps chromium
+
+      - name: Run stable Chromium E2E smoke
+        run: bun run test:e2e -- --project=chromium --workers=1 tests/e2e/meta.spec.ts tests/e2e/navigation.spec.ts
         env:
           CI: "true"

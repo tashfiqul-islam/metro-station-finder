@@ -83,6 +83,7 @@ const PrivacyPage = (): React.ReactElement => (
   </LegalPage>
 );
 
+/* v8 ignore next -- framework route registration glue */
 export const Route = createFileRoute("/privacy")({
   component: PrivacyPage,
   head: () =>

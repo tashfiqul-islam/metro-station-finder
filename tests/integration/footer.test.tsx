@@ -42,7 +42,7 @@ describe("Footer", () => {
 
   it("renders legal section heading", async () => {
     await renderFooter();
-    expect(screen.getByText("Legal")).toBeDefined();
+    expect(screen.getByText("Legal and source")).toBeDefined();
   });
 
   it("renders legal links", async () => {
@@ -63,7 +63,7 @@ describe("Footer", () => {
     expect(screen.getByText(/2026 Metro Station Finder/i)).toBeDefined();
   });
 
-  it("renders built with love attribution", async () => {
+  it("renders the maintainer signature line", async () => {
     await renderFooter();
     expect(screen.getByText(/built with/i)).toBeDefined();
     expect(screen.getAllByText(/tashfiqul islam/i).length).toBeGreaterThan(0);

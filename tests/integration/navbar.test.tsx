@@ -50,12 +50,14 @@ describe("NavBar", () => {
     await waitFor(() => {}, { timeout: 500 });
   });
 
-  it("logo renders full name and short abbreviation", async () => {
+  it("logo renders brand text and desktop/mobile brand assets", async () => {
     await renderNavBar();
     await waitFor(() => {
-      // Both spans are in the DOM; CSS hides one on each breakpoint
       expect(screen.getByText("Metro Station Finder")).toBeDefined();
-      expect(screen.getByText("MSF")).toBeDefined();
+      expect(
+        document.querySelector('img[src="/brand/logo/logo-primary-light.svg"]'),
+      ).not.toBeNull();
+      expect(document.querySelector('img[src="/brand/icon/icon-light.svg"]')).not.toBeNull();
     });
     await waitFor(() => {}, { timeout: 500 });
   });
@@ -102,5 +104,77 @@ describe("NavBar", () => {
       expect(screen.queryByRole("navigation", { name: /mobile navigation/i })).toBeNull();
     });
     await waitFor(() => {}, { timeout: 500 });
+  });
+
+  it("mobile menu closes after clicking a nav link", async () => {
+    await renderNavBar();
+    const hamburger = await screen.findByRole("button", {
+      name: /toggle mobile menu/i,
+    });
+    fireEvent.click(hamburger);
+    await waitFor(() => {
+      expect(screen.getByRole("navigation", { name: /mobile navigation/i })).toBeDefined();
+    });
+
+    const mobileNav = screen.getByRole("navigation", { name: /mobile navigation/i });
+    const aboutLink = screen
+      .getAllByRole("link", { name: "About" })
+      .find((link) => mobileNav.contains(link));
+
+    if (!aboutLink) {
+      throw new Error("Missing mobile About link");
+    }
+
+    fireEvent.click(aboutLink);
+
+    await waitFor(() => {
+      expect(screen.queryByRole("navigation", { name: /mobile navigation/i })).toBeNull();
+    });
+  });
+
+  it("clicking inside the mobile menu does not trigger outside-close logic", async () => {
+    await renderNavBar();
+    const hamburger = await screen.findByRole("button", {
+      name: /toggle mobile menu/i,
+    });
+    fireEvent.click(hamburger);
+
+    const mobileNav = await screen.findByRole("navigation", { name: /mobile navigation/i });
+    fireEvent.mouseDown(mobileNav);
+
+    await waitFor(() => {
+      expect(screen.getByRole("navigation", { name: /mobile navigation/i })).toBeDefined();
+    });
+  });
+
+  it("non-Escape keys do not close the mobile menu", async () => {
+    await renderNavBar();
+    const hamburger = await screen.findByRole("button", {
+      name: /toggle mobile menu/i,
+    });
+    fireEvent.click(hamburger);
+
+    await screen.findByRole("navigation", { name: /mobile navigation/i });
+    fireEvent.keyDown(document, { key: "Enter" });
+
+    await waitFor(() => {
+      expect(screen.getByRole("navigation", { name: /mobile navigation/i })).toBeDefined();
+    });
+  });
+
+  it("adds the scrolled shadow class after window scroll", async () => {
+    await renderNavBar();
+    Object.defineProperty(window, "scrollY", {
+      configurable: true,
+      value: 40,
+    });
+
+    fireEvent.scroll(window);
+
+    await waitFor(() => {
+      expect(document.querySelector("header")?.className).toContain(
+        "drop-shadow-[0_14px_34px_oklch(0_0_0/0.10)]",
+      );
+    });
   });
 });

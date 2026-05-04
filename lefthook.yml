@@ -1,9 +1,8 @@
 # Lefthook — Fast, parallel Git hooks manager.
 # https://lefthook.dev/configuration/
 #
-# This project uses the modern `jobs` syntax (Lefthook 2.x) over the
-# legacy `commands` syntax. Jobs run in parallel by default when
-# `parallel: true` is set at the hook level.
+# This project uses schema-friendly `commands` blocks for hooks.
+# Commands run in parallel when `parallel: true` is set at the hook level.
 #
 # Developer-local overrides can be placed in `lefthook-local.yml`
 # (already gitignored). They merge on top of this file.
@@ -11,15 +10,14 @@
 assert_lefthook_installed: true
 colors: true
 no_tty: false
-skip_output:
+output:
   - meta
   - summary
-  - execution
   - execution_out
 
 pre-commit:
   parallel: true
-  jobs:
+  commands:
     # Matches upstream ultracite/lefthook recommendation: run `ultracite fix`
     # on the whole project with no glob filter. The previous scaffold passed
     # `{staged_files}` and included `.md` in the glob, which caused ultracite
@@ -28,24 +26,24 @@ pre-commit:
     # breaking docs-only commits. Bare `ultracite fix` runs in ~400 ms on
     # this project, handles every file type ultracite supports, and never
     # fails on empty type sets.
-    - name: format
+    format:
       run: bunx ultracite fix
       stage_fixed: true
-    - name: typecheck
+    typecheck:
       glob: "*.{ts,tsx}"
       run: bun run typecheck
 
 pre-push:
   parallel: true
-  jobs:
-    - name: lint
+  commands:
+    lint:
       run: bun run lint
-    - name: typecheck
+    typecheck:
       run: bun run typecheck
-    - name: test-unit
+    test-unit:
       run: bun run test:unit
 
 commit-msg:
-  jobs:
-    - name: commitlint
+  commands:
+    commitlint:
       run: bunx commitlint --edit {1}

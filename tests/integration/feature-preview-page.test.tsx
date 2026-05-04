@@ -3,15 +3,6 @@ import { describe, expect, it, vi } from "vitest";
 
 import { FeaturePreviewPage } from "@/components/common/feature-preview-page";
 
-// motion/react is not available in jsdom — stub it before any import resolves it.
-vi.mock("motion/react", () => ({
-  motion: {
-    div: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-      <div {...props}>{children}</div>
-    ),
-  },
-}));
-
 // Base UI Progress uses ResizeObserver internally — stub it for jsdom.
 if (typeof window !== "undefined" && !window.ResizeObserver) {
   window.ResizeObserver = class ResizeObserver {

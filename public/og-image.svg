@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">Metro Station Finder</title>
+  <desc id="desc">Dhaka MRT-6 metro guide with station finder, fares, and trip planning.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#06130d" />
+      <stop offset="100%" stop-color="#0f2b1c" />
+    </linearGradient>
+    <linearGradient id="accent" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0%" stop-color="#1ecf75" />
+      <stop offset="100%" stop-color="#74e2a7" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)" rx="32" />
+  <g opacity="0.12">
+    <path d="M0 118h1200" stroke="#d9fbe8" stroke-width="2" />
+    <path d="M0 236h1200" stroke="#d9fbe8" stroke-width="2" />
+    <path d="M0 354h1200" stroke="#d9fbe8" stroke-width="2" />
+    <path d="M0 472h1200" stroke="#d9fbe8" stroke-width="2" />
+    <path d="M160 0v630" stroke="#d9fbe8" stroke-width="2" />
+    <path d="M320 0v630" stroke="#d9fbe8" stroke-width="2" />
+    <path d="M480 0v630" stroke="#d9fbe8" stroke-width="2" />
+    <path d="M640 0v630" stroke="#d9fbe8" stroke-width="2" />
+    <path d="M800 0v630" stroke="#d9fbe8" stroke-width="2" />
+    <path d="M960 0v630" stroke="#d9fbe8" stroke-width="2" />
+  </g>
+  <rect x="84" y="82" width="184" height="44" rx="22" fill="#0d2217" stroke="#1ecf75" stroke-opacity="0.35" />
+  <text x="176" y="110" fill="#74e2a7" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="20" font-weight="700" letter-spacing="0.18em" text-anchor="middle">DHAKA MRT-6</text>
+  <text x="84" y="246" fill="#f3fff8" font-family="Oxanium, 'Plus Jakarta Sans', Arial, sans-serif" font-size="88" font-weight="800">Metro Station</text>
+  <text x="84" y="332" fill="url(#accent)" font-family="Oxanium, 'Plus Jakarta Sans', Arial, sans-serif" font-size="88" font-weight="800">Finder</text>
+  <text x="84" y="404" fill="#c7ddcf" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="34" font-weight="500">Station finder, fare calculator, and trip planning for Dhaka commuters.</text>
+  <g transform="translate(84 500)">
+    <path d="M0 20h560" stroke="#1ecf75" stroke-width="10" stroke-linecap="round" />
+    <circle cx="36" cy="20" r="12" fill="#06130d" stroke="#74e2a7" stroke-width="8" />
+    <circle cx="182" cy="20" r="12" fill="#06130d" stroke="#74e2a7" stroke-width="8" />
+    <circle cx="326" cy="20" r="12" fill="#06130d" stroke="#74e2a7" stroke-width="8" />
+    <circle cx="468" cy="20" r="12" fill="#06130d" stroke="#74e2a7" stroke-width="8" />
+    <circle cx="560" cy="20" r="12" fill="#06130d" stroke="#74e2a7" stroke-width="8" />
+  </g>
+</svg>

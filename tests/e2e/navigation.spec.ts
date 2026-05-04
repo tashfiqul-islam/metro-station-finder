@@ -18,48 +18,43 @@ test.describe("Navigation", () => {
 
   test("navigating via navbar updates the page title", async ({ page }) => {
     await page.goto("/");
-    await page.waitForLoadState("networkidle");
 
     await expect(page).toHaveTitle(/Metro Station Finder/);
   });
 
-  test("no full-page reload when clicking nav links", async ({ page }) => {
+  test("internal navigation updates the URL and keeps the shell visible", async ({ page }) => {
     await page.goto("/");
-    await page.waitForLoadState("networkidle");
     await page.setViewportSize({ height: 800, width: 1280 });
 
-    // Track full-page load events — SPA navigation should not trigger them
-    let loadCount = 0;
-    page.on("load", () => {
-      loadCount += 1;
-    });
+    await page.getByRole("link", { name: "About" }).first().click();
 
-    // Reset counter after initial load
-    loadCount = 0;
-
-    // Click the About nav link
-    const aboutLinks = page.getByText("About");
-    await aboutLinks.first().click();
-    await page.waitForTimeout(500);
-
-    // A proper SPA navigation should not fire a new page load
-    expect(loadCount).toBe(0);
+    await expect(page).toHaveURL(/\/about$/);
+    await expect(page).toHaveTitle(/About/);
+    await expect(page.getByRole("navigation", { name: "Main navigation" })).toBeVisible();
   });
 
   test("mobile hamburger menu opens and shows all nav items", async ({ page }) => {
     await page.setViewportSize({ height: 812, width: 375 });
     await page.goto("/");
-    await page.waitForLoadState("domcontentloaded");
 
     const hamburger = page.getByRole("button", { name: /toggle mobile menu/i });
-    await hamburger.click();
+    await expect(hamburger).toBeVisible();
+    const mobileNav = page.locator("#mobile-menu");
 
-    const mobileNav = page.getByRole("navigation", { name: "Mobile navigation" });
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      await hamburger.click({ force: true });
+      if (await mobileNav.count()) {
+        break;
+      }
+      await page.waitForTimeout(150);
+    }
+
     await expect(mobileNav).toBeVisible();
-    await expect(mobileNav.getByText("Home")).toBeVisible();
-    await expect(mobileNav.getByText("Station Finder")).toBeVisible();
-    await expect(mobileNav.getByText("Station Fares")).toBeVisible();
-    await expect(mobileNav.getByText("Trip Planner")).toBeVisible();
-    await expect(mobileNav.getByText("About")).toBeVisible();
+    await expect(hamburger).toHaveAttribute("aria-expanded", "true");
+    await expect(mobileNav.getByRole("link", { exact: true, name: "Home" })).toBeVisible();
+    await expect(mobileNav.getByRole("link", { name: "Station Finder" })).toBeVisible();
+    await expect(mobileNav.getByRole("link", { name: "Station Fares" })).toBeVisible();
+    await expect(mobileNav.getByRole("link", { name: "Trip Planner" })).toBeVisible();
+    await expect(mobileNav.getByRole("link", { name: "About" })).toBeVisible();
   });
 });

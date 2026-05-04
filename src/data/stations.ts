@@ -209,12 +209,8 @@ export const STATIONS: readonly Station[] = parseOrThrow(
 // ─── O(1) lookup helpers ──────────────────────────────────────────────────────
 
 const bySlugMap = new Map<string, Station>();
-const byOrderMap = new Map<number, Station>();
-
 for (const station of STATIONS) {
   bySlugMap.set(station.slug, station);
-  byOrderMap.set(station.orderIndex, station);
 }
 
 export const STATIONS_BY_SLUG: ReadonlyMap<string, Station> = bySlugMap;
-export const STATIONS_BY_ORDER: ReadonlyMap<number, Station> = byOrderMap;

@@ -3,25 +3,36 @@
  */
 
 export interface RouteMeta {
-  title: string;
   description: string;
+  title: string;
   path: string;
   image?: string;
   type?: "website" | "article" | "organization";
 }
 
 const SITE_NAME = "Metro Station Finder";
-const SITE_URL = "https://metro-station-finder.local";
-const SITE_IMAGE = `${SITE_URL}/og-image.png`;
-const TWITTER_HANDLE = "@metrofinderapp";
+const DEFAULT_SITE_URL = "http://localhost:3000";
+const SITE_URL = (import.meta.env["VITE_SITE_URL"] || DEFAULT_SITE_URL).replace(/\/$/, "");
+const SITE_IMAGE = "/og-image.svg";
+const TWITTER_HANDLE = import.meta.env["VITE_TWITTER_HANDLE"];
+
+const getCanonicalUrl = (path: string): string => `${SITE_URL}${path}`;
+
+const getImageUrl = (image?: string): string => {
+  const assetPath = image || SITE_IMAGE;
+  if (assetPath.startsWith("http://") || assetPath.startsWith("https://")) {
+    return assetPath;
+  }
+  return `${SITE_URL}${assetPath}`;
+};
 
 /**
  * Generate meta tags for a route
  */
 export const generateRouteMeta = (route: RouteMeta) => {
   const fullTitle = route.title === SITE_NAME ? route.title : `${route.title} | ${SITE_NAME}`;
-  const canonicalUrl = `${SITE_URL}${route.path}`;
-  const image = route.image || SITE_IMAGE;
+  const canonicalUrl = getCanonicalUrl(route.path);
+  const image = getImageUrl(route.image);
 
   return {
     links: [
@@ -45,7 +56,7 @@ export const generateRouteMeta = (route: RouteMeta) => {
       { content: fullTitle, name: "twitter:title" },
       { content: route.description, name: "twitter:description" },
       { content: image, name: "twitter:image" },
-      { content: TWITTER_HANDLE, name: "twitter:creator" },
+      ...(TWITTER_HANDLE ? [{ content: TWITTER_HANDLE, name: "twitter:creator" }] : []),
     ],
   };
 };
@@ -54,13 +65,13 @@ export const generateRouteMeta = (route: RouteMeta) => {
  * Generate JSON-LD structured data for WebPage
  */
 export const generateWebPageSchema = (route: RouteMeta) => {
-  const canonicalUrl = `${SITE_URL}${route.path}`;
+  const canonicalUrl = getCanonicalUrl(route.path);
 
   const schema = {
     "@context": "https://schema.org",
     "@type": "WebPage",
     description: route.description,
-    image: route.image || SITE_IMAGE,
+    image: getImageUrl(route.image),
     isPartOf: {
       "@type": "WebSite",
       name: SITE_NAME,

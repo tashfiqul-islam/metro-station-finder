@@ -1,268 +1,194 @@
 import {
-  ArrowsDownUpIcon,
   CurrencyCircleDollarIcon,
   MagnifyingGlassIcon,
   MapTrifoldIcon,
   SpeakerHighIcon,
   WheelchairIcon,
-  WifiHighIcon,
 } from "@phosphor-icons/react";
 
-import { BentoCard } from "@/components/common/bento-card";
 import { ViewportAnimation } from "@/components/common/viewport-animation";
 import { cn } from "@/lib/utils";
 
-// ---------------------------------------------------------------------------
-// Visual preview components (decorative, aria-hidden by parent wrapper)
-// ---------------------------------------------------------------------------
+interface FeatureItem {
+  title: string;
+  description: string;
+  outcome: string;
+  icon: React.ElementType;
+  accent: string;
+  accentSolid: string;
+  size: "lg" | "md";
+}
 
-const StationSearchPreview = () => (
-  <div className="mt-5 overflow-hidden rounded-xl border border-border/40 bg-background/30">
-    <div className="flex items-center gap-2 border-b border-border/30 px-3 py-2.5">
-      <MagnifyingGlassIcon className="h-3.5 w-3.5 text-muted-foreground/60" />
-      <span className="text-xs text-muted-foreground/50">Farmgate</span>
-      <span className="relative ml-auto flex h-1.5 w-1.5">
-        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-60" />
-        <span className="relative h-1.5 w-1.5 rounded-full bg-primary" />
-      </span>
-    </div>
-    <div className="divide-y divide-border/20">
-      {[
-        { active: true, detail: "Agargaon ↔ Kawran Bazar", name: "Farmgate" },
-        { active: false, detail: "Bijoy Sarani ↔ Farmgate", name: "Agargaon" },
-        { active: false, detail: "Farmgate ↔ Shahbag", name: "Kawran Bazar" },
-      ].map(({ name, detail, active }) => (
-        <div
-          key={name}
-          className={cn("flex items-center gap-3 px-3 py-2.5", active && "bg-primary/8")}
-        >
-          <div
-            className={cn(
-              "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold",
-              active ? "bg-primary text-primary-foreground" : "bg-muted/60 text-muted-foreground",
-            )}
-          >
-            {name[0]}
-          </div>
-          <div className="min-w-0">
-            <div
-              className={cn(
-                "truncate text-xs font-semibold",
-                active ? "text-primary" : "text-foreground",
-              )}
-            >
-              {name}
-            </div>
-            <div className="truncate text-[10px] text-muted-foreground">{detail}</div>
-          </div>
-          <span className="ml-auto shrink-0 text-[9px] font-medium text-muted-foreground/50">
-            Line 6
-          </span>
-        </div>
-      ))}
-    </div>
-  </div>
-);
+const FEATURES: FeatureItem[] = [
+  {
+    accent: "oklch(0.64 0.2 145 / 0.10)",
+    accentSolid: "oklch(0.64 0.2 145)",
+    description:
+      "Look up the MRT-6 stations by name and move straight to the stop you actually need.",
+    icon: MagnifyingGlassIcon,
+    outcome: "Station lookup",
+    size: "lg",
+    title: "Find the right station",
+  },
+  {
+    accent: "oklch(0.74 0.15 75 / 0.10)",
+    accentSolid: "oklch(0.74 0.15 75)",
+    description: "Check the fare between two points before you arrive at the ticket machine.",
+    icon: CurrencyCircleDollarIcon,
+    outcome: "Fare answer",
+    size: "lg",
+    title: "Check the price first",
+  },
+  {
+    accent: "oklch(0.60 0.18 249 / 0.10)",
+    accentSolid: "oklch(0.60 0.18 249)",
+    description:
+      "See the route, count the stops, and understand the stretch of line you are taking.",
+    icon: MapTrifoldIcon,
+    outcome: "Trip clarity",
+    size: "lg",
+    title: "Plan the journey",
+  },
+  {
+    accent: "oklch(0.67 0.15 155 / 0.10)",
+    accentSolid: "oklch(0.67 0.15 155)",
+    description: "Check platform and service signals without digging through fragmented updates.",
+    icon: SpeakerHighIcon,
+    outcome: "Service status",
+    size: "md",
+    title: "See live operating context",
+  },
+  {
+    accent: "oklch(0.61 0.21 299 / 0.10)",
+    accentSolid: "oklch(0.61 0.21 299)",
+    description: "Understand lift, ramp, and mobility-support information before arriving on site.",
+    icon: WheelchairIcon,
+    outcome: "Access details",
+    size: "md",
+    title: "Check accessibility quickly",
+  },
+] as const;
 
-const FareCalculatorPreview = () => (
-  <div className="mt-5 rounded-xl border border-border/40 bg-background/30 p-4">
-    <div className="flex items-center gap-2">
-      <div className="flex-1 rounded-lg border border-border/40 bg-card/50 p-2.5 text-center">
-        <div className="text-[9px] font-medium uppercase tracking-wider text-muted-foreground">
-          From
-        </div>
-        <div className="mt-0.5 text-xs font-bold text-foreground">Uttara North</div>
-      </div>
-      <div className="text-xs text-muted-foreground/50">→</div>
-      <div className="flex-1 rounded-lg border border-border/40 bg-card/50 p-2.5 text-center">
-        <div className="text-[9px] font-medium uppercase tracking-wider text-muted-foreground">
-          To
-        </div>
-        <div className="mt-0.5 text-xs font-bold text-foreground">Motijheel</div>
-      </div>
-    </div>
-    <div className="mt-3 rounded-xl border border-amber-500/20 bg-amber-500/8 py-3 text-center">
-      <div className="text-2xl font-black" style={{ color: "oklch(0.78 0.13 75)" }}>
-        ৳ 100
-      </div>
-      <div className="mt-0.5 text-[10px] text-muted-foreground">Single journey fare</div>
-    </div>
-  </div>
-);
+const FeatureCard = ({
+  accent,
+  accentSolid,
+  description,
+  icon: Icon,
+  outcome,
+  size,
+  title,
+}: FeatureItem): React.ReactElement => (
+  <article
+    className={cn(
+      "section-card group relative flex h-full flex-col overflow-hidden rounded-[1.75rem] p-6 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-[0_24px_70px_oklch(0_0_0/0.10)]",
+      size === "lg" && "min-h-64",
+    )}
+    data-feature-size={size}
+    data-testid="feature-card"
+  >
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-x-0 top-0 h-px"
+      style={{
+        background: `linear-gradient(90deg, transparent, ${accentSolid}, transparent)`,
+        opacity: 0.55,
+      }}
+    />
 
-const TripPlanningPreview = () => (
-  <div className="mt-5 space-y-0">
-    {[
-      { name: "Mirpur 10", time: "depart" },
-      { name: "Agargaon", time: "4 min" },
-      { name: "Farmgate", time: "9 min" },
-      { name: "Shahbag", time: "14 min" },
-    ].map(({ name, time }, i, arr) => (
-      <div key={name} className="flex items-start gap-3">
-        <div className="flex flex-col items-center pt-0.5">
-          <div
-            className={cn(
-              "h-2.5 w-2.5 shrink-0 rounded-full border-2",
-              i === 0 || i === arr.length - 1
-                ? "border-primary bg-primary"
-                : "border-primary/50 bg-background",
-            )}
-          />
-          {i < arr.length - 1 && (
-            <div
-              className="w-0.5 flex-1 bg-gradient-to-b from-primary/50 to-primary/20"
-              style={{ height: "1.5rem" }}
-            />
-          )}
-        </div>
-        <div className="flex w-full items-baseline justify-between pb-3">
-          <span
-            className={cn(
-              "text-xs font-medium",
-              i === 0 || i === arr.length - 1 ? "text-foreground" : "text-muted-foreground",
-            )}
-          >
-            {name}
-          </span>
-          <span className="text-[10px] text-muted-foreground/60">{time}</span>
-        </div>
-      </div>
-    ))}
-  </div>
-);
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full blur-3xl"
+      style={{ background: accent }}
+    />
 
-const LiveUpdatesPreview = () => (
-  <div className="mt-4 space-y-2">
-    <div className="flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/8 px-3 py-2">
-      <span className="relative flex h-2 w-2 shrink-0">
-        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
-        <span className="relative h-2 w-2 rounded-full bg-emerald-500" />
-      </span>
-      <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-        All services normal
-      </span>
-    </div>
-    <div className="grid grid-cols-2 gap-1.5">
-      <div className="rounded-lg bg-muted/40 px-2.5 py-2 text-center">
-        <div className="text-xs font-bold text-foreground">5 min</div>
-        <div className="text-[9px] text-muted-foreground">Headway</div>
-      </div>
-      <div className="rounded-lg bg-muted/40 px-2.5 py-2 text-center">
-        <div className="text-xs font-bold text-foreground">17</div>
-        <div className="text-[9px] text-muted-foreground">Stations</div>
-      </div>
-    </div>
-  </div>
-);
-
-const AccessibilityPreview = () => (
-  <div className="mt-4 grid grid-cols-3 gap-2">
-    {[
-      { icon: WheelchairIcon, label: "Lifts" },
-      { icon: ArrowsDownUpIcon, label: "Ramps" },
-      { icon: SpeakerHighIcon, label: "Audio" },
-    ].map(({ icon: Icon, label }) => (
+    <div className="relative z-10 flex items-start justify-between gap-4">
       <div
-        key={label}
-        className="flex flex-col items-center gap-1.5 rounded-xl border border-border/40 bg-muted/30 py-3"
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-border/35 bg-muted/65"
+        style={{ boxShadow: `0 8px 24px ${accent}` }}
       >
-        <Icon className="h-5 w-5 text-primary/70" weight="duotone" />
-        <span className="text-[10px] text-muted-foreground">{label}</span>
+        <Icon aria-hidden className="h-5 w-5" style={{ color: accentSolid }} weight="duotone" />
       </div>
-    ))}
-  </div>
-);
 
-// ---------------------------------------------------------------------------
-// Section
-// ---------------------------------------------------------------------------
+      <div className="text-right text-[11px] font-semibold uppercase tracking-[0.2em] text-primary/70">
+        {outcome}
+      </div>
+    </div>
+
+    <div className="relative z-10 mt-8 flex flex-1 flex-col">
+      <h3 className="font-heading text-xl font-bold tracking-tight text-foreground">{title}</h3>
+      <p className="mt-4 text-sm leading-7 text-muted-foreground">{description}</p>
+    </div>
+  </article>
+);
 
 export const FeaturesSection = (): React.ReactElement => (
-  <section aria-label="Features" className="py-20">
-    <div className="container mx-auto px-4">
-      {/* Section header */}
-      <ViewportAnimation>
-        <div className="mb-12 text-center">
-          <div className="mb-4 flex items-center justify-center gap-3">
-            <div className="h-px w-8 bg-primary/50" />
-            <span className="text-xs font-semibold uppercase tracking-widest text-primary/70">
-              Features
-            </span>
-            <div className="h-px w-8 bg-primary/50" />
+  <section aria-label="Features" className="relative py-24 lg:py-32">
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0"
+      style={{
+        background:
+          "radial-gradient(38% 24% at 18% 18%, oklch(0.64 0.2 145 / 0.07), transparent), radial-gradient(34% 22% at 84% 74%, oklch(0.60 0.18 249 / 0.06), transparent)",
+      }}
+    />
+
+    <div className="container relative mx-auto px-4">
+      <div className="grid gap-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-14">
+        <ViewportAnimation>
+          <div className="max-w-xl">
+            <div className="mb-4 flex items-center gap-3">
+              <div aria-hidden className="h-px w-8 bg-primary/50" />
+              <span className="section-kicker">Capabilities</span>
+            </div>
+
+            <h2
+              className="font-heading text-3xl font-bold tracking-tight lg:text-4xl"
+              style={{
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                background:
+                  "linear-gradient(135deg, oklch(0.52 0.12 145), oklch(0.72 0.18 145) 45%, oklch(0.58 0.22 145))",
+                backgroundClip: "text",
+              }}
+            >
+              Everything you need
+            </h2>
+
+            <p className="mt-5 max-w-lg text-base leading-8 text-muted-foreground sm:text-lg">
+              The product is built around five commuter tasks. Each one reduces a specific transit
+              decision to a direct answer.
+            </p>
+
+            <div className="section-panel mt-10 p-6">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary/70">
+                Product focus
+              </div>
+              <p className="mt-3 text-sm leading-7 text-muted-foreground">
+                Not a dashboard. Not a transport encyclopedia. Just the key pieces of information a
+                rider needs before, during, and between stations.
+              </p>
+            </div>
           </div>
-          <h2
-            className="font-heading text-3xl font-bold lg:text-4xl"
-            style={{
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              background:
-                "linear-gradient(135deg, oklch(0.52 0.12 145), oklch(0.72 0.18 145) 45%, oklch(0.58 0.22 145))",
-              backgroundClip: "text",
-            }}
-          >
-            Everything you need
-          </h2>
-          <p className="mt-3 text-muted-foreground">
-            Five tools built for Dhaka commuters. Fast, accurate, and completely free.
-          </p>
-        </div>
-      </ViewportAnimation>
+        </ViewportAnimation>
 
-      {/* Bento grid */}
-      <ViewportAnimation delay={0.1}>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:gap-5">
-          {/* Card 1 — Station Search (col-span-2) */}
-          <BentoCard
-            size="lg"
-            className="md:col-span-2"
-            accent="oklch(0.64 0.2 145 / 0.15)"
-            icon={<MagnifyingGlassIcon size={28} weight="duotone" />}
-            title="Station Search"
-            description="Find any of the 17 MRT Line 6 stations instantly. Search by name, get location details, nearby landmarks, and real-time service information."
-            visual={<StationSearchPreview />}
-          />
+        <ViewportAnimation delay={0.08}>
+          <div className="grid gap-4 lg:gap-5">
+            <div className="grid gap-4 md:grid-cols-2 lg:gap-5">
+              {FEATURES.slice(0, 2).map((feature) => (
+                <FeatureCard key={feature.title} {...feature} />
+              ))}
+            </div>
 
-          {/* Card 2 — Fare Calculator */}
-          <BentoCard
-            size="md"
-            accent="oklch(0.78 0.13 75 / 0.15)"
-            icon={<CurrencyCircleDollarIcon size={28} weight="duotone" />}
-            title="Fare Calculator"
-            description="Calculate exact fares between any two stations. Get single journey, return trip, and MRT Pass pricing in seconds."
-            visual={<FareCalculatorPreview />}
-          />
+            <FeatureCard {...(FEATURES[2] as FeatureItem)} />
 
-          {/* Card 3 — Trip Planning */}
-          <BentoCard
-            size="md"
-            accent="oklch(0.57 0.19 249 / 0.15)"
-            icon={<MapTrifoldIcon size={28} weight="duotone" />}
-            title="Trip Planning"
-            description="Plan multi-leg journeys with optimal routes, estimated travel times, and interchange guidance across the network."
-            visual={<TripPlanningPreview />}
-          />
-
-          {/* Card 4 — Live Updates */}
-          <BentoCard
-            size="sm"
-            accent="oklch(0.65 0.18 142 / 0.15)"
-            icon={<WifiHighIcon size={24} weight="duotone" />}
-            title="Live Updates"
-            description="Service status and platform information updated in real time."
-            visual={<LiveUpdatesPreview />}
-          />
-
-          {/* Card 5 — Accessibility */}
-          <BentoCard
-            size="sm"
-            accent="oklch(0.61 0.23 299 / 0.15)"
-            icon={<WheelchairIcon size={24} weight="duotone" />}
-            title="Accessibility"
-            description="Lift locations, accessible routes, and mobility aid facilities at every station."
-            visual={<AccessibilityPreview />}
-          />
-        </div>
-      </ViewportAnimation>
+            <div className="grid gap-4 md:grid-cols-2 lg:gap-5">
+              {FEATURES.slice(3).map((feature) => (
+                <FeatureCard key={feature.title} {...feature} />
+              ))}
+            </div>
+          </div>
+        </ViewportAnimation>
+      </div>
     </div>
   </section>
 );

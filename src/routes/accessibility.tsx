@@ -80,6 +80,7 @@ const AccessibilityPage = (): React.ReactElement => (
   </LegalPage>
 );
 
+/* v8 ignore next -- framework route registration glue */
 export const Route = createFileRoute("/accessibility")({
   component: AccessibilityPage,
   head: () =>

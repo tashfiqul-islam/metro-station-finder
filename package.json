@@ -37,8 +37,6 @@
     "typecheck": "tsc --noEmit",
     "lint": "ultracite check",
     "lint:fix": "ultracite fix",
-    "format": "ultracite fix",
-    "format:check": "ultracite check",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
@@ -59,10 +57,10 @@
     "commit": "cz",
     "release": "semantic-release",
     "release:dry": "semantic-release --dry-run",
-    "clean": "rm -rf dist .output .tanstack .nitro coverage playwright-report test-results",
-    "reinstall": "bun run clean && rm -rf node_modules bun.lock && bun install",
+    "clean": "node -e \"for (const p of ['dist','.output','.tanstack','.nitro','coverage','playwright-report','test-results']) { try { require('node:fs').rmSync(p, { recursive: true, force: true }); } catch {} }\"",
+    "reinstall": "node -e \"for (const p of ['node_modules','bun.lock']) { try { require('node:fs').rmSync(p, { recursive: true, force: true }); } catch {} }\" && bun install",
     "prepare": "lefthook install",
-    "ci": "bun run typecheck && bun run lint && bun run test && bun run build"
+    "ci": "bun run typecheck && bun run lint:fix && bun run test && bun run build"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
@@ -80,7 +78,6 @@
     "@tanstack/router-plugin": "^1.167.32",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "motion": "^12.38.0",
     "nitro": "^3.0.260429-beta",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",

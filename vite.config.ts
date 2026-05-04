@@ -9,7 +9,7 @@ import { defineConfig } from "vite";
 
 // https://vite.dev/config
 // https://tanstack.com/start/latest/docs/framework/react/guide/static-prerendering
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   build: {
     chunkSizeWarningLimit: 600,
     cssMinify: "lightningcss",
@@ -69,6 +69,13 @@ export default defineConfig({
     viteReact(),
   ],
 
+  // Prerender spins up Vite preview after build. Keep it off the dev port so
+  // `vite build` does not fail when a local dev server is already running.
+  preview: {
+    port: 4173,
+    strictPort: true,
+  },
+
   // Path alias — kept in sync with tsconfig.json `paths`.
   // Plain alias is stable across Vite / Vitest / Rolldown / IDE TS servers.
   // Vite 8's `resolve.tsconfigPaths` is experimental and has flaky IDE types.
@@ -79,7 +86,7 @@ export default defineConfig({
   },
 
   server: {
-    port: 3000,
+    port: command === "serve" ? 3000 : 4173,
     strictPort: true,
   },
-});
+}));

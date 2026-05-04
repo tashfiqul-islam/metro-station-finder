@@ -106,6 +106,7 @@ const DataSourcesPage = (): React.ReactElement => (
   </LegalPage>
 );
 
+/* v8 ignore next -- framework route registration glue */
 export const Route = createFileRoute("/data-sources")({
   component: DataSourcesPage,
   head: () =>

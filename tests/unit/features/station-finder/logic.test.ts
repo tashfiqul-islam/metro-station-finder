@@ -69,7 +69,13 @@ describe("findNearest", () => {
     };
     const result = findNearest(midpoint, STATIONS);
     // Both are equidistant; Farmgate has lower orderIndex (11 < 12)
-    expect(result.orderIndex).toBeLessThanOrEqual(result.orderIndex);
-    expect(["farmgate", "karwan-bazar"]).toContain(result.slug);
+    expect(result.orderIndex).toBe(farmgate.orderIndex);
+    expect(result.slug).toBe("farmgate");
+  });
+
+  it("throws on an empty station list", () => {
+    expect(() => findNearest({ lat: 0, lng: 0 }, [])).toThrow(
+      "findNearest requires a non-empty stations array",
+    );
   });
 });

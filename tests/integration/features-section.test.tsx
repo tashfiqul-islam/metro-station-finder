@@ -1,21 +1,7 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { FeaturesSection } from "@/pages/home/sections/features-section";
-
-// motion/react is not available in jsdom — stub it before any import resolves it.
-vi.mock("motion/react", () => ({
-  motion: {
-    div: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-      <div {...props}>{children}</div>
-    ),
-    section: ({ children, ...props }: React.HTMLAttributes<HTMLElement>) => (
-      <section {...props}>{children}</section>
-    ),
-  },
-  useInView: () => true,
-  useReducedMotion: () => false,
-}));
 
 describe("FeaturesSection", () => {
   it("renders without crashing", () => {
@@ -30,28 +16,28 @@ describe("FeaturesSection", () => {
 
   it("renders 5 BentoCard elements", () => {
     render(<FeaturesSection />);
-    const cards = screen.getAllByTestId("bento-card");
+    const cards = screen.getAllByTestId("feature-card");
     expect(cards).toHaveLength(5);
   });
 
-  it('first BentoCard has data-size="lg"', () => {
+  it('first feature card has data-feature-size="lg"', () => {
     render(<FeaturesSection />);
-    const cards = screen.getAllByTestId("bento-card");
-    expect(cards[0]?.dataset["size"]).toBe("lg");
+    const cards = screen.getAllByTestId("feature-card");
+    expect(cards[0]?.dataset["featureSize"]).toBe("lg");
   });
 
-  it('has "Station Search" text', () => {
+  it('has "Find the right station" text', () => {
     render(<FeaturesSection />);
-    expect(screen.getByText("Station Search")).toBeDefined();
+    expect(screen.getByText("Find the right station")).toBeDefined();
   });
 
-  it('has "Fare Calculator" text', () => {
+  it('has "Check the price first" text', () => {
     render(<FeaturesSection />);
-    expect(screen.getByText("Fare Calculator")).toBeDefined();
+    expect(screen.getByText("Check the price first")).toBeDefined();
   });
 
-  it('has "Trip Planning" text', () => {
+  it('has "Plan the journey" text', () => {
     render(<FeaturesSection />);
-    expect(screen.getByText("Trip Planning")).toBeDefined();
+    expect(screen.getByText("Plan the journey")).toBeDefined();
   });
 });
