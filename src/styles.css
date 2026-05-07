@@ -279,24 +279,6 @@
     border: 2px solid transparent;
     background-clip: padding-box;
   }
-
-  @media (prefers-reduced-motion: no-preference) {
-    ::view-transition-group(root) {
-      animation-duration: 240ms;
-      animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
-    }
-
-    ::view-transition-old(root),
-    ::view-transition-new(root) {
-      animation-duration: 240ms;
-      animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
-      mix-blend-mode: normal;
-    }
-
-    ::view-transition-image-pair(root) {
-      isolation: auto;
-    }
-  }
 }
 
 @layer components {

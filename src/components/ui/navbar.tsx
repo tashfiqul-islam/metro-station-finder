@@ -12,7 +12,6 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { memo, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-import { Theme } from "@/components/navbar/theme";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -49,9 +48,9 @@ const NavLink = memo(
         "cursor-pointer no-underline hover:no-underline",
         "transition-all duration-200",
         "text-muted-foreground hover:text-foreground",
-        "data-[status=active]:bg-foreground/[0.05] data-[status=active]:font-semibold data-[status=active]:text-foreground",
+        "data-[status=active]:bg-foreground/5 data-[status=active]:font-semibold data-[status=active]:text-foreground",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
-        isActive && "bg-foreground/[0.05] font-semibold text-foreground",
+        isActive && "bg-foreground/5 font-semibold text-foreground",
       )}
       data-value={href}
       style={{ background: "none", border: "none" }}
@@ -78,14 +77,9 @@ export const NavBar = (): React.ReactElement => {
   const routerState = useRouterState();
   const { pathname } = routerState.location;
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLElement>(null);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 16);
@@ -206,27 +200,24 @@ export const NavBar = (): React.ReactElement => {
             </div>
 
             {/* ── Controls ── */}
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2">
               <div className="hidden items-center gap-2 lg:flex">
                 <Button
                   asChild={<Link to="/login">Log in</Link>}
-                  className="rounded-full px-4 text-sm font-medium"
+                  className="rounded-full border border-border/45 bg-background/72 px-4 text-sm font-medium text-foreground/88 backdrop-blur-sm hover:border-primary/20 hover:bg-foreground/[0.035] hover:text-foreground dark:bg-background/48"
                   size="sm"
-                  variant="ghost"
+                  variant="outline"
                 />
                 <Button
                   asChild={<Link to="/signup">Sign up</Link>}
-                  className="rounded-full px-4 text-sm font-semibold shadow-[0_10px_24px_oklch(0.44_0.145_145_/_0.20)]"
+                  className="rounded-full px-4 text-sm font-semibold shadow-[0_10px_24px_oklch(0.44_0.145_145/0.20)]"
                   size="sm"
                   variant="primary"
                 />
               </div>
 
-              <Theme />
-
               <div aria-hidden="true" className="mx-1 hidden h-5 w-px bg-border/45 lg:block" />
 
-              {/* GitHub */}
               <a
                 aria-label="View project on GitHub"
                 className={cn(
@@ -280,7 +271,7 @@ export const NavBar = (): React.ReactElement => {
       </header>
 
       {/* ── Mobile dropdown — portal to avoid containment clipping ── */}
-      {mounted &&
+      {typeof document !== "undefined" &&
         isMobileMenuOpen &&
         createPortal(
           <nav
@@ -370,7 +361,7 @@ export const NavBar = (): React.ReactElement => {
               <div className="mb-3 flex gap-2">
                 <Button
                   asChild={<Link to="/login">Log in</Link>}
-                  className="flex-1 rounded-full"
+                  className="flex-1 rounded-full border-border/45 bg-background/72 text-foreground/88 dark:bg-background/48"
                   size="sm"
                   variant="outline"
                 />

@@ -1,7 +1,12 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { Theme, applyTheme } from "@/components/navbar/theme";
+import {
+  Theme,
+  applyTheme,
+  disableTransitionsTemporarily,
+  transitionTheme,
+} from "@/components/navbar/theme";
 
 beforeEach(() => {
   localStorage.clear();
@@ -60,6 +65,55 @@ describe("Theme", () => {
     expect(() => applyTheme("dark")).not.toThrow();
 
     globalThis.document = originalDocument;
+  });
+
+  it("transitionTheme falls back safely when browser globals are unavailable", () => {
+    const originalDocument = globalThis.document;
+    const originalWindow = globalThis.window;
+
+    Reflect.deleteProperty(globalThis, "document");
+    Reflect.deleteProperty(globalThis, "window");
+
+    expect(() => transitionTheme("dark")).not.toThrow();
+
+    globalThis.document = originalDocument;
+    globalThis.window = originalWindow;
+  });
+
+  it("disableTransitionsTemporarily returns a safe noop when document is unavailable", () => {
+    const originalDocument = globalThis.document;
+    Reflect.deleteProperty(globalThis, "document");
+
+    expect(() => disableTransitionsTemporarily()()).not.toThrow();
+
+    globalThis.document = originalDocument;
+  });
+
+  it("disableTransitionsTemporarily skips getComputedStyle when window is unavailable", () => {
+    const originalWindow = globalThis.window;
+    Reflect.deleteProperty(globalThis, "window");
+
+    const restoreTransitions = disableTransitionsTemporarily();
+    expect(document.head.querySelector("style[data-theme-transition='true']")).not.toBeNull();
+
+    restoreTransitions();
+    expect(document.head.querySelector("style[data-theme-transition='true']")).toBeNull();
+
+    globalThis.window = originalWindow;
+  });
+
+  it("disableTransitionsTemporarily injects and removes the transition blocker", () => {
+    const getComputedStyleSpy = vi.spyOn(window, "getComputedStyle");
+    const restoreTransitions = disableTransitionsTemporarily();
+
+    expect(document.head.querySelector("style[data-theme-transition='true']")).not.toBeNull();
+    expect(getComputedStyleSpy).toHaveBeenCalledWith(document.body);
+
+    restoreTransitions();
+
+    expect(document.head.querySelector("style[data-theme-transition='true']")).toBeNull();
+
+    getComputedStyleSpy.mockRestore();
   });
 
   it("falls back to system when localStorage throws", async () => {
@@ -139,5 +193,20 @@ describe("Theme", () => {
     await waitFor(() => {
       expect(document.documentElement.classList.contains("dark")).toBe(false);
     });
+  });
+
+  it("transitionTheme applies the theme and removes the temporary transition blocker", () => {
+    vi.useFakeTimers();
+
+    transitionTheme("dark");
+
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
+    expect(document.head.querySelector("style[data-theme-transition='true']")).not.toBeNull();
+
+    vi.runAllTimers();
+
+    expect(document.head.querySelector("style[data-theme-transition='true']")).toBeNull();
+
+    vi.useRealTimers();
   });
 });

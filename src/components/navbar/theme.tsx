@@ -16,6 +16,7 @@ const THEME_OPTIONS = [
 const THEME_CELL_SIZE = 28;
 const THEME_GAP = 2;
 const THEME_PADDING = 4;
+const noop = () => void 0;
 
 const getThemeIndex = (theme: ThemeValue): number =>
   THEME_OPTIONS.findIndex((option) => option.value === theme);
@@ -53,25 +54,39 @@ export const applyTheme = (theme: ThemeValue): void => {
   html.classList.add(effective);
 };
 
-const transitionTheme = (theme: ThemeValue): void => {
+export const disableTransitionsTemporarily = (): (() => void) => {
+  if (typeof document === "undefined") {
+    return noop;
+  }
+
+  const style = document.createElement("style");
+  style.dataset["themeTransition"] = "true";
+  style.append(
+    document.createTextNode(
+      `*,*::before,*::after{-webkit-transition:none!important;transition:none!important}`,
+    ),
+  );
+
+  document.head.append(style);
+
+  if (typeof window !== "undefined") {
+    window.getComputedStyle(document.body);
+  }
+
+  return () => {
+    style.remove();
+  };
+};
+
+export const transitionTheme = (theme: ThemeValue): void => {
   if (typeof document === "undefined" || typeof window === "undefined") {
     applyTheme(theme);
     return;
   }
 
-  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const doc = document as Document & {
-    startViewTransition?: Document["startViewTransition"];
-  };
-
-  if (!doc.startViewTransition || prefersReducedMotion) {
-    applyTheme(theme);
-    return;
-  }
-
-  doc.startViewTransition(() => {
-    applyTheme(theme);
-  });
+  const restoreTransitions = disableTransitionsTemporarily();
+  applyTheme(theme);
+  setTimeout(restoreTransitions, 0);
 };
 
 export const Theme = () => {
@@ -114,11 +129,7 @@ export const Theme = () => {
     return (
       <div
         aria-hidden="true"
-        className="h-9 w-24 rounded-full opacity-0"
-        style={{
-          backgroundColor: "oklch(var(--background) / 0.72)",
-          border: "1px solid var(--color-border)",
-        }}
+        className="h-9 w-24 rounded-full border border-border/45 bg-background/72 opacity-0 backdrop-blur-sm dark:bg-background/48"
       />
     );
   }
@@ -126,18 +137,16 @@ export const Theme = () => {
   return (
     <div
       aria-label="Theme selector"
-      className="relative isolate inline-flex h-9 items-center rounded-full border shadow-[0_1px_6px_oklch(0_0_0/0.04),inset_0_1px_0_oklch(1_0_0/0.08)]"
+      className="relative isolate inline-flex h-9 items-center rounded-full border border-border/45 bg-background/72 backdrop-blur-sm dark:bg-background/48"
       role="group"
       style={{
-        backgroundColor: "var(--color-surface-2)",
-        borderColor: "var(--color-border)",
         gap: `${THEME_GAP}px`,
         padding: `${THEME_PADDING}px`,
       }}
     >
       <div
         aria-hidden="true"
-        className="absolute left-0 top-1/2 rounded-full border bg-background shadow-[0_4px_12px_oklch(0_0_0/0.08),inset_0_1px_0_oklch(1_0_0/0.12)] transition-transform duration-250 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform"
+        className="absolute left-0 top-1/2 rounded-full border bg-background transition-transform duration-250 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform"
         style={{
           borderColor: "var(--color-border)",
           height: `${THEME_CELL_SIZE}px`,
@@ -167,7 +176,7 @@ export const Theme = () => {
             <Icon
               aria-hidden="true"
               className={cn(
-                "relative z-10 h-[15px] w-[15px] transition-[transform,color,opacity] duration-200",
+                "relative z-10 h-3.75 w-3.75 transition-[transform,color,opacity] duration-200",
                 isActive ? "scale-100" : "group-hover:scale-105",
               )}
               style={{

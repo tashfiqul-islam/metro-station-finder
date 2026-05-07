@@ -2,6 +2,8 @@ import { CoffeeIcon, GithubLogoIcon, HeartStraightIcon } from "@phosphor-icons/r
 import { Link } from "@tanstack/react-router";
 import { memo } from "react";
 
+import { Theme } from "@/components/navbar/theme";
+
 const LEGAL_LINKS = [
   { href: "/privacy", label: "Privacy Policy" },
   { href: "/terms", label: "Terms of Use" },
@@ -116,7 +118,7 @@ export const Footer = memo(
           </div>
         </div>
 
-        <div className="mt-6 flex flex-col gap-3 border-t border-border/35 pt-4 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-6 flex flex-col gap-4 border-t border-border/35 pt-4 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
             <span>&copy; 2026 Metro Station Finder</span>
             <span aria-hidden="true" className="text-border">
@@ -132,25 +134,33 @@ export const Footer = memo(
             </a>
           </div>
 
-          <p className="inline-flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground/75">
-            <span>Built with</span>
-            <HeartStraightIcon
-              aria-hidden="true"
-              className="h-3.5 w-3.5 text-primary"
-              weight="fill"
-            />
-            <span>and</span>
-            <CoffeeIcon aria-hidden="true" className="h-3.5 w-3.5 text-primary" weight="duotone" />
-            <span>by</span>
-            <a
-              className="font-medium text-foreground/85 transition-colors duration-200 hover:text-foreground"
-              href="https://github.com/tashfiqul-islam"
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              Tashfiqul Islam
-            </a>
-          </p>
+          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-4">
+            <Theme />
+            <div aria-hidden="true" className="hidden h-5 w-px bg-border/35 sm:block" />
+            <p className="inline-flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground/75">
+              <span>Built with</span>
+              <HeartStraightIcon
+                aria-hidden="true"
+                className="h-3.5 w-3.5 text-primary"
+                weight="fill"
+              />
+              <span>and</span>
+              <CoffeeIcon
+                aria-hidden="true"
+                className="h-3.5 w-3.5 text-primary"
+                weight="duotone"
+              />
+              <span>by</span>
+              <a
+                className="font-medium text-foreground/85 transition-colors duration-200 hover:text-foreground"
+                href="https://github.com/tashfiqul-islam"
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                Tashfiqul Islam
+              </a>
+            </p>
+          </div>
         </div>
       </div>
     </footer>
