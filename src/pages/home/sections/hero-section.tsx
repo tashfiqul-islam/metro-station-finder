@@ -7,6 +7,7 @@ import {
 } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
 
+import { warmMapCanvas } from "@/components/common/map-canvas";
 import { RouteMapSvg } from "@/components/common/route-map-svg";
 import { ViewportAnimation } from "@/components/common/viewport-animation";
 import { Button } from "@/components/ui/button";
@@ -99,7 +100,15 @@ export const HeroSection = (): React.ReactElement => (
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
               <Button
                 asChild={
-                  <Link to="/station-finder">
+                  <Link
+                    onFocus={() => {
+                      void warmMapCanvas();
+                    }}
+                    onMouseEnter={() => {
+                      void warmMapCanvas();
+                    }}
+                    to="/station-finder"
+                  >
                     <span className="inline-flex items-center gap-2">
                       Explore Stations
                       <ArrowRightIcon className="h-4 w-4" weight="bold" />
