@@ -3,16 +3,11 @@ import { Suspense, lazy } from "react";
 
 import { cn } from "@/lib/utils";
 
-const MAP_CANVAS_CLIENT_MODULE = "@/components/common/map-canvas-client";
-
 interface MapCanvasClientModule {
   MapCanvasClient: (props: MapCanvasProps) => React.ReactElement;
 }
 
-const loadMapCanvasClient = () => 
-  /* @vite-ignore */
-  import(MAP_CANVAS_CLIENT_MODULE) as Promise<MapCanvasClientModule>
-;
+const loadMapCanvasClient = () => import("./map-canvas-client") as Promise<MapCanvasClientModule>;
 
 const LazyMapCanvasClient = lazy(async () => {
   const module = await loadMapCanvasClient();
