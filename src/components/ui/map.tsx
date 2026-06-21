@@ -624,6 +624,7 @@ type MarkerTooltipProps = {
   className?: string;
 } & Omit<PopupOptions, "className" | "closeButton" | "closeOnClick">;
 
+/* v8 ignore start -- Unused registry extras retained from generated mapcn source. Remove this block-level coverage ignore when this repo first edits or relies on these exports in product code. */
 const MarkerTooltip = ({
   children,
   className,
@@ -725,6 +726,7 @@ const MarkerLabel = ({
     </div>
   );
 };
+/* v8 ignore stop -- Unused registry extras retained from generated mapcn source. Remove this block-level coverage ignore when this repo first edits or relies on these exports in product code. */
 
 interface MapControlsProps {
   /** Position of the controls on the map (default: "bottom-right") */
@@ -957,6 +959,7 @@ type MapPopupProps = {
   closeButton?: boolean;
 } & Omit<PopupOptions, "className" | "closeButton">;
 
+/* v8 ignore start -- Unused registry extras retained from generated mapcn source. Remove this block-level coverage ignore when this repo first edits or relies on these exports in product code. */
 const MapPopup = ({
   longitude,
   latitude,
@@ -1842,6 +1845,7 @@ const MapClusterLayer = <P extends GeoJsonProperties = GeoJsonProperties>({
 
   return null;
 };
+/* v8 ignore stop -- Unused registry extras retained from generated mapcn source. Remove this block-level coverage ignore when this repo first edits or relies on these exports in product code. */
 
 export {
   Map,

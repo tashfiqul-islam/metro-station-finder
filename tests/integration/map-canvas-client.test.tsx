@@ -15,24 +15,26 @@ vi.mock("@/components/ui/map", async () => {
   const React = await import("react");
 
   return {
-    Map: React.forwardRef((
-      {
-        children,
-        className,
-      }: {
-        children?: React.ReactNode;
-        className?: string;
-      },
-      ref: React.ForwardedRef<typeof mockMap>,
-    ) => {
-      React.useImperativeHandle(ref, () => mockMap);
+    Map: React.forwardRef(
+      (
+        {
+          children,
+          className,
+        }: {
+          children?: React.ReactNode;
+          className?: string;
+        },
+        ref: React.ForwardedRef<typeof mockMap>,
+      ) => {
+        React.useImperativeHandle(ref, () => mockMap);
 
-      return (
-        <div className={className} data-testid="map-component">
-          {children}
-        </div>
-      );
-    }),
+        return (
+          <div className={className} data-testid="map-component">
+            {children}
+          </div>
+        );
+      },
+    ),
     MapControls: ({ position }: { position: string }) => (
       <div data-position={position} data-testid="map-controls" />
     ),
@@ -56,7 +58,7 @@ describe("MapCanvasClient", () => {
       </MapCanvasClient>,
     );
 
-    const {coordinates} = MRT6_LINE.geometry;
+    const { coordinates } = MRT6_LINE.geometry;
     const longitudes = coordinates.map(([lng]) => lng);
     const latitudes = coordinates.map(([, lat]) => lat);
 
