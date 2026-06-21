@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -29,6 +29,8 @@ interface MapCanvasProps {
   className?: string;
   offline?: boolean;
 }
+
+type NetworkState = "offline" | "online" | "unknown";
 
 const MapCanvasFallback = ({
   className,
@@ -61,10 +63,35 @@ export const MapCanvas = ({
   className,
   offline = false,
 }: MapCanvasProps): React.ReactElement => {
-  const isOffline = offline || (typeof navigator !== "undefined" && !navigator.onLine);
+  const [networkState, setNetworkState] = useState<NetworkState>("unknown");
 
-  if (isOffline) {
+  useEffect(() => {
+    if (offline || typeof navigator === "undefined") {
+      return;
+    }
+
+    const syncOfflineState = (): void => {
+      setNetworkState(navigator.onLine ? "online" : "offline");
+    };
+
+    syncOfflineState();
+    window.addEventListener("online", syncOfflineState);
+    window.addEventListener("offline", syncOfflineState);
+    window.addEventListener("pageshow", syncOfflineState);
+
+    return () => {
+      window.removeEventListener("online", syncOfflineState);
+      window.removeEventListener("offline", syncOfflineState);
+      window.removeEventListener("pageshow", syncOfflineState);
+    };
+  }, [offline]);
+
+  if (offline || networkState === "offline") {
     return <MapCanvasFallback className={className} offline />;
+  }
+
+  if (networkState === "unknown") {
+    return <MapCanvasFallback className={className} />;
   }
 
   return (
