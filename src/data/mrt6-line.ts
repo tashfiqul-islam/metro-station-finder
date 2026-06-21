@@ -2,7 +2,7 @@
 // Source file: src/data/mrt6-line.geojson (committed for tooling/GIS compatibility).
 // Coordinates are in [longitude, latitude] order (GeoJSON / MapLibre convention).
 // Geometry is sourced from committed static GeoJSON refreshed from OSM / Overpass data.
-// Coordinate order matches station orderIndex (Uttara North = index 0, Kamalapur = index 16).
+// Coordinate order follows the station travel direction (Uttara North toward Kamalapur).
 
 /** GeoJSON coordinate pair: [longitude, latitude] */
 export type LngLat = [number, number];

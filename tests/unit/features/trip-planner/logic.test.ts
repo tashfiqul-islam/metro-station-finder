@@ -6,25 +6,27 @@ import { InvalidStationError } from "@/features/fare-calculator/logic";
 import { clipLineToSegment, planTrip } from "@/features/trip-planner/logic";
 
 describe("clipLineToSegment", () => {
-  it("returns a single point for a zero-length segment (same index)", () => {
+  it("returns the station coordinate for a zero-length segment", () => {
     const coords = clipLineToSegment(mrt6Line, 0, 0);
     expect(coords).toHaveLength(1);
+    expect(coords[0]).toEqual([STATIONS[0]?.lng, STATIONS[0]?.lat]);
   });
 
-  it("returns 2 coordinates for adjacent stations (indices 0 and 1)", () => {
+  it("anchors the clipped segment to the requested station coordinates", () => {
     const coords = clipLineToSegment(mrt6Line, 0, 1);
-    expect(coords).toHaveLength(2);
+    expect(coords[0]).toEqual([STATIONS[0]?.lng, STATIONS[0]?.lat]);
+    expect(coords.at(-1)).toEqual([STATIONS[1]?.lng, STATIONS[1]?.lat]);
   });
 
-  it("returns 17 coordinates for the full line (indices 0 to 16)", () => {
-    const coords = clipLineToSegment(mrt6Line, 0, 16);
-    expect(coords).toHaveLength(17);
+  it("returns dense geometry rather than one coordinate per station", () => {
+    const coords = clipLineToSegment(mrt6Line, 3, 8);
+    expect(coords.length).toBeGreaterThan(6);
   });
 
-  it("returns the same number of coords for forward and reverse direction", () => {
+  it("returns the reverse path when direction is reversed", () => {
     const forward = clipLineToSegment(mrt6Line, 2, 8);
     const reverse = clipLineToSegment(mrt6Line, 8, 2);
-    expect(forward).toHaveLength(reverse.length);
+    expect(reverse).toEqual([...forward].toReversed());
   });
 
   it("coordinates are [lng, lat] pairs (numbers)", () => {
@@ -45,6 +47,7 @@ describe("planTrip", () => {
     expect(trip.estimatedMinutes).toBe(0);
     expect(trip.stops).toHaveLength(1);
     expect(trip.segmentCoords).toHaveLength(1);
+    expect(trip.segmentCoords[0]).toEqual([trip.stops[0]?.lng, trip.stops[0]?.lat]);
   });
 
   it("forward and reverse trips have the same fare and distance", () => {
@@ -52,6 +55,7 @@ describe("planTrip", () => {
     const reverse = planTrip("motijheel", "uttara-north");
     expect(forward.fare).toBe(reverse.fare);
     expect(forward.distanceKm).toBeCloseTo(reverse.distanceKm, 6);
+    expect(reverse.segmentCoords).toEqual([...forward.segmentCoords].toReversed());
   });
 
   it("includes all intermediate stops in correct order (forward)", () => {
@@ -95,11 +99,15 @@ describe("planTrip", () => {
     expect(trip.estimatedMinutes).toBeGreaterThan(0);
   });
 
-  it("segmentCoords match the clipped line segment", () => {
+  it("segmentCoords are anchored to the trip endpoints", () => {
     const trip = planTrip("uttara-north", "karwan-bazar");
-    // Uttara North = orderIndex 1 (idx 0), Karwan Bazar = orderIndex 12 (idx 11)
-    // Segment should cover 12 points (indices 0..11)
-    expect(trip.segmentCoords).toHaveLength(12);
+    expect(trip.segmentCoords[0]).toEqual([trip.stops[0]?.lng, trip.stops[0]?.lat]);
+    expect(trip.segmentCoords.at(-1)).toEqual([trip.stops.at(-1)?.lng, trip.stops.at(-1)?.lat]);
+  });
+
+  it("segmentCoords use dense geometry for multi-stop trips", () => {
+    const trip = planTrip("uttara-north", "karwan-bazar");
+    expect(trip.segmentCoords.length).toBeGreaterThan(trip.stops.length);
   });
 
   it("throws InvalidStationError for unknown origin", () => {

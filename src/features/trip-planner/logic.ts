@@ -20,10 +20,36 @@ export interface TripResult {
 
 // ─── Line clipping ────────────────────────────────────────────────────────────
 
+const toStationPoint = (station: Pick<Station, "lat" | "lng">): LngLat => [
+  station.lng,
+  station.lat,
+];
+
+const areSamePoint = (a: LngLat | undefined, b: LngLat): boolean =>
+  a?.[0] === b[0] && a?.[1] === b[1];
+
+const findNearestLineCoordIndex = (
+  coords: readonly LngLat[],
+  station: Pick<Station, "lat" | "lng">,
+): number => {
+  let nearestIdx = 0;
+  let minDistance = Infinity;
+
+  for (const [index, coord] of coords.entries()) {
+    const distance = haversineKm(station, { lat: coord[1], lng: coord[0] });
+    if (distance < minDistance) {
+      minDistance = distance;
+      nearestIdx = index;
+    }
+  }
+
+  return nearestIdx;
+};
+
 /**
- * Returns a slice of the LineString coordinates between two 0-based indices.
- * Always returns coordinates in the direction from `fromIdx` to `toIdx`
- * (i.e. reversed when `fromIdx > toIdx`).
+ * Returns a dense slice of the LineString between two station indices.
+ * The segment is anchored to the actual station coordinates and follows
+ * the dense line geometry in the requested travel direction.
  */
 export const clipLineToSegment = (
   line: Mrt6LineFeature,
@@ -31,16 +57,44 @@ export const clipLineToSegment = (
   toIdx: number,
 ): LngLat[] => {
   const coords = line.geometry.coordinates;
+  const fromStation = STATIONS[fromIdx];
+  const toStation = STATIONS[toIdx];
 
-  if (fromIdx === toIdx) {
-    return [coords[fromIdx] as LngLat];
+  if (!fromStation || !toStation) {
+    throw new RangeError("clipLineToSegment requires valid station indices");
   }
 
-  const lo = Math.min(fromIdx, toIdx);
-  const hi = Math.max(fromIdx, toIdx);
-  const slice = coords.slice(lo, hi + 1) as LngLat[];
+  const fromPoint = toStationPoint(fromStation);
+  const toPoint = toStationPoint(toStation);
 
-  return fromIdx > toIdx ? [...slice].toReversed() : slice;
+  if (fromIdx === toIdx) {
+    return [fromPoint];
+  }
+
+  const fromCoordIdx = findNearestLineCoordIndex(coords, fromStation);
+  const toCoordIdx = findNearestLineCoordIndex(coords, toStation);
+  const lo = Math.min(fromCoordIdx, toCoordIdx);
+  const hi = Math.max(fromCoordIdx, toCoordIdx);
+  const slice = coords.slice(lo, hi + 1) as LngLat[];
+  const lineSegment = fromCoordIdx > toCoordIdx ? [...slice].toReversed() : slice;
+
+  const anchoredSegment: LngLat[] = [];
+
+  if (!areSamePoint(anchoredSegment.at(-1), fromPoint)) {
+    anchoredSegment.push(fromPoint);
+  }
+
+  for (const coord of lineSegment) {
+    if (!areSamePoint(anchoredSegment.at(-1), coord)) {
+      anchoredSegment.push(coord);
+    }
+  }
+
+  if (!areSamePoint(anchoredSegment.at(-1), toPoint)) {
+    anchoredSegment.push(toPoint);
+  }
+
+  return anchoredSegment;
 };
 
 // ─── Trip planning ────────────────────────────────────────────────────────────
