@@ -33,6 +33,25 @@ const NotFoundComponent = () => (
   </div>
 );
 
+const ErrorComponent = ({ error }: { error: Error }) => (
+  <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-6">
+    <WarningCircleIcon className="h-16 w-16 text-red-500" weight="fill" />
+    <h1 className="font-bold text-4xl">Something went wrong</h1>
+    <p className="max-w-md text-center text-lg text-muted-foreground">
+      {error.message || "An unexpected error occurred. Please try again later."}
+    </p>
+    <Link className="text-primary underline hover:no-underline" to="/">
+      Go home
+    </Link>
+  </div>
+);
+
+const PendingComponent = () => (
+  <div className="flex min-h-screen items-center justify-center">
+    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+  </div>
+);
+
 // ─── Root shell ────────────────────────────────────────────────────────────────
 const RootDocument = ({ children }: { children: React.ReactNode }) => {
   const [queryClient] = useState(
@@ -109,6 +128,7 @@ const RootDocument = ({ children }: { children: React.ReactNode }) => {
 // ─── Route definition ─────────────────────────────────────────────────────────
 /* v8 ignore next -- framework route registration glue */
 export const Route = createRootRoute({
+  errorComponent: ErrorComponent,
   head: () => ({
     links: [
       { href: appCss, rel: "stylesheet" },
@@ -146,5 +166,6 @@ export const Route = createRootRoute({
   }),
   loader: () => ({}),
   notFoundComponent: NotFoundComponent,
+  pendingComponent: PendingComponent,
   shellComponent: RootDocument,
 });

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { Badge } from "@/components/ui/badge";
 import { ViewportAnimation } from "@/components/common/viewport-animation";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { SectionHeading } from "@/pages/home/components/section-heading";
 
 interface VersionEntry {
   version: string;
@@ -51,7 +52,7 @@ const versions: VersionEntry[] = [
     current: true,
     date: "April 2026",
     description:
-      "The current milestone combines station lookup, fare clarity, trip planning, and a tighter interface around the actual decisions riders make.",
+      "The current milestone combines station lookup, fare clarity, trip planning, and home-page polish around the actual decisions riders make.",
     label: "Current baseline",
     version: "v1.0.0",
   },
@@ -229,28 +230,11 @@ export const JourneySection = (): React.ReactElement => {
         <ViewportAnimation>
           <div className="grid gap-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-end">
             <div className="max-w-xl">
-              <div className="mb-4 flex items-center gap-3">
-                <div aria-hidden className="h-px w-8 bg-primary/50" />
-                <span className="section-kicker">Product timeline</span>
-              </div>
-
-              <h2
-                className="font-heading text-3xl font-bold tracking-tight lg:text-4xl"
-                style={{
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  background:
-                    "linear-gradient(135deg, oklch(0.52 0.12 145), oklch(0.72 0.18 145) 45%, oklch(0.58 0.22 145))",
-                  backgroundClip: "text",
-                }}
-              >
-                The journey
-              </h2>
-
-              <p className="mt-5 max-w-lg text-base leading-8 text-muted-foreground sm:text-lg">
-                The product improved in a few clear steps: solve the station problem, solve the fare
-                problem, then tighten the experience around real transit decisions.
-              </p>
+              <SectionHeading
+                description="The product improved in a few clear steps: solve the station problem, solve the fare problem, then tighten the experience around real transit decisions."
+                eyebrow="Product timeline"
+                title="The journey"
+              />
 
               <div className="section-panel mt-10 p-6">
                 <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary/70">
@@ -272,7 +256,7 @@ export const JourneySection = (): React.ReactElement => {
         </ViewportAnimation>
 
         <ViewportAnimation delay={0.08}>
-          <div className="section-panel mt-14 rounded-[2rem] p-5 sm:p-6">
+          <div className="section-panel mt-14 p-5 sm:p-6">
             <div className="flex items-center justify-between gap-4 border-b border-border/40 pb-4">
               <div className="text-sm font-semibold tracking-tight text-foreground">
                 metro-station-finder / timeline
@@ -346,7 +330,7 @@ export const JourneySection = (): React.ReactElement => {
 
                       <article
                         className={cn(
-                          "section-card group relative flex-1 overflow-hidden rounded-[1.5rem] p-5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-[0_18px_50px_oklch(0_0_0/0.08)] md:w-[calc(50%-2rem)] md:flex-none",
+                          "section-card group relative flex-1 overflow-hidden p-5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-[0_18px_50px_oklch(0_0_0/0.08)] md:w-[calc(50%-2rem)] md:flex-none",
                           v.current && "border-primary/30",
                         )}
                       >

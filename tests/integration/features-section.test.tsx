@@ -40,4 +40,17 @@ describe("FeaturesSection", () => {
     render(<FeaturesSection />);
     expect(screen.getByText("Plan the journey")).toBeDefined();
   });
+
+  it("renders corridor and accessibility-flow cards", () => {
+    render(<FeaturesSection />);
+    expect(screen.getByText("Read the corridor")).toBeDefined();
+    expect(screen.getByText("Use it with less friction")).toBeDefined();
+  });
+
+  it("keeps the home-page promise static and task-focused", () => {
+    render(<FeaturesSection />);
+    expect(screen.getByText(/static MRT-6 facts first/iu)).toBeDefined();
+    expect(screen.queryByText(/live operating context/iu)).toBeNull();
+    expect(screen.queryByText(/service signals/iu)).toBeNull();
+  });
 });

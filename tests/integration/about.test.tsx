@@ -19,7 +19,7 @@ describe("About Page", () => {
     expect(
       screen.getByRole("heading", {
         level: 1,
-        name: /Built for Dhaka commuters,shaped by a product owner who ships tools/i,
+        name: /Built for Dhaka commuters,shaped by a product owner who ships tools/iu,
       }),
     ).toBeInTheDocument();
   });
@@ -29,10 +29,10 @@ describe("About Page", () => {
     expect(
       screen.getByRole("heading", {
         level: 1,
-        name: /Built for Dhaka commuters,shaped by a product owner who ships tools/i,
+        name: /Built for Dhaka commuters,shaped by a product owner who ships tools/iu,
       }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/Built for Dhaka commuters/)).toBeInTheDocument();
+    expect(screen.getByText(/Built for Dhaka commuters/u)).toBeInTheDocument();
   });
 
   it("renders all four section eyebrows without interaction", () => {
@@ -46,14 +46,14 @@ describe("About Page", () => {
   it("renders overview content", () => {
     renderAbout();
     expect(
-      screen.getByText(/slow to check at the exact moment people needed certainty/),
+      screen.getByText(/slow to check at the exact moment people needed certainty/u),
     ).toBeInTheDocument();
   });
 
   it("renders maintainer profile content", () => {
     renderAbout();
     expect(
-      screen.getByText(/software that feels practical the moment it is opened/),
+      screen.getByText(/software that feels practical the moment it is opened/u),
     ).toBeInTheDocument();
   });
 
@@ -81,7 +81,7 @@ describe("About Page", () => {
     expect(
       screen.getByRole("heading", {
         level: 1,
-        name: /Built for Dhaka commuters,shaped by a product owner who ships tools/i,
+        name: /Built for Dhaka commuters,shaped by a product owner who ships tools/iu,
       }),
     ).toBeInTheDocument();
   });

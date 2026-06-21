@@ -12,7 +12,7 @@ export interface RouteMeta {
 
 const SITE_NAME = "Metro Station Finder";
 const DEFAULT_SITE_URL = "http://localhost:3000";
-const SITE_URL = (import.meta.env["VITE_SITE_URL"] || DEFAULT_SITE_URL).replace(/\/$/, "");
+const SITE_URL = (import.meta.env["VITE_SITE_URL"] || DEFAULT_SITE_URL).replace(/\/$/u, "");
 const SITE_IMAGE = "/og-image.svg";
 const TWITTER_HANDLE = import.meta.env["VITE_TWITTER_HANDLE"];
 

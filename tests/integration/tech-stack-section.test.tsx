@@ -54,8 +54,8 @@ describe("TechStackSection — item arrays", () => {
 
   it("each item has logoDark and logoLight paths", () => {
     for (const item of [...row1Items, ...row2Items]) {
-      expect(item.logoDark).toMatch(/^\/tech-stack\/.+\.svg$/);
-      expect(item.logoLight).toMatch(/^\/tech-stack\/.+\.svg$/);
+      expect(item.logoDark).toMatch(/^\/tech-stack\/.+\.svg$/u);
+      expect(item.logoLight).toMatch(/^\/tech-stack\/.+\.svg$/u);
     }
   });
 

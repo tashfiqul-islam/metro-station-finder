@@ -3,6 +3,7 @@ import type { ReactElement } from "react";
 
 import { ViewportAnimation } from "@/components/common/viewport-animation";
 import { cn } from "@/lib/utils";
+import { SectionHeading } from "@/pages/home/components/section-heading";
 
 interface StoryItem {
   ordinal: string;
@@ -45,7 +46,7 @@ const STORIES: StoryItem[] = [
     accent: "oklch(0.64 0.2 145 / 0.12)",
     accentSolid: "oklch(0.64 0.2 145)",
     description:
-      "Thousands of commuters now check stations, confirm fares, and plan journeys faster. The result is less friction at the exact moment transit decisions matter.",
+      "The v1 rebuild now frames station lookup, fares, and trip planning as one tested commuter flow. The result is less friction at the exact moment transit decisions matter.",
     icon: CheckCircleIcon,
     ordinal: "04",
     title: "Impact",
@@ -67,32 +68,15 @@ export const StorySection = (): ReactElement => (
       <div className="grid gap-10 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:gap-14">
         <ViewportAnimation>
           <div className="max-w-xl">
-            <div className="mb-4 flex items-center gap-3">
-              <div aria-hidden className="h-px w-8 bg-primary/50" />
-              <span className="section-kicker">Origin</span>
-            </div>
-
-            <h2
-              className="font-heading text-3xl font-bold tracking-tight lg:text-4xl"
-              style={{
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                background:
-                  "linear-gradient(135deg, oklch(0.52 0.12 145), oklch(0.72 0.18 145) 45%, oklch(0.58 0.22 145))",
-                backgroundClip: "text",
-              }}
-            >
-              How it started
-            </h2>
-
-            <p className="mt-5 max-w-lg text-base leading-8 text-muted-foreground sm:text-lg">
-              This was not born from a generic startup idea. It came from a commuter problem: people
-              needed reliable MRT information exactly when they were already in motion.
-            </p>
+            <SectionHeading
+              description="This was not born from a generic startup idea. It came from a commuter problem: people needed reliable MRT information exactly when they were already in motion."
+              eyebrow="Origin"
+              title="How it started"
+            />
 
             <div className="section-panel mt-10 p-6">
               <div className="flex items-start gap-4">
-                <div className="section-chip rounded-2xl border-primary/25 bg-primary/8 px-4 py-3">
+                <div className="section-chip border-primary/25 bg-primary/8 px-4 py-3">
                   <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary/70">
                     Core idea
                   </div>
@@ -125,7 +109,7 @@ export const StorySection = (): ReactElement => (
               <ViewportAnimation delay={index * 0.08} key={story.ordinal}>
                 <article
                   className={cn(
-                    "section-card group relative flex h-full flex-col overflow-hidden rounded-[1.75rem] p-6 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/28 hover:shadow-[0_24px_70px_oklch(0_0_0/0.10)]",
+                    "section-card group relative flex h-full flex-col overflow-hidden p-6 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/28 hover:shadow-[0_24px_70px_oklch(0_0_0/0.10)]",
                     largeCard && "sm:min-h-80",
                   )}
                 >
@@ -140,13 +124,13 @@ export const StorySection = (): ReactElement => (
 
                   <div
                     aria-hidden="true"
-                    className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full blur-3xl"
-                    style={{ background: story.accent }}
+                    className="pointer-events-none absolute inset-x-0 bottom-0 h-16 opacity-70"
+                    style={{ background: `linear-gradient(180deg, transparent, ${story.accent})` }}
                   />
 
                   <div className="relative z-10 flex items-start justify-between gap-4">
                     <div
-                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-border/35 bg-muted/65"
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border/35 bg-muted/65"
                       style={{ boxShadow: `0 8px 24px ${story.accent}` }}
                     >
                       <Icon

@@ -18,15 +18,15 @@ describe("Theme", () => {
   it("renders all three theme buttons", async () => {
     render(<Theme />);
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: /light theme/i })).toBeDefined();
-      expect(screen.getByRole("button", { name: /system theme/i })).toBeDefined();
-      expect(screen.getByRole("button", { name: /dark theme/i })).toBeDefined();
+      expect(screen.getByRole("button", { name: /light theme/iu })).toBeDefined();
+      expect(screen.getByRole("button", { name: /system theme/iu })).toBeDefined();
+      expect(screen.getByRole("button", { name: /dark theme/iu })).toBeDefined();
     });
   });
 
   it("clicking Dark button writes to localStorage and adds .dark class to html", async () => {
     render(<Theme />);
-    const darkBtn = await screen.findByRole("button", { name: /dark theme/i });
+    const darkBtn = await screen.findByRole("button", { name: /dark theme/iu });
     fireEvent.click(darkBtn);
 
     await waitFor(() => {
@@ -37,7 +37,7 @@ describe("Theme", () => {
 
   it("clicking System button writes to localStorage", async () => {
     render(<Theme />);
-    const systemBtn = await screen.findByRole("button", { name: /system theme/i });
+    const systemBtn = await screen.findByRole("button", { name: /system theme/iu });
     fireEvent.click(systemBtn);
 
     await waitFor(() => {
@@ -49,7 +49,7 @@ describe("Theme", () => {
     localStorage.setItem("theme", "dark");
     render(<Theme />);
 
-    const lightBtn = await screen.findByRole("button", { name: /light theme/i });
+    const lightBtn = await screen.findByRole("button", { name: /light theme/iu });
     fireEvent.click(lightBtn);
 
     await waitFor(() => {
@@ -123,7 +123,7 @@ describe("Theme", () => {
 
     render(<Theme />);
 
-    const systemBtn = await screen.findByRole("button", { name: /system theme/i });
+    const systemBtn = await screen.findByRole("button", { name: /system theme/iu });
     expect(systemBtn).toBeInTheDocument();
 
     getItemSpy.mockRestore();

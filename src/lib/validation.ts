@@ -2,7 +2,7 @@ import * as v from "valibot";
 
 // ─── Primitive schemas ────────────────────────────────────────────────────────
 
-const SLUG_REGEX = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+const SLUG_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
 
 export const SlugSchema = v.pipe(
   v.string(),

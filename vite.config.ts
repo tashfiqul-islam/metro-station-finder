@@ -9,84 +9,101 @@ import { defineConfig } from "vite";
 
 // https://vite.dev/config
 // https://tanstack.com/start/latest/docs/framework/react/guide/static-prerendering
-export default defineConfig(({ command }) => ({
-  build: {
-    chunkSizeWarningLimit: 600,
-    cssMinify: "lightningcss",
-    reportCompressedSize: false,
-    rolldownOptions: {
-      output: {
-        assetFileNames: "assets/[name]-[hash][extname]",
-        chunkFileNames: "assets/[name]-[hash].js",
-        entryFileNames: "assets/[name]-[hash].js",
+export default defineConfig(({ command, mode }) => {
+  if (command === "build") {
+    // Some shells export NODE_ENV=development; keep React's production build hermetic.
+    process.env["NODE_ENV"] = "production";
+  }
+
+  return {
+    build: {
+      chunkSizeWarningLimit: 600,
+      cssMinify: "lightningcss",
+      reportCompressedSize: false,
+      rolldownOptions: {
+        output: {
+          assetFileNames: "assets/[name]-[hash][extname]",
+          chunkFileNames: "assets/[name]-[hash].js",
+          entryFileNames: "assets/[name]-[hash].js",
+        },
+      },
+      sourcemap: true,
+      target: "es2024",
+    },
+
+    optimizeDeps: {
+      // Pre-bundle these for faster dev cold-start
+      include: ["react", "react-dom", "react-dom/client"],
+    },
+
+    plugins: [
+      // Keep devtools stripped from production builds while enabling source jumps in dev.
+      devtools({
+        injectSource: {
+          enabled: true,
+          ignore: {
+            files: [/.*\.stories\.(?:js|ts|jsx|tsx)$/u],
+          },
+        },
+        removeDevtoolsOnBuild: true,
+      }),
+
+      // Tailwind v4 Oxide engine
+      tailwindcss(),
+
+      // Nitro server runtime (used by TanStack Start for SSR/prerender)
+      nitro(),
+
+      // TanStack Start
+      //
+      // - Prerender defaults to off; we enable it for full SSG. The crawler
+      //   walks `<a>` tags starting from `/` to discover routes, so every
+      //   public page is emitted as static HTML at build time.
+      // - `autoSubfolderIndex: true` emits `/<route>/index.html` so static
+      //   hosts serve clean URLs without trailing-slash redirects.
+      // - `autoStaticPathsDiscovery: true` lets route `staticPaths` loaders
+      //   contribute to the prerender queue automatically.
+      //
+      // NOTE: vite-plugin-pwa wiring is deferred to the PWA implementation
+      // phase; once in, it will sit after tanstackStart() to register the
+      // service worker against the prerendered assets.
+      tanstackStart({
+        prerender: {
+          autoStaticPathsDiscovery: true,
+          autoSubfolderIndex: true,
+          concurrency: 14,
+          crawlLinks: true,
+          enabled: true,
+          failOnError: true,
+          maxRedirects: 5,
+          retryCount: 2,
+          retryDelay: 1000,
+        },
+      }),
+
+      // React must come AFTER tanstackStart() per TanStack docs
+      viteReact(),
+    ],
+
+    // Prerender spins up Vite preview after build. Keep it off the dev port so
+    // `vite build` does not fail when a local dev server is already running.
+    preview: {
+      port: 4173,
+      strictPort: true,
+    },
+
+    // Path alias — kept in sync with tsconfig.json `paths`.
+    // Plain alias is stable across Vite / Vitest / Rolldown / IDE TS servers.
+    // Vite 8's `resolve.tsconfigPaths` is experimental and has flaky IDE types.
+    resolve: {
+      alias: {
+        "@": fileURLToPath(new URL("src", import.meta.url)),
       },
     },
-    sourcemap: true,
-    target: "es2024",
-  },
 
-  optimizeDeps: {
-    // Pre-bundle these for faster dev cold-start
-    include: ["react", "react-dom", "react-dom/client"],
-  },
-
-  plugins: [
-    // TanStack devtools overlay (dev only, auto-disabled in prod)
-    devtools(),
-
-    // Tailwind v4 Oxide engine
-    tailwindcss(),
-
-    // Nitro server runtime (used by TanStack Start for SSR/prerender)
-    nitro(),
-
-    // TanStack Start
-    //
-    // - Prerender defaults to off; we enable it for full SSG. The crawler
-    //   walks `<a>` tags starting from `/` to discover routes, so every
-    //   public page is emitted as static HTML at build time.
-    // - `autoSubfolderIndex: true` emits `/<route>/index.html` so static
-    //   hosts serve clean URLs without trailing-slash redirects.
-    // - `autoStaticPathsDiscovery: true` lets route `staticPaths` loaders
-    //   contribute to the prerender queue automatically.
-    //
-    // NOTE: vite-plugin-pwa wiring is deferred to the PWA implementation
-    // phase; once in, it will sit after tanstackStart() to register the
-    // service worker against the prerendered assets.
-    tanstackStart({
-      prerender: {
-        autoStaticPathsDiscovery: true,
-        autoSubfolderIndex: true,
-        concurrency: 14,
-        crawlLinks: true,
-        enabled: true,
-        retryCount: 2,
-        retryDelay: 1000,
-      },
-    }),
-
-    // React must come AFTER tanstackStart() per TanStack docs
-    viteReact(),
-  ],
-
-  // Prerender spins up Vite preview after build. Keep it off the dev port so
-  // `vite build` does not fail when a local dev server is already running.
-  preview: {
-    port: 4173,
-    strictPort: true,
-  },
-
-  // Path alias — kept in sync with tsconfig.json `paths`.
-  // Plain alias is stable across Vite / Vitest / Rolldown / IDE TS servers.
-  // Vite 8's `resolve.tsconfigPaths` is experimental and has flaky IDE types.
-  resolve: {
-    alias: {
-      "@": fileURLToPath(new URL("src", import.meta.url)),
+    server: {
+      port: mode === "development" ? 3000 : 4173,
+      strictPort: true,
     },
-  },
-
-  server: {
-    port: command === "serve" ? 3000 : 4173,
-    strictPort: true,
-  },
-}));
+  };
+});

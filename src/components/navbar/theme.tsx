@@ -138,7 +138,6 @@ export const Theme = () => {
     <div
       aria-label="Theme selector"
       className="relative isolate inline-flex h-9 items-center rounded-full border border-border/45 bg-background/72 backdrop-blur-sm dark:bg-background/48"
-      role="group"
       style={{
         gap: `${THEME_GAP}px`,
         padding: `${THEME_PADDING}px`,

@@ -35,7 +35,7 @@ describe("Footer", () => {
 
   it("renders the GitHub link", async () => {
     await renderFooter();
-    const link = screen.getByRole("link", { name: /github/i });
+    const link = screen.getByRole("link", { name: /github/iu });
     expect(link).toBeDefined();
     expect(link.getAttribute("href")).toContain("github.com");
   });
@@ -60,12 +60,12 @@ describe("Footer", () => {
 
   it("renders copyright text", async () => {
     await renderFooter();
-    expect(screen.getByText(/2026 Metro Station Finder/i)).toBeDefined();
+    expect(screen.getByText(/2026 Metro Station Finder/iu)).toBeDefined();
   });
 
   it("renders the maintainer signature line", async () => {
     await renderFooter();
-    expect(screen.getByText(/built with/i)).toBeDefined();
-    expect(screen.getAllByText(/tashfiqul islam/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/built with/iu)).toBeDefined();
+    expect(screen.getAllByText(/tashfiqul islam/iu).length).toBeGreaterThan(0);
   });
 });

@@ -33,10 +33,39 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Audit dependencies
+        run: bun pm audit
+
       - name: Run full CI gate
         run: bun run ci
         env:
           CI: "true"
+
+      - name: Check bundle size budget
+        run: |
+          node -e "
+            const fs = require('fs');
+            const path = require('path');
+            const assetsDir = '.output/public/assets';
+            if (!fs.existsSync(assetsDir)) {
+              console.log('Assets dir not found, skipping bundle check');
+              process.exit(0);
+            }
+            const files = fs.readdirSync(assetsDir).filter(f => f.endsWith('.js'));
+            const budget = 200 * 1024; // 200 KB
+            let maxSize = 0;
+            let maxFile = '';
+            for (const file of files) {
+              const size = fs.statSync(path.join(assetsDir, file)).size;
+              if (size > maxSize) { maxSize = size; maxFile = file; }
+            }
+            const maxSizeKb = (maxSize / 1024).toFixed(1);
+            console.log('Largest JS chunk:', maxFile, maxSizeKb + ' KB');
+            if (maxSize > budget) {
+              console.error('BUNDLE BUDGET EXCEEDED:', maxFile, maxSizeKb + 'KB > 200KB');
+              process.exit(1);
+            }
+          "
 
       - name: Install Playwright Chromium
         run: bunx playwright install --with-deps chromium

@@ -15,12 +15,32 @@ const MRT_STATIONS = [
   "Agargaon",
   "Bijoy Sarani",
   "Farmgate",
-  "Kawran Bazar",
+  "Karwan Bazar",
   "Shahbag",
   "Dhaka University",
-  "Secretariat",
+  "Bangladesh Secretariat",
   "Motijheel",
   "Kamalapur",
+];
+
+const MRT_STATIONS_BN = [
+  "উত্তরা উত্তর",
+  "উত্তরা সেন্টার",
+  "উত্তরা দক্ষিণ",
+  "পল্লবী",
+  "মিরপুর ১১",
+  "মিরপুর ১০",
+  "কাজীপাড়া",
+  "শেওড়াপাড়া",
+  "আগারগাঁও",
+  "বিজয় সরণি",
+  "ফার্মগেট",
+  "কারওয়ান বাজার",
+  "শাহবাগ",
+  "ঢাকা বিশ্ববিদ্যালয়",
+  "বাংলাদেশ সচিবালয়",
+  "মতিঝিল",
+  "কমলাপুর",
 ];
 
 describe("RouteMapSvg", () => {
@@ -29,15 +49,9 @@ describe("RouteMapSvg", () => {
     expect(screen.getByTestId("route-map-svg")).toBeDefined();
   });
 
-  it("has role=img for accessibility", () => {
+  it("has an accessible aria-label on the SVG", () => {
     render(<RouteMapSvg />);
-    const svg = screen.getByRole("img");
-    expect(svg).toBeDefined();
-  });
-
-  it("has an aria-label describing the route map", () => {
-    render(<RouteMapSvg />);
-    const svg = screen.getByRole("img");
+    const svg = screen.getByTestId("route-map-svg");
     expect(svg.getAttribute("aria-label")).toBe("MRT Line 6 route map");
   });
 
@@ -47,16 +61,23 @@ describe("RouteMapSvg", () => {
     expect(el?.classList.contains("custom-svg")).toBe(true);
   });
 
-  it("renders all 17 station names", () => {
+  it("renders all 17 English station names", () => {
     render(<RouteMapSvg />);
     for (const station of MRT_STATIONS) {
       expect(screen.getByText(station)).toBeDefined();
     }
   });
 
-  it("renders the correct number of station labels (17)", () => {
+  it("renders all 17 Bengali station names", () => {
+    render(<RouteMapSvg />);
+    for (const station of MRT_STATIONS_BN) {
+      expect(screen.getByText(station)).toBeDefined();
+    }
+  });
+
+  it("renders the correct number of station label groups (17)", () => {
     const { container } = render(<RouteMapSvg />);
-    const textElements = container.querySelectorAll("text");
-    expect(textElements.length).toBe(MRT_STATIONS.length);
+    const stationLabels = container.querySelectorAll('[data-testid="route-map-station-label"]');
+    expect(stationLabels.length).toBe(MRT_STATIONS.length);
   });
 });

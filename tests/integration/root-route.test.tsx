@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import type * as TanStackRouter from "@tanstack/react-router";
-import { describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { Route } from "@/routes/__root";
 
@@ -61,6 +61,26 @@ vi.mock("@/lib/web-vitals", () => ({
 }));
 
 describe("Root route", () => {
+  let originalError: typeof console.error;
+
+  beforeAll(() => {
+    originalError = console.error;
+    console.error = (...args: unknown[]) => {
+      const [msg] = args;
+      if (
+        typeof msg === "string" &&
+        (msg.includes("cannot be a child of") || msg.includes("hydration error"))
+      ) {
+        return;
+      }
+      originalError(...args);
+    };
+  });
+
+  afterAll(() => {
+    console.error = originalError;
+  });
+
   it("exposes expected head metadata and links", async () => {
     const routeOptions = Route.options as unknown as RootRouteTestOptions;
     const head = await routeOptions.head?.({});

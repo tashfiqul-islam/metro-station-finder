@@ -49,7 +49,7 @@ test.describe("Meta tags and SEO", () => {
       await page.goto(route.path);
 
       // Check title
-      await expect(page).toHaveTitle(new RegExp(route.title));
+      await expect(page).toHaveTitle(new RegExp(route.title, "u"));
 
       // Check description meta tag
       const descriptionMeta = page.locator('meta[name="description"]');
@@ -95,8 +95,19 @@ test.describe("Meta tags and SEO", () => {
 });
 
 test("all routes are prerendered", async ({ page }) => {
-  for (const route of routes) {
-    const response = await page.goto(route.path);
-    expect(response?.status()).toBe(200);
+  const statuses = await Promise.all(
+    routes.map(async (route) => {
+      const routePage = await page.context().newPage();
+      try {
+        const response = await routePage.goto(route.path);
+        return response?.status();
+      } finally {
+        await routePage.close();
+      }
+    }),
+  );
+
+  for (const status of statuses) {
+    expect(status).toBe(200);
   }
 });

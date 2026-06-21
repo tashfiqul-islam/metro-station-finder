@@ -2,6 +2,7 @@ import { memo } from "react";
 
 import { ViewportAnimation } from "@/components/common/viewport-animation";
 import { InfiniteSlider } from "@/components/ui/infinite-slider";
+import { SectionHeading } from "@/pages/home/components/section-heading";
 
 interface TechItem {
   logoDark: string;
@@ -42,7 +43,7 @@ export const row2Items: TechItem[] = [
   makeDualItem("Zed", "zed-logo-dark.svg", "zed-logo-light.svg", "Editor"),
 ];
 
-const stackPrinciples = ["Fast on mobile", "Clear by default", "Made for repeat use"] as const;
+const stackPrinciples = ["Static first", "Clear by default", "Made for repeat use"] as const;
 
 interface TechItemCardProps {
   logoDark: string;
@@ -53,8 +54,8 @@ interface TechItemCardProps {
 
 const TechItemCard = memo(
   ({ logoDark, logoLight, name, role }: TechItemCardProps): React.ReactElement => (
-    <div className="group mx-2 flex min-w-52 items-center gap-3 rounded-2xl border border-border/40 bg-background/70 px-4 py-3 backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/35 hover:bg-background/90 hover:shadow-[0_10px_30px_oklch(0.50_0.18_145/0.10)]">
-      <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border/35 bg-muted/70 p-2 transition-colors duration-300 group-hover:border-primary/20 group-hover:bg-primary/5">
+    <div className="group mx-2 flex min-w-52 items-center gap-3 rounded-lg border border-border/40 bg-background/70 px-4 py-3 backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/35 hover:bg-background/90 hover:shadow-[0_10px_30px_oklch(0.50_0.18_145/0.10)]">
+      <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border/35 bg-muted/70 p-2 transition-colors duration-300 group-hover:border-primary/20 group-hover:bg-primary/5">
         <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-primary/45 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
         <img
           alt=""
@@ -123,37 +124,17 @@ export const TechStackSection = memo(
       <div className="container relative mx-auto px-4">
         <ViewportAnimation>
           <div className="grid gap-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(18rem,0.9fr)] lg:items-end">
-            <div className="max-w-2xl">
-              <div className="mb-4 flex items-center gap-3">
-                <div aria-hidden className="h-px w-8 bg-primary/50" />
-                <span className="section-kicker">The Stack</span>
-              </div>
-
-              <h2
-                className="font-heading text-3xl font-bold tracking-tight lg:text-4xl"
-                style={{
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  background:
-                    "linear-gradient(135deg, oklch(0.52 0.12 145), oklch(0.72 0.18 145) 45%, oklch(0.58 0.22 145))",
-                  backgroundClip: "text",
-                }}
-              >
-                Powered by
-              </h2>
-
-              <p className="mt-4 max-w-xl text-base leading-relaxed text-muted-foreground">
-                The product runs on a small set of dependable tools chosen to keep the interface
-                fast, the data clear, and the experience steady every time someone checks a route.
-              </p>
-            </div>
+            <SectionHeading
+              className="max-w-2xl"
+              description="The product runs on a static-first set of dependable tools chosen to keep the interface fast, the data clear, and the experience steady every time someone checks a route."
+              descriptionClassName="mt-4 max-w-xl leading-relaxed"
+              eyebrow="The Stack"
+              title="Powered by"
+            />
 
             <div className="grid gap-3 sm:grid-cols-3 lg:justify-self-end">
               {stackPrinciples.map((principle) => (
-                <div
-                  className="section-card rounded-2xl px-4 py-4 text-center shadow-sm"
-                  key={principle}
-                >
+                <div className="section-card px-4 py-4 text-center shadow-sm" key={principle}>
                   <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-primary/65">
                     {principle}
                   </span>
@@ -164,7 +145,7 @@ export const TechStackSection = memo(
         </ViewportAnimation>
 
         <ViewportAnimation delay={0.08}>
-          <div className="section-panel mt-14 overflow-hidden rounded-[2rem]">
+          <div className="section-panel mt-14 overflow-hidden">
             <div className="border-b border-border/40 px-5 py-4 sm:px-6">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex items-center gap-2.5">

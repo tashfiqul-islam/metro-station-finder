@@ -45,7 +45,7 @@ describe("HomePage", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 2, name: "The journey" })).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { level: 2, name: /Pick the task that matches the commute/i }),
+      screen.getByRole("heading", { level: 2, name: /Choose the answer you need next/iu }),
     ).toBeInTheDocument();
     expect(screen.getByRole("contentinfo", { name: "Site footer" })).toBeInTheDocument();
   });

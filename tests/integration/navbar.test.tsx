@@ -65,11 +65,11 @@ describe("NavBar", () => {
   it("mobile hamburger opens the menu", async () => {
     await renderNavBar();
     const hamburger = await screen.findByRole("button", {
-      name: /toggle mobile menu/i,
+      name: /toggle mobile menu/iu,
     });
     fireEvent.click(hamburger);
     await waitFor(() => {
-      expect(screen.getByRole("navigation", { name: /mobile navigation/i })).toBeDefined();
+      expect(screen.getByRole("navigation", { name: /mobile navigation/iu })).toBeDefined();
     });
     await waitFor(() => {}, { timeout: 500 });
   });
@@ -77,15 +77,15 @@ describe("NavBar", () => {
   it("mobile menu closes on Escape key", async () => {
     await renderNavBar();
     const hamburger = await screen.findByRole("button", {
-      name: /toggle mobile menu/i,
+      name: /toggle mobile menu/iu,
     });
     fireEvent.click(hamburger);
     await waitFor(() => {
-      expect(screen.getByRole("navigation", { name: /mobile navigation/i })).toBeDefined();
+      expect(screen.getByRole("navigation", { name: /mobile navigation/iu })).toBeDefined();
     });
     fireEvent.keyDown(document, { key: "Escape" });
     await waitFor(() => {
-      expect(screen.queryByRole("navigation", { name: /mobile navigation/i })).toBeNull();
+      expect(screen.queryByRole("navigation", { name: /mobile navigation/iu })).toBeNull();
     });
     await waitFor(() => {}, { timeout: 500 });
   });
@@ -93,15 +93,15 @@ describe("NavBar", () => {
   it("mobile menu closes on outside click", async () => {
     await renderNavBar();
     const hamburger = await screen.findByRole("button", {
-      name: /toggle mobile menu/i,
+      name: /toggle mobile menu/iu,
     });
     fireEvent.click(hamburger);
     await waitFor(() => {
-      expect(screen.getByRole("navigation", { name: /mobile navigation/i })).toBeDefined();
+      expect(screen.getByRole("navigation", { name: /mobile navigation/iu })).toBeDefined();
     });
     fireEvent.mouseDown(document.body);
     await waitFor(() => {
-      expect(screen.queryByRole("navigation", { name: /mobile navigation/i })).toBeNull();
+      expect(screen.queryByRole("navigation", { name: /mobile navigation/iu })).toBeNull();
     });
     await waitFor(() => {}, { timeout: 500 });
   });
@@ -109,14 +109,14 @@ describe("NavBar", () => {
   it("mobile menu closes after clicking a nav link", async () => {
     await renderNavBar();
     const hamburger = await screen.findByRole("button", {
-      name: /toggle mobile menu/i,
+      name: /toggle mobile menu/iu,
     });
     fireEvent.click(hamburger);
     await waitFor(() => {
-      expect(screen.getByRole("navigation", { name: /mobile navigation/i })).toBeDefined();
+      expect(screen.getByRole("navigation", { name: /mobile navigation/iu })).toBeDefined();
     });
 
-    const mobileNav = screen.getByRole("navigation", { name: /mobile navigation/i });
+    const mobileNav = screen.getByRole("navigation", { name: /mobile navigation/iu });
     const aboutLink = screen
       .getAllByRole("link", { name: "About" })
       .find((link) => mobileNav.contains(link));
@@ -128,37 +128,37 @@ describe("NavBar", () => {
     fireEvent.click(aboutLink);
 
     await waitFor(() => {
-      expect(screen.queryByRole("navigation", { name: /mobile navigation/i })).toBeNull();
+      expect(screen.queryByRole("navigation", { name: /mobile navigation/iu })).toBeNull();
     });
   });
 
   it("clicking inside the mobile menu does not trigger outside-close logic", async () => {
     await renderNavBar();
     const hamburger = await screen.findByRole("button", {
-      name: /toggle mobile menu/i,
+      name: /toggle mobile menu/iu,
     });
     fireEvent.click(hamburger);
 
-    const mobileNav = await screen.findByRole("navigation", { name: /mobile navigation/i });
+    const mobileNav = await screen.findByRole("navigation", { name: /mobile navigation/iu });
     fireEvent.mouseDown(mobileNav);
 
     await waitFor(() => {
-      expect(screen.getByRole("navigation", { name: /mobile navigation/i })).toBeDefined();
+      expect(screen.getByRole("navigation", { name: /mobile navigation/iu })).toBeDefined();
     });
   });
 
   it("non-Escape keys do not close the mobile menu", async () => {
     await renderNavBar();
     const hamburger = await screen.findByRole("button", {
-      name: /toggle mobile menu/i,
+      name: /toggle mobile menu/iu,
     });
     fireEvent.click(hamburger);
 
-    await screen.findByRole("navigation", { name: /mobile navigation/i });
+    await screen.findByRole("navigation", { name: /mobile navigation/iu });
     fireEvent.keyDown(document, { key: "Enter" });
 
     await waitFor(() => {
-      expect(screen.getByRole("navigation", { name: /mobile navigation/i })).toBeDefined();
+      expect(screen.getByRole("navigation", { name: /mobile navigation/iu })).toBeDefined();
     });
   });
 

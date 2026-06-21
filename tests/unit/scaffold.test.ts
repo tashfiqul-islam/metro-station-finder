@@ -8,7 +8,7 @@ describe("scaffold", () => {
   });
 
   it("uses bun as the package manager", () => {
-    expect(pkg.packageManager).toMatch(/^bun@/);
+    expect(pkg.packageManager).toMatch(/^bun@/u);
   });
 
   it("declares every script the plan depends on", () => {

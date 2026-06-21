@@ -218,6 +218,12 @@
   }
 }
 
+@keyframes route-map-flow {
+  to {
+    stroke-dashoffset: -18;
+  }
+}
+
 @keyframes journey-fade-up {
   from {
     opacity: 0;
@@ -321,6 +327,19 @@
     filter: drop-shadow(0 12px 30px oklch(0.64 0.2 145 / 0.18));
   }
 
+  .section-title-gradient {
+    background: linear-gradient(
+      135deg,
+      oklch(0.52 0.12 145),
+      oklch(0.72 0.18 145) 45%,
+      oklch(0.58 0.22 145)
+    );
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: var(--color-primary);
+  }
+
   /* ── Nav glass ───────────────────────────────────────────────────────────
      Separate token so we can tune navbar opacity independently of cards.
   */
@@ -364,7 +383,7 @@
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border: 1px solid oklch(0 0 0 / 9%);
-    border-radius: 1.75rem;
+    border-radius: var(--radius-xl);
     box-shadow:
       0 20px 70px oklch(0 0 0 / 8%),
       0 1px 0 oklch(1 0 0 / 45%) inset;
@@ -383,7 +402,7 @@
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     border: 1px solid oklch(0 0 0 / 8%);
-    border-radius: 1.5rem;
+    border-radius: var(--radius-lg);
     box-shadow:
       0 18px 60px oklch(0 0 0 / 8%),
       0 1px 0 oklch(1 0 0 / 38%) inset;
@@ -408,6 +427,77 @@
   .dark .section-chip {
     background: oklch(1 0 0 / 6%);
     border-color: oklch(1 0 0 / 8%);
+  }
+
+  .hero-grid-surface {
+    opacity: 0.12;
+    background-image:
+      linear-gradient(to right, oklch(0.44 0.145 145 / 0.18) 1px, transparent 1px),
+      linear-gradient(to bottom, oklch(0.44 0.145 145 / 0.12) 1px, transparent 1px),
+      linear-gradient(to right, oklch(0.44 0.145 145 / 0.08) 1px, transparent 1px),
+      linear-gradient(to bottom, oklch(0.44 0.145 145 / 0.06) 1px, transparent 1px);
+    background-position: center, center, center, center;
+    background-size:
+      96px 96px,
+      96px 96px,
+      24px 24px,
+      24px 24px;
+    mask-image: linear-gradient(to bottom, transparent, black 18%, black 76%, transparent);
+    -webkit-mask-image: linear-gradient(to bottom, transparent, black 18%, black 76%, transparent);
+  }
+
+  .dark .hero-grid-surface {
+    opacity: 0.2;
+  }
+
+  .hero-map-surface {
+    opacity: 0.62;
+    background-image:
+      radial-gradient(circle at 34% 18%, oklch(0.44 0.145 145 / 0.12), transparent 28%),
+      linear-gradient(to right, oklch(0.44 0.145 145 / 0.11) 1px, transparent 1px),
+      linear-gradient(to bottom, oklch(0.44 0.145 145 / 0.09) 1px, transparent 1px);
+    background-size:
+      100% 100%,
+      32px 32px,
+      32px 32px;
+  }
+
+  .dark .hero-map-surface {
+    opacity: 0.72;
+    background-image:
+      radial-gradient(circle at 34% 18%, oklch(0.64 0.2 145 / 0.14), transparent 28%),
+      linear-gradient(to right, oklch(0.64 0.2 145 / 0.11) 1px, transparent 1px),
+      linear-gradient(to bottom, oklch(0.64 0.2 145 / 0.08) 1px, transparent 1px);
+  }
+
+  .route-map-frame {
+    background:
+      linear-gradient(180deg, oklch(1 0 0 / 76%), oklch(0.96 0.01 145 / 66%)),
+      radial-gradient(circle at 72% 14%, oklch(0.44 0.145 145 / 0.11), transparent 34%);
+    border: 1px solid oklch(0 0 0 / 10%);
+    box-shadow:
+      0 22px 54px oklch(0 0 0 / 8%) inset,
+      0 1px 0 oklch(1 0 0 / 56%) inset;
+  }
+
+  .dark .route-map-frame {
+    background:
+      linear-gradient(180deg, oklch(0.16 0.018 250 / 72%), oklch(0.1 0.016 250 / 76%)),
+      radial-gradient(circle at 72% 14%, oklch(0.64 0.2 145 / 0.14), transparent 34%);
+    border-color: oklch(1 0 0 / 10%);
+    box-shadow:
+      0 24px 70px oklch(0 0 0 / 24%) inset,
+      0 1px 0 oklch(1 0 0 / 8%) inset;
+  }
+
+  .route-map-flow {
+    animation: route-map-flow 2.8s linear infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .route-map-flow {
+      animation: none;
+    }
   }
 
   .journey-stop-current {

@@ -118,24 +118,24 @@ describe("Static route pages", () => {
   it("renders privacy route content", () => {
     renderRouteComponent(PrivacyRoute as unknown as RouteWithHead);
     expect(screen.getByRole("heading", { level: 1, name: "Privacy Policy" })).toBeInTheDocument();
-    expect(screen.getAllByText(/do not collect/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/do not collect/iu).length).toBeGreaterThan(0);
   });
 
   it("renders terms route content", () => {
     renderRouteComponent(TermsRoute as unknown as RouteWithHead);
     expect(screen.getByRole("heading", { level: 1, name: "Terms of Use" })).toBeInTheDocument();
-    expect(screen.getAllByText(/free to use/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/free to use/iu).length).toBeGreaterThan(0);
   });
 
   it("renders accessibility route content", () => {
     renderRouteComponent(AccessibilityRoute as unknown as RouteWithHead);
     expect(screen.getByRole("heading", { level: 1, name: "Accessibility" })).toBeInTheDocument();
-    expect(screen.getAllByText(/WCAG 2.1 Level AA/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/WCAG 2.1 Level AA/iu).length).toBeGreaterThan(0);
   });
 
   it("renders data sources route content", () => {
     renderRouteComponent(DataSourcesRoute as unknown as RouteWithHead);
     expect(screen.getByRole("heading", { level: 1, name: "Data Sources" })).toBeInTheDocument();
-    expect(screen.getByText(/Dhaka Mass Transit Company Limited/i)).toBeInTheDocument();
+    expect(screen.getByText(/Dhaka Mass Transit Company Limited/iu)).toBeInTheDocument();
   });
 });

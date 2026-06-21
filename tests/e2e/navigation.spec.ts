@@ -19,7 +19,7 @@ test.describe("Navigation", () => {
   test("navigating via navbar updates the page title", async ({ page }) => {
     await page.goto("/");
 
-    await expect(page).toHaveTitle(/Metro Station Finder/);
+    await expect(page).toHaveTitle(/Metro Station Finder/u);
   });
 
   test("internal navigation updates the URL and keeps the shell visible", async ({ page }) => {
@@ -28,8 +28,8 @@ test.describe("Navigation", () => {
 
     await page.getByRole("link", { name: "About" }).first().click();
 
-    await expect(page).toHaveURL(/\/about$/);
-    await expect(page).toHaveTitle(/About/);
+    await expect(page).toHaveURL(/\/about$/u);
+    await expect(page).toHaveTitle(/About/u);
     await expect(page.getByRole("navigation", { name: "Main navigation" })).toBeVisible();
   });
 
@@ -37,17 +37,20 @@ test.describe("Navigation", () => {
     await page.setViewportSize({ height: 812, width: 375 });
     await page.goto("/");
 
-    const hamburger = page.getByRole("button", { name: /toggle mobile menu/i });
+    const hamburger = page.getByRole("button", { name: /toggle mobile menu/iu });
     await expect(hamburger).toBeVisible();
     const mobileNav = page.locator("#mobile-menu");
 
-    for (let attempt = 0; attempt < 3; attempt += 1) {
+    const openMobileMenu = async (attemptsRemaining: number): Promise<void> => {
       await hamburger.click({ force: true });
-      if (await mobileNav.count()) {
-        break;
+      if ((await mobileNav.count()) > 0 || attemptsRemaining <= 1) {
+        return;
       }
       await page.waitForTimeout(150);
-    }
+      await openMobileMenu(attemptsRemaining - 1);
+    };
+
+    await openMobileMenu(3);
 
     await expect(mobileNav).toBeVisible();
     await expect(hamburger).toHaveAttribute("aria-expanded", "true");

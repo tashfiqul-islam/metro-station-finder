@@ -6,6 +6,7 @@ export const getRouter = () => {
   const router = createTanStackRouter({
     defaultPreload: "intent",
     defaultPreloadStaleTime: 0,
+    defaultViewTransition: true,
     routeTree,
     scrollRestoration: true,
   });
@@ -14,7 +15,8 @@ export const getRouter = () => {
 };
 
 declare module "@tanstack/react-router" {
-  // biome-ignore lint/style/useNamingConvention: TanStack Router module augmentation requires this exact interface name
+  // oxlint-disable-next-line typescript-eslint/no-empty-interface
+  // TanStack Router module augmentation requires this exact interface name.
   interface Register {
     router: ReturnType<typeof getRouter>;
   }
