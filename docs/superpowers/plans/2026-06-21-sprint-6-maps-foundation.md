@@ -181,12 +181,12 @@ const MapCanvasFallback = ({ className, offline = false }: Omit<MapCanvasProps, 
   <div
     className={cn(
       "relative overflow-hidden rounded-2xl border border-border bg-card/70",
-      "min-h-[22rem] w-full",
+      "min-h-88 w-full",
       className,
     )}
   >
     <div className="absolute inset-0 animate-pulse bg-linear-to-br from-primary/6 via-transparent to-primary/10" />
-    <div className="relative flex h-full min-h-[22rem] items-center justify-center px-6 text-center">
+    <div className="relative flex h-full min-h-88 items-center justify-center px-6 text-center">
       <div className="space-y-2">
         <p className="font-heading text-base font-semibold text-foreground">
           {offline ? "Offline - map unavailable" : "Loading map"}
@@ -324,10 +324,10 @@ export const MapCanvasClient = ({
   }, [bounds]);
 
   return (
-    <div className={cn("relative min-h-[22rem] w-full overflow-hidden rounded-2xl", className)}>
+    <div className={cn("relative min-h-88 w-full overflow-hidden rounded-2xl", className)}>
       <Map
         ref={mapRef}
-        className="h-full min-h-[22rem] w-full"
+        className="h-full min-h-88 w-full"
         viewport={{
           bearing: 0,
           center: [90.4125, 23.8103],
@@ -555,7 +555,7 @@ export const StationFinderRoute = (): React.ReactElement => {
           <div className="section-card px-4 py-2">Static MRT-6 corridor preview</div>
         </div>
 
-        <MapCanvas className="h-[26rem] md:h-[34rem]">
+        <MapCanvas className="h-104 md:h-136">
           <MetroLineLayer />
           <StationMarkers />
         </MapCanvas>
