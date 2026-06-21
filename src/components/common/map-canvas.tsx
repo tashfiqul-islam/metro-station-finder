@@ -14,8 +14,14 @@ const LazyMapCanvasClient = lazy(async () => {
   return { default: module.MapCanvasClient };
 });
 
-export const warmMapCanvas = async (): Promise<void> => {
-  await loadMapCanvasClient();
+export const warmMapCanvas = (): void => {
+  void (async () => {
+    try {
+      await loadMapCanvasClient();
+    } catch {
+      // Best-effort preload only; ignore warm-up failures.
+    }
+  })();
 };
 
 interface MapCanvasProps {
