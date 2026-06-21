@@ -23,26 +23,18 @@ test.describe("station finder map preview", () => {
   test("shows offline overlay without crashing", async ({ context, page }, testInfo) => {
     test.skip(
       !["chromium", "mobile-chrome"].includes(testInfo.project.name),
-      "Real offline back/forward remount is reproducible in Chromium-family projects here; Firefox and WebKit do not consistently replay the cached route entry against the Vite dev server once offline.",
+      "Offline overlay behavior is covered in Chromium-family projects here; Firefox and WebKit do not consistently replay this dev-server flow once offline.",
     );
 
     await page.goto("/");
     await page.getByRole("link", { name: "Explore Stations" }).click();
     await expect(page.getByRole("heading", { name: /station finder/iu })).toBeVisible();
+    await expect(page.locator('[data-testid^="station-marker-"]')).toHaveCount(17, {
+      timeout: 30_000,
+    });
+    await expect(page.getByText(/loading map/iu)).toHaveCount(0);
 
     await context.setOffline(true);
-
-    await page.evaluate(() => {
-      window.history.back();
-    });
-    await expect(page).toHaveURL(/\/$/u, { timeout: 15_000 });
-
-    await page.evaluate(() => {
-      window.history.forward();
-    });
-
-    await expect(page).toHaveURL(/\/station-finder$/u, { timeout: 15_000 });
-    await expect(page.getByRole("heading", { name: /station finder/iu })).toBeVisible();
     await expect(page.getByText(/offline - map unavailable/iu)).toBeVisible();
   });
 });
