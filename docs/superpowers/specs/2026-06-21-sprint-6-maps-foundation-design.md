@@ -2,7 +2,7 @@
 
 **Date:** 2026-06-21  
 **Status:** Draft for review  
-**Scope:** Sprint 6 only — SSR-safe map foundation for `/station-finder` with 17 MRT-6 station markers, static line rendering, offline-safe preview behavior, and verification gates
+**Scope:** Sprint 6 only — SSR-safe map foundation for `/station-finder` with 17 MRT-6 station markers, real MRT-6 alignment rendering, offline-safe preview behavior, and verification gates
 
 ---
 
@@ -19,7 +19,7 @@ It does **not** yet have a browser-safe map integration. The primary Sprint 6 ri
 
 This sprint's job is to establish a production-safe map foundation without leaking browser-only imports into prerender, while keeping the implementation small enough that Sprint 7 can layer real station-finder behavior on top without rewriting the map stack.
 
-**Outcome:** Visiting `/station-finder` should show a real interactive map with the MRT-6 corridor and all 17 station markers. The page must prerender successfully, must not crash offline, and must keep the map stack code-split away from the main entry.
+**Outcome:** Visiting `/station-finder` should show a real interactive map with the MRT-6 corridor and all 17 station markers. The corridor line must visually follow the actual metro alignment rather than connecting stations with a sparse approximation. The page must prerender successfully, must not crash offline, and must keep the map stack code-split away from the main entry.
 
 ---
 
@@ -35,6 +35,7 @@ This spec is based on current repo state plus current official docs and current 
 - `@mapcn` registry already configured in `components.json`
 - `station-finder` route currently exists as a preview route
 - `stations.ts` and `mrt6-line.ts` are already present and tested
+- current committed `mrt6-line.ts` is still a sparse hand-traced fallback, not the desired final alignment geometry
 
 ### Current-doc inputs
 
@@ -43,6 +44,7 @@ This spec is based on current repo state plus current official docs and current 
 - **mapcn:** copy-paste owned component model, `Map`, `MapMarker`, `MarkerPopup`, `MapRoute`, `MapControls`, and `useMap` are first-class; raw MapLibre access is intentionally supported
 - **MapLibre GL JS:** GeoJSON sources and line layers are the correct primitive for the corridor layer; cleanup of sources/layers must be explicit
 - **Vite 8:** dynamic imports already create separate chunks; explicit chunk grouping is available but should only be added if natural splitting is insufficient
+- **OSM / Overpass:** the correct source for MRT-6 line geometry is the committed relation geometry or derived dense alignment polyline; manual edits are acceptable only as narrow cleanup after OSM-first extraction
 
 ---
 
@@ -51,13 +53,14 @@ This spec is based on current repo state plus current official docs and current 
 ### In scope
 
 1. Install and own the `@mapcn/map` component source under `src/components/ui/map.tsx`
-2. Add an SSR-safe `MapCanvas` wrapper that never imports browser-only map code during prerender
-3. Render the MRT-6 line on the map from the committed static GeoJSON
-4. Render all 17 stations as interactive markers with visible popup metadata
-5. Replace the current `/station-finder` placeholder with a real map preview page
-6. Add route-entry map chunk warming for smoother navigation into `/station-finder`
-7. Add integration and E2E coverage for prerender safety, markers, popup interaction, and offline behavior
-8. Verify map stack code is lazy-split from the main route entry
+2. Replace the current sparse MRT-6 fallback geometry with a dense real alignment polyline sourced from OSM / Overpass first and manually cleaned only if necessary
+3. Add an SSR-safe `MapCanvas` wrapper that never imports browser-only map code during prerender
+4. Render the MRT-6 line on the map from the committed static GeoJSON
+5. Render all 17 stations as interactive markers with visible popup metadata
+6. Replace the current `/station-finder` placeholder with a real map preview page
+7. Add route-entry map chunk warming for smoother navigation into `/station-finder`
+8. Add integration and E2E coverage for prerender safety, markers, popup interaction, and offline behavior
+9. Verify map stack code is lazy-split from the main route entry
 
 ### Allowed enabling fixes
 
@@ -83,6 +86,7 @@ Sprint 6 does **not** include:
 - user location marker
 - walking routes
 - ORS server functions
+- street routing along roads between station and user destination
 - fare/trip calculations in the route UI
 - clustering or high-density marker rendering
 - custom tile hosting fallback
@@ -105,6 +109,7 @@ The route must:
 - render a visible, non-broken fallback in prerendered HTML
 - hydrate into a real interactive map in the browser
 - display the full MRT-6 corridor as a colored line
+- use dense alignment geometry that visually follows the real metro path rather than sparse station-to-station segments
 - display all 17 stations as clickable markers
 - open a popup with station name and slug when a marker is clicked
 - show an offline-safe overlay when the browser is offline
@@ -359,8 +364,17 @@ Use raw GeoJSON source + line layer through `useMap`, not a manually clipped rou
 Reason:
 
 - the MRT-6 corridor is static
-- source already exists in repo
+- source already exists in repo, but its geometry must be corrected to a dense alignment before Sprint 6 is considered finished
 - this is the correct primitive for future trip-planner reuse
+
+### Geometry source strategy
+
+The MRT-6 corridor geometry for Sprint 6 must be sourced in this order:
+
+1. **OSM / Overpass first** — fetch the MRT-6 relation/alignment geometry and derive a dense committed `LineString`
+2. **Manual cleanup second** — only if the OSM geometry is incomplete, noisy, or requires narrow trimming to render correctly
+
+Sprint 6 must not keep the current sparse station-to-station fallback if a denser real alignment can be committed now.
 
 ### Initial viewport behavior
 
@@ -395,7 +409,7 @@ No transformations beyond marker shape and popup text.
 
 `mrt6-line.ts` → `MetroLineLayer` → GeoJSON source → line layer
 
-No clipping, no fetching, no external API.
+No runtime fetching, no external API. Data-source refresh is a build-time / committed-asset correction only.
 
 ### Route page
 
@@ -474,6 +488,7 @@ Build verification must confirm:
 - no SSR crash from map imports
 - generated station-finder HTML exists in the output
 - prerendered output contains a shell/skeleton rather than a broken empty region or stack trace
+- the committed MRT-6 line geometry is dense enough that the rendered corridor is visibly rail-shaped rather than a coarse zig-zag between station points
 
 ---
 
@@ -543,7 +558,14 @@ Mitigation:
 - treat offline overlay as a first-class UI state
 - verify via Playwright offline reload smoke
 
-### Risk 5: Warm-import hint becomes coupled to unstable home layout
+### Risk 5: Committed MRT-6 geometry remains too sparse and visually wrong
+
+Mitigation:
+
+- refresh `src/data/mrt6-line.geojson` from OSM / Overpass before calling Sprint 6 done
+- allow only narrow manual cleanup after the OSM-first pass
+
+### Risk 6: Warm-import hint becomes coupled to unstable home layout
 
 Mitigation:
 
@@ -557,15 +579,16 @@ Mitigation:
 Sprint 6 spec is satisfied only when all are true:
 
 1. `@mapcn/map` is added and owned in source
-2. `/station-finder` shows a live map after hydration
-3. all 17 stations render as markers with popups
-4. MRT-6 line renders from committed static GeoJSON
-5. route prerenders successfully without map import crashes
-6. offline reload shows an explicit overlay and no crash
-7. map stack is lazy-split from the main entry path
-8. `bun run ci` passes
-9. targeted E2E map smoke passes
-10. build output inspection confirms the prerender-safe shell on the route
+2. committed `mrt6-line.geojson` contains dense real alignment geometry sourced from OSM / Overpass first, with only narrow manual cleanup if needed
+3. `/station-finder` shows a live map after hydration
+4. all 17 stations render as markers with popups
+5. MRT-6 line renders from committed static GeoJSON
+6. route prerenders successfully without map import crashes
+7. offline reload shows an explicit overlay and no crash
+8. map stack is lazy-split from the main entry path
+9. `bun run ci` passes
+10. targeted E2E map smoke passes
+11. build output inspection confirms the prerender-safe shell on the route
 
 ---
 
@@ -584,13 +607,14 @@ The later implementation plan must preserve these guardrails:
 The implementation plan should therefore be able to proceed in a clean sequence:
 
 1. install mapcn
-2. build the SSR-safe wrapper
-3. wire corridor layer
-4. wire station markers
-5. replace route preview
-6. add warm-import hint
-7. add tests
-8. verify chunking and prerender
+2. refresh MRT-6 geometry from OSM / Overpass and commit the dense alignment
+3. build the SSR-safe wrapper
+4. wire corridor layer
+5. wire station markers
+6. replace route preview
+7. add warm-import hint
+8. add tests
+9. verify chunking and prerender
 
 ---
 

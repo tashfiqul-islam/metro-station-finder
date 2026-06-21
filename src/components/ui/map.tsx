@@ -391,6 +391,8 @@ type MapMarkerProps = {
   onDrag?: (lngLat: { lng: number; lat: number }) => void;
   /** Callback when marker drag ends (requires draggable: true) */
   onDragEnd?: (lngLat: { lng: number; lat: number }) => void;
+  /** Visual stack order for overlapping markers */
+  zIndex?: number;
 } & Omit<MarkerOptions, "element">;
 
 const MapMarker = ({
@@ -404,6 +406,7 @@ const MapMarker = ({
   onDrag,
   onDragEnd,
   draggable = false,
+  zIndex,
   ...markerOptions
 }: MapMarkerProps): React.ReactElement => {
   const { map } = useMap();
@@ -505,7 +508,23 @@ const MapMarker = ({
     if (marker.getPitchAlignment() !== (pitchAlignment ?? "auto")) {
       marker.setPitchAlignment(pitchAlignment ?? "auto");
     }
-  }, [marker, longitude, latitude, draggable, offset, rotation, rotationAlignment, pitchAlignment]);
+
+    if (zIndex === undefined) {
+      marker.getElement().style.removeProperty("z-index");
+    } else {
+      marker.getElement().style.zIndex = String(zIndex);
+    }
+  }, [
+    marker,
+    longitude,
+    latitude,
+    draggable,
+    offset,
+    rotation,
+    rotationAlignment,
+    pitchAlignment,
+    zIndex,
+  ]);
 
   return <MarkerContext.Provider value={{ map, marker }}>{children}</MarkerContext.Provider>;
 };

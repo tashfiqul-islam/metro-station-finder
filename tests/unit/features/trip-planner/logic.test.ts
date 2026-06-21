@@ -5,7 +5,10 @@ import { STATIONS } from "@/data/stations";
 import { InvalidStationError } from "@/features/fare-calculator/logic";
 import {
   clipLineToSegment,
+  getStationLineAnchorCoords,
   getStationLineAnchorIndexes,
+  getStationLineDisplayAnchorCoords,
+  getStationLineDisplayAnchorIndexes,
   planTrip,
 } from "@/features/trip-planner/logic";
 
@@ -30,6 +33,36 @@ describe("clipLineToSegment", () => {
 
     expect(anchors[0]).toBeLessThan(anchors[1] ?? -1);
     expect(anchors[1]).toBeLessThan(anchors[2] ?? -1);
+  });
+
+  it("returns dense-line anchor coordinates in station order", () => {
+    const anchors = getStationLineAnchorCoords(mrt6Line, STATIONS);
+    const anchorIndexes = getStationLineAnchorIndexes(mrt6Line, STATIONS);
+
+    expect(anchors).toHaveLength(STATIONS.length);
+    expect(anchors[0]).toEqual(mrt6Line.geometry.coordinates[anchorIndexes[0] ?? -1]);
+    expect(anchors[5]).toEqual(mrt6Line.geometry.coordinates[anchorIndexes[5] ?? -1]);
+    expect(anchors.at(-1)).toEqual(mrt6Line.geometry.coordinates[anchorIndexes.at(-1) ?? -1]);
+  });
+
+  it("spreads south-end display anchors while preserving order", () => {
+    const displayIndexes = getStationLineDisplayAnchorIndexes(mrt6Line, STATIONS);
+    const motijheelIndex = STATIONS.findIndex((station) => station.slug === "motijheel");
+    const kamalapurIndex = STATIONS.findIndex((station) => station.slug === "kamalapur");
+
+    expect(displayIndexes[motijheelIndex]).toBeLessThan(displayIndexes[kamalapurIndex] ?? -1);
+    expect(
+      (displayIndexes[kamalapurIndex] ?? -1) - (displayIndexes[motijheelIndex] ?? -1),
+    ).toBeGreaterThanOrEqual(32);
+  });
+
+  it("returns display anchors that still lie on the dense line", () => {
+    const displayAnchors = getStationLineDisplayAnchorCoords(mrt6Line, STATIONS);
+    const allCoords = new Set(mrt6Line.geometry.coordinates.map((coord) => coord.join(",")));
+
+    for (const anchor of displayAnchors) {
+      expect(allCoords.has(anchor.join(","))).toBe(true);
+    }
   });
 
   it("returns the station coordinate for a zero-length segment", () => {

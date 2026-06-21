@@ -83,6 +83,99 @@ export const getStationLineAnchorIndexes = (
   });
 };
 
+export const getStationLineAnchorCoords = (
+  line: Mrt6LineFeature,
+  stations: readonly Pick<Station, "lat" | "lng">[],
+): LngLat[] => {
+  const anchorIndexes = getStationLineAnchorIndexes(line, stations);
+
+  return anchorIndexes.map((anchorIndex) => {
+    const coord = line.geometry.coordinates[anchorIndex];
+
+    if (!coord) {
+      throw new RangeError("getStationLineAnchorCoords requires valid station anchor indices");
+    }
+
+    return coord;
+  });
+};
+
+const MIN_DISPLAY_ANCHOR_INDEX_GAP = 32;
+
+const MOTIJHEEL_SLUG = "motijheel";
+const KAMALAPUR_SLUG = "kamalapur";
+
+export const getStationLineDisplayAnchorIndexes = (
+  line: Mrt6LineFeature,
+  stations: readonly Pick<Station, "lat" | "lng">[],
+): number[] => {
+  const anchorIndexes = getStationLineAnchorIndexes(line, stations);
+  const displayIndexes = [...anchorIndexes];
+
+  const stationIndexBySlug = new Map(
+    STATIONS.map((station, index) => [station.slug, index] as const),
+  );
+
+  const motijheelIndex = stationIndexBySlug.get(MOTIJHEEL_SLUG);
+  const kamalapurIndex = stationIndexBySlug.get(KAMALAPUR_SLUG);
+
+  if (motijheelIndex === undefined || kamalapurIndex === undefined) {
+    throw new RangeError(
+      "getStationLineDisplayAnchorIndexes requires Motijheel and Kamalapur stations",
+    );
+  }
+
+  const motijheelAnchor = displayIndexes[motijheelIndex];
+  const kamalapurAnchor = displayIndexes[kamalapurIndex];
+  const previousAnchor = displayIndexes[motijheelIndex - 1];
+
+  if (
+    motijheelAnchor === undefined ||
+    kamalapurAnchor === undefined ||
+    previousAnchor === undefined
+  ) {
+    throw new RangeError("getStationLineDisplayAnchorIndexes requires valid station anchors");
+  }
+
+  const currentGap = kamalapurAnchor - motijheelAnchor;
+  if (currentGap < MIN_DISPLAY_ANCHOR_INDEX_GAP) {
+    const candidateAnchor = kamalapurAnchor - MIN_DISPLAY_ANCHOR_INDEX_GAP;
+    displayIndexes[motijheelIndex] = Math.max(candidateAnchor, previousAnchor + 1);
+  }
+
+  for (let index = 1; index < displayIndexes.length; index += 1) {
+    const current = displayIndexes[index];
+    const previous = displayIndexes[index - 1];
+
+    if (current === undefined || previous === undefined || current <= previous) {
+      throw new RangeError(
+        "getStationLineDisplayAnchorIndexes could not preserve station order on the dense line",
+      );
+    }
+  }
+
+  return displayIndexes;
+};
+
+export const getStationLineDisplayAnchorCoords = (
+  line: Mrt6LineFeature,
+  stations: readonly Pick<Station, "lat" | "lng">[],
+): LngLat[] => {
+  const displayIndexes = getStationLineDisplayAnchorIndexes(line, stations);
+
+  return displayIndexes.map((displayIndex) => {
+    const coord = line.geometry.coordinates[displayIndex];
+
+    if (!coord) {
+      throw new RangeError(
+        "getStationLineDisplayAnchorCoords requires valid display anchor indices",
+      );
+    }
+
+    return coord;
+  });
+};
+
 /**
  * Returns a dense slice of the LineString between two station indices.
  * The segment is anchored to the actual station coordinates and follows

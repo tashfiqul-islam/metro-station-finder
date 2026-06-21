@@ -1,8 +1,10 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+import mrt6Line from "@/data/mrt6-line";
 import { STATIONS } from "@/data/stations";
 import { StationMarkers } from "@/features/station-finder/components/station-markers";
+import { getStationLineAnchorIndexes } from "@/features/trip-planner/logic";
 
 vi.mock("@/components/ui/map", () => ({
   MapMarker: ({
@@ -38,5 +40,23 @@ describe("StationMarkers", () => {
     expect(screen.getByText("Motijheel")).toBeInTheDocument();
     expect(screen.getByText("motijheel")).toBeInTheDocument();
     expect(screen.getByText("uttara-north")).toBeInTheDocument();
+  });
+
+  it("uses dense-line anchor coordinates for marker placement", () => {
+    render(<StationMarkers />);
+
+    const markers = screen.getAllByTestId("map-marker");
+    const anchorIndexes = getStationLineAnchorIndexes(mrt6Line, STATIONS);
+
+    const mirpur10Index = STATIONS.findIndex((station) => station.slug === "mirpur-10");
+    const mirpur10Marker = markers[mirpur10Index];
+    const mirpur10AnchorIndex = anchorIndexes[mirpur10Index];
+    const mirpur10Anchor =
+      mirpur10AnchorIndex === undefined
+        ? undefined
+        : mrt6Line.geometry.coordinates[mirpur10AnchorIndex];
+
+    expect(mirpur10Marker).toHaveAttribute("data-longitude", String(mirpur10Anchor?.[0]));
+    expect(mirpur10Marker).toHaveAttribute("data-latitude", String(mirpur10Anchor?.[1]));
   });
 });

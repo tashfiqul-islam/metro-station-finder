@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Ship an SSR-safe `/station-finder` map preview with 17 MRT-6 station markers, a static corridor line, offline-safe fallback behavior, and proof that the map stack stays out of the main prerender path.
+**Goal:** Ship an SSR-safe `/station-finder` map preview with 17 MRT-6 station markers, a real MRT-6 alignment line, offline-safe fallback behavior, and proof that the map stack stays out of the main prerender path.
 
-**Architecture:** Keep file-route registration in `src/routes/station-finder.tsx`, move page composition into `src/features/station-finder/route.tsx`, and isolate all browser-only map code behind a lazy client island. Use mapcn for the owned React map primitive, DOM markers for the 17 stations, and a raw GeoJSON source + line layer through `useMap` for the MRT-6 corridor.
+**Architecture:** Keep file-route registration in `src/routes/station-finder.tsx`, move page composition into `src/features/station-finder/route.tsx`, and isolate all browser-only map code behind a lazy client island. Before wiring the map UI, replace the sparse fallback MRT-6 geometry with a dense OSM/Overpass-first alignment so the corridor line follows the actual metro route. Use mapcn for the owned React map primitive, DOM markers for the 17 stations, and a raw GeoJSON source + line layer through `useMap` for the MRT-6 corridor.
 
 ---
 
@@ -32,6 +32,10 @@
 
 ### Modified files
 
+- `src/data/mrt6-line.geojson`
+  - replace sparse fallback coordinates with dense OSM/Overpass-first alignment geometry
+- `src/data/mrt6-line.ts`
+  - keep the typed wrapper in sync with the updated committed geometry
 - `package.json`
   - map dependency changes from the shadcn/mapcn install if required
 - `bun.lock`
@@ -42,6 +46,68 @@
   - attach `warmMapCanvas()` to the stable `/station-finder` entry path if that CTA still lives here
 - `vite.config.ts`
   - only if natural lazy splitting or prerender behavior needs a narrow supporting adjustment
+
+---
+
+### Task 0: Refresh MRT-6 corridor geometry from OSM first
+
+**Files:**
+
+- Modify: `src/data/mrt6-line.geojson`
+- Modify: `src/data/mrt6-line.ts`
+- Test: `tests/unit/features/trip-planner/logic.test.ts`
+- Test: `tests/integration/map-canvas-client.test.tsx`
+
+- [ ] **Step 1: Fetch the best available MRT-6 alignment geometry from OSM / Overpass**
+
+Use a read-only fetch path first. Do not hand-redraw first.
+
+Expected outcome:
+
+- one dense `LineString` following the MRT-6 alignment
+- coordinates remain in `[lng, lat]` order
+- route direction still matches station order from Uttara North to Kamalapur
+
+- [ ] **Step 2: Replace the sparse fallback GeoJSON with the dense alignment**
+
+Update `src/data/mrt6-line.geojson` so it contains the dense committed alignment geometry.
+
+Rules:
+
+- OSM / Overpass geometry is the primary source
+- manual cleanup is allowed only if the OSM output is incomplete or noisy
+- do not switch to road directions or any street-routing geometry
+- keep the file as a single GeoJSON `Feature<LineString>`
+
+- [ ] **Step 3: Keep the typed wrapper in sync**
+
+Update `src/data/mrt6-line.ts` to reflect the refreshed geometry and replace the stale hand-trace comment.
+
+Required comment change:
+
+- remove language that says the file is hand-traced fallback
+- replace it with wording that the geometry is sourced from committed static GeoJSON and refreshed from OSM / Overpass
+
+- [ ] **Step 4: Run the geometry-sensitive tests**
+
+Run:
+
+```bash
+bun run test:unit -- tests/unit/features/trip-planner/logic.test.ts
+bun run test:integration -- tests/integration/map-canvas-client.test.tsx
+```
+
+Expected:
+
+- clipping logic still passes with the denser line
+- fit-bounds map client test still passes after updating any geometry-derived expectations
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/data/mrt6-line.geojson src/data/mrt6-line.ts tests/unit/features/trip-planner/logic.test.ts tests/integration/map-canvas-client.test.tsx
+git commit -m "fix: refresh mrt6 alignment geometry"
+```
 
 ---
 
@@ -791,6 +857,7 @@ If `vite.config.ts` was unchanged, skip this commit.
 
 ## Spec Coverage Check
 
+- OSM / Overpass-first dense geometry refresh: Task 0
 - `@mapcn/map` owned code install: Task 1
 - SSR-safe wrapper: Tasks 2 and 3
 - 17 DOM markers with popup metadata: Task 5
