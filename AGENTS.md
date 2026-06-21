@@ -34,7 +34,7 @@ Adapted from the Karpathy coding-behavior framework. These override default inst
 
 State assumptions before implementing anything non-trivial:
 
-```
+```text
 ASSUMPTIONS:
 1. [what I'm assuming about the requirement]
 2. [what I'm assuming about the architecture]
@@ -66,7 +66,7 @@ Transform requests into verifiable goals. Prefer tests-first when possible:
 
 For multi-step work, state a brief plan with verification gates:
 
-```
+```text
 1. [step] → verify: [check]
 2. [step] → verify: [check]
 ```
@@ -162,7 +162,7 @@ Anything that touches `window`, `document`, `localStorage`, geolocation, `Inters
 
 Features live in `src/features/<feature-name>/` with everything for that feature co-located:
 
-```
+```text
 src/features/station-finder/
   route.tsx           # TanStack route component
   components/         # feature-specific UI
@@ -400,8 +400,8 @@ The first build milestone is porting the site shell from `D:/Projects/metro-stat
 
 ## 14. When you get stuck
 
-1. Check the TanStack Start docs at https://tanstack.com/start/latest before guessing.
-2. Check mapcn docs at https://mapcn.vercel.app/docs before guessing MapLibre APIs.
+1. Check the TanStack Start docs at <https://tanstack.com/start/latest> before guessing.
+2. Check mapcn docs at <https://mapcn.vercel.app/docs> before guessing MapLibre APIs.
 3. Check existing code in `src/features/` for established patterns.
 4. If the issue is library-version-specific, verify against the installed version in `package.json` — don't assume latest-online matches what's installed.
 5. If a linter rule seems wrong for this project, **do not disable it inline.** Open a discussion about updating `oxlint.config.ts`.
