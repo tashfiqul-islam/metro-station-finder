@@ -3,9 +3,35 @@ import { describe, expect, it } from "vitest";
 import mrt6Line from "@/data/mrt6-line";
 import { STATIONS } from "@/data/stations";
 import { InvalidStationError } from "@/features/fare-calculator/logic";
-import { clipLineToSegment, planTrip } from "@/features/trip-planner/logic";
+import {
+  clipLineToSegment,
+  getStationLineAnchorIndexes,
+  planTrip,
+} from "@/features/trip-planner/logic";
 
 describe("clipLineToSegment", () => {
+  it("builds monotonic dense-line anchor indexes across station order", () => {
+    const anchors = getStationLineAnchorIndexes(mrt6Line, STATIONS);
+
+    expect(anchors).toHaveLength(STATIONS.length);
+
+    for (const [index, anchor] of anchors.entries()) {
+      expect(anchor).toBeGreaterThanOrEqual(0);
+      expect(anchor).toBeLessThan(mrt6Line.geometry.coordinates.length);
+
+      if (index > 0) {
+        expect(anchor).toBeGreaterThanOrEqual(anchors[index - 1] ?? -1);
+      }
+    }
+  });
+
+  it("keeps the north-end station anchors in strict travel order", () => {
+    const anchors = getStationLineAnchorIndexes(mrt6Line, STATIONS);
+
+    expect(anchors[0]).toBeLessThan(anchors[1] ?? -1);
+    expect(anchors[1]).toBeLessThan(anchors[2] ?? -1);
+  });
+
   it("returns the station coordinate for a zero-length segment", () => {
     const coords = clipLineToSegment(mrt6Line, 0, 0);
     expect(coords).toHaveLength(1);

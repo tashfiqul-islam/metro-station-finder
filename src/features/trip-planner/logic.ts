@@ -31,11 +31,17 @@ const areSamePoint = (a: LngLat | undefined, b: LngLat): boolean =>
 const findNearestLineCoordIndex = (
   coords: readonly LngLat[],
   station: Pick<Station, "lat" | "lng">,
+  fromIdx = 0,
+  toIdx = coords.length - 1,
 ): number => {
-  let nearestIdx = 0;
+  let nearestIdx = fromIdx;
   let minDistance = Infinity;
 
   for (const [index, coord] of coords.entries()) {
+    if (index < fromIdx || index > toIdx) {
+      continue;
+    }
+
     const distance = haversineKm(station, { lat: coord[1], lng: coord[0] });
     if (distance < minDistance) {
       minDistance = distance;
@@ -44,6 +50,37 @@ const findNearestLineCoordIndex = (
   }
 
   return nearestIdx;
+};
+
+export const getStationLineAnchorIndexes = (
+  line: Mrt6LineFeature,
+  stations: readonly Pick<Station, "lat" | "lng">[],
+): number[] => {
+  const coords = line.geometry.coordinates;
+
+  if (stations.length > coords.length) {
+    throw new RangeError(
+      "getStationLineAnchorIndexes requires at least one dense-line point per station",
+    );
+  }
+
+  let previousAnchorIdx = -1;
+
+  return stations.map((station, stationIndex) => {
+    const remainingStations = stations.length - stationIndex;
+    const searchStart = previousAnchorIdx + 1;
+    const searchEnd = coords.length - remainingStations;
+
+    if (searchStart > searchEnd) {
+      throw new RangeError(
+        "getStationLineAnchorIndexes could not preserve station order on the dense line",
+      );
+    }
+
+    const anchorIdx = findNearestLineCoordIndex(coords, station, searchStart, searchEnd);
+    previousAnchorIdx = anchorIdx;
+    return anchorIdx;
+  });
 };
 
 /**
@@ -71,8 +108,14 @@ export const clipLineToSegment = (
     return [fromPoint];
   }
 
-  const fromCoordIdx = findNearestLineCoordIndex(coords, fromStation);
-  const toCoordIdx = findNearestLineCoordIndex(coords, toStation);
+  const stationLineAnchorIndexes = getStationLineAnchorIndexes(line, STATIONS);
+  const fromCoordIdx = stationLineAnchorIndexes[fromIdx];
+  const toCoordIdx = stationLineAnchorIndexes[toIdx];
+
+  if (fromCoordIdx === undefined || toCoordIdx === undefined) {
+    throw new RangeError("clipLineToSegment requires valid station anchor indices");
+  }
+
   const lo = Math.min(fromCoordIdx, toCoordIdx);
   const hi = Math.max(fromCoordIdx, toCoordIdx);
   const slice = coords.slice(lo, hi + 1) as LngLat[];
