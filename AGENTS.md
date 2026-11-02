@@ -6,6 +6,7 @@ Read this file, applicable ancestor/scoped instructions, [workflow](docs/agents/
 
 | Trigger | Additional read set |
 | --- | --- |
+| Specification, skill selection or Plane preparation | [Skills](docs/agents/skills.md); [Plane](docs/agents/plane.md); [specification](docs/templates/specification.md) and [ticket](docs/templates/plane-ticket.md) templates |
 | Package, import, provider or architecture change | [Architecture](docs/agents/architecture.md); relevant ADRs if present |
 | API, external request or contract | [API](docs/agents/api.md) |
 | UI, interaction or accessibility | [UI](docs/agents/ui.md) |
@@ -14,7 +15,7 @@ Read this file, applicable ancestor/scoped instructions, [workflow](docs/agents/
 | Logs, traces or diagnosis signals | [Observability](docs/agents/observability.md) |
 | Tool, dependency, deployment, release or rollback | [Maintenance](docs/agents/maintenance.md) |
 | Completion or review | [Quality gates](docs/agents/quality-gates.md) |
-| Existing behavior or domain terms | [METRO-9 parity and glossary work](https://app.plane.so/metro-station-finder/browse/METRO-9/); use source until its documents land |
+| Existing behavior or domain terms | [Parity](docs/product/feature-parity.md); [glossary](docs/product/glossary.md) |
 
 Inspect relevant source, manifests, lockfiles and config first. Distinguish Confirmed, Inferred and Unknown; label technical claims Repo-verified, Context7-verified, Web-verified or Unverified. Record exact revision and checks. Verify package/API advice against installed versions and official Context7 docs; use official web sources when insufficient. Never claim unavailable skills, commands or gates ran.
 

@@ -1,0 +1,129 @@
+{
+  "collections": [
+    {
+      "source": "https://github.com/obra/superpowers",
+      "version": "7.0.1",
+      "provenance": "Installed Codex plugin manifest; upstream commit not attested. SHA256 below pins reviewed bytes.",
+      "root": "superpowers"
+    },
+    {
+      "source": "https://github.com/mattpocock/skills",
+      "provenance": "Installer .agents/.skill-lock.json names source and folder hashes; no upstream commit attested. SHA256 below pins reviewed bytes.",
+      "root": "pocock"
+    }
+  ],
+  "reviewedAt": "2026-11-02",
+  "files": [
+    {
+      "path": ".codex-plugin/plugin.json",
+      "sha256": "1A8DDAB7B9B6D8C5077A3A4B3A3B4EFB8E4FC50E3B60430F5EA7E662B7974577",
+      "root": "superpowers"
+    },
+    {
+      "path": "skills/using-superpowers/SKILL.md",
+      "sha256": "82C5C8866AD7F5DD4440CE66BD7806BA48A2F13771BEAE5CF112E53F08FE36BA",
+      "root": "superpowers"
+    },
+    {
+      "path": "skills/brainstorming/SKILL.md",
+      "sha256": "61A7EF918652108C76A3FD01E02DD92D39996C6B46D4CB2819CBD03F6C45E46A",
+      "root": "superpowers"
+    },
+    {
+      "path": "skills/using-git-worktrees/SKILL.md",
+      "sha256": "8CFB86F121269E8F7F12361E6795C4F6738828340E28964C9229D365666C9EDD",
+      "root": "superpowers"
+    },
+    {
+      "path": "skills/writing-plans/SKILL.md",
+      "sha256": "A6C67C1900064347C2A329990DD3C555657C51C3EC53B259A08AA01A2C26139A",
+      "root": "superpowers"
+    },
+    {
+      "path": "skills/subagent-driven-development/SKILL.md",
+      "sha256": "BA41F697136CBA88A7962D60C8E2F97488BA04A8688B1D0FBEB27F6953808E75",
+      "root": "superpowers"
+    },
+    {
+      "path": "skills/test-driven-development/SKILL.md",
+      "sha256": "64B03FCE4AEE5A97A93160CEA8111F3BA13A17B7C001DB4BD5836D67FD10705D",
+      "root": "superpowers"
+    },
+    {
+      "path": "skills/systematic-debugging/SKILL.md",
+      "sha256": "51C6435D98C83C42C96BA7C35725A0B2C376CD487FB1A4E6BD0DDBE7E33EF202",
+      "root": "superpowers"
+    },
+    {
+      "path": "skills/verification-before-completion/SKILL.md",
+      "sha256": "2BEFE7FC55BCADAA3D97DD9E8EFEB633D2561C0EBE74C5A8B17C4D9E7E4520B3",
+      "root": "superpowers"
+    },
+    {
+      "path": "skills/requesting-code-review/SKILL.md",
+      "sha256": "2180E14A448E9410BEC88E6646A2D1F0CE7FDD58DE27388C1E052E929679D2BC",
+      "root": "superpowers"
+    },
+    {
+      "path": "skills/receiving-code-review/SKILL.md",
+      "sha256": "091DF1629510AF1B92FC4ABD6F96732EBEDB4CB2C0F3457E8F2740B0504A2438",
+      "root": "superpowers"
+    },
+    {
+      "path": "skills/finishing-a-development-branch/SKILL.md",
+      "sha256": "8DB5A922B242DD4E1BF824CB91C13B3E8D8E8A86D6CEAF7F0774EB9CCE909D65",
+      "root": "superpowers"
+    },
+    {
+      "path": "skills/subagent-driven-development/implementer-prompt.md",
+      "sha256": "81DD9D5A3FB0B09B96B5829F03B9796842F3199EF7591D1BA1C2DB2A515F64D0",
+      "root": "superpowers"
+    },
+    {
+      "path": "grill-me/SKILL.md",
+      "sha256": "C9DF326C4AB635765EA884471D21F4E21D5B0EC85AEC43A06C238307841EB4BC",
+      "root": "pocock"
+    },
+    {
+      "path": "grill-with-docs/ADR-FORMAT.md",
+      "sha256": "DBA54707C3251660ECF7EE6FF154A816A62BADDDD4EF403062F3A34E23509636",
+      "root": "pocock"
+    },
+    {
+      "path": "grill-with-docs/CONTEXT-FORMAT.md",
+      "sha256": "6E92FCCD425B3C7F3474FFB50EAE5EBB8A8F80C71EC57F167B007DACCD3A81CC",
+      "root": "pocock"
+    },
+    {
+      "path": "grill-with-docs/SKILL.md",
+      "sha256": "9602923616CE00904F1BECE7455EC8D0CBB656C5DEB466A76912556CFE24DC71",
+      "root": "pocock"
+    },
+    {
+      "path": "to-prd/SKILL.md",
+      "sha256": "9453D5CAAA191FF8CE5529E38608B1255C68E738E4AA7BB2B23CA0DD4D2C4138",
+      "root": "pocock"
+    },
+    {
+      "path": "to-issues/SKILL.md",
+      "sha256": "28B5742CC0D8BDC27284EDD18D6F9B86107F8935487A76EE1EF7DCB9D151281F",
+      "root": "pocock"
+    },
+    {
+      "path": "triage/AGENT-BRIEF.md",
+      "sha256": "911C013566695A0DB7EA53441522D7E6AE4CF8B96556C3CECECCEAC97DFC8C35",
+      "root": "pocock"
+    },
+    {
+      "path": "triage/OUT-OF-SCOPE.md",
+      "sha256": "A0A85F50664D16FDF1E66D88BD0E3B2D961C91D5F39E2A6A1FD9E26ED577C558",
+      "root": "pocock"
+    },
+    {
+      "path": "triage/SKILL.md",
+      "sha256": "ACDC9B0A40F8821CE9A6479E5781C37C30AC2E1E1E27A8377437AF09472C16FE",
+      "root": "pocock"
+    }
+  ],
+  "schemaVersion": 1
+}

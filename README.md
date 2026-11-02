@@ -6,6 +6,6 @@ Legacy baseline: `af903d7a2c1bf08165cfcf4a00ca0c0d73eedead`, retained on `master
 
 Start ticket branches from `feature/metro-rebuild`; merge reviewed ticket PRs back here and delete merged ticket branches. The owner explicitly permits Done after verified integration merge for the authorized tickets. This overrides the older main-only completion wording in preserved guidance for those tickets only.
 
-When the owner authorizes migration, create `main` from this independent rebuild lineage and make it default. Do not merge `master` or another legacy descendant into this lineage. Default migration and removal/archive of `master` remain deferred.
+METRO-11 owns the authorized migration: create `main` from this independent rebuild lineage and make it default. Do not merge `master` or another legacy descendant into this lineage. No migration occurs in METRO-10. Removal/archive of `master` requires separate authorization.
 
-No runnable scaffold or package checks exist here yet. Follow [agent guidance](AGENTS.md), [parity](docs/product/feature-parity.md) and [glossary](docs/product/glossary.md). METRO-10 prepares skills and Plane; METRO-11 owns the scaffold.
+No application scaffold or package gates exist here yet. Local preparation checks are documented in the [dry run](docs/examples/plane-preparation/README.md). Follow [agent guidance](AGENTS.md), [parity](docs/product/feature-parity.md) and [glossary](docs/product/glossary.md). METRO-10 supplies [reviewed skills](docs/agents/skills.md), the [Plane adapter](docs/agents/plane.md) and reusable preparation templates. METRO-11 owns the scaffold and main/default migration.
