@@ -1,0 +1,93 @@
+{
+  "slices": [
+    {
+      "title": "Render synthetic station result",
+      "exclusions": [
+        "Location permission and providers"
+      ],
+      "blockedBy": [],
+      "id": "station",
+      "outcome": "Fixture station is observable",
+      "scope": [
+        "One fixed station result"
+      ],
+      "testingSeams": [
+        {
+          "id": "ST-SEAM",
+          "checks": [
+            "Exact station identity",
+            "Unknown ID error"
+          ],
+          "fixture": "A -> Station A",
+          "boundary": "fixture input to observable station result"
+        }
+      ],
+      "acceptanceCriteria": [
+        {
+          "when": "lookup runs",
+          "id": "ST-1",
+          "given": "Fixture station A",
+          "failureChecks": [
+            "Unknown fixture ID fails visibly",
+            "Empty fixture rejected"
+          ],
+          "then": "station A is shown"
+        }
+      ]
+    },
+    {
+      "title": "Render synthetic fare result",
+      "exclusions": [
+        "Official fare claims and payment"
+      ],
+      "blockedBy": [
+        "station"
+      ],
+      "id": "fare",
+      "outcome": "Fixture fare is observable",
+      "scope": [
+        "One fixed station-pair fare"
+      ],
+      "testingSeams": [
+        {
+          "id": "FA-SEAM",
+          "checks": [
+            "Exact fixture fare",
+            "Unknown pair error"
+          ],
+          "fixture": "A/B -> 10 fixture units",
+          "boundary": "station pair to observable fixture fare"
+        }
+      ],
+      "acceptanceCriteria": [
+        {
+          "when": "fare requested",
+          "id": "FA-1",
+          "given": "Station A and B fixture",
+          "failureChecks": [
+            "Missing pair fails visibly",
+            "Same station boundary explicitly rejected"
+          ],
+          "then": "fixture fare 10 is shown"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 1,
+  "grouping": {
+    "module": "https://example.invalid/modules/lookup",
+    "release": "https://example.invalid/releases/fixture-v1",
+    "milestone": "https://example.invalid/milestones/fixture"
+  },
+  "scope": [
+    "Deterministic synthetic lookup preparation"
+  ],
+  "specification": {
+    "url": "https://example.invalid/specs/lookup-v1",
+    "id": "SYNTHETIC-LOOKUP",
+    "revision": "fixture-v1"
+  },
+  "exclusions": [
+    "No product implementation, live data or publishing"
+  ]
+}
