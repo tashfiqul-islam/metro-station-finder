@@ -12,7 +12,8 @@ import { isRecord } from "./guards.ts";
 const TAG = /^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z][0-9A-Za-z.-]*)?$/u;
 
 export function validateTag(tag: string): string {
-  if (!TAG.test(tag)) throw new Error(`Tag must look like v1.2.3 or v1.2.3-rc.1, got "${tag}"`);
+  if (!TAG.test(tag))
+    throw new Error(`Tag must look like v1.2.3 or v1.2.3-rc.1, got ${JSON.stringify(tag)}`);
   return tag;
 }
 
@@ -59,6 +60,7 @@ export interface PlaneRelease {
   externalSource: string | null;
   externalId: string | null;
   tagId: string | null;
+  descriptionHtml: string;
 }
 
 export interface PlaneTag {
@@ -94,10 +96,13 @@ export function escapeHtml(text: string): string {
     .replaceAll('"', "&quot;");
 }
 
+/** Words that mark a retracted release in the Plane description; they survive HTML normalisation. */
+const RETRACTED = "is not published (deleted, unpublished or a draft).";
+
 /** The Plane release description: facts that identify the release, in a stable order. */
 export function renderDescription(tag: string, sha: string, release: GithubRelease | null): string {
   if (release === null) {
-    return `<p>GitHub release ${escapeHtml(tag)} is not published (deleted, unpublished or a draft). Commit: ${escapeHtml(sha)}. Status reset by release sync.</p>`;
+    return `<p>GitHub release ${escapeHtml(tag)} ${RETRACTED} Commit: ${escapeHtml(sha)}. Status reset by release sync.</p>`;
   }
   const refs = extractReferences(release.body);
   const tickets = refs.tickets.length > 0 ? refs.tickets.join(", ") : "none found";
@@ -137,9 +142,9 @@ interface ReleasePatch {
 }
 
 /** A Plane release the sync may write: its own, or the not-yet-linked planned one. */
-export function isManaged(existing: PlaneRelease): boolean {
+export function isManaged(existing: PlaneRelease, tag: string): boolean {
   return (
-    existing.externalSource === "github" ||
+    (existing.externalSource === "github" && existing.externalId === tag) ||
     (existing.status === "unreleased" && existing.externalSource === null)
   );
 }
@@ -174,7 +179,7 @@ export type Decision =
 
 export function decide(input: DecideInput): Decision {
   const { tag, sha, release, deployed, existing, existingTag, content } = input;
-  if (existing !== undefined && !isManaged(existing)) {
+  if (existing !== undefined && !isManaged(existing, tag)) {
     return { kind: "skip", reason: `${tag} is already released in Plane and not managed by sync` };
   }
   if (release === null && existing === undefined) {
@@ -205,6 +210,7 @@ export function decide(input: DecideInput): Decision {
     existing.isPrerelease === patch.is_prerelease &&
     existing.externalSource === patch.external_source &&
     existing.externalId === patch.external_id &&
+    existing.descriptionHtml.includes(RETRACTED) === (release === null) &&
     (!wantTag || (existingTag !== undefined && existing.tagId === existingTag.id));
   if (scalarsSame && tagCurrent) return { kind: "unchanged" };
   return {
@@ -267,8 +273,10 @@ export async function fetchGithubRelease(
   };
 }
 
-export async function resolveSha(config: Config, deps: Deps): Promise<string> {
+/** The commit of the tag, or null when the tag no longer exists. */
+export async function resolveSha(config: Config, deps: Deps): Promise<string | null> {
   const response = await githubGet(config, deps, `/commits/${encodeURIComponent(config.tag)}`);
+  if (response.status === 404) return null;
   if (!response.ok) return fail(`Resolving the commit of ${config.tag}`, response);
   const data: unknown = await response.json();
   const sha = isRecord(data) ? field(data, "sha") : null;
@@ -277,7 +285,7 @@ export async function resolveSha(config: Config, deps: Deps): Promise<string> {
   return sha;
 }
 
-/** True when the newest status of some `production` deployment of this SHA is `success`. */
+/** True when some `production` deployment of this SHA has ever reached `success`. */
 export async function hasProductionDeployment(
   config: Config,
   deps: Deps,
@@ -294,11 +302,15 @@ export async function hasProductionDeployment(
   for (const deployment of deployments as unknown[]) {
     const id = isRecord(deployment) ? deployment["id"] : undefined;
     if (typeof id !== "number") continue;
-    const statuses = await githubGet(config, deps, `/deployments/${id}/statuses?per_page=1`);
+    const statuses = await githubGet(config, deps, `/deployments/${id}/statuses?per_page=100`);
     if (!statuses.ok) return fail("Reading a deployment status", statuses);
-    const latest: unknown = await statuses.json();
-    const first: unknown = Array.isArray(latest) ? (latest as unknown[])[0] : undefined;
-    if (isRecord(first) && first["state"] === "success") return true;
+    const all: unknown = await statuses.json();
+    // A later deployment turns this one `inactive`, so any `success` in its history counts.
+    if (
+      Array.isArray(all) &&
+      (all as unknown[]).some((s) => isRecord(s) && s["state"] === "success")
+    )
+      return true;
   }
   return false;
 }
@@ -333,14 +345,15 @@ async function planeRequest(
   });
 }
 
-/** Walks a Plane cursor-paginated list and returns the first item `pick` accepts. */
-async function planeFind<T>(
+/** Walks a Plane cursor-paginated list and returns every item `pick` accepts. */
+async function planeFindAll<T>(
   config: Config,
   deps: Deps,
   suffix: string,
   what: string,
   pick: (raw: unknown) => T | null,
-): Promise<T | undefined> {
+): Promise<T[]> {
+  const found: T[] = [];
   let cursor = "";
   for (let page = 0; page < 20; page += 1) {
     const query = `?per_page=100${cursor === "" ? "" : `&cursor=${encodeURIComponent(cursor)}`}`;
@@ -350,14 +363,22 @@ async function planeFind<T>(
     if (!isRecord(data) || !Array.isArray(data["results"]))
       throw new Error(`Plane ${what} list had an unexpected shape`);
     for (const raw of data["results"] as unknown[]) {
-      const found = pick(raw);
-      if (found !== null) return found;
+      const match = pick(raw);
+      if (match !== null) found.push(match);
     }
     const next = field(data, "next_cursor");
-    if (data["next_page_results"] !== true || next === null) return undefined;
+    if (data["next_page_results"] !== true || next === null) return found;
     cursor = next;
   }
   throw new Error(`Plane ${what} list did not end after 20 pages`);
+}
+
+function single<T>(matches: readonly T[], what: string, name: string): T | undefined {
+  if (matches.length > 1)
+    throw new Error(
+      `Plane has ${matches.length} ${what} named ${JSON.stringify(name)}; fix the duplicate first`,
+    );
+  return matches[0];
 }
 
 export function toRelease(raw: unknown, name: string): PlaneRelease | null {
@@ -369,12 +390,29 @@ export function toRelease(raw: unknown, name: string): PlaneRelease | null {
     id,
     name,
     status,
-    releaseDate: field(raw, "release_date"),
+    releaseDate: field(raw, "release_date")?.slice(0, 10) ?? null,
     isPrerelease: raw["is_prerelease"] === true,
     externalSource: field(raw, "external_source"),
     externalId: field(raw, "external_id"),
-    tagId: field(raw, "tag"),
+    tagId: referenceId(raw["tag"]),
+    descriptionHtml: descriptionOf(raw),
   };
+}
+
+/** The description HTML, flat or nested the way Plane's list endpoint returns it. */
+function descriptionOf(raw: Record<string, unknown>): string {
+  const nested = raw["description"];
+  return (
+    field(raw, "description_html") ??
+    (isRecord(nested) ? field(nested, "description_html") : null) ??
+    ""
+  );
+}
+
+/** Plane may return a relation as an id or as an object with an id. */
+function referenceId(value: unknown): string | null {
+  if (typeof value === "string") return value;
+  return isRecord(value) ? field(value, "id") : null;
 }
 
 export function toTag(raw: unknown, version: string): PlaneTag | null {
@@ -420,16 +458,23 @@ export type Outcome = "created" | "updated" | "unchanged" | "skipped";
 export async function syncRelease(config: Config, deps: Deps): Promise<Outcome> {
   validateTag(config.tag);
   const release = await fetchGithubRelease(config, deps);
-  const sha = await resolveSha(config, deps);
-  const existing = await planeFind(config, deps, "", "releases", (raw) =>
-    toRelease(raw, config.tag),
+  const resolved = await resolveSha(config, deps);
+  if (release !== null && resolved === null)
+    throw new Error(`Release ${config.tag} is published but its tag does not resolve to a commit`);
+  const sha = resolved ?? "unknown (tag no longer exists)";
+  const existing = single(
+    await planeFindAll(config, deps, "", "releases", (raw) => toRelease(raw, config.tag)),
+    "releases",
+    config.tag,
   );
-  const existingTag = await planeFind(config, deps, "tags/", "release tags", (raw) =>
-    toTag(raw, config.tag),
+  const existingTag = single(
+    await planeFindAll(config, deps, "tags/", "release tags", (raw) => toTag(raw, config.tag)),
+    "release tags",
+    config.tag,
   );
   const deployed =
-    release !== null && !release.prerelease
-      ? await hasProductionDeployment(config, deps, sha)
+    release !== null && resolved !== null && !release.prerelease
+      ? await hasProductionDeployment(config, deps, resolved)
       : false;
   if (release !== null && !release.prerelease && !deployed) {
     deps.log(
@@ -461,18 +506,20 @@ export async function syncRelease(config: Config, deps: Deps): Promise<Outcome> 
     deps.log(`Plane release ${config.tag} already matches GitHub.`);
     return "unchanged";
   }
+  // Order matters for recovery: the tag carries the content hash, so it is finalised last. A failure
+  // anywhere before that leaves the hash stale and the next run redoes every step.
   const patch = { ...decision.patch };
+  let tagId = existingTag?.id ?? null;
   if (decision.writeTag && release !== null && content !== null) {
-    patch.tag = await writeTag(
+    tagId = await writeTag(
       config,
       deps,
       existingTag,
       sha,
-      tagDescription(release, content.hash),
+      `Synced from GitHub release ${release.url}. Sync pending.`,
     );
-  } else if (existingTag !== undefined && release !== null) {
-    patch.tag = existingTag.id;
   }
+  if (release !== null && tagId !== null) patch.tag = tagId;
   const response =
     decision.releaseId === null
       ? await planeRequest(config, deps, planeUrl(config, ""), "POST", patch)
@@ -503,6 +550,15 @@ export async function syncRelease(config: Config, deps: Deps): Promise<Outcome> 
       { description_html: content.changelogHtml },
     );
     if (!log.ok) return fail("Writing the Plane release log", log);
+  }
+  if (decision.writeTag && release !== null && content !== null && tagId !== null) {
+    await writeTag(
+      config,
+      deps,
+      { id: tagId, version: config.tag, gitTag: config.tag, commitHash: sha, description: "" },
+      sha,
+      tagDescription(release, content.hash),
+    );
   }
   deps.log(
     `${decision.create ? "Created" : "Updated"} Plane release ${config.tag} (${patch.status}).`,

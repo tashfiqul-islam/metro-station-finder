@@ -44,7 +44,7 @@ interface World {
   /** `null` = no published release (404). */
   github: null | { draft?: boolean; prerelease?: boolean; body: string; published_at?: string };
   sha: string;
-  deployments: { id: number; state: string }[];
+  deployments: { id: number; states: string[] }[];
   releases: PlaneRelease[];
   tags: Record<string, unknown>[];
   changelogs: Record<string, string>;
@@ -120,7 +120,9 @@ function server(w: World): Deps & { calls: string[] } {
     const statusMatch = /^gh:\/deployments\/(\d+)\/statuses/u.exec(path);
     if (statusMatch !== null) {
       const found = w.deployments.find((d) => d.id === Number(statusMatch[1]));
-      return Promise.resolve(reply(200, found === undefined ? [] : [{ state: found.state }]));
+      return Promise.resolve(
+        reply(200, found === undefined ? [] : found.states.map((state) => ({ state }))),
+      );
     }
     if (method === "GET" && path.startsWith("plane:tags/"))
       return Promise.resolve(page(w.tags, url));
@@ -184,7 +186,7 @@ const run = (w: World, overrides: Partial<Config> = {}) => {
 test("METRO-14 a published stable release creates the release, its tag and its log, and a replay changes nothing", async () => {
   const w = world();
   expect((await run(w)).outcome).toBe("created");
-  expect(w.writes).toEqual(["tag:create", "release:create", "changelog"]);
+  expect(w.writes).toEqual(["tag:create", "release:create", "changelog", "tag:update"]);
   const [release] = w.releases;
   const [tag] = w.tags;
   expect(release).toMatchObject({
@@ -208,8 +210,8 @@ test("METRO-14 a published stable release creates the release, its tag and its l
 test("METRO-14 a successful production deployment of the same SHA marks the release released with its date", async () => {
   const w = world({
     deployments: [
-      { id: 1, state: "failure" },
-      { id: 2, state: "success" },
+      { id: 1, states: ["failure"] },
+      { id: 2, states: ["inactive", "success"] },
     ],
   });
   await run(w);
@@ -219,8 +221,9 @@ test("METRO-14 a successful production deployment of the same SHA marks the rele
 test("METRO-14 a failed or missing deployment never marks the release released", async () => {
   for (const deployments of [
     [],
-    [{ id: 1, state: "failure" }],
-    [{ id: 1, state: "in_progress" }],
+    [{ id: 1, states: ["failure"] }],
+    [{ id: 1, states: ["inactive"] }],
+    [{ id: 1, states: ["in_progress"] }],
   ]) {
     const w = world({ deployments });
     await run(w);
@@ -231,7 +234,7 @@ test("METRO-14 a failed or missing deployment never marks the release released",
 test("METRO-14 a prerelease is flagged and never released, even with a deployment", async () => {
   const w = world({
     github: { body: "pre", prerelease: true },
-    deployments: [{ id: 1, state: "success" }],
+    deployments: [{ id: 1, states: ["success"] }],
   });
   await run(w);
   expect(w.releases[0]).toMatchObject({ status: "unreleased", is_prerelease: true });
@@ -291,7 +294,7 @@ test("METRO-14 edited notes or a moved tag rewrite the tag, the log and the rele
   w.github = { body: "New notes METRO-13", published_at: "2026-11-04T10:00:00Z" };
   w.writes.length = 0;
   expect((await run(w)).outcome).toBe("updated");
-  expect(w.writes).toEqual(["tag:update", "release:update", "changelog"]);
+  expect(w.writes).toEqual(["tag:update", "release:update", "changelog", "tag:update"]);
   expect(w.changelogs["rel-1"]).toContain("New notes METRO-13");
   w.sha = "f".repeat(40);
   w.writes.length = 0;
@@ -447,4 +450,117 @@ test("METRO-14 the entry point reads the environment, logs the outcome and fails
     process.exitCode = 0;
     error.mockRestore();
   }
+});
+
+test("METRO-14 a write that fails after the tag was created is fully redone on the next run", async () => {
+  const w = world({ fail: { "POST plane:$": 500 } });
+  expect(String(await run(w).catch((e: unknown) => e))).toContain(
+    "Creating the Plane release failed",
+  );
+  expect(w.tags).toHaveLength(1);
+  expect(hashOf(String(w.tags[0]?.["description"]))).toBeNull();
+  w.fail = {};
+  expect((await run(w)).outcome).toBe("created");
+  expect(w.changelogs["rel-1"]).toContain("Notes METRO-12");
+  expect(w.tags).toHaveLength(1);
+  expect(hashOf(String(w.tags[0]?.["description"]))).toMatch(/^[0-9a-f]{64}$/u);
+  w.writes.length = 0;
+  expect((await run(w)).outcome).toBe("unchanged");
+});
+
+test("METRO-14 a failed log write leaves the hash stale so the log is retried", async () => {
+  const w = world({ fail: { "PATCH plane:rel-1/changelog/": 500 } });
+  expect(String(await run(w).catch((e: unknown) => e))).toContain(
+    "Writing the Plane release log failed",
+  );
+  w.fail = {};
+  expect((await run(w)).outcome).toBe("updated");
+  expect(w.changelogs["rel-1"]).toContain("Notes METRO-12");
+});
+
+test("METRO-14 a retraction still works when the tag itself is gone", async () => {
+  const w = world();
+  await run(w);
+  w.github = null;
+  w.sha = "";
+  const deps = server(w);
+  const gone: Deps = {
+    ...deps,
+    fetch: (url, init) =>
+      url.includes("/commits/") ? Promise.resolve(reply(404)) : deps.fetch(url, init),
+  };
+  expect(await syncRelease(config, gone)).toBe("updated");
+  expect(w.releases[0]).toMatchObject({ status: "unreleased" });
+  expect(String(w.releases[0]?.["description_html"])).toContain("unknown (tag no longer exists)");
+});
+
+test("METRO-14 a published release whose tag does not resolve is an error", async () => {
+  const w = world();
+  const deps = server(w);
+  const gone: Deps = {
+    ...deps,
+    fetch: (url, init) =>
+      url.includes("/commits/") ? Promise.resolve(reply(404)) : deps.fetch(url, init),
+  };
+  await expect(syncRelease(config, gone)).rejects.toThrow("does not resolve to a commit");
+});
+
+test("METRO-14 duplicate Plane names are an error, never an arbitrary pick", async () => {
+  const w = world({
+    releases: [
+      { id: "a", name: "v1.2.0", status: "unreleased" },
+      { id: "b", name: "v1.2.0", status: "unreleased" },
+    ],
+  });
+  await expect(run(w)).rejects.toThrow("2 releases named");
+  const t = world({
+    tags: [
+      { id: "x", version: "v1.2.0" },
+      { id: "y", version: "v1.2.0" },
+    ],
+  });
+  await expect(run(t)).rejects.toThrow("2 release tags named");
+});
+
+test("METRO-14 a github-sourced release with another external id is not managed", async () => {
+  const w = world({
+    releases: [
+      {
+        id: "x",
+        name: "v1.2.0",
+        status: "released",
+        external_source: "github",
+        external_id: "v9.9.9",
+      },
+    ],
+  });
+  expect((await run(w)).outcome).toBe("skipped");
+  expect(w.writes).toEqual([]);
+});
+
+test("METRO-14 Plane returning the tag as an object and the date as a datetime still converges", async () => {
+  const w = world();
+  await run(w);
+  const release = onlyRelease(w);
+  w.releases[0] = { ...release, tag: { id: release["tag"] }, release_date: null };
+  w.writes.length = 0;
+  expect((await run(w)).outcome).toBe("unchanged");
+  const shipped = world({ deployments: [{ id: 1, states: ["success"] }] });
+  await run(shipped);
+  const r = onlyRelease(shipped);
+  shipped.releases[0] = { ...r, release_date: "2026-11-04T00:00:00Z" };
+  shipped.writes.length = 0;
+  expect((await run(shipped)).outcome).toBe("unchanged");
+});
+
+test("METRO-14 a tag with control characters cannot inject into the log", () => {
+  const evil = "v1.0.0\n::error::boom";
+  let message = "";
+  try {
+    validateTag(evil);
+  } catch (error) {
+    message = String(error);
+  }
+  expect(message).not.toContain("\n::error::");
+  expect(message).toContain("\\n::error::");
 });
