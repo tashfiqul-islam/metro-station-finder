@@ -1,0 +1,13 @@
+{
+  "name": "@metro/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@metro/core": "workspace:*",
+    "valibot": "1.5.0"
+  }
+}
