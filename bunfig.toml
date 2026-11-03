@@ -4,3 +4,5 @@ exact = true
 auto = "disable"
 linker = "isolated"
 saveTextLockfile = true
+# 3-day release cooldown in seconds; must equal the Renovate minimumReleaseAge.
+minimumReleaseAge = 259200
