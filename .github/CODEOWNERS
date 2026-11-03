@@ -15,3 +15,5 @@
 /apps/*/tsconfig.json @tashfiqul-islam
 /packages/*/tsconfig.json @tashfiqul-islam
 /apps/web/vite.config.ts @tashfiqul-islam
+/bunfig.toml @tashfiqul-islam
+/.gitattributes @tashfiqul-islam

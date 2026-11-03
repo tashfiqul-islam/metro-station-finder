@@ -9,9 +9,18 @@ hooks {
   }
   ["pre-push"] {
     steps {
-      ["check"] { check = "bun run check" }
-      ["build"] { check = "bun run build && bun run smoke && bun run bundle:check" }
-      ["scan"] { check = "bun run scan" }
+      ["check"] {
+        exclusive = true
+        check = "bun run check"
+      }
+      ["build"] {
+        exclusive = true
+        check = "bun run build && bun run smoke && bun run bundle:check"
+      }
+      ["scan"] {
+        exclusive = true
+        check = "bun run scan"
+      }
     }
   }
 }
