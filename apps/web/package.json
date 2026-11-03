@@ -3,10 +3,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "vite build"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "dependencies": {
-    "@metro/core": "workspace:*",
+    "@metro/contracts": "workspace:*",
     "react": "19.3.1",
     "react-dom": "19.3.1"
   }

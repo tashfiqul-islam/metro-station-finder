@@ -2,7 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { gzipSync } from "node:zlib";
 
-const root = resolve(process.argv[2] ?? "apps/web/dist");
+const root = resolve(process.argv[2] ?? "apps/web/dist/client");
 async function sizes(directory: string): Promise<{ raw: number; gzip: number }> {
   let raw = 0;
   let gzip = 0;

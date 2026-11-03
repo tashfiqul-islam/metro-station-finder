@@ -2,7 +2,12 @@
   "$schema": "../../node_modules/wrangler/config-schema.json",
   "name": "metro-scaffold",
   "main": "src/index.ts",
-  "compatibility_date": "2026-11-02",
+  "compatibility_date": "2026-10-30",
   "workers_dev": false,
   "send_metrics": false,
+  // `directory` is supplied by @cloudflare/vite-plugin (the client build output).
+  "assets": {
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"],
+  },
 }
