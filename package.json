@@ -24,9 +24,12 @@
     "bundle:check": "node scripts/bundle.ts",
     "scan:dependencies": "bun audit",
     "imports": "node --import ./scripts/dependency-parser.ts node_modules/dependency-cruiser/bin/dependency-cruiser.mjs --config .dependency-cruiser.mjs",
-    "check": "bun run check:fast && bun run scripts/boundaries.ts && bun run imports:check && bun run unused && bun run links:check && bun test && bun run typecheck",
+    "check": "bun run check:fast && bun run scripts/boundaries.ts && bun run imports:check && bun run unused && bun run links:check && bun run lint:workflows && bun run renovate:check && bun test && bun run typecheck",
     "unused": "knip",
-    "links:check": "node scripts/links.ts"
+    "links:check": "node scripts/links.ts",
+    "lint:workflows": "node scripts/workflows.ts .github/workflows",
+    "renovate:check": "renovate-config-validator --strict .github/renovate.json5",
+    "scan:history": "node scripts/secrets.ts --history"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",
