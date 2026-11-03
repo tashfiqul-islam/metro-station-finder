@@ -7,7 +7,7 @@
 /scripts/ @tashfiqul-islam
 /docs/agents/ @tashfiqul-islam
 /knip.json @tashfiqul-islam
-/.dependency-cruiser.mjs @tashfiqul-islam
+/.dependency-cruiser.mts @tashfiqul-islam
 /.oxlintrc.json @tashfiqul-islam
 /tsconfig*.json @tashfiqul-islam
 /.editorconfig @tashfiqul-islam
