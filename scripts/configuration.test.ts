@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { cp, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { validateConfiguration, validateRuntimes } from "./configuration";
@@ -9,8 +9,25 @@ async function fixture() {
   const root = await mkdtemp(join(tmpdir(), "metro-config-"));
   for (const file of ["package.json", "mise.toml", "bunfig.toml"])
     await cp(resolve(file), join(root, file));
+  await mkdir(join(root, ".github"));
+  await cp(resolve(".github/renovate.json5"), join(root, ".github/renovate.json5"));
   return root;
 }
+
+async function editFile(
+  root: string,
+  file: string,
+  edit: (source: string) => string,
+): Promise<void> {
+  const path = join(root, file);
+  await writeFile(path, edit(await readFile(path, "utf8")));
+}
+
+const spawnRenovate = (config: string) =>
+  Bun.spawnSync(["renovate-config-validator", "--strict", config], {
+    stdout: "pipe",
+    stderr: "pipe",
+  });
 
 test("aligned required configuration passes", async () => {
   const root = await fixture();
@@ -171,3 +188,107 @@ test("FND-H6 every mise task has a description", async () => {
     },
   );
 });
+
+test("FND-S3 rejects a bunfig without minimumReleaseAge naming install.minimumReleaseAge", async () => {
+  const root = await fixture();
+  try {
+    await editFile(root, "bunfig.toml", (source) =>
+      source.replace(/minimumReleaseAge = \d+\r?\n/, ""),
+    );
+    await expect(validateConfiguration(root)).rejects.toThrow("install.minimumReleaseAge");
+  } finally {
+    await rm(root, { recursive: true });
+  }
+});
+
+test("FND-S3 rejects a shorter Bun cooldown", async () => {
+  const root = await fixture();
+  try {
+    await editFile(root, "bunfig.toml", (source) =>
+      source.replace(/minimumReleaseAge = \d+/, "minimumReleaseAge = 86400"),
+    );
+    await expect(validateConfiguration(root)).rejects.toThrow("install.minimumReleaseAge");
+  } finally {
+    await rm(root, { recursive: true });
+  }
+});
+
+test("FND-S2 rejects a Renovate cooldown that differs from bunfig", async () => {
+  const root = await fixture();
+  try {
+    await editFile(root, ".github/renovate.json5", (source) =>
+      source.replace('minimumReleaseAge: "3 days"', 'minimumReleaseAge: "2 days"'),
+    );
+    await expect(validateConfiguration(root)).rejects.toThrow("minimumReleaseAge");
+  } finally {
+    await rm(root, { recursive: true });
+  }
+});
+
+test("FND-S2 accepts an equivalent Renovate duration in other units", async () => {
+  const root = await fixture();
+  try {
+    await editFile(root, ".github/renovate.json5", (source) =>
+      source.replace('minimumReleaseAge: "3 days"', 'minimumReleaseAge: "72 hours"'),
+    );
+    await validateConfiguration(root);
+  } finally {
+    await rm(root, { recursive: true });
+  }
+});
+
+test("FND-S2 rejects a missing Renovate configuration", async () => {
+  const root = await fixture();
+  try {
+    await rm(join(root, ".github/renovate.json5"));
+    await expect(validateConfiguration(root)).rejects.toThrow("renovate.json5");
+  } finally {
+    await rm(root, { recursive: true });
+  }
+});
+
+test("FND-S2 rejects a Renovate configuration without minimumReleaseAge", async () => {
+  const root = await fixture();
+  try {
+    await editFile(root, ".github/renovate.json5", (source) =>
+      source.replace(/^\s*minimumReleaseAge: "3 days",\r?\n/m, ""),
+    );
+    await expect(validateConfiguration(root)).rejects.toThrow("minimumReleaseAge");
+  } finally {
+    await rm(root, { recursive: true });
+  }
+});
+
+for (const tool of ["actionlint", "zizmor"]) {
+  test(`rejects a missing or non-exact ${tool} pin`, async () => {
+    await withMise(
+      (source) => source.replace(new RegExp(`${tool} = "[^"]+"`), `${tool} = "latest"`),
+      async (root) => {
+        await expect(validateConfiguration(root)).rejects.toThrow(`tools.${tool}`);
+      },
+    );
+  });
+}
+
+test("FND-S2 the real Renovate configuration passes the pinned strict validator", () => {
+  const result = spawnRenovate(resolve(".github/renovate.json5"));
+  expect(result.exitCode).toBe(0);
+});
+
+test("FND-S2 a Renovate fixture with an unknown option fails the pinned validator", async () => {
+  const root = await fixture();
+  try {
+    const file = join(root, ".github/renovate.json5");
+    await editFile(root, ".github/renovate.json5", (source) =>
+      source.replace(
+        "dependencyDashboard: true,",
+        "dependencyDashboard: true,\n  bogusOption: true,",
+      ),
+    );
+    const result = spawnRenovate(file);
+    expect(result.exitCode).not.toBe(0);
+    expect(result.stdout.toString() + result.stderr.toString()).toContain("bogusOption");
+  } finally {
+    await rm(root, { recursive: true });
+  }
+}, 60000);

@@ -9,7 +9,26 @@ import { cleanGitEnv } from "./git-env.ts";
 const SYMLINK_MODE = "120000";
 const GITLINK_MODE = "160000";
 
-const root = resolve(process.argv[2] ?? ".");
+const history = process.argv[2] === "--history";
+const root = resolve((history ? process.argv[3] : process.argv[2]) ?? ".");
+if (history) {
+  // Full Git history, redacted. Needs full clone depth (CI checks out with fetch-depth: 0); a shallow
+  // clone would silently scan only part of the history, so it fails visibly instead.
+  const shallow = execFileSync("git", ["-C", root, "rev-parse", "--is-shallow-repository"], {
+    encoding: "utf8",
+    env: cleanGitEnv(),
+  }).trim();
+  if (shallow !== "false")
+    throw new Error("History scan requires a full clone; fetch with fetch-depth: 0");
+  const version = await gitleaksVersion(fileURLToPath(new URL("..", import.meta.url)));
+  const result = spawnSync(
+    "mise",
+    ["exec", `gitleaks@${version}`, "--", "gitleaks", "git", root, "--redact", "--no-banner"],
+    { stdio: "inherit", shell: false, env: cleanGitEnv() },
+  );
+  if (result.error) throw result.error;
+  process.exit(result.status ?? 1);
+}
 // Inherited GIT_* variables (hooks, linked worktrees) must not redirect `-C root`.
 const listing = execFileSync("git", ["-C", root, "ls-files", "-s", "-z"], {
   encoding: "utf8",

@@ -7,6 +7,11 @@ hooks {
       ["fast"] { check = "bun run check:fast" }
     }
   }
+  ["commit-msg"] {
+    steps {
+      ["conventional"] { check = "node scripts/commit-message.ts {{commit_msg_file}}" }
+    }
+  }
   ["pre-push"] {
     steps {
       ["check"] {

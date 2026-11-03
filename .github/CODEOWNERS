@@ -7,7 +7,7 @@
 /scripts/ @tashfiqul-islam
 /docs/agents/ @tashfiqul-islam
 /knip.json @tashfiqul-islam
-/.dependency-cruiser.mjs @tashfiqul-islam
+/.dependency-cruiser.mts @tashfiqul-islam
 /.oxlintrc.json @tashfiqul-islam
 /tsconfig*.json @tashfiqul-islam
 /.editorconfig @tashfiqul-islam
@@ -25,3 +25,4 @@
 /.vscode/ @tashfiqul-islam
 /docs/adr/ @tashfiqul-islam
 /.github/pull_request_template.md @tashfiqul-islam
+/.gitleaksignore @tashfiqul-islam

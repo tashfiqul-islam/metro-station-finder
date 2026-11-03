@@ -1,0 +1,21 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  extends: ["config:recommended", "helpers:pinGitHubActionDigests"],
+  enabledManagers: ["bun", "mise", "github-actions"],
+  baseBranchPatterns: ["feature/metro-rebuild"],
+  rangeStrategy: "pin",
+  // Must equal bunfig.toml install.minimumReleaseAge (259200 seconds); scripts/configuration.ts enforces it.
+  minimumReleaseAge: "3 days",
+  // Security fixes are not delayed by the cooldown.
+  vulnerabilityAlerts: { minimumReleaseAge: null, rangeStrategy: "pin" },
+  dependencyDashboard: true,
+  prConcurrentLimit: 5,
+  lockFileMaintenance: { enabled: true, schedule: ["before 5am on monday"] },
+  packageRules: [
+    { groupName: "react", matchPackageNames: ["react", "react-dom", "@types/react", "@types/react-dom"] },
+    { groupName: "cloudflare", matchPackageNames: ["wrangler", "@cloudflare/**"] },
+    { groupName: "oxc", matchPackageNames: ["oxfmt", "oxlint", "oxlint-tsgolint"] },
+    { groupName: "typescript", matchPackageNames: ["typescript", "@typescript/**"] },
+    { groupName: "playwright", matchPackageNames: ["playwright", "@playwright/**", "@axe-core/playwright"] },
+  ],
+}

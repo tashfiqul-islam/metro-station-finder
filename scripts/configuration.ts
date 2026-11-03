@@ -30,7 +30,7 @@ export async function validateConfiguration(root: string): Promise<void> {
         `mise.toml tools.${runtime} must match package.json engines.${runtime} (${version})`,
       );
   }
-  exactToolVersion(tools, "gitleaks");
+  for (const tool of ["gitleaks", "actionlint", "zizmor"]) exactToolVersion(tools, tool);
   for (const [name, task] of Object.entries(record(mise["tasks"], "mise.toml tasks"))) {
     const description = record(task, `mise.toml tasks.${name}`)["description"];
     if (typeof description !== "string" || description.trim() === "")
@@ -48,6 +48,45 @@ export async function validateConfiguration(root: string): Promise<void> {
     if (install[key] !== value)
       throw new Error(`bunfig.toml install.${key} must be ${String(value)}`);
   }
+  if (install["minimumReleaseAge"] !== RELEASE_COOLDOWN_SECONDS)
+    throw new Error(`bunfig.toml install.minimumReleaseAge must be ${RELEASE_COOLDOWN_SECONDS}`);
+  const renovate = await readRenovate(root);
+  const renovateAge = renovate["minimumReleaseAge"];
+  if (typeof renovateAge !== "string")
+    throw new Error(`${RENOVATE_FILE}: minimumReleaseAge is required`);
+  if (durationSeconds(renovateAge) !== install["minimumReleaseAge"])
+    throw new Error(
+      `${RENOVATE_FILE}: minimumReleaseAge "${renovateAge}" must equal bunfig.toml install.minimumReleaseAge (${RELEASE_COOLDOWN_SECONDS} seconds)`,
+    );
+}
+
+const RELEASE_COOLDOWN_SECONDS = 259200;
+const RENOVATE_FILE = ".github/renovate.json5";
+
+async function readRenovate(root: string): Promise<Record<string, unknown>> {
+  try {
+    return record(
+      Bun.JSON5.parse(await readFile(join(root, RENOVATE_FILE), "utf8")),
+      RENOVATE_FILE,
+    );
+  } catch (error) {
+    throw new Error(`${RENOVATE_FILE}: ${String(error)}`);
+  }
+}
+
+const UNIT_SECONDS: Record<string, number> = {
+  minute: 60,
+  hour: 3600,
+  day: 86400,
+  week: 604800,
+};
+
+/** Normalizes a Renovate duration such as "3 days" or "72 hours" to seconds. */
+export function durationSeconds(duration: string): number {
+  const match = /^(\d+) (minute|hour|day|week)s?$/.exec(duration.trim());
+  const unit = match?.[2];
+  if (!match || !unit) throw new Error(`Unsupported Renovate duration: ${duration}`);
+  return Number(match[1]) * (UNIT_SECONDS[unit] ?? 0);
 }
 
 export function validateRuntimes(

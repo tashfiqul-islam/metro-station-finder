@@ -5,6 +5,11 @@ node = "26.13.0"
 gitleaks = "8.30.1"
 hk = "2.11.0"
 pkl = "0.32.2"
+actionlint = "1.7.12"
+zizmor = "1.31.1"
+# Owner-approved 2026-11-03 (option A): the only trust-policy exception. @yarnpkg/libzip 3.2.2 has no
+# provenance although 3.2.0 had; reviewed and limited to this exact transitive version.
+"npm:renovate" = { version = "44.198.3", trust_policy_excludes = ["@yarnpkg/libzip@3.2.2"] }
 
 [tasks.bootstrap]
 description = "Verify tools and install the frozen dependency graph"

@@ -4,7 +4,7 @@
     ".": {
       "entry": ["scripts/*.ts"],
       "project": ["scripts/**/*.ts"],
-      "ignoreBinaries": ["mise"]
+      "ignoreBinaries": ["mise", "renovate-config-validator"]
     },
     "apps/web": {
       "project": ["src/**/*.{ts,tsx}"]
