@@ -7,51 +7,35 @@
       "outcome": "Fixture station is observable",
       "externalId": "SYNTHETIC-LOOKUP/station",
       "id": "station",
-      "scope": [
-        "One fixed station result"
-      ],
-      "exclusions": [
-        "Location permission and providers"
-      ],
+      "scope": ["One fixed station result"],
+      "exclusions": ["Location permission and providers"],
       "acceptanceCriteria": [
         {
           "when": "lookup runs",
           "id": "ST-1",
           "given": "Fixture station A",
-          "failureChecks": [
-            "Unknown fixture ID fails visibly",
-            "Empty fixture rejected"
-          ],
+          "failureChecks": ["Unknown fixture ID fails visibly", "Empty fixture rejected"],
           "then": "station A is shown"
         }
       ],
       "testingSeams": [
         {
           "id": "ST-SEAM",
-          "checks": [
-            "Exact station identity",
-            "Unknown ID error"
-          ],
+          "checks": ["Exact station identity", "Unknown ID error"],
           "fixture": "A -> Station A",
           "boundary": "fixture input to observable station result"
         }
       ]
     },
     {
-      "blockedBy": [
-        "station"
-      ],
+      "blockedBy": ["station"],
       "title": "Render synthetic fare result",
       "externalSource": "metro-spec",
       "outcome": "Fixture fare is observable",
       "externalId": "SYNTHETIC-LOOKUP/fare",
       "id": "fare",
-      "scope": [
-        "One fixed station-pair fare"
-      ],
-      "exclusions": [
-        "Official fare claims and payment"
-      ],
+      "scope": ["One fixed station-pair fare"],
+      "exclusions": ["Official fare claims and payment"],
       "acceptanceCriteria": [
         {
           "when": "fare requested",
@@ -67,22 +51,15 @@
       "testingSeams": [
         {
           "id": "FA-SEAM",
-          "checks": [
-            "Exact fixture fare",
-            "Unknown pair error"
-          ],
+          "checks": ["Exact fixture fare", "Unknown pair error"],
           "fixture": "A/B -> 10 fixture units",
           "boundary": "station pair to observable fixture fare"
         }
       ]
     }
   ],
-  "scope": [
-    "Deterministic synthetic lookup preparation"
-  ],
-  "exclusions": [
-    "No product implementation, live data or publishing"
-  ],
+  "scope": ["Deterministic synthetic lookup preparation"],
+  "exclusions": ["No product implementation, live data or publishing"],
   "grouping": {
     "module": "https://example.invalid/modules/lookup",
     "release": "https://example.invalid/releases/fixture-v1",

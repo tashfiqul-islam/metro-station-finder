@@ -1,6 +1,6 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { isAbsolute, join, relative, resolve } from 'node:path';
-import ts from 'typescript';
+import ts from '@typescript/typescript6';
 
 /** Narrow scaffold guard. The full dependency graph gate belongs to METRO-12. */
 export async function checkCoreBoundary(root: string): Promise<string[]> {

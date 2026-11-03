@@ -2,6 +2,11 @@
   "name": "@metro/api",
   "private": true,
   "type": "module",
-  "scripts": { "build": "wrangler deploy --dry-run --outdir dist" },
-  "dependencies": { "@metro/core": "workspace:*", "hono": "4.13.14" }
+  "scripts": {
+    "build": "wrangler deploy --dry-run --outdir dist"
+  },
+  "dependencies": {
+    "@metro/core": "workspace:*",
+    "hono": "4.13.16"
+  }
 }

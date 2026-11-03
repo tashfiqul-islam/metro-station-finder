@@ -1,0 +1,6 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": { "types": ["node"], "skipLibCheck": true },
+  "include": ["./*.ts", "../apps/web/vite.config.ts"],
+  "exclude": ["./*.test.ts", "./configuration.ts", "./tools.ts"]
+}

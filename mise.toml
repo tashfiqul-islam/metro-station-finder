@@ -1,3 +1,28 @@
+# Runtime pins must match package.json engines.
 [tools]
-bun = "1.4.0"
-node = "24.22.2"
+bun = "1.4.4"
+node = "26.13.0"
+
+[tasks.bootstrap]
+description = "Verify tools and install the frozen dependency graph"
+run = "bun run bootstrap"
+
+[tasks.check]
+description = "Run local configuration, boundary, test and type gates"
+run = "bun run check"
+
+[tasks.build]
+description = "Build web and dry-run the Worker bundle"
+run = "bun run build"
+
+[tasks.dev]
+description = "Start local web and Worker servers"
+run = "bun run dev"
+
+[tasks.smoke]
+description = "Check real browser and local Worker behavior"
+run = "bun run smoke"
+
+[tasks.format]
+description = "Format tracked configuration files"
+run = "bun run format"
