@@ -39,8 +39,8 @@ Deployment SHA and provider failure cause unknown. A browser observation on this
 **Repo-verified:** Bun 1.4.0 ran direct imports of the three baseline modules, exit 0. No installed application dependencies needed. To reproduce, save the code below as a temporary `metro-parity-check.ts` in repository root, run `bun ./metro-parity-check.ts`, then remove that temporary file. Checks mutate only an in-memory imported array and restore it in finally; no data file is edited.
 
 ```typescript
-import { findNearestMetro } from "./src/services/metroServices.ts";
 import { calculateFare, stationNames } from "./src/services/fareCalculation.ts";
+import { findNearestMetro } from "./src/services/metroServices.ts";
 import { metroStations } from "./src/utils/constants.ts";
 
 function check(name: string, ok: boolean) {
