@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
 import { cleanGitEnv } from "./git-env";
 
 test("cleanGitEnv removes every GIT_* variable and keeps the rest", () => {

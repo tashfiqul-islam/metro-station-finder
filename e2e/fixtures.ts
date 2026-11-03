@@ -1,4 +1,4 @@
-import AxeBuilder from "@axe-core/playwright";
+import { AxeBuilder } from "@axe-core/playwright";
 import { expect, test as base } from "@playwright/test";
 
 interface Options {

@@ -18,8 +18,9 @@ export const errorEnvelopeSchema = v.pipe(
 export type ScaffoldStatusBody = v.InferOutput<typeof scaffoldStatusSchema>;
 export type ErrorEnvelope = v.InferOutput<typeof errorEnvelopeSchema>;
 
-type Equal<A, B> =
-  (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
+type Equal<A, B> = (() => unknown extends A ? 1 : 2) extends () => unknown extends B ? 1 : 2
+  ? true
+  : false;
 
 /** Compile-time guard: the schema-derived type must stay identical to the core type. */
 export const coreStatusMatchesSchema: Equal<ScaffoldStatus, ScaffoldStatusBody> = true;

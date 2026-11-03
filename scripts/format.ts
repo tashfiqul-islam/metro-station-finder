@@ -6,7 +6,7 @@ const files = execFileSync(
   { encoding: "utf8" },
 )
   .split("\0")
-  .filter((file) => /\.(ts|tsx|js|mjs|css|html|md|json|jsonc|toml|yaml|yml)$/.test(file));
+  .filter((file) => /\.(ts|tsx|js|mjs|css|html|md|json|jsonc|toml|yaml|yml)$/u.test(file));
 if (files.length === 0) throw new Error("No supported source/configuration files found");
 const mode = process.argv[2];
 if (mode !== "--check" && mode !== "--write") throw new Error("Expected --check or --write");

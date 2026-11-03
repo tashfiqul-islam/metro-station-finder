@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
-import { fetchScaffoldStatus } from "./status-client";
 import type { ScaffoldStatusBody } from "@metro/contracts";
+import { useEffect, useState } from "react";
+
+import { fetchScaffoldStatus } from "./status-client";
 
 type State =
   | { readonly phase: "loading" }
@@ -11,18 +12,19 @@ export function App() {
   const [state, setState] = useState<State>({ phase: "loading" });
   useEffect(() => {
     const controller = new AbortController();
-    fetchScaffoldStatus(fetch, controller.signal).then(
-      (status) => {
+    async function load() {
+      try {
+        const status = await fetchScaffoldStatus(fetch, controller.signal);
         if (!controller.signal.aborted) setState({ phase: "success", status });
-      },
-      (error: unknown) => {
+      } catch (error: unknown) {
         if (controller.signal.aborted) return;
         setState({
           phase: "error",
           message: error instanceof Error ? error.message : "Unknown error",
         });
-      },
-    );
+      }
+    }
+    void load();
     return () => controller.abort();
   }, []);
 

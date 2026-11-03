@@ -1,11 +1,12 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
+
 import { cleanGitEnv } from "./git-env.ts";
 
 const TYPES = "feat|fix|refactor|docs|test|chore|perf|ci|style|build|revert";
-const CONVENTIONAL = new RegExp(`^(?:${TYPES})(?:\\([a-z0-9][a-z0-9._/-]*\\))?!?: \\S`);
+const CONVENTIONAL = new RegExp(`^(?:${TYPES})(?:\\([a-z0-9][a-z0-9._/-]*\\))?!?: \\S`, "u");
 // Subjects Git itself generates for merges and reverts.
-const GIT_GENERATED = /^(?:Merge |Revert ")\S/;
+const GIT_GENERATED = /^(?:Merge |Revert ")\S/u;
 
 /** Returns an error message for an invalid subject, or null when it is accepted. */
 export function validateSubject(subject: string): string | null {
@@ -15,7 +16,7 @@ export function validateSubject(subject: string): string | null {
 
 /** Validates the first non-comment line of a commit message; the body is free-form. */
 export function validateMessage(message: string): string | null {
-  const subject = message.split(/\r?\n/).find((line) => !line.startsWith("#"));
+  const subject = message.split(/\r?\n/u).find((line) => !line.startsWith("#"));
   return validateSubject(subject ?? "");
 }
 

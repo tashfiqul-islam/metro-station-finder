@@ -1,4 +1,5 @@
 import { afterAll, afterEach, beforeAll, expect, spyOn, test } from "bun:test";
+
 import { GlobalRegistrator } from "@happy-dom/global-registrator";
 
 // The DOM must exist before React and Testing Library are imported.
@@ -13,19 +14,20 @@ const json = (body: unknown, init: ResponseInit = {}) =>
     headers: { "content-type": "application/json" },
     ...init,
   });
+const ignoreResponse = (_response: Response): void => {};
 const stubFetch = (handler: () => Promise<Response>) => {
-  globalThis.fetch = handler as unknown as typeof fetch;
+  globalThis.fetch = Object.assign(handler, { preconnect: () => {} });
 };
 
 beforeAll(() => {
-  (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+  Reflect.set(globalThis, "IS_REACT_ACT_ENVIRONMENT", true);
 });
 afterEach(() => {
   cleanup();
   globalThis.fetch = realFetch;
 });
 afterAll(async () => {
-  delete (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT;
+  Reflect.deleteProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT");
   await GlobalRegistrator.unregister();
 });
 
@@ -70,19 +72,24 @@ test("FND-T2 shows an alert for a network failure", async () => {
 });
 
 test("FND-T2 shows a generic message for a non-Error rejection", async () => {
-  stubFetch(() => Promise.reject("boom" as unknown as Error));
+  stubFetch(() => Promise.reject("boom"));
   render(<App />);
   expect((await screen.findByRole("alert")).textContent).toContain("Unknown error");
 });
 
 test("FND-T2 unmounting before the response arrives updates nothing and throws nothing", async () => {
-  let resolve: (response: Response) => void = () => {};
-  stubFetch(() => new Promise<Response>((done) => (resolve = done)));
+  let deliver = ignoreResponse;
+  stubFetch(
+    () =>
+      new Promise<Response>((resolve) => {
+        deliver = resolve;
+      }),
+  );
   const errors = spyOn(console, "error").mockImplementation(() => {});
   const view = render(<App />);
   view.unmount();
-  resolve(json({ kind: "synthetic-scaffold", ready: true }));
-  await new Promise((done) => setTimeout(done, 10));
+  deliver(json({ kind: "synthetic-scaffold", ready: true }));
+  await new Promise((resolve) => setTimeout(resolve, 10));
   expect(document.body.textContent).toBe("");
   expect(errors).not.toHaveBeenCalled();
   errors.mockRestore();

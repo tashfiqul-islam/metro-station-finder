@@ -12,7 +12,7 @@ async function sizes(directory: string): Promise<{ raw: number; gzip: number }> 
       const nested = await sizes(path);
       raw += nested.raw;
       gzip += nested.gzip;
-    } else if (/\.(js|css)$/.test(entry.name)) {
+    } else if (/\.(js|css)$/u.test(entry.name)) {
       const bytes = await readFile(path);
       raw += bytes.length;
       gzip += gzipSync(bytes).length;

@@ -1,18 +1,23 @@
 import { readdir, readFile } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve } from "node:path";
+
 import ts from "@typescript/typescript6";
+
+import { isRecord } from "./guards.ts";
 
 /** Narrow scaffold guard. The full dependency graph gate belongs to METRO-12. */
 export async function checkCoreBoundary(root: string): Promise<string[]> {
   const errors: string[] = [];
-  const manifest = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
+  const manifest: unknown = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
   for (const section of [
     "dependencies",
     "devDependencies",
     "peerDependencies",
     "optionalDependencies",
   ]) {
-    if (Object.keys(manifest[section] ?? {}).length) errors.push(`Core cannot declare ${section}`);
+    const declared = isRecord(manifest) ? manifest[section] : undefined;
+    if (isRecord(declared) && Object.keys(declared).length)
+      errors.push(`Core cannot declare ${section}`);
   }
   const sourceRoot = resolve(root, "src");
   const within = (file: string) => {
@@ -34,7 +39,7 @@ export async function checkCoreBoundary(root: string): Promise<string[]> {
         await visitDirectory(file);
         continue;
       }
-      if (!/\.[cm]?[jt]sx?$/.test(file) || /\.test\.[jt]sx?$/.test(file)) continue;
+      if (!/\.[cm]?[jt]sx?$/u.test(file) || /\.test\.[jt]sx?$/u.test(file)) continue;
       const source = ts.createSourceFile(
         file,
         await readFile(file, "utf8"),

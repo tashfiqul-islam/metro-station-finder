@@ -12,6 +12,10 @@
     "apps/api": {
       "project": ["src/**/*.ts"]
     },
+    "packages/contracts": {
+      "entry": ["src/**/*.test.ts"],
+      "project": ["src/**/*.ts"]
+    },
     "packages/core": {
       "entry": ["src/**/*.test.ts"],
       "project": ["src/**/*.ts"]

@@ -1,11 +1,12 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+
+import { isRecord } from "./guards.ts";
 import { exactToolVersion } from "./tool-pins.ts";
 
 function record(value: unknown, name: string): Record<string, unknown> {
-  if (!value || typeof value !== "object" || Array.isArray(value))
-    throw new Error(`${name}: expected an object`);
-  return value as Record<string, unknown>;
+  if (!isRecord(value)) throw new Error(`${name}: expected an object`);
+  return value;
 }
 
 export async function validateConfiguration(root: string): Promise<void> {
@@ -14,7 +15,7 @@ export async function validateConfiguration(root: string): Promise<void> {
       const source = await readFile(join(root, file), "utf8");
       return record(toml ? Bun.TOML.parse(source) : JSON.parse(source), file);
     } catch (error) {
-      throw new Error(`${file}: ${String(error)}`);
+      throw new Error(`${file}: ${String(error)}`, { cause: error });
     }
   }
   const manifest = await parse("package.json");
@@ -23,7 +24,7 @@ export async function validateConfiguration(root: string): Promise<void> {
   const tools = record(mise["tools"], "mise.toml tools");
   for (const runtime of ["bun", "node"]) {
     const version = engines[runtime];
-    if (typeof version !== "string" || !/^\d+\.\d+\.\d+$/.test(version))
+    if (typeof version !== "string" || !/^\d+\.\d+\.\d+$/u.test(version))
       throw new Error(`package.json engines.${runtime}: exact stable version required`);
     if (tools[runtime] !== version)
       throw new Error(
@@ -70,7 +71,7 @@ async function readRenovate(root: string): Promise<Record<string, unknown>> {
       RENOVATE_FILE,
     );
   } catch (error) {
-    throw new Error(`${RENOVATE_FILE}: ${String(error)}`);
+    throw new Error(`${RENOVATE_FILE}: ${String(error)}`, { cause: error });
   }
 }
 
@@ -83,7 +84,7 @@ const UNIT_SECONDS: Record<string, number> = {
 
 /** Normalizes a Renovate duration such as "3 days" or "72 hours" to seconds. */
 export function durationSeconds(duration: string): number {
-  const match = /^(\d+) (minute|hour|day|week)s?$/.exec(duration.trim());
+  const match = /^(\d+) (minute|hour|day|week)s?$/u.exec(duration.trim());
   const unit = match?.[2];
   if (!match || !unit) throw new Error(`Unsupported Renovate duration: ${duration}`);
   return Number(match[1]) * (UNIT_SECONDS[unit] ?? 0);

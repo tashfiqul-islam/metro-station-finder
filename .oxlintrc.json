@@ -1,11 +1,129 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "options": { "typeAware": true },
-  "plugins": ["typescript", "react", "jsx-a11y"],
-  "categories": { "correctness": "error" },
-  "rules": {
-    "typescript/no-floating-promises": "error",
-    "typescript/no-misused-promises": "error"
+  "options": {
+    "typeAware": true,
+    "reportUnusedDisableDirectives": "error"
   },
-  "ignorePatterns": ["**/dist/**", ".local/**", ".superpowers/**"]
+  "plugins": [
+    "eslint",
+    "typescript",
+    "unicorn",
+    "oxc",
+    "import",
+    "promise",
+    "node",
+    "react",
+    "jsx-a11y"
+  ],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "error",
+    "pedantic": "off",
+    "style": "off",
+    "restriction": "off",
+    "nursery": "off"
+  },
+  "rules": {
+    "eslint/eqeqeq": "error",
+    "eslint/no-console": "error",
+    "eslint/no-var": "error",
+    "eslint/prefer-const": "error",
+    "eslint/no-eval": "error",
+    "eslint/no-implied-eval": "error",
+    "eslint/no-return-assign": "error",
+    "eslint/require-unicode-regexp": "error",
+    "typescript/consistent-type-imports": "error",
+    "typescript/no-explicit-any": "error",
+    "typescript/no-non-null-assertion": "error",
+    "typescript/no-floating-promises": "error",
+    "typescript/no-misused-promises": "error",
+    "typescript/await-thenable": "error",
+    "typescript/only-throw-error": "error",
+    "typescript/switch-exhaustiveness-check": "error",
+    "typescript/no-unnecessary-type-assertion": "error",
+    "typescript/no-unsafe-argument": "error",
+    "typescript/no-unsafe-assignment": "error",
+    "typescript/no-unsafe-call": "error",
+    "typescript/no-unsafe-member-access": "error",
+    "typescript/no-unsafe-return": "error",
+    "unicorn/prefer-node-protocol": "error",
+    "unicorn/no-useless-undefined": "error",
+    "unicorn/prefer-string-replace-all": "error",
+    "import/no-duplicates": "error",
+    "import/no-self-import": "error",
+    "import/first": "error",
+    "promise/no-return-wrap": "error",
+    "promise/param-names": "error",
+    "react/jsx-key": "error",
+    "react/rules-of-hooks": "error",
+    "react/exhaustive-deps": "error",
+    // The automatic JSX runtime (Vite, plugin-react, tsconfig `jsx: react-jsx`) needs no React import.
+    "react/react-in-jsx-scope": "off"
+  },
+  "overrides": [
+    {
+      "files": [
+        "scripts/**",
+        "e2e/**",
+        "playwright.config.ts",
+        "*.config.ts",
+        ".dependency-cruiser.mts"
+      ],
+      "env": { "node": true },
+      "rules": {
+        // Command-line tools report through the console, and run their steps one after another on purpose
+        // (Git, file and process work whose order matters).
+        "eslint/no-console": "off",
+        "eslint/no-await-in-loop": "off"
+      }
+    },
+    {
+      "files": ["**/*.test.ts", "**/*.test.tsx"],
+      "plugins": [
+        "eslint",
+        "typescript",
+        "unicorn",
+        "oxc",
+        "import",
+        "promise",
+        "node",
+        "react",
+        "jsx-a11y",
+        "jest"
+      ],
+      "rules": {
+        "eslint/no-console": "off",
+        "eslint/no-await-in-loop": "off",
+        "jest/no-focused-tests": "error",
+        "jest/no-disabled-tests": "error",
+        "jest/no-identical-title": "error",
+        "jest/valid-expect": "error"
+      }
+    },
+    {
+      // These files are compiled by Bun-typed projects (tsconfig.test.json, tsconfig.dom-test.json, the
+      // `bun run` entry scripts), but the type-aware linter discovers the nearest tsconfig.json, which has
+      // no `bun` types, so `bun:test`, `expect` and `Bun` resolve to `error` types. The unsafe-* family then
+      // reports the missing types, not real unsafe code. The real compiler gates (`bun run typecheck`) still
+      // check these files strictly.
+      "files": ["**/*.test.ts", "**/*.test.tsx", "scripts/tools.ts", "scripts/configuration.ts"],
+      "rules": {
+        "typescript/no-unsafe-argument": "off",
+        "typescript/no-unsafe-assignment": "off",
+        "typescript/no-unsafe-call": "off",
+        "typescript/no-unsafe-member-access": "off",
+        "typescript/no-unsafe-return": "off"
+      }
+    }
+  ],
+  "ignorePatterns": [
+    "**/dist/**",
+    "coverage/**",
+    "playwright-report/**",
+    "test-results/**",
+    "apps/api/worker-configuration.d.ts",
+    ".local/**",
+    ".superpowers/**"
+  ]
 }

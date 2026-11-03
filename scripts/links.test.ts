@@ -2,9 +2,17 @@ import { afterEach, expect, test } from "bun:test";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+
 import { checkLinks, formatProblem, githubSlugs } from "./links";
 
 const roots: string[] = [];
+
+/** The first element of `items`; fails the test when there is none. */
+function first<T>(items: readonly T[]): T {
+  const [item] = items;
+  if (item === undefined) throw new Error("expected at least one item");
+  return item;
+}
 
 async function fixture(files: Record<string, string>): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), "metro-links-"));
@@ -33,8 +41,8 @@ test("FND-H1 reports a missing target file with file:line", async () => {
   const root = await fixture({ "README.md": "# T\n\ntext\n[gone](docs/missing.md)\n" });
   const problems = await checkLinks(root, ["README.md"]);
   expect(problems).toHaveLength(1);
-  expect(formatProblem(problems[0]!)).toContain("README.md:4");
-  expect(formatProblem(problems[0]!)).toContain("docs/missing.md");
+  expect(formatProblem(first(problems))).toContain("README.md:4");
+  expect(formatProblem(first(problems))).toContain("docs/missing.md");
 });
 
 test("FND-H1 reports a missing heading anchor in another file and in the same file", async () => {
@@ -47,7 +55,7 @@ test("FND-H1 reports a missing heading anchor in another file and in the same fi
     ["README.md", 3],
     ["README.md", 4],
   ]);
-  expect(problems[0]!.message).toContain("#nope");
+  expect(first(problems).message).toContain("#nope");
 });
 
 test("FND-H1 ignores external URLs, mailto links and fenced or inline code", async () => {
@@ -77,7 +85,7 @@ test("FND-H1 rejects links that escape the repository root", async () => {
   const root = await fixture({ "docs/a.md": "# A\n\n[up](../../outside.md)\n" });
   const problems = await checkLinks(root, ["docs/a.md"]);
   expect(problems).toHaveLength(1);
-  expect(problems[0]!.message).toContain("escapes");
+  expect(first(problems).message).toContain("escapes");
 });
 
 test("FND-H1 decodes percent-encoding, strips titles and resolves root-absolute links", async () => {

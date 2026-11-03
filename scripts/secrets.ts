@@ -3,8 +3,9 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve, relative, isAbsolute } from "node:path";
 import { fileURLToPath } from "node:url";
-import { gitleaksVersion } from "./tool-pins.ts";
+
 import { cleanGitEnv } from "./git-env.ts";
+import { gitleaksVersion } from "./tool-pins.ts";
 
 const SYMLINK_MODE = "120000";
 const GITLINK_MODE = "160000";

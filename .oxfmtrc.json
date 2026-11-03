@@ -1,0 +1,33 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "printWidth": 100,
+  "tabWidth": 2,
+  "useTabs": false,
+  "semi": true,
+  "singleQuote": false,
+  "trailingComma": "all",
+  "endOfLine": "lf",
+  "insertFinalNewline": true,
+  "sortImports": {
+    "groups": [
+      "builtin",
+      "external",
+      ["internal", "subpath"],
+      ["parent", "sibling", "index"],
+      "style",
+      "unknown"
+    ],
+    "newlinesBetween": true,
+    "ignoreCase": true,
+    "order": "asc"
+  },
+  "sortPackageJson": true,
+  "ignorePatterns": [
+    "**/dist/**",
+    "coverage/**",
+    "playwright-report/**",
+    "test-results/**",
+    "apps/api/worker-configuration.d.ts",
+    "bun.lock"
+  ]
+}

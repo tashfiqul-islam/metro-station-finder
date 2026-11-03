@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { randomBytes } from "node:crypto";
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { resolve, join } from "node:path";
+
 import { cleanGitEnv } from "./git-env";
 
 async function fixture(run: (root: string) => Promise<void>) {
@@ -85,7 +86,7 @@ test("secret gate rejects tracked symlinks instead of following them", () =>
     expect(Bun.spawnSync(["git", "init", root], { env: cleanGitEnv() }).exitCode).toBe(0);
     await writeFile(join(root, "target.txt"), "../outside-secret");
     const hash = git(root, "hash-object", "-w", "target.txt").stdout.toString().trim();
-    expect(hash).toMatch(/^[0-9a-f]{40,64}$/);
+    expect(hash).toMatch(/^[0-9a-f]{40,64}$/u);
     expect(
       git(root, "update-index", "--add", "--cacheinfo", `120000,${hash},link.txt`).exitCode,
     ).toBe(0);

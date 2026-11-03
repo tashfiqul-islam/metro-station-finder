@@ -9,7 +9,7 @@ import { join, resolve } from "node:path";
  */
 export function lintWorkflows(directory: string): { ok: boolean; output: string } {
   const files = readdirSync(directory)
-    .filter((name) => /\.ya?ml$/.test(name))
+    .filter((name) => /\.ya?ml$/u.test(name))
     .map((name) => join(directory, name));
   if (!files.length) return { ok: false, output: `No workflow files in ${directory}` };
   let output = "";

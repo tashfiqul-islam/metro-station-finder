@@ -1,5 +1,7 @@
 import { expect, test } from "bun:test";
+
 import { parseErrorEnvelope, parseScaffoldStatus } from "@metro/contracts";
+
 import { createApp } from "./app";
 import app from "./index";
 
@@ -45,7 +47,7 @@ test("FND-R4 an unexpected failure returns a 500 envelope without leaking the ca
 });
 
 test("FND-R4 a status that drifts from the contract is rejected at the API", async () => {
-  const drifted = createApp(() => ({ kind: "synthetic-scaffold", ready: false }) as never);
+  const drifted = createApp(() => ({ kind: "synthetic-scaffold", ready: false }));
   expect((await drifted.request("/api/scaffold/status")).status).toBe(500);
 });
 
