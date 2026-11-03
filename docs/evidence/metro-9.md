@@ -18,13 +18,13 @@ The Google script URL requests `libraries=places`; no version is pinned. The unu
 
 **Web-verified:** coordinator inspected [public site](https://tashfiqul-islam.github.io/metro-station-finder/) on 2026-11-02 and supplied findings for this audit; this author did not repeat browser research.
 
-| Case | Steps / observed outcome |
-| --- | --- |
-| J1 | Open Home. Location input disabled; Google panel displayed “Oops! Something went wrong. This page did not load Google Maps correctly.” |
-| J2 | Successful Places selection and manual submission could not be verified because provider failed. Source behavior only is documented. |
-| J3 | Successful walking route, markers, distance and provider recovery not observed. |
-| J4 | Open Route Fare. Both selections blank and no fare. Select Uttara North: destination offers other 15 stations. Select Motijheel: BDT 100. Footer v0.0.2. |
-| J5 | Navigation to fare worked. Outside-click dropdown behavior and mobile layout were source-inspected only, not independently browser-reproduced. |
+| Case | Steps / observed outcome                                                                                                                                 |
+| ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| J1   | Open Home. Location input disabled; Google panel displayed “Oops! Something went wrong. This page did not load Google Maps correctly.”                   |
+| J2   | Successful Places selection and manual submission could not be verified because provider failed. Source behavior only is documented.                     |
+| J3   | Successful walking route, markers, distance and provider recovery not observed.                                                                          |
+| J4   | Open Route Fare. Both selections blank and no fare. Select Uttara North: destination offers other 15 stations. Select Motijheel: BDT 100. Footer v0.0.2. |
+| J5   | Navigation to fare worked. Outside-click dropdown behavior and mobile layout were source-inspected only, not independently browser-reproduced.           |
 
 Deployment SHA and provider failure cause unknown. A browser observation on this URL does not establish that deployment equals the pinned baseline. No official fare authority was established by its displayed value.
 
@@ -48,41 +48,73 @@ function check(name: string, ok: boolean) {
   console.log("PASS " + name);
 }
 function thrown(action: () => unknown): string {
-  try { action(); } catch (error) { return (error as Error).message; }
+  try {
+    action();
+  } catch (error) {
+    return (error as Error).message;
+  }
   throw new Error("Expected exception");
 }
-const matrix = stationNames.map(a => stationNames.map(b => calculateFare(a, b)));
-check("F1: 16 unique names per dataset",
-  new Set(stationNames).size === 16 && new Set(metroStations.map(s => s.name)).size === 16);
+const matrix = stationNames.map((a) => stationNames.map((b) => calculateFare(a, b)));
+check(
+  "F1: 16 unique names per dataset",
+  new Set(stationNames).size === 16 && new Set(metroStations.map((s) => s.name)).size === 16,
+);
 check("F2: 256 finite fares", matrix.flat().length === 256 && matrix.flat().every(Number.isFinite));
-check("F2: symmetric and zero diagonal",
-  matrix.every((row, i) => row.every((v, j) => v === matrix[j][i] && (i !== j || v === 0))));
-check("F2: off-diagonal 20..100 multiples of ten",
-  matrix.every((row, i) => row.every((v, j) => i === j || (v >= 20 && v <= 100 && v % 10 === 0))));
+check(
+  "F2: symmetric and zero diagonal",
+  matrix.every((row, i) => row.every((v, j) => v === matrix[j][i] && (i !== j || v === 0))),
+);
+check(
+  "F2: off-diagonal 20..100 multiples of ten",
+  matrix.every((row, i) => row.every((v, j) => i === j || (v >= 20 && v <= 100 && v % 10 === 0))),
+);
 check("F3: Uttara North to Motijheel", calculateFare("Uttara North", "Motijheel") === 100);
 for (const name of ["", "uttara north", " Uttara North", "Mirpur 11", "Agaragaon"]) {
-  check("F4: reject " + JSON.stringify(name),
-    thrown(() => calculateFare(name, "Motijheel")) === "Station not found: " + name);
+  check(
+    "F4: reject " + JSON.stringify(name),
+    thrown(() => calculateFare(name, "Motijheel")) === "Station not found: " + name,
+  );
 }
-check("D1: all exact station points select themselves",
-  metroStations.every(s => findNearestMetro(s).name === s.name));
-check("D2: NaN throws",
-  thrown(() => findNearestMetro({ lat: NaN, lng: 90 })) === "No metro stations found");
-check("D3: fixed Dhaka center", findNearestMetro({ lat: 23.8103, lng: 90.4125 }).name === "Kazipara");
-check("D3: out-of-range accepted", findNearestMetro({ lat: 100, lng: 200 }).name === "Uttara North");
+check(
+  "D1: all exact station points select themselves",
+  metroStations.every((s) => findNearestMetro(s).name === s.name),
+);
+check(
+  "D2: NaN throws",
+  thrown(() => findNearestMetro({ lat: NaN, lng: 90 })) === "No metro stations found",
+);
+check(
+  "D3: fixed Dhaka center",
+  findNearestMetro({ lat: 23.8103, lng: 90.4125 }).name === "Kazipara",
+);
+check(
+  "D3: out-of-range accepted",
+  findNearestMetro({ lat: 100, lng: 200 }).name === "Uttara North",
+);
 const original = metroStations.slice();
 try {
-  metroStations.splice(0, metroStations.length,
-    { name: "first", lat: 0, lng: 0 }, { name: "second", lat: 0, lng: 0 });
+  metroStations.splice(
+    0,
+    metroStations.length,
+    { name: "first", lat: 0, lng: 0 },
+    { name: "second", lat: 0, lng: 0 },
+  );
   check("D4: first wins exact tie", findNearestMetro({ lat: 0, lng: 0 }).name === "first");
   metroStations.splice(0);
-  check("D5: empty data throws",
-    thrown(() => findNearestMetro({ lat: 0, lng: 0 })) === "No metro stations found");
+  check(
+    "D5: empty data throws",
+    thrown(() => findNearestMetro({ lat: 0, lng: 0 })) === "No metro stations found",
+  );
 } finally {
   metroStations.splice(0, metroStations.length, ...original);
 }
-console.log("label mismatches", metroStations.flatMap((s, i) =>
-  s.name === stationNames[i] ? [] : [i + ": " + s.name + " / " + stationNames[i]]));
+console.log(
+  "label mismatches",
+  metroStations.flatMap((s, i) =>
+    s.name === stationNames[i] ? [] : [i + ": " + s.name + " / " + stationNames[i]],
+  ),
+);
 for (const meters of [0, 999, 1000, 1001]) {
   const unit = meters >= 1000 ? "km" : "miles";
   console.log("U1", meters, (meters / (unit === "km" ? 1000 : 1609.34)).toFixed(2), unit);
@@ -97,11 +129,11 @@ The positional alias mapping, stale-result race risk and route-versus-card impli
 
 ## Acceptance trace
 
-| Acceptance criterion | Evidence |
-| --- | --- |
-| Existing journeys / source / reproducibility | Parity journey table; J1–J5 distinguish browser-observed and source-only behavior; F1–F4, D1–D5, U1 reproducible checks. |
-| Consistent station / unit / nearest / fare definitions | Glossary and five-label mismatch table. |
-| Denied/unavailable location, invalid selection, no result, provider failure | Parity R1–R6 explicitly proposed; J1 observed provider failure; no invented permission observation. |
-| Authority/staleness risks and deterministic fixtures | Parity data findings, Unknown section, R7–R8. |
+| Acceptance criterion                                                        | Evidence                                                                                                                 |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Existing journeys / source / reproducibility                                | Parity journey table; J1–J5 distinguish browser-observed and source-only behavior; F1–F4, D1–D5, U1 reproducible checks. |
+| Consistent station / unit / nearest / fare definitions                      | Glossary and five-label mismatch table.                                                                                  |
+| Denied/unavailable location, invalid selection, no result, provider failure | Parity R1–R6 explicitly proposed; J1 observed provider failure; no invented permission observation.                      |
+| Authority/staleness risks and deterministic fixtures                        | Parity data findings, Unknown section, R7–R8.                                                                            |
 
 Local documentation checks: relative links resolved, only three requested Markdown paths changed, diff whitespace check passed. These checks do not certify transport data or satisfy merge/CI requirements. Ticket completion remains subject to the project's review and integration workflow.

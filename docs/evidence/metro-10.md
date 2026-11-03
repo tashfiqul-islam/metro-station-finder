@@ -12,13 +12,13 @@
 
 Pocock root `C:/Users/Tashfiq/.agents/skills` contains plain copies of `grill-me`, `grill-with-docs`, `to-prd`, `to-issues`, `triage`. Read supporting CONTEXT/ADR and triage brief/out-of-scope formats. Installer record `C:/Users/Tashfiq/.agents/.skill-lock.json` identifies GitHub source `mattpocock/skills`, plugin name `mattpocock-skills`, installation 2026-05-12 and update 2026-05-28, without upstream commit. Recorded installer folder hashes:
 
-| Skill | Folder hash (installer metadata, not content SHA256 or Git commit) |
-| --- | --- |
-| grill-me | `2a1ad17028306ebe45f0e49703fa28b9b2e7f499` |
-| grill-with-docs | `2c6aa7079cc705a6e0c319fcf23a0fa39968de29` |
-| to-prd | `d6eff3e99a325d2d9c2acbe31b4d76fa5340a154` |
-| to-issues | `b38c5aa6ae5d6903e60d3f74a7aafd32d02f2c06` |
-| triage | `de4f182c30876a2460ca307e2f601b9b892527e5` |
+| Skill           | Folder hash (installer metadata, not content SHA256 or Git commit) |
+| --------------- | ------------------------------------------------------------------ |
+| grill-me        | `2a1ad17028306ebe45f0e49703fa28b9b2e7f499`                         |
+| grill-with-docs | `2c6aa7079cc705a6e0c319fcf23a0fa39968de29`                         |
+| to-prd          | `d6eff3e99a325d2d9c2acbe31b4d76fa5340a154`                         |
+| to-issues       | `b38c5aa6ae5d6903e60d3f74a7aafd32d02f2c06`                         |
+| triage          | `de4f182c30876a2460ca307e2f601b9b892527e5`                         |
 
 `to-spec`/`to-tickets` absent in inspected installed inventories. [Skills guide](../agents/skills.md) maps conceptual stages to actual names, resolves GitHub/Plane defaults and separates preparation from publication/dispatch/implementation. **Inferred:** bounded compatibility follows explicit adapter rules, not version labels or a comprehensive interoperability test.
 
@@ -32,12 +32,12 @@ Context7 queried before web: `/obra/superpowers` for Codex setup; `/websites/dev
 
 ## Acceptance mapping
 
-| Ticket acceptance | Evidence |
-| --- | --- |
-| Reviewed revisions, install/update and actual triggers | Content lock; skills guide with source/provenance limits and controlled review procedure |
-| Plane storage, creation, blockers, states, release/module/milestone | Plane native-operation table, safe retry ledger and readback procedure |
-| Preserve scope, criteria and seams in independent tickets | Source/tickets fixture comparison; two bounded outcomes; fare blocked by station; complete failure and seam fields |
-| No implicit dispatch/implementation; instructions agree | Templates and adapter authorization boundaries; AGENTS routing; workflow/README owner exception and METRO-11 migration |
+| Ticket acceptance                                                   | Evidence                                                                                                               |
+| ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Reviewed revisions, install/update and actual triggers              | Content lock; skills guide with source/provenance limits and controlled review procedure                               |
+| Plane storage, creation, blockers, states, release/module/milestone | Plane native-operation table, safe retry ledger and readback procedure                                                 |
+| Preserve scope, criteria and seams in independent tickets           | Source/tickets fixture comparison; two bounded outcomes; fare blocked by station; complete failure and seam fields     |
+| No implicit dispatch/implementation; instructions agree             | Templates and adapter authorization boundaries; AGENTS routing; workflow/README owner exception and METRO-11 migration |
 
 Manual template comparison: specification identity/revision/source, scope/exclusions, grouping, slice ID/title/outcome, full Given/When/Then/failure checks, testing boundary/fixture/checks and blockers all have explicit template slots. JSON comparison checks the bounded projection, not Markdown rendering or semantic research quality. Stable identity adds `metro-spec` plus specification/slice key; source revision remains separate to support retries.
 

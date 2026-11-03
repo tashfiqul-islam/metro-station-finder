@@ -1,8 +1,8 @@
-import { createRoot } from 'react-dom/client';
-import { getScaffoldStatus } from '@metro/core';
+import { createRoot } from "react-dom/client";
+import { getScaffoldStatus } from "@metro/core";
 
-const root = document.getElementById('root');
-if (!root) throw new Error('Missing application root');
+const root = document.getElementById("root");
+if (!root) throw new Error("Missing application root");
 
 createRoot(root).render(
   <main>

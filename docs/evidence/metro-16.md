@@ -6,22 +6,22 @@ Date: 2026-11-03. Base: d5f8b3bd3addba4e0555ab782fb1a916ece026e6. Scope: configu
 
 **Confirmed / Web-verified:** official release/registry sources checked on 2026-11-03. Exact manifest and lockfile pins are Repo-verified. Registry `latest` is a dated observation, not a future guarantee.
 
-| Pin | Official source |
-| --- | --- |
-| Bun 1.4.4 | https://github.com/oven-sh/bun/releases/tag/bun-v1.4.4 |
-| Node 26.13.0 | https://nodejs.org/en/blog/release/v26.13.0 |
-| TypeScript 7.0.2 | https://registry.npmjs.org/typescript/latest |
-| TypeScript compiler API 6.0.2 | https://registry.npmjs.org/@typescript/typescript6/latest |
-| Hono 4.13.16 | https://registry.npmjs.org/hono/latest |
-| React / React DOM 19.3.1 | https://registry.npmjs.org/react/latest ; https://registry.npmjs.org/react-dom/latest |
+| Pin                            | Official source                                                                                     |
+| ------------------------------ | --------------------------------------------------------------------------------------------------- |
+| Bun 1.4.4                      | https://github.com/oven-sh/bun/releases/tag/bun-v1.4.4                                              |
+| Node 26.13.0                   | https://nodejs.org/en/blog/release/v26.13.0                                                         |
+| TypeScript 7.0.2               | https://registry.npmjs.org/typescript/latest                                                        |
+| TypeScript compiler API 6.0.2  | https://registry.npmjs.org/@typescript/typescript6/latest                                           |
+| Hono 4.13.16                   | https://registry.npmjs.org/hono/latest                                                              |
+| React / React DOM 19.3.1       | https://registry.npmjs.org/react/latest ; https://registry.npmjs.org/react-dom/latest               |
 | React / React DOM types 19.3.0 | https://registry.npmjs.org/@types/react/latest ; https://registry.npmjs.org/@types/react-dom/latest |
-| Bun types 1.4.4 | https://registry.npmjs.org/@types/bun/latest |
-| Node types 26.6.6 | https://registry.npmjs.org/@types/node/latest |
-| Worker types 5.20261103.1 | https://registry.npmjs.org/@cloudflare/workers-types/latest |
-| Oxfmt 0.75.0 | https://registry.npmjs.org/oxfmt/latest |
-| Playwright 1.64.1 | https://registry.npmjs.org/playwright/latest |
-| Vite 8.3.5 | https://registry.npmjs.org/vite/latest |
-| Wrangler 4.156.2 | https://registry.npmjs.org/wrangler/latest |
+| Bun types 1.4.4                | https://registry.npmjs.org/@types/bun/latest                                                        |
+| Node types 26.6.6              | https://registry.npmjs.org/@types/node/latest                                                       |
+| Worker types 5.20261103.1      | https://registry.npmjs.org/@cloudflare/workers-types/latest                                         |
+| Oxfmt 0.75.0                   | https://registry.npmjs.org/oxfmt/latest                                                             |
+| Playwright 1.64.1              | https://registry.npmjs.org/playwright/latest                                                        |
+| Vite 8.3.5                     | https://registry.npmjs.org/vite/latest                                                              |
+| Wrangler 4.156.2               | https://registry.npmjs.org/wrangler/latest                                                          |
 
 TypeScript 7 compiler/API separation: https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/ . Oxfmt language coverage: https://oxc.rs/docs/guide/usage/formatter/language-support . Context7 consulted official TypeScript v7.0.2 strict/compiler documentation and Bun install configuration documentation. Actual pinned compiler/formatter executions provide the compatibility evidence.
 
