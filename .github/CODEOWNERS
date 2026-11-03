@@ -19,3 +19,9 @@
 /.gitattributes @tashfiqul-islam
 /AGENTS.md @tashfiqul-islam
 /docs/specifications/ @tashfiqul-islam
+/CLAUDE.md @tashfiqul-islam
+/LICENSE @tashfiqul-islam
+/SECURITY.md @tashfiqul-islam
+/.vscode/ @tashfiqul-islam
+/docs/adr/ @tashfiqul-islam
+/.github/pull_request_template.md @tashfiqul-islam
