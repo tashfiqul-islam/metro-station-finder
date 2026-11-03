@@ -23,7 +23,7 @@ export function missingSecrets(env: Readonly<Record<string, string | undefined>>
 }
 
 export function secretsMessage(missing: readonly string[]): string {
-  return `Missing ${missing.join(" and ")} in the GitHub environment "preview". Add them under Settings > Environments > preview (token scope: Workers Scripts edit for this account only); nothing was deployed.`;
+  return `Missing ${missing.join(" and ")} in the GitHub environment "preview". Add CLOUDFLARE_API_TOKEN as a secret and CLOUDFLARE_ACCOUNT_ID as a variable under Settings > Environments > preview (token scope: Workers Scripts edit for this account only); nothing was deployed.`;
 }
 
 /** The workers.dev URL of a deployment, from Wrangler's output. Fails when there is none or it is for another Worker. */
