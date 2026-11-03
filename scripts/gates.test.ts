@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { randomBytes } from "node:crypto";
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { resolve, join } from "node:path";
 import { cleanGitEnv } from "./git-env";
@@ -124,8 +125,24 @@ test("type gate rejects malformed existing domain data", () =>
 
 test("bundle gate rejects oversized production artifacts", () =>
   fixture(async (root) => {
-    await writeFile(join(root, "large.js"), "x".repeat(470_001));
+    await writeFile(join(root, "large.js"), "x".repeat(250_001));
     const result = Bun.spawnSync(["node", resolve("scripts/bundle.ts"), root]);
     expect(result.stderr.toString()).toContain("Bundle budget exceeded");
     expect(result.exitCode).not.toBe(0);
+  }));
+
+test("bundle gate rejects artifacts that exceed only the gzip budget", () =>
+  fixture(async (root) => {
+    // Incompressible bytes: raw size stays under the raw cap while gzip exceeds its cap.
+    await writeFile(join(root, "dense.js"), randomBytes(81_000));
+    const result = Bun.spawnSync(["node", resolve("scripts/bundle.ts"), root]);
+    expect(result.stderr.toString()).toContain("Bundle budget exceeded");
+    expect(result.exitCode).not.toBe(0);
+  }));
+
+test("bundle gate accepts artifacts within budget", () =>
+  fixture(async (root) => {
+    await writeFile(join(root, "small.js"), "console.log(1);\n");
+    const result = Bun.spawnSync(["node", resolve("scripts/bundle.ts"), root]);
+    expect(result.exitCode).toBe(0);
   }));
