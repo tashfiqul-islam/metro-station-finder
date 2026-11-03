@@ -48,3 +48,11 @@ test("FND-R4 a status that drifts from the contract is rejected at the API", asy
   const drifted = createApp(() => ({ kind: "synthetic-scaffold", ready: false }) as never);
   expect((await drifted.request("/api/scaffold/status")).status).toBe(500);
 });
+
+test("FND-R3 HEAD on the status route is served and OPTIONS is a 405 envelope", async () => {
+  const head = await app.request("/api/scaffold/status", { method: "HEAD" });
+  expect(head.status).toBe(200);
+  expect(await head.text()).toBe("");
+  const options = await app.request("/api/scaffold/status", { method: "OPTIONS" });
+  expect(options.status).toBe(405);
+});

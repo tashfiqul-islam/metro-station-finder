@@ -12,7 +12,9 @@ export function App() {
   useEffect(() => {
     const controller = new AbortController();
     fetchScaffoldStatus(fetch, controller.signal).then(
-      (status) => setState({ phase: "success", status }),
+      (status) => {
+        if (!controller.signal.aborted) setState({ phase: "success", status });
+      },
       (error: unknown) => {
         if (controller.signal.aborted) return;
         setState({

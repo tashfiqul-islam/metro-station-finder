@@ -9,31 +9,41 @@ const origin = "http://127.0.0.1:4173";
 
 /** Starts the built app with `vite preview` (Vite + @cloudflare/vite-plugin run it in workerd). */
 async function startPreview() {
+  const windows = process.platform === "win32";
   const child = spawn(process.execPath, [resolve("node_modules/vite/bin/vite.js"), "preview"], {
     cwd: resolve("apps/web"),
     stdio: ["ignore", "pipe", "pipe"],
+    // A process group on POSIX lets close() stop workerd together with Vite.
+    detached: !windows,
   });
   let output = "";
-  const ready = new Promise<void>((done, fail) => {
-    const watch = (chunk: Buffer) => {
-      output += chunk.toString();
-      if (output.includes(origin)) done();
-    };
-    child.stdout.on("data", watch);
-    child.stderr.on("data", watch);
-    child.once("exit", (code) =>
-      fail(new Error(`vite preview exited early (${code}):\n${output}`)),
+  for (const stream of [child.stdout, child.stderr])
+    stream.on("data", (chunk: Buffer) => (output += chunk.toString()));
+  let exited = false;
+  child.once("exit", () => (exited = true));
+  const deadline = Date.now() + 60_000;
+  for (;;) {
+    if (exited)
+      throw new Error(`vite preview exited early:
+${output}`);
+    const ready = await fetch(new URL("/", origin)).then(
+      (response) => response.ok,
+      () => false,
     );
-  });
-  await ready;
-  return {
-    close() {
-      child.removeAllListeners("exit");
-      if (process.platform === "win32")
-        spawnSync("taskkill", ["/pid", String(child.pid), "/t", "/f"], { stdio: "ignore" });
-      else child.kill("SIGTERM");
-    },
-  };
+    if (ready) break;
+    if (Date.now() > deadline) {
+      stop();
+      throw new Error(`vite preview was not ready within 60 s:
+${output}`);
+    }
+    await new Promise((done) => setTimeout(done, 250));
+  }
+  function stop() {
+    if (windows)
+      spawnSync("taskkill", ["/pid", String(child.pid), "/t", "/f"], { stdio: "ignore" });
+    else if (child.pid) process.kill(-child.pid, "SIGKILL");
+  }
+  return { close: stop };
 }
 
 const preview = await startPreview();
