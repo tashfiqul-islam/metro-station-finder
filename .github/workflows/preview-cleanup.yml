@@ -1,0 +1,54 @@
+name: Preview cleanup
+on:
+  pull_request:
+    types: [closed]
+permissions: {}
+jobs:
+  cleanup:
+    name: Delete preview Worker
+    # Same-repository pull requests only; forks never had a preview.
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    concurrency:
+      group: preview-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
+    environment: preview
+    permissions:
+      contents: read
+    env:
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          version: 2026.10.25
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+      - run: bun run bootstrap
+      - name: Require the Cloudflare secrets
+        run: node scripts/preview.ts secrets
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Name the preview Worker
+        id: name
+        run: node scripts/preview.ts name
+      - name: Delete the preview Worker
+        env:
+          WORKER: ${{ steps.name.outputs.name }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          # A pull request that never got a preview has no Worker; that is not a failure. Anything else is.
+          if output="$(bunx wrangler delete --name "$WORKER" --force 2>&1)"; then
+            echo "$output"
+          else
+            echo "$output" >&2
+            if grep -qE "10007|does not exist|not found" <<<"$output"; then echo "No preview Worker to delete."; else exit 1; fi
+          fi

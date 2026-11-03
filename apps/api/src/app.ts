@@ -2,22 +2,93 @@ import { parseScaffoldStatus, type ErrorEnvelope } from "@metro/contracts";
 import { getScaffoldStatus } from "@metro/core";
 import { Hono } from "hono";
 
+/**
+ * One structured log line. Only these fields exist, so nothing else (query string, headers, bodies,
+ * error messages) can be logged by accident. See docs/specifications/cloudflare-preview.md.
+ */
+export type LogLine =
+  | {
+      level: "info";
+      event: "request";
+      requestId: string;
+      method: string;
+      path: string;
+      status: number;
+      durationMs: number;
+    }
+  | { level: "error"; event: "error"; requestId: string; errorName: string };
+
+export type Logger = (line: LogLine) => void;
+
+/** Workers Observability collects console output; one JSON object per line is the contract. */
+const consoleLogger: Logger = (line) => {
+  // oxlint-disable-next-line eslint/no-console -- the Workers log sink is the console
+  console.log(JSON.stringify(line));
+};
+
+const REQUEST_ID = /^[A-Za-z0-9_-]{8,64}$/u;
+const GIT_SHA = /^[0-9a-f]{40}$/u;
+
 function envelope(code: string, message: string): ErrorEnvelope {
   return { error: { code, message } };
 }
 
-/** Builds the API. The status source is injectable so failure paths can be tested. */
-export function createApp(readStatus: () => unknown = getScaffoldStatus) {
-  const app = new Hono<{ Bindings: Env }>();
+const STATUS_ROUTE = "/api/scaffold/status";
+
+/** The route pattern to log. Anything but a known route collapses to `/api/*`, so a raw path is never logged. */
+function routeLabel(pathname: string): string {
+  return pathname === STATUS_ROUTE ? STATUS_ROUTE : "/api/*";
+}
+
+function previewSha(env: unknown): string | undefined {
+  if (typeof env !== "object" || env === null || !("PREVIEW_SHA" in env)) return undefined;
+  const value = env.PREVIEW_SHA;
+  return typeof value === "string" && GIT_SHA.test(value) ? value : undefined;
+}
+
+/** Builds the API. The status source and log sink are injectable so failure paths can be tested. */
+export function createApp(
+  readStatus: () => unknown = getScaffoldStatus,
+  log: Logger = consoleLogger,
+) {
+  const app = new Hono<{ Bindings: Env; Variables: { requestId: string } }>();
+
+  app.use("/api/*", async (context, next) => {
+    const supplied = context.req.header("x-request-id");
+    const requestId =
+      supplied !== undefined && REQUEST_ID.test(supplied) ? supplied : crypto.randomUUID();
+    context.set("requestId", requestId);
+    const started = performance.now();
+    await next();
+    context.header("x-request-id", requestId);
+    const sha = previewSha(context.env);
+    if (sha !== undefined) context.header("x-preview-sha", sha);
+    log({
+      level: "info",
+      event: "request",
+      requestId,
+      method: context.req.method,
+      path: routeLabel(new URL(context.req.url).pathname),
+      status: context.res.status,
+      durationMs: Math.round(performance.now() - started),
+    });
+  });
+
   app.get("/api/scaffold/status", (context) => context.json(parseScaffoldStatus(readStatus())));
   app.all("/api/scaffold/status", (context) => {
     context.header("Allow", "GET, HEAD");
     return context.json(envelope("method_not_allowed", "Use GET"), 405);
   });
   app.all("/api/*", (context) => context.json(envelope("not_found", "No such API route"), 404));
-  // The cause is deliberately not echoed to clients.
-  app.onError((_error, context) =>
-    context.json(envelope("internal_error", "Internal server error"), 500),
-  );
+  // The cause is deliberately not echoed to clients or logged beyond its class name.
+  app.onError((error, context) => {
+    log({
+      level: "error",
+      event: "error",
+      requestId: context.get("requestId"),
+      errorName: error.name.slice(0, 64),
+    });
+    return context.json(envelope("internal_error", "Internal server error"), 500);
+  });
   return app;
 }

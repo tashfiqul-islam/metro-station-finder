@@ -10,4 +10,14 @@
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*"],
   },
+  // Per-pull-request preview Workers: build with CLOUDFLARE_ENV=preview and deploy with --name
+  // metro-scaffold-pr-<number>. Only previews are reachable on workers.dev; the default stays closed.
+  "env": {
+    "preview": {
+      "name": "metro-scaffold-preview",
+      "workers_dev": true,
+      "preview_urls": false,
+      "observability": { "enabled": true },
+    },
+  },
 }
