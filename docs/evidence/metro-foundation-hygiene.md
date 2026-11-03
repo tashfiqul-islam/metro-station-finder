@@ -30,13 +30,13 @@ Scope items 6 and 8 (`.vscode/`, CODEOWNERS) are files without a dedicated test;
 - `scripts/links.test.ts` and the H6 tests failed before implementation (`Cannot find module './links'`; `Export named 'gitleaksVersion' not found`).
 - `scripts/repository.test.ts` copied onto an export of `827d0a7`: 0 pass, 8 fail.
 
-**GREEN:** after implementation the focused suites pass; full `check`: 151 tests, 0 failures, 12 files, `check` about 20 s.
+**GREEN:** after implementation the focused suites pass; full `check`: 152 tests, 0 failures, 12 files, `check` about 20 s.
 
 ## Commands (final tree)
 
 | Command                                                                              | Result                                                                      |
 | ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------- |
-| `mise exec -- bun run check`                                                         | pass (151 tests; links 45 files; typecheck, knip, import graph, boundaries) |
+| `mise exec -- bun run check`                                                         | pass (152 tests; links 46 files; typecheck, knip, import graph, boundaries) |
 | `mise exec -- bun run build`                                                         | pass (Wrangler dry run, nothing uploaded)                                   |
 | `mise exec -- bun run smoke`                                                         | pass (Chromium, Worker 200 and 404)                                         |
 | `mise exec -- bun run bundle:check`                                                  | pass, 219788 raw / 67984 gzip, budget unchanged (250000 / 80000)            |
