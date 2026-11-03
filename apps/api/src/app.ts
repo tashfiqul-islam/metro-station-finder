@@ -15,7 +15,6 @@ export function createApp(readStatus: () => unknown = getScaffoldStatus) {
     return context.json(envelope("method_not_allowed", "Use GET"), 405);
   });
   app.all("/api/*", (context) => context.json(envelope("not_found", "No such API route"), 404));
-  app.all("/api", (context) => context.json(envelope("not_found", "No such API route"), 404));
   // The cause is deliberately not echoed to clients.
   app.onError((_error, context) =>
     context.json(envelope("internal_error", "Internal server error"), 500),

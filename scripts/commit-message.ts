@@ -19,10 +19,12 @@ export function validateMessage(message: string): string | null {
   return validateSubject(subject ?? "");
 }
 
-function validateRange(range: string): string[] {
+/** Validates every commit subject in a Git range; `cwd` selects the repository. */
+export function validateRange(range: string, cwd?: string): string[] {
   const output = execFileSync("git", ["log", "--format=%H%x00%s", range], {
     encoding: "utf8",
     env: cleanGitEnv(),
+    ...(cwd ? { cwd } : {}),
   });
   const commits = output.split("\n").filter(Boolean);
   return commits.flatMap((entry) => {
@@ -32,23 +34,25 @@ function validateRange(range: string): string[] {
   });
 }
 
-if (import.meta.main) {
-  const [flag, value] = process.argv.slice(2);
+/** CLI body: returns the problems found for `<message-file>` or `--range <base>..<head>`. */
+export function runCommitMessageCli(args: string[]): string[] {
+  const [flag, value] = args;
+  if (flag === "--range" && value) return validateRange(value);
+  if (flag && !flag.startsWith("-"))
+    return [validateMessage(readFileSync(flag, "utf8"))].filter((error) => error !== null);
+  throw new Error("Usage: commit-message.ts <message-file> | --range <base>..<head>");
+}
+
+/** Runs the CLI and returns the process exit code (0 = valid). */
+export function commitMessageMain(args: string[]): number {
   try {
-    const problems =
-      flag === "--range" && value
-        ? validateRange(value)
-        : flag && !flag.startsWith("-")
-          ? [validateMessage(readFileSync(flag, "utf8"))].filter((error) => error !== null)
-          : (() => {
-              throw new Error("Usage: commit-message.ts <message-file> | --range <base>..<head>");
-            })();
-    if (problems.length) {
-      console.error(problems.join("\n"));
-      process.exitCode = 1;
-    }
+    const problems = runCommitMessageCli(args);
+    if (problems.length) console.error(problems.join("\n"));
+    return problems.length ? 1 : 0;
   } catch (error) {
     console.error(String(error));
-    process.exitCode = 1;
+    return 1;
   }
 }
+
+if (import.meta.main) process.exitCode = commitMessageMain(process.argv.slice(2));

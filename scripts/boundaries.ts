@@ -79,10 +79,13 @@ export async function checkCoreBoundary(root: string): Promise<string[]> {
   return errors;
 }
 
-if (import.meta.main) {
-  const errors = await checkCoreBoundary(resolve("packages/core"));
+/** CLI body: prints the result and sets the exit code. */
+export async function runBoundaryCheck(root: string): Promise<void> {
+  const errors = await checkCoreBoundary(root);
   if (errors.length) {
     console.error(errors.join("\n"));
     process.exitCode = 1;
   } else console.log("Core boundary passed");
 }
+
+if (import.meta.main) await runBoundaryCheck(resolve("packages/core"));

@@ -11,7 +11,13 @@ async function compile(project: string, source: string) {
     await writeFile(
       join(root, "tsconfig.json"),
       JSON.stringify({
-        extends: resolve(project === "." ? "tsconfig.test.json" : `${project}/tsconfig.json`),
+        extends: resolve(
+          project === "."
+            ? "tsconfig.test.json"
+            : project.endsWith(".json")
+              ? project
+              : `${project}/tsconfig.json`,
+        ),
         include: ["./fixture.ts"],
         exclude: [],
       }),
@@ -66,3 +72,18 @@ for (const [project, source] of [
     expect(result.stdout.toString()).toMatch(/TS(2580|2584|2304|2591|2868)/);
   });
 }
+
+test("FND-T4 DOM-test files compile with DOM and Bun types", async () => {
+  const result = await compile(
+    "tsconfig.dom-test.json",
+    "export const title: string = document.title; export const runtime: string = Bun.version;",
+  );
+  expect(result.stdout.toString() + result.stderr.toString()).toBe("");
+  expect(result.exitCode).toBe(0);
+});
+
+test("FND-T4 the DOM-test project still enforces strict compiler flags", async () => {
+  const result = await compile("tsconfig.dom-test.json", 'export const value: string = ["x"][2];');
+  expect(result.exitCode).not.toBe(0);
+  expect(result.stdout.toString()).toContain("TS2322");
+});

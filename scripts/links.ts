@@ -154,8 +154,8 @@ function trackedMarkdown(root: string): string[] {
     .filter((file) => file.endsWith(".md"));
 }
 
-if (import.meta.main) {
-  const root = resolve(process.argv[2] ?? fileURLToPath(new URL("..", import.meta.url)));
+/** CLI body: checks every Markdown file Git knows about and sets the exit code. */
+export async function runLinkCheck(root: string): Promise<void> {
   const files = [];
   for (const file of trackedMarkdown(root))
     if (await stat(join(root, file)).catch(() => undefined)) files.push(file);
@@ -164,3 +164,6 @@ if (import.meta.main) {
   if (problems.length > 0) process.exitCode = 1;
   else console.log(`Links ok: ${files.length} Markdown files`);
 }
+
+if (import.meta.main)
+  await runLinkCheck(resolve(process.argv[2] ?? fileURLToPath(new URL("..", import.meta.url))));
