@@ -7,7 +7,7 @@ import { join, resolve } from "node:path";
 async function run(source: string, test_: string) {
   const root = await mkdtemp(join(tmpdir(), "metro-coverage-"));
   try {
-    const bunfig = await readFile(resolve("bunfig.toml"), "utf8");
+    const bunfig = await readFile(resolve(import.meta.dir, "..", "bunfig.toml"), "utf8");
     await writeFile(join(root, "bunfig.toml"), bunfig.slice(bunfig.indexOf("[test]")));
     await writeFile(join(root, "subject.ts"), source);
     await writeFile(join(root, "subject.test.ts"), test_);
@@ -45,5 +45,5 @@ export function neverCalled() {
     loader,
   );
   expect(result.code).not.toBe(0);
-  expect(result.output).toContain("subject.ts");
+  expect(result.output).toMatch(/subject.tss*|s*50.00s*|s*16.67/);
 });

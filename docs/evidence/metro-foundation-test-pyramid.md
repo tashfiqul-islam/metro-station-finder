@@ -52,4 +52,19 @@ No threshold, assertion or ignore list was weakened.
 - Hosted `Quality gates`, the new browser install and cache, and artifact uploads run only on the PR.
 - The mobile project is a Chromium device profile (Pixel 7), not a real device.
 - The failure-artifact upload path in CI was not exercised (it only runs when `smoke` fails).
-- Coverage of the browser entry `apps/web/src/main.tsx` is not measured: Bun reports only loaded files and the entry runs only in a browser.
+- Bun reports only files a test loads, so these tracked sources are not measured by the gate: `scripts/bundle.ts`, `scripts/dependency-parser.ts`, `scripts/format.ts`, `scripts/secrets.ts`, `scripts/tools.ts` (entry scripts run as subprocesses or by `check`), `apps/web/src/main.tsx` (browser entry, covered by `smoke`) and `packages/core/src/domain/scaffold-status.ts` (a type, no executable code). Review finding 1 asked for this disclosure; a gate that fails on unmeasured files would need either an ignore list or loading entry scripts, both rejected here.
+
+## Review disposition
+
+Independent fresh-context review of `c9442da..4a98a08` (read-only; it ran `bun test` but not Playwright). No Critical findings.
+
+| #   | Severity  | Finding                                                                 | Disposition                                                                                   |
+| --- | --------- | ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| 1   | Important | The per-file gate does not measure files no test loads                  | Disclosed in this file and in `testing.md` with the exact list and why; no ignore list added. |
+| 2   | Important | The Playwright cache key would keep hitting the old chromium-only entry | Fixed: the key now ends in `-chromium-firefox-webkit`.                                        |
+| 3   | Minor     | `CI=false` or `CI=0` still selected all projects                        | Fixed: only `true` or `1` selects all projects.                                               |
+| 4   | Minor     | `IS_REACT_ACT_ENVIRONMENT` never reset                                  | Fixed in `afterAll`.                                                                          |
+| 5   | Minor     | `realFetch` captured after registration                                 | Accepted: `unregister` restores the original.                                                 |
+| 6   | Minor     | Unmount test could not catch a late `setState`                          | Strengthened: also asserts `console.error` is not called.                                     |
+| 7   | Minor     | Coverage failure test asserted only `subject.ts` in the output          | Fixed: asserts the table row (50.00 % functions, 16.67 % lines).                              |
+| 8   | Minor     | `coverage.test.ts` depended on the working directory                    | Fixed: resolves `bunfig.toml` from `import.meta.dir`.                                         |

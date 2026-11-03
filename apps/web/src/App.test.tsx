@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, expect, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, expect, spyOn, test } from "bun:test";
 import { GlobalRegistrator } from "@happy-dom/global-registrator";
 
 // The DOM must exist before React and Testing Library are imported.
@@ -25,6 +25,7 @@ afterEach(() => {
   globalThis.fetch = realFetch;
 });
 afterAll(async () => {
+  delete (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT;
   await GlobalRegistrator.unregister();
 });
 
@@ -77,9 +78,12 @@ test("FND-T2 shows a generic message for a non-Error rejection", async () => {
 test("FND-T2 unmounting before the response arrives updates nothing and throws nothing", async () => {
   let resolve: (response: Response) => void = () => {};
   stubFetch(() => new Promise<Response>((done) => (resolve = done)));
+  const errors = spyOn(console, "error").mockImplementation(() => {});
   const view = render(<App />);
   view.unmount();
   resolve(json({ kind: "synthetic-scaffold", ready: true }));
   await new Promise((done) => setTimeout(done, 10));
   expect(document.body.textContent).toBe("");
+  expect(errors).not.toHaveBeenCalled();
+  errors.mockRestore();
 });

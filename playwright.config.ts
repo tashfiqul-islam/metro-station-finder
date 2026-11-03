@@ -20,7 +20,7 @@ export default defineConfig({
   reporter: [["list"], ["html", { open: "never", outputFolder: "playwright-report" }]],
   outputDir: "test-results",
   use: { baseURL: origin, trace: "retain-on-failure", screenshot: "only-on-failure" },
-  projects: process.env["CI"] ? projects : projects.slice(0, 1),
+  projects: ["true", "1"].includes(process.env["CI"] ?? "") ? projects : projects.slice(0, 1),
   webServer: {
     // The built app, served by `vite preview` with the Worker running in workerd.
     command: "node ../../node_modules/vite/bin/vite.js preview",
