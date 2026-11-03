@@ -2,15 +2,29 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve, relative, isAbsolute } from "node:path";
+import { cleanGitEnv } from "./git-env.ts";
+
+const SYMLINK_MODE = "120000";
+const GITLINK_MODE = "160000";
 
 const root = resolve(process.argv[2] ?? ".");
-const files = execFileSync("git", ["-C", root, "ls-files", "-z"], { encoding: "utf8" })
+// Inherited GIT_* variables (hooks, linked worktrees) must not redirect `-C root`.
+const listing = execFileSync("git", ["-C", root, "ls-files", "-s", "-z"], {
+  encoding: "utf8",
+  env: cleanGitEnv(),
+})
   .split("\0")
-  .filter(Boolean);
-if (!files.length) throw new Error("Secret scan requires tracked source");
+  .filter(Boolean)
+  .map((entry) => {
+    const tab = entry.indexOf("\t");
+    return { mode: entry.slice(0, entry.indexOf(" ")), path: entry.slice(tab + 1) };
+  });
+if (!listing.length) throw new Error("Secret scan requires tracked source");
 const staging = await mkdtemp(join(tmpdir(), "metro-secrets-"));
 try {
-  for (const file of files) {
+  for (const { mode, path: file } of listing) {
+    if (mode === SYMLINK_MODE || mode === GITLINK_MODE)
+      throw new Error(`Tracked symlink or submodule cannot be scanned safely: ${file}`);
     if (isAbsolute(file) || relative(root, resolve(root, file)).startsWith(".."))
       throw new Error(`Invalid tracked path: ${file}`);
     const target = join(staging, file);

@@ -2,26 +2,39 @@ import { expect, test } from "bun:test";
 import { mkdtemp, readFile, rm, writeFile, copyFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { cleanGitEnv } from "./git-env";
 
-test("installed hooks inspect staged bytes and restore failed snapshots in linked worktrees", async () => {
-  const root = await mkdtemp(join(tmpdir(), "metro-hooks-"));
-  const linked = `${root}-linked`;
-  const run = (args: string[], cwd = root) =>
-    Bun.spawnSync(args, { cwd, env: { ...process.env, HK_MISE: "0" } });
-  const ok = (args: string[], cwd = root) => {
+// Every fixture command runs with GIT_* removed so a hook invoking this suite can never
+// redirect git into the caller's real repository.
+const env = () => ({ ...cleanGitEnv(), HK_MISE: "0" });
+
+function runner(defaultCwd: string) {
+  const run = (args: string[], cwd = defaultCwd) => Bun.spawnSync(args, { cwd, env: env() });
+  const ok = (args: string[], cwd = defaultCwd) => {
     const result = run(args, cwd);
     expect(result.stdout.toString() + result.stderr.toString()).not.toContain("PANIC");
     if (result.exitCode !== 0)
       throw new Error(`${args.join(" ")}: ${result.stdout.toString()}${result.stderr.toString()}`);
     return result.stdout.toString();
   };
+  return { run, ok };
+}
+
+function configureFixture(ok: (args: string[]) => string) {
+  ok(["git", "init", "-b", "main"]);
+  ok(["git", "config", "user.email", "fixture@example.invalid"]);
+  ok(["git", "config", "user.name", "Hook fixture"]);
+  ok(["git", "config", "core.autocrlf", "false"]);
+  // Only this disposable repository disables signing; real commits remain signed.
+  ok(["git", "config", "commit.gpgsign", "false"]);
+}
+
+test("installed hooks inspect staged bytes and restore failed snapshots in linked worktrees", async () => {
+  const root = await mkdtemp(join(tmpdir(), "metro-hooks-"));
+  const linked = `${root}-linked`;
+  const { run, ok } = runner(root);
   try {
-    ok(["git", "init"]);
-    ok(["git", "config", "user.email", "fixture@example.invalid"]);
-    ok(["git", "config", "user.name", "Hook fixture"]);
-    ok(["git", "config", "core.autocrlf", "false"]);
-    // Only this disposable repository disables signing; real commits remain signed.
-    ok(["git", "config", "commit.gpgsign", "false"]);
+    configureFixture(ok);
     await copyFile(resolve("hk.pkl"), join(root, "hk.pkl"));
     await writeFile(
       join(root, "package.json"),
@@ -62,3 +75,47 @@ test("installed hooks inspect staged bytes and restore failed snapshots in linke
     await rm(root, { recursive: true, force: true });
   }
 }, 60000);
+
+test("installed pre-push hook blocks a failing canonical check and allows a passing one", async () => {
+  const root = await mkdtemp(join(tmpdir(), "metro-prepush-"));
+  const remote = `${root}-remote`;
+  const { run, ok } = runner(root);
+  const stub = "node -e 0";
+  try {
+    ok(["git", "init", "--bare", "-b", "main", remote], tmpdir());
+    configureFixture(ok);
+    await copyFile(resolve("hk.pkl"), join(root, "hk.pkl"));
+    await writeFile(
+      join(root, "package.json"),
+      JSON.stringify({
+        scripts: {
+          "check:fast": stub,
+          check: "node check.cjs",
+          build: stub,
+          smoke: stub,
+          "bundle:check": stub,
+          scan: stub,
+        },
+      }),
+    );
+    await writeFile(
+      join(root, "check.cjs"),
+      "if (require('node:fs').existsSync('FAIL')) process.exit(1);",
+    );
+    await writeFile(join(root, "FAIL"), "block\n");
+    ok(["git", "add", "."]);
+    ok(["git", "commit", "-m", "Fixture baseline"]);
+    ok(["git", "remote", "add", "origin", remote]);
+    ok(["hk", "install"]);
+    expect(run(["git", "push", "origin", "main"]).exitCode).not.toBe(0);
+    expect(ok(["git", "ls-remote", "--heads", "origin"])).toBe("");
+    await rm(join(root, "FAIL"));
+    ok(["git", "add", "-A"]);
+    ok(["git", "commit", "-m", "Remove failing marker"]);
+    ok(["git", "push", "origin", "main"]);
+    expect(ok(["git", "ls-remote", "--heads", "origin"])).toContain("refs/heads/main");
+  } finally {
+    await rm(remote, { recursive: true, force: true });
+    await rm(root, { recursive: true, force: true });
+  }
+}, 120000);

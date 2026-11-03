@@ -17,3 +17,5 @@
 /apps/web/vite.config.ts @tashfiqul-islam
 /bunfig.toml @tashfiqul-islam
 /.gitattributes @tashfiqul-islam
+/AGENTS.md @tashfiqul-islam
+/docs/specifications/ @tashfiqul-islam

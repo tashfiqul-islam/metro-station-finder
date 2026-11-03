@@ -4,7 +4,7 @@ Status: Repo-verified tool configuration; hosted gates and remote branch rules r
 
 Use Bun and exact pins in `mise.toml`, package manifests and `bun.lock`. Run `mise install`, then `mise exec -- bun run bootstrap`. Frozen bootstrap validates runtime pins before installing the locked graph. Do not use generic global-tool installs as evidence of project compatibility.
 
-Install hooks per checkout with `mise exec -- hk install --mise`. Repeat for linked worktrees. hk 2.11.0 and Pkl 0.32.2 use the matching pinned `hk.pkl` schema. Preserve staged-snapshot stashing and failure restoration when changing hook policy. Verify real hooks in disposable Git fixtures; never alter the caller index/worktree to manufacture test cases.
+Install hooks per checkout with `mise exec -- hk install --mise`. Repeat for linked worktrees. hk 2.11.0 and Pkl 0.32.2 use the matching pinned `hk.pkl` schema. Preserve staged-snapshot stashing and failure restoration when changing hook policy. Verify real hooks in disposable Git fixtures; never alter the caller index/worktree to manufacture test cases. Any test or script that runs `git` against a fixture must use `cleanGitEnv()` from `scripts/git-env.ts` so hook-exported `GIT_*` variables cannot redirect it.
 
 Gate commands and required remote policy are documented in [quality gates](quality-gates.md). Keep workflow job context `Quality gates` stable; coordinate required-check policy before renaming. CI uses pinned actions/checkout v7.0.1 and jdx/mise-action v5.2.5 commits, with mise 2026.10.25. Verify official release commits before updates; preserve read-only permissions and disabled persisted credentials.
 

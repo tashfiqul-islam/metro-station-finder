@@ -19,6 +19,10 @@ for (const job of Object.keys(passing)) {
     expect(requiredJobsSucceeded(incomplete)).toBe(false);
   });
 }
+test("aggregate rejects an extra job that did not succeed", () =>
+  expect(requiredJobsSucceeded({ ...passing, extra: { result: "failure" } })).toBe(false));
+test("aggregate accepts an extra job that succeeded", () =>
+  expect(requiredJobsSucceeded({ ...passing, extra: { result: "success" } })).toBe(true));
 for (const value of [null, undefined, [], "success", {}, { checks: null }]) {
   test(`aggregate rejects malformed ${JSON.stringify(value)}`, () =>
     expect(requiredJobsSucceeded(value)).toBe(false));

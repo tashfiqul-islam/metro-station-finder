@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { resolve, join } from "node:path";
+import { cleanGitEnv } from "./git-env";
 
 async function fixture(run: (root: string) => Promise<void>) {
   await mkdir(".local", { recursive: true });
@@ -35,20 +36,64 @@ test("bundle gate rejects absent production artifacts", () =>
     expect(result.exitCode).not.toBe(0);
   }));
 
+const git = (root: string, ...args: string[]) =>
+  Bun.spawnSync(["git", "-C", root, ...args], { env: cleanGitEnv() });
+
 test(
   "secret gate rejects a generated fake credential in tracked temporary source",
   () =>
     fixture(async (root) => {
-      expect(Bun.spawnSync(["git", "init", root]).exitCode).toBe(0);
+      expect(Bun.spawnSync(["git", "init", root], { env: cleanGitEnv() }).exitCode).toBe(0);
       const token = ["gh", "p_", "Ab3dEf6hIj9kLm2nOp5qRs8tUv1wXy4zAB7c"].join("");
       await writeFile(join(root, "fixture.ts"), `export const token = ${JSON.stringify(token)};`);
-      expect(Bun.spawnSync(["git", "-C", root, "add", "fixture.ts"]).exitCode).toBe(0);
-      const result = Bun.spawnSync(["node", resolve("scripts/secrets.ts"), root]);
+      expect(git(root, "add", "fixture.ts").exitCode).toBe(0);
+      const result = Bun.spawnSync(["node", resolve("scripts/secrets.ts"), root], {
+        env: cleanGitEnv(),
+      });
       expect(result.stdout.toString() + result.stderr.toString()).toContain("leaks found");
       expect(result.exitCode).not.toBe(0);
     }),
   30000,
 );
+
+test(
+  "secret gate scans the requested repository even when GIT_DIR points elsewhere",
+  () =>
+    fixture(async (root) => {
+      const decoy = `${root}-decoy`;
+      try {
+        expect(Bun.spawnSync(["git", "init", root], { env: cleanGitEnv() }).exitCode).toBe(0);
+        expect(Bun.spawnSync(["git", "init", decoy], { env: cleanGitEnv() }).exitCode).toBe(0);
+        const token = ["gh", "p_", "Ab3dEf6hIj9kLm2nOp5qRs8tUv1wXy4zAB7c"].join("");
+        await writeFile(join(root, "fixture.ts"), `export const token = ${JSON.stringify(token)};`);
+        expect(git(root, "add", "fixture.ts").exitCode).toBe(0);
+        const result = Bun.spawnSync(["node", resolve("scripts/secrets.ts"), root], {
+          env: { ...cleanGitEnv(), GIT_DIR: join(decoy, ".git") },
+        });
+        expect(result.stdout.toString() + result.stderr.toString()).toContain("leaks found");
+        expect(result.exitCode).not.toBe(0);
+      } finally {
+        await rm(decoy, { recursive: true, force: true });
+      }
+    }),
+  30000,
+);
+
+test("secret gate rejects tracked symlinks instead of following them", () =>
+  fixture(async (root) => {
+    expect(Bun.spawnSync(["git", "init", root], { env: cleanGitEnv() }).exitCode).toBe(0);
+    await writeFile(join(root, "target.txt"), "../outside-secret");
+    const hash = git(root, "hash-object", "-w", "target.txt").stdout.toString().trim();
+    expect(hash).toMatch(/^[0-9a-f]{40,64}$/);
+    expect(
+      git(root, "update-index", "--add", "--cacheinfo", `120000,${hash},link.txt`).exitCode,
+    ).toBe(0);
+    const result = Bun.spawnSync(["node", resolve("scripts/secrets.ts"), root], {
+      env: cleanGitEnv(),
+    });
+    expect(result.stderr.toString()).toContain("Tracked symlink or submodule");
+    expect(result.exitCode).not.toBe(0);
+  }));
 
 test("type gate rejects malformed existing domain data", () =>
   fixture(async (root) => {
