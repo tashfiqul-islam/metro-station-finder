@@ -2,20 +2,18 @@
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "workspaces": {
     ".": {
-      "entry": ["scripts/*.ts", ".dependency-cruiser.mjs"],
+      "entry": ["scripts/*.ts"],
       "project": ["scripts/**/*.ts"],
       "ignoreBinaries": ["mise"]
     },
     "apps/web": {
-      "entry": ["src/main.tsx", "vite.config.ts"],
-      "project": ["src/**/*.{ts,tsx}", "vite.config.ts"]
+      "project": ["src/**/*.{ts,tsx}"]
     },
     "apps/api": {
-      "entry": ["src/index.ts"],
       "project": ["src/**/*.ts"]
     },
     "packages/core": {
-      "entry": ["src/application/scaffold-status.ts", "src/**/*.test.ts"],
+      "entry": ["src/**/*.test.ts"],
       "project": ["src/**/*.ts"]
     }
   }

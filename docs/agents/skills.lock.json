@@ -168,6 +168,31 @@
       "sha256": "8BC999D5162EDC202D618B096F84FF4E18252E3375B6F8D1796AB79A8301B8C6",
       "path": "context7-mcp/SKILL.md",
       "root": "tooling"
+    },
+    {
+      "root": "superpowers",
+      "path": "skills/subagent-driven-development/references/resuming.md",
+      "sha256": "FF6E38BDE2276FAA2A7E93513086CADED0EA10EDBF2EC7F349A7E3B0D7C668C4"
+    },
+    {
+      "root": "superpowers",
+      "path": "skills/subagent-driven-development/references/handling-reports.md",
+      "sha256": "8F759CDD4936220C38AAB05B6D6C48C6DF8AC8F146B0F37A6D2FACBF87133C67"
+    },
+    {
+      "root": "superpowers",
+      "path": "skills/subagent-driven-development/references/fix-loop.md",
+      "sha256": "EAFFF1F801AF2CED86E8761F3EEEF04B701860D986BA5D0A8B20D506A75104BB"
+    },
+    {
+      "root": "tooling",
+      "path": "github-actions-docs/SKILL.md",
+      "sha256": "B06BC480F7608C43896F85257BC61B1DE6D48F005468B734713155B849DAED6A"
+    },
+    {
+      "root": "superpowers",
+      "path": "skills/subagent-driven-development/references/cannot-verify.md",
+      "sha256": "E698713A15E0EABF1A2AB26FFE1BB04BF70C9D6D2E2060D44A0F9A1BDD4408BF"
     }
   ],
   "schemaVersion": 1

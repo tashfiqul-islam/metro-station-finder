@@ -1,6 +1,6 @@
 # Reviewed skills and preparation
 
-**Confirmed / Repo-verified:** [content lock](skills.lock.json) pins 30 reviewed installed files by SHA256, including supporting documents and Bun/Context7 guidance. Superpowers manifest reports 7.0.1. Pocock skills are plain installed copies; installer metadata identifies `mattpocock/skills` and folder hashes, not an upstream Git commit. Tooling copies have no attested upstream commit/version. These content pins identify reviewed bytes; version names alone do not. See [preparation evidence](../evidence/metro-10.md) and [workspace evidence](../evidence/metro-11.md).
+**Confirmed / Repo-verified:** [content lock](skills.lock.json) pins 35 reviewed installed files by SHA256, including supporting documents and Bun/Context7 guidance. Superpowers manifest reports 7.0.1. Pocock skills are plain installed copies; installer metadata identifies `mattpocock/skills` and folder hashes, not an upstream Git commit. Tooling copies have no attested upstream commit/version. These content pins identify reviewed bytes; version names alone do not. See [preparation evidence](../evidence/metro-10.md) and [workspace evidence](../evidence/metro-11.md).
 
 ## Read triggers and ownership
 

@@ -1,17 +1,15 @@
-# Quality gates and completion
+# Quality gates
 
-Historical baseline: legacy implementation references and checks below concern commit `af903d7a2c1bf08165cfcf4a00ca0c0d73eedead`, not files or executable gates in this independent rebuild. See [rebuild boundary](../../README.md).
+Status: Repo-verified configuration. Hosted execution and remote enforcement require controller verification.
 
-## Available evidence versus planned checks
+Use `mise install`, then `mise exec -- bun run bootstrap` for the exact tool pins and frozen dependencies. Install repository hooks with `mise exec -- hk install --mise` in each checkout, including linked worktrees. This writes local Git hook configuration (Git 2.54+) or legacy shims; it does not enforce remote policy. Keep mise available on PATH. No global hook install required.
 
-**Confirmed / Repo-verified:** scripts exist in [manifest](https://github.com/tashfiqul-islam/metro-station-finder/blob/af903d7a2c1bf08165cfcf4a00ca0c0d73eedead/package.json); tag/manual Pages workflow exists in [workflow](https://github.com/tashfiqul-islam/metro-station-finder/blob/af903d7a2c1bf08165cfcf4a00ca0c0d73eedead/.github/workflows/nextjs.yml). Script existence does not prove a pass, required PR CI or branch protection. See [maintenance](maintenance.md) for execution limits.
+`hk.pkl` pins schema 2.11.0; mise pins hk 2.11.0 / Pkl 0.32.2. Pre-commit stashes unstaged edits, runs canonical `bun run check:fast` against the staged snapshot, then restores edits on success or failure. It never auto-fixes or stages changes. Pre-push runs canonical `check`, `build`, `smoke`, `bundle:check` and `scan`. Hooks are local feedback and can be bypassed; CI is authoritative.
 
-**Planned / Unverified as executable gates:** pinned canonical commands shared by hk and CI; Oxfmt/Oxlint/types, Knip/dependency-cruiser, data/domain tests, relevant contract/Workers/Playwright/axe checks, secret/dependency scans and bundle budget. No command names, thresholds or enforcement are established by this document. METRO-11 creates reproducible scaffold; METRO-12 implements gates and proves invalid fixtures fail and valid scaffold passes. Later preview/release checks belong to METRO-13/14.
+`.github/workflows/quality.yml` runs on pull requests targeting `feature/metro-rebuild` or `main`, and integration pushes to `feature/metro-rebuild`, without path filters. Three required jobs run frozen bootstrap plus check, build/browser smoke/bundle, and dependency/secret scans. The always-running `Quality gates` aggregate accepts only explicit success for every required job. Missing, cancelled, skipped or failed results fail the aggregate. Actions use immutable full SHA pins, read-only contents permission and no persisted checkout credentials. There is no deployment job.
 
-**Confirmed / Repo-verified:** [preparation dry-run and scoped negative checks](../examples/plane-preparation/README.md) validate reviewed skill content and source-to-ticket preservation locally. These do not replace future application gates or test live Plane writes.
+External branch rules must require the exact `Quality gates` check from GitHub Actions on `feature/metro-rebuild`, an up-to-date branch, pull requests, signed commits, resolved conversations, and no force-push/deletion or bypass. CODEOWNERS identifies @tashfiqul-islam for gate policy. CODEOWNERS alone does not enforce reviews: requiring owner approval needs a separate eligible reviewer, since the sole owner cannot approve their own PR. Controller records the actual remote rule and any approval gap; do not claim that local configuration enforces it.
 
-## Completion evidence
+Canonical checks: `bun run check:fast` (format/type-aware lint), `bun run check` (fast checks, boundaries, import graph, Knip, tests, type checks), `bun run build`, `bun run smoke`, `bun run bundle:check`, `bun run scan`. Browser smoke requires `bun run playwright install chromium` locally; CI installs browser system dependencies too. Smoke may start local services; no preview or release follows.
 
-For every slice record reviewed source and final revisions, acceptance criterion to evidence mapping, exact check text/results, environment, failures, unrun checks and material unknowns. Verify routing/links/scope for documentation. Applicable review must be resolved; required CI must pass before Done. The [workflow](workflow.md) records the owner-authorized integration-merge exception for rebuild tickets; otherwise main merge remains canonical. An unchecked merge is insufficient.
-
-Gate, permission or contract changes require explicit scope and review. Never silently weaken policy, disable failing checks or infer enforcement from prose. Missing implementation is a gap to report, not a check to claim passed. [METRO-8 evidence](../evidence/metro-8.md) records this documentation slice only.
+Focused tests cover aggregate result semantics and actual installed hooks in disposable Git repositories, including partial staging, failure restoration and linked worktrees. See [METRO-12 evidence](../evidence/metro-12.md). Report exact revision, commands and outcomes; a local pass is not hosted CI proof.

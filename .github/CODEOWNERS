@@ -1,0 +1,17 @@
+# Gate policy changes require owner review when branch rules enforce CODEOWNERS.
+/.github/ @tashfiqul-islam
+/hk.pkl @tashfiqul-islam
+/mise.toml @tashfiqul-islam
+/package.json @tashfiqul-islam
+/bun.lock @tashfiqul-islam
+/scripts/ @tashfiqul-islam
+/docs/agents/ @tashfiqul-islam
+/knip.json @tashfiqul-islam
+/.dependency-cruiser.mjs @tashfiqul-islam
+/.oxlintrc.json @tashfiqul-islam
+/tsconfig*.json @tashfiqul-islam
+/.editorconfig @tashfiqul-islam
+/.gitignore @tashfiqul-islam
+/apps/*/tsconfig.json @tashfiqul-islam
+/packages/*/tsconfig.json @tashfiqul-islam
+/apps/web/vite.config.ts @tashfiqul-islam
