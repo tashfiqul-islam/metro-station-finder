@@ -21,7 +21,7 @@ mise exec bun@1.4.4 node@26.13.0 -- bun run dev
 For the real browser/local Worker smoke after build:
 
 ```powershell
-mise exec bun@1.4.4 node@26.13.0 -- bunx --no-install playwright install chromium
+mise exec bun@1.4.4 node@26.13.0 -- bun run playwright install chromium
 mise exec bun@1.4.4 node@26.13.0 -- bun run smoke
 ```
 
@@ -42,10 +42,10 @@ $env:PLAYWRIGHT_BROWSERS_PATH = Join-Path (Get-Location) '.local/browsers'
 - `packages/core/src/domain`: synthetic contract; `src/application`: executable shared result. No dependencies, provider globals, apps or adapters. Its separate `types: []`, ES-only typecheck runs without browser/Bun/Node globals.
 - `apps/web`: React DOM composition; `apps/api`: Hono composition with Worker default export. Apps depend inward on `@metro/core`; no framework imports cross into core.
 - Root owns build/test tooling. App manifests own runtime dependencies. Exact direct versions plus the single Bun lock pin the resolved graph; there is no workspace orchestrator.
-- `scripts/boundaries.ts` parses core source imports, exports, import types, dynamic imports and require calls. It rejects non-relative/computed/escaping references, symlinks and declared dependencies. Test files may import Bun. This narrow smoke guard is not a security sandbox or full architecture policy; broader graph/CI gates remain METRO-12.
+- `scripts/boundaries.ts` parses core source imports, exports, import types, dynamic imports and require calls. It rejects non-relative/computed/escaping references, symlinks and declared dependencies. Test files may import Bun. This narrow smoke guard is not a security sandbox or full architecture policy; the import-graph and CI gates are described in [quality gates](agents/quality-gates.md).
 - Node runs Vite/Wrangler tooling and native TypeScript scripts; Bun installs/tests/orchestrates. Wrangler's local Node API is explicitly `unstable_startWorker`, pinned to 4.156.2. Upgrades require rechecking that API and runtime smoke.
 
-No station/fare functionality, provider integration, product API contract, data store, Docker/native scaffolding, CI, deployment or release automation is implemented. Existing preparation checks remain separate; see [reviewed skills](agents/skills.md).
+No station/fare functionality, provider integration, product API contract, data store, Docker/native scaffolding, deployment or release automation is implemented. CI quality gates exist; see [quality gates](agents/quality-gates.md). Existing preparation checks remain separate; see [reviewed skills](agents/skills.md).
 
 ## Release-time branch transition
 
