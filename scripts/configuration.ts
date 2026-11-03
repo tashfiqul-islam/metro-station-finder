@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { exactToolVersion } from "./tool-pins.ts";
 
 function record(value: unknown, name: string): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value))
@@ -29,7 +30,12 @@ export async function validateConfiguration(root: string): Promise<void> {
         `mise.toml tools.${runtime} must match package.json engines.${runtime} (${version})`,
       );
   }
-  if (tools["gitleaks"] !== "8.30.1") throw new Error("mise.toml tools.gitleaks must be 8.30.1");
+  exactToolVersion(tools, "gitleaks");
+  for (const [name, task] of Object.entries(record(mise["tasks"], "mise.toml tasks"))) {
+    const description = record(task, `mise.toml tasks.${name}`)["description"];
+    if (typeof description !== "string" || description.trim() === "")
+      throw new Error(`mise.toml tasks.${name}.description is required`);
+  }
   if (manifest["packageManager"] !== `bun@${String(engines["bun"])}`)
     throw new Error("package.json packageManager must match engines.bun");
   const install = record((await parse("bunfig.toml", true))["install"], "bunfig.toml install");

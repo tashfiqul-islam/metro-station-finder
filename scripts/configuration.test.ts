@@ -3,6 +3,7 @@ import { cp, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { validateConfiguration, validateRuntimes } from "./configuration";
+import { gitleaksVersion } from "./tool-pins";
 
 async function fixture() {
   const root = await mkdtemp(join(tmpdir(), "metro-config-"));
@@ -114,4 +115,59 @@ test("rejects missing secret scanner pin", async () => {
   } finally {
     await rm(root, { recursive: true });
   }
+});
+
+async function withMise(edit: (source: string) => string, run: (root: string) => Promise<void>) {
+  const root = await fixture();
+  try {
+    const path = join(root, "mise.toml");
+    await writeFile(path, edit(await readFile(path, "utf8")));
+    await run(root);
+  } finally {
+    await rm(root, { recursive: true });
+  }
+}
+
+test("FND-H6 derives the Gitleaks version from mise.toml", async () => {
+  await withMise(
+    (source) => source.replace(/gitleaks = "[^"]+"/, 'gitleaks = "9.1.2"'),
+    async (root) => {
+      expect(await gitleaksVersion(root)).toBe("9.1.2");
+      await validateConfiguration(root);
+    },
+  );
+});
+
+test("FND-H6 rejects a missing Gitleaks pin naming tools.gitleaks", async () => {
+  await withMise(
+    (source) => source.replace(/gitleaks = "[^"]+"\n/, ""),
+    async (root) => {
+      await expect(validateConfiguration(root)).rejects.toThrow("tools.gitleaks");
+      await expect(gitleaksVersion(root)).rejects.toThrow("tools.gitleaks");
+    },
+  );
+});
+
+test("FND-H6 rejects a non-exact Gitleaks pin", async () => {
+  await withMise(
+    (source) => source.replace(/gitleaks = "[^"]+"/, 'gitleaks = "latest"'),
+    async (root) => {
+      await expect(validateConfiguration(root)).rejects.toThrow("tools.gitleaks");
+    },
+  );
+});
+
+test("FND-H6 secrets script no longer hardcodes a Gitleaks version", async () => {
+  const source = await readFile(resolve("scripts/secrets.ts"), "utf8");
+  expect(source).not.toMatch(/gitleaks@\d/);
+  expect(source).toContain("gitleaksVersion");
+});
+
+test("FND-H6 every mise task has a description", async () => {
+  await withMise(
+    (source) => source.replace(/\[tasks\.scan\]\ndescription = "[^"]+"\n/, "[tasks.scan]\n"),
+    async (root) => {
+      await expect(validateConfiguration(root)).rejects.toThrow("tasks.scan.description");
+    },
+  );
 });

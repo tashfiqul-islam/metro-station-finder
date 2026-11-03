@@ -6,21 +6,22 @@ How the engineering skills consume this repo's domain documentation. Layout: sin
 
 - [`docs/product/glossary.md`](../product/glossary.md): canonical domain terms.
 - [`docs/product/feature-parity.md`](../product/feature-parity.md): behavior baseline for the rebuild.
-- **`docs/adr/`**: ADRs touching the area you are about to work in, if the directory exists.
+- [`docs/adr/`](../adr/0001-foundation-baseline.md): ADRs touching the area you are about to work in (template: [0000](../adr/0000-template.md)).
 - **`CONTEXT.md`** at the repo root, if one exists. None is planned.
 
-If an optional file or directory does not exist, **proceed silently**. Do not flag its absence or suggest creating it upfront. Skills that would create `CONTEXT.md` (for example `grill-with-docs`) must not do so; any such file would compete with the glossary. Record vocabulary changes in the glossary instead, within explicit ticket scope.
+If an optional file does not exist, **proceed silently**. Do not flag its absence or suggest creating it upfront. Skills that would create `CONTEXT.md` (for example `grill-with-docs`) must not do so; any such file would compete with the glossary. Record vocabulary changes in the glossary instead, within explicit ticket scope.
 
 ## File structure
 
 ```
 /
 ├── docs/
-│   ├── adr/                  (optional)
+│   ├── adr/
 │   └── product/
 │       ├── glossary.md
 │       └── feature-parity.md
-└── src/
+├── apps/                     (web, api)
+└── packages/                 (core)
 ```
 
 ## Use the glossary's vocabulary

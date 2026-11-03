@@ -31,7 +31,9 @@ description = "Format tracked configuration files"
 run = "bun run format"
 
 [tasks.scan]
+description = "Scan dependencies and tracked files for known vulnerabilities and secrets"
 run = "bun run scan"
 
 [tasks."bundle:check"]
+description = "Check production bundle size against the budget"
 run = "bun run bundle:check"
