@@ -31,6 +31,7 @@
 ## Task 1: Deliver reviewed skill and Plane preparation contract
 
 **Files:**
+
 - Create `docs/agents/skills.md`, `docs/agents/plane.md`, `docs/agents/skills.lock.json`.
 - Create `docs/templates/specification.md`, `docs/templates/plane-ticket.md`.
 - Create `docs/examples/plane-preparation/source.json`, `tickets.json`, `README.md`.
@@ -39,6 +40,7 @@
 - Modify `AGENTS.md`, `docs/agents/workflow.md`, `docs/agents/quality-gates.md`, and `README.md` only where routing/status/setup statements need reconciliation.
 
 **Interfaces:**
+
 - Consumes: METRO-10 acceptance, installed skill files and provider tool definitions, existing operating guide and bootstrap specification.
 - Produces: explicit read triggers; content-hash lock with configurable roots; documented install/update/review procedure; Plane page/work-item/native blocker/state/module/milestone/release mapping; source-to-ticket dry run with stable identities and traceable checks.
 

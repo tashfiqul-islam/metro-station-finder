@@ -1,5 +1,5 @@
-import type { ScaffoldStatus } from '../domain/scaffold-status';
+import type { ScaffoldStatus } from "../domain/scaffold-status";
 
 export function getScaffoldStatus(): ScaffoldStatus {
-  return { kind: 'synthetic-scaffold', ready: true };
+  return { kind: "synthetic-scaffold", ready: true };
 }

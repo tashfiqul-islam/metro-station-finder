@@ -1,0 +1,26 @@
+amends "package://github.com/jdx/hk/releases/download/v2.11.0/hk@2.11.0#/Config.pkl"
+
+hooks {
+  ["pre-commit"] {
+    stash = "git"
+    steps {
+      ["fast"] { check = "bun run check:fast" }
+    }
+  }
+  ["pre-push"] {
+    steps {
+      ["check"] {
+        exclusive = true
+        check = "bun run check"
+      }
+      ["build"] {
+        exclusive = true
+        check = "bun run build && bun run smoke && bun run bundle:check"
+      }
+      ["scan"] {
+        exclusive = true
+        check = "bun run scan"
+      }
+    }
+  }
+}

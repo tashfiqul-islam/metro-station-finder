@@ -2,6 +2,9 @@
 [tools]
 bun = "1.4.4"
 node = "26.13.0"
+gitleaks = "8.30.1"
+hk = "2.11.0"
+pkl = "0.32.2"
 
 [tasks.bootstrap]
 description = "Verify tools and install the frozen dependency graph"
@@ -26,3 +29,9 @@ run = "bun run smoke"
 [tasks.format]
 description = "Format tracked configuration files"
 run = "bun run format"
+
+[tasks.scan]
+run = "bun run scan"
+
+[tasks."bundle:check"]
+run = "bun run bundle:check"

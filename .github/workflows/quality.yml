@@ -1,0 +1,71 @@
+name: Quality
+on:
+  pull_request:
+    branches: [feature/metro-rebuild, main]
+  push:
+    branches: [feature/metro-rebuild]
+permissions:
+  contents: read
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  checks:
+    name: Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@6612f0ef07ed2a736cd1e00a94a065522dd41195 # v5.2.5
+        with:
+          version: 2026.10.25
+      - run: bun run bootstrap
+      - run: bun run check
+  build:
+    name: Build and smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@6612f0ef07ed2a736cd1e00a94a065522dd41195 # v5.2.5
+        with:
+          version: 2026.10.25
+      - run: bun run bootstrap
+      - run: bun run playwright install --with-deps chromium
+      - run: bun run build
+      - run: bun run smoke
+      - run: bun run bundle:check
+  security:
+    name: Security
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@6612f0ef07ed2a736cd1e00a94a065522dd41195 # v5.2.5
+        with:
+          version: 2026.10.25
+      - run: bun run bootstrap
+      - run: bun run scan
+  quality:
+    name: Quality gates
+    if: ${{ always() }}
+    needs: [checks, build, security]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@6612f0ef07ed2a736cd1e00a94a065522dd41195 # v5.2.5
+        with:
+          version: 2026.10.25
+          install_args: node
+      - run: node scripts/ci-results.ts
+        env:
+          REQUIRED_JOB_RESULTS: ${{ toJSON(needs) }}

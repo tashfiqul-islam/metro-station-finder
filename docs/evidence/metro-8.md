@@ -18,13 +18,13 @@ Supplied METRO-8 brief; operating guide `144aa09c-cd9a-4ce6-9161-a28826bb405b`; 
 
 Every scenario reads root/applicable scoped instructions, workflow, ticket spec and acceptance criteria; every completion reads quality-gates. No scoped instructions currently. Exact additional documents below; combine more root triggers only if stated scope grows.
 
-| Scenario | Additional read set | Other evidence |
-| --- | --- | --- |
-| Add geocoding request validation/provider error contract | api, architecture, security, testing | METRO-9/source for existing behavior; version-specific provider docs |
-| Fix keyboard focus/error rendering without provider changes | ui, testing | METRO-9/source for existing behavior/terms |
-| Fix nearest-station calculation without UI/provider/log changes | testing | METRO-9/source for existing behavior/terms |
-| Update map-provider dependency | maintenance, architecture, api, security, testing, ui | Relevant ADRs if added; provider docs; METRO-9/source |
-| Release checked revision without product changes | maintenance | Applicable implemented deployment/smoke checks and shipping evidence |
+| Scenario                                                        | Additional read set                                   | Other evidence                                                       |
+| --------------------------------------------------------------- | ----------------------------------------------------- | -------------------------------------------------------------------- |
+| Add geocoding request validation/provider error contract        | api, architecture, security, testing                  | METRO-9/source for existing behavior; version-specific provider docs |
+| Fix keyboard focus/error rendering without provider changes     | ui, testing                                           | METRO-9/source for existing behavior/terms                           |
+| Fix nearest-station calculation without UI/provider/log changes | testing                                               | METRO-9/source for existing behavior/terms                           |
+| Update map-provider dependency                                  | maintenance, architecture, api, security, testing, ui | Relevant ADRs if added; provider docs; METRO-9/source                |
+| Release checked revision without product changes                | maintenance                                           | Applicable implemented deployment/smoke checks and shipping evidence |
 
 Manual review confirms additive routing: API composes relevant boundaries; UI/bug avoid unrelated maintenance/architecture reads; provider dependency selects touched UI/API/security boundaries; release preserves shipping distinction. Root links all nine categories and parity/terms trigger.
 
