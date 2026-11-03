@@ -114,3 +114,12 @@ test("FND-H1 heading anchors with duplicates resolve to -1 suffix", async () => 
   });
   expect(await checkLinks(root, ["a.md"])).toEqual([]);
 });
+
+test("FND-H1 resolves targets containing balanced parentheses", async () => {
+  const root = await fixture({
+    "a (1).md": "# A\n",
+    "README.md": "# T\n\n[ok](a%20(1).md) [bad](gone(1).md)\n",
+  });
+  const problems = await checkLinks(root, ["README.md"]);
+  expect(problems.map((p) => p.message)).toEqual(["missing link target: gone(1).md"]);
+});

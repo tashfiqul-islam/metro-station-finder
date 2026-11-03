@@ -17,7 +17,7 @@ interface FoundLink {
 
 const SCHEME = /^[a-z][a-z0-9+.-]*:/i;
 const FENCE = /^\s{0,3}(```+|~~~+)/;
-const INLINE_LINK = /\]\(\s*(<[^>]*>|[^\s)]+)(?:\s+(?:"[^"]*"|'[^']*'))?\s*\)/g;
+const INLINE_LINK = /\]\(\s*(<[^>]*>|(?:[^\s()]|\([^\s()]*\))+)(?:\s+(?:"[^"]*"|'[^']*'))?\s*\)/g;
 const DEFINITION = /^\s{0,3}\[[^\]]+\]:\s*(<[^>]*>|\S+)/;
 
 /** Yields each non-code line with its 1-based number; fenced blocks and inline code are blanked. */
