@@ -2,6 +2,8 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve, relative, isAbsolute } from "node:path";
+import { fileURLToPath } from "node:url";
+import { gitleaksVersion } from "./tool-pins.ts";
 import { cleanGitEnv } from "./git-env.ts";
 
 const SYMLINK_MODE = "120000";
@@ -20,6 +22,7 @@ const listing = execFileSync("git", ["-C", root, "ls-files", "-s", "-z"], {
     return { mode: entry.slice(0, entry.indexOf(" ")), path: entry.slice(tab + 1) };
   });
 if (!listing.length) throw new Error("Secret scan requires tracked source");
+const gitleaks = await gitleaksVersion(fileURLToPath(new URL("..", import.meta.url)));
 const staging = await mkdtemp(join(tmpdir(), "metro-secrets-"));
 try {
   for (const { mode, path: file } of listing) {
@@ -33,7 +36,7 @@ try {
   }
   const result = spawnSync(
     "mise",
-    ["exec", "gitleaks@8.30.1", "--", "gitleaks", "dir", staging, "--redact", "--no-banner"],
+    ["exec", `gitleaks@${gitleaks}`, "--", "gitleaks", "dir", staging, "--redact", "--no-banner"],
     { stdio: "inherit", shell: false },
   );
   if (result.error) throw result.error;
