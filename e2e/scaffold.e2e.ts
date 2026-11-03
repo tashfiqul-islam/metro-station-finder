@@ -53,7 +53,7 @@ test.describe("page", () => {
   });
 
   test.describe("when the status request fails", () => {
-    test.use({ allowedConsoleError: /Failed to load resource.*status of 500/ });
+    test.use({ allowedConsoleError: /Failed to load resource.*status of 500/u });
 
     test("FND-T3 an intercepted 500 shows the error state with role=alert", async ({ page }) => {
       await page.route("**/api/scaffold/status", (route) =>

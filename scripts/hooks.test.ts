@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+
 import { cleanGitEnv } from "./git-env";
 
 // Every fixture command runs with GIT_* removed so a hook invoking this suite can never

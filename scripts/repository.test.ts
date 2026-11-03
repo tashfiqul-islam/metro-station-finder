@@ -1,6 +1,8 @@
 import { expect, test } from "bun:test";
 import { readFile, readdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
+
+import { isRecord } from "./guards";
 import { checkLinks, formatProblem } from "./links";
 
 const root = resolve(import.meta.dir, "..");
@@ -30,7 +32,7 @@ SOFTWARE.
 `;
 
 test("FND-H4 LICENSE holds the exact MIT text and the manifest declares MIT", async () => {
-  expect((await read("LICENSE")).replace(/\r\n/g, "\n")).toBe(MIT);
+  expect((await read("LICENSE")).replaceAll("\r\n", "\n")).toBe(MIT);
   expect(JSON.parse(await read("package.json")).license).toBe("MIT");
 });
 
@@ -59,8 +61,8 @@ test("FND-H5 CLAUDE.md contains only the AGENTS.md import", async () => {
 });
 
 test("FND-H3 ADR template and Accepted ADR-0001 are linked from architecture and domain guides", async () => {
-  expect(await read("docs/adr/0001-foundation-baseline.md")).toMatch(/^- Status: Accepted$/m);
-  expect(await read("docs/adr/0000-template.md")).toMatch(/Status/);
+  expect(await read("docs/adr/0001-foundation-baseline.md")).toMatch(/^- Status: Accepted$/mu);
+  expect(await read("docs/adr/0000-template.md")).toMatch(/Status/u);
   for (const guide of ["docs/agents/architecture.md", "docs/agents/domain.md"]) {
     const body = await read(guide);
     expect(body).toContain("adr/0001-foundation-baseline.md");
@@ -69,7 +71,7 @@ test("FND-H3 ADR template and Accepted ADR-0001 are linked from architecture and
 });
 
 test("FND-H2 guidance carries no stale METRO-12 or layout claims", async () => {
-  const stale = [/pending METRO-12/i, /proposed checks/i, /not available verified gates/i];
+  const stale = [/pending METRO-12/iu, /proposed checks/iu, /not available verified gates/iu];
   const files = [
     "README.md",
     "docs/development.md",
@@ -81,18 +83,20 @@ test("FND-H2 guidance carries no stale METRO-12 or layout claims", async () => {
     const body = await read(file);
     for (const pattern of stale) expect(`${file}: ${pattern.test(body)}`).toBe(`${file}: false`);
   }
-  expect(await read("docs/agents/domain.md")).not.toMatch(/^└── src\/$/m);
-  expect(await read("docs/agents/ui.md")).not.toMatch(/Playwright\/axe are proposed/);
+  expect(await read("docs/agents/domain.md")).not.toMatch(/^└── src\/$/mu);
+  expect(await read("docs/agents/ui.md")).not.toMatch(/Playwright\/axe are proposed/u);
 });
 
 test("FND-H2 the preparation README snippet lists every locked skill root", async () => {
-  const lock = JSON.parse(await read("docs/agents/skills.lock.json")) as {
-    collections?: { root: string }[];
-  };
-  const roots = new Set((lock.collections ?? []).map((file) => file.root));
+  const lock: unknown = JSON.parse(await read("docs/agents/skills.lock.json"));
+  const collections =
+    isRecord(lock) && Array.isArray(lock["collections"]) ? lock["collections"] : [];
+  const roots = new Set(
+    collections.map((file: unknown) => (isRecord(file) ? file["root"] : undefined)),
+  );
   const readme = await read("docs/examples/plane-preparation/README.md");
   expect(roots.size).toBeGreaterThan(0);
-  for (const name of roots) expect(readme).toMatch(new RegExp(String.raw`^\s+${name} = '`, "m"));
+  for (const name of roots) expect(readme).toMatch(new RegExp(String.raw`^\s+${name} = '`, "mu"));
 });
 
 test("FND-H1 the real repository Markdown has no broken relative link or anchor", async () => {

@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+
 import { getScaffoldStatus } from "./scaffold-status";
 
 test("consumers receive an explicitly synthetic readiness result", () => {

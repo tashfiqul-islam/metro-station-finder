@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { copyFile, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+
 import { validateMessage, validateSubject } from "./commit-message";
 import { cleanGitEnv } from "./git-env";
 

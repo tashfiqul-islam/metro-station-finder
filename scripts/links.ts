@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { readFile, stat } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+
 import { cleanGitEnv } from "./git-env.ts";
 
 export interface LinkProblem {
@@ -15,15 +16,15 @@ interface FoundLink {
   target: string;
 }
 
-const SCHEME = /^[a-z][a-z0-9+.-]*:/i;
-const FENCE = /^\s{0,3}(```+|~~~+)/;
-const INLINE_LINK = /\]\(\s*(<[^>]*>|(?:[^\s()]|\([^\s()]*\))+)(?:\s+(?:"[^"]*"|'[^']*'))?\s*\)/g;
-const DEFINITION = /^\s{0,3}\[[^\]]+\]:\s*(<[^>]*>|\S+)/;
+const SCHEME = /^[a-z][a-z0-9+.-]*:/iu;
+const FENCE = /^\s{0,3}(```+|~~~+)/u;
+const INLINE_LINK = /\]\(\s*(<[^>]*>|(?:[^\s()]|\([^\s()]*\))+)(?:\s+(?:"[^"]*"|'[^']*'))?\s*\)/gu;
+const DEFINITION = /^\s{0,3}\[[^\]]+\]:\s*(<[^>]*>|\S+)/u;
 
 /** Yields each non-code line with its 1-based number; fenced blocks and inline code are blanked. */
 function* proseLines(source: string): Generator<{ line: number; text: string; raw: string }> {
   let fence: string | undefined;
-  const lines = source.split(/\r?\n/);
+  const lines = source.split(/\r?\n/u);
   for (const [index, raw] of lines.entries()) {
     const marker = FENCE.exec(raw)?.[1];
     if (fence) {
@@ -37,7 +38,7 @@ function* proseLines(source: string): Generator<{ line: number; text: string; ra
     yield {
       line: index + 1,
       raw,
-      text: raw.replace(/`+[^`]*`+/g, (span) => " ".repeat(span.length)),
+      text: raw.replaceAll(/`+[^`]*`+/gu, (span) => " ".repeat(span.length)),
     };
   }
 }
@@ -60,14 +61,14 @@ function findLinks(source: string): FoundLink[] {
 
 function slugOf(heading: string): string {
   return heading
-    .replace(/\s+#+\s*$/, "")
-    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1")
-    .replace(/<[^>]+>/g, "")
-    .replace(/[`*~]/g, "")
+    .replace(/\s+#+\s*$/u, "")
+    .replaceAll(/!?\[([^\]]*)\]\([^)]*\)/gu, "$1")
+    .replaceAll(/<[^>]+>/gu, "")
+    .replaceAll(/[`*~]/gu, "")
     .trim()
     .toLowerCase()
-    .replace(/[^\p{L}\p{N}\s_-]/gu, "")
-    .replace(/\s/g, "-");
+    .replaceAll(/[^\p{L}\p{N}\s_-]/gu, "")
+    .replaceAll(/\s/gu, "-");
 }
 
 /** GitHub heading anchors for a Markdown document, duplicates suffixed `-1`, `-2`. */
@@ -75,7 +76,7 @@ export function githubSlugs(source: string): string[] {
   const seen = new Map<string, number>();
   const slugs: string[] = [];
   for (const { raw } of proseLines(source)) {
-    const heading = /^\s{0,3}#{1,6}\s+(.*)$/.exec(raw);
+    const heading = /^\s{0,3}#{1,6}\s+(.*)$/u.exec(raw);
     if (!heading?.[1]) continue;
     const base = slugOf(heading[1]);
     const count = seen.get(base) ?? 0;
@@ -127,7 +128,7 @@ export async function checkLinks(root: string, files: string[]): Promise<LinkPro
         problems.push({ file, line, message: `link escapes the repository: ${target}` });
         continue;
       }
-      const info = await stat(resolved).catch(() => undefined);
+      const info = await stat(resolved).catch(() => {});
       if (!info) {
         problems.push({ file, line, message: `missing link target: ${target}` });
         continue;
@@ -158,7 +159,7 @@ function trackedMarkdown(root: string): string[] {
 export async function runLinkCheck(root: string): Promise<void> {
   const files = [];
   for (const file of trackedMarkdown(root))
-    if (await stat(join(root, file)).catch(() => undefined)) files.push(file);
+    if (await stat(join(root, file)).catch(() => {})) files.push(file);
   const problems = await checkLinks(root, files);
   for (const problem of problems) console.error(formatProblem(problem));
   if (problems.length > 0) process.exitCode = 1;

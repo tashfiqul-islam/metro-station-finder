@@ -1,8 +1,9 @@
 import { expect, test } from "bun:test";
-import { checkCoreBoundary } from "./boundaries";
 import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
+import { checkCoreBoundary } from "./boundaries";
 
 async function fixture(source: string, dependencies = {}) {
   const root = await mkdtemp(join(tmpdir(), "metro-boundary-"));

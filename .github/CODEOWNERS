@@ -28,3 +28,10 @@
 /.gitleaksignore @tashfiqul-islam
 /apps/api/wrangler.jsonc @tashfiqul-islam
 /packages/contracts/ @tashfiqul-islam
+/playwright.config.ts @tashfiqul-islam
+/e2e/ @tashfiqul-islam
+/CONTRIBUTING.md @tashfiqul-islam
+/apps/api/worker-configuration.d.ts @tashfiqul-islam
+/apps/*/package.json @tashfiqul-islam
+/packages/*/package.json @tashfiqul-islam
+/.oxfmtrc.json @tashfiqul-islam

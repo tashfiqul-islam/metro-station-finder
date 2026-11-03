@@ -1,6 +1,8 @@
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { isRecord } from "./guards.ts";
+
 const REQUIRED_JOBS = ["checks", "build", "security"] as const;
 
 function succeeded(entry: unknown): boolean {
@@ -15,9 +17,8 @@ function succeeded(entry: unknown): boolean {
  * the required list is a floor that stops a gate being dropped from `needs`.
  */
 export function requiredJobsSucceeded(needs: unknown): boolean {
-  if (typeof needs !== "object" || needs === null || Array.isArray(needs)) return false;
-  const jobs = needs as Record<string, unknown>;
-  return REQUIRED_JOBS.every((job) => job in jobs) && Object.values(jobs).every(succeeded);
+  if (!isRecord(needs)) return false;
+  return REQUIRED_JOBS.every((job) => job in needs) && Object.values(needs).every(succeeded);
 }
 
 /** CLI body: fails unless every required quality job succeeded. */

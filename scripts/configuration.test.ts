@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+
 import { validateConfiguration, validateRuntimes } from "./configuration";
 import { gitleaksVersion } from "./tool-pins";
 
@@ -98,7 +99,7 @@ for (const [field, value] of [
       const source = await readFile(path, "utf8");
       await writeFile(
         path,
-        source.replace(new RegExp(`${field} = [^\\r\\n]+`), `${field} = ${value}`),
+        source.replace(new RegExp(`${field} = [^\\r\\n]+`, "u"), `${field} = ${value}`),
       );
       await expect(validateConfiguration(root)).rejects.toThrow(`install.${field}`);
     } finally {
@@ -147,7 +148,7 @@ async function withMise(edit: (source: string) => string, run: (root: string) =>
 
 test("FND-H6 derives the Gitleaks version from mise.toml", async () => {
   await withMise(
-    (source) => source.replace(/gitleaks = "[^"]+"/, 'gitleaks = "9.1.2"'),
+    (source) => source.replace(/gitleaks = "[^"]+"/u, 'gitleaks = "9.1.2"'),
     async (root) => {
       expect(await gitleaksVersion(root)).toBe("9.1.2");
       await validateConfiguration(root);
@@ -157,7 +158,7 @@ test("FND-H6 derives the Gitleaks version from mise.toml", async () => {
 
 test("FND-H6 rejects a missing Gitleaks pin naming tools.gitleaks", async () => {
   await withMise(
-    (source) => source.replace(/gitleaks = "[^"]+"\n/, ""),
+    (source) => source.replace(/gitleaks = "[^"]+"\n/u, ""),
     async (root) => {
       await expect(validateConfiguration(root)).rejects.toThrow("tools.gitleaks");
       await expect(gitleaksVersion(root)).rejects.toThrow("tools.gitleaks");
@@ -167,7 +168,7 @@ test("FND-H6 rejects a missing Gitleaks pin naming tools.gitleaks", async () => 
 
 test("FND-H6 rejects a non-exact Gitleaks pin", async () => {
   await withMise(
-    (source) => source.replace(/gitleaks = "[^"]+"/, 'gitleaks = "latest"'),
+    (source) => source.replace(/gitleaks = "[^"]+"/u, 'gitleaks = "latest"'),
     async (root) => {
       await expect(validateConfiguration(root)).rejects.toThrow("tools.gitleaks");
     },
@@ -176,13 +177,13 @@ test("FND-H6 rejects a non-exact Gitleaks pin", async () => {
 
 test("FND-H6 secrets script no longer hardcodes a Gitleaks version", async () => {
   const source = await readFile(resolve("scripts/secrets.ts"), "utf8");
-  expect(source).not.toMatch(/gitleaks@\d/);
+  expect(source).not.toMatch(/gitleaks@\d/u);
   expect(source).toContain("gitleaksVersion");
 });
 
 test("FND-H6 every mise task has a description", async () => {
   await withMise(
-    (source) => source.replace(/\[tasks\.scan\]\ndescription = "[^"]+"\n/, "[tasks.scan]\n"),
+    (source) => source.replace(/\[tasks\.scan\]\ndescription = "[^"]+"\n/u, "[tasks.scan]\n"),
     async (root) => {
       await expect(validateConfiguration(root)).rejects.toThrow("tasks.scan.description");
     },
@@ -193,7 +194,7 @@ test("FND-S3 rejects a bunfig without minimumReleaseAge naming install.minimumRe
   const root = await fixture();
   try {
     await editFile(root, "bunfig.toml", (source) =>
-      source.replace(/minimumReleaseAge = \d+\r?\n/, ""),
+      source.replace(/minimumReleaseAge = \d+\r?\n/u, ""),
     );
     await expect(validateConfiguration(root)).rejects.toThrow("install.minimumReleaseAge");
   } finally {
@@ -205,7 +206,7 @@ test("FND-S3 rejects a shorter Bun cooldown", async () => {
   const root = await fixture();
   try {
     await editFile(root, "bunfig.toml", (source) =>
-      source.replace(/minimumReleaseAge = \d+/, "minimumReleaseAge = 86400"),
+      source.replace(/minimumReleaseAge = \d+/u, "minimumReleaseAge = 86400"),
     );
     await expect(validateConfiguration(root)).rejects.toThrow("install.minimumReleaseAge");
   } finally {
@@ -251,7 +252,7 @@ test("FND-S2 rejects a Renovate configuration without minimumReleaseAge", async 
   const root = await fixture();
   try {
     await editFile(root, ".github/renovate.json5", (source) =>
-      source.replace(/^\s*minimumReleaseAge: "3 days",\r?\n/m, ""),
+      source.replace(/^\s*minimumReleaseAge: "3 days",\r?\n/mu, ""),
     );
     await expect(validateConfiguration(root)).rejects.toThrow("minimumReleaseAge");
   } finally {
@@ -262,7 +263,7 @@ test("FND-S2 rejects a Renovate configuration without minimumReleaseAge", async 
 for (const tool of ["actionlint", "zizmor"]) {
   test(`rejects a missing or non-exact ${tool} pin`, async () => {
     await withMise(
-      (source) => source.replace(new RegExp(`${tool} = "[^"]+"`), `${tool} = "latest"`),
+      (source) => source.replace(new RegExp(`${tool} = "[^"]+"`, "u"), `${tool} = "latest"`),
       async (root) => {
         await expect(validateConfiguration(root)).rejects.toThrow(`tools.${tool}`);
       },

@@ -69,7 +69,7 @@ for (const [project, source] of [
   test(`${project}: rejects foreign ambient ${source}`, async () => {
     const result = await compile(project, source);
     expect(result.exitCode).not.toBe(0);
-    expect(result.stdout.toString()).toMatch(/TS(2580|2584|2304|2591|2868)/);
+    expect(result.stdout.toString()).toMatch(/TS(2580|2584|2304|2591|2868)/u);
   });
 }
 

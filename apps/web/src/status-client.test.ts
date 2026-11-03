@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+
 import { fetchScaffoldStatus } from "./status-client";
 
 const json = (body: unknown, init: ResponseInit = {}) =>
@@ -7,7 +8,10 @@ const json = (body: unknown, init: ResponseInit = {}) =>
     headers: { "content-type": "application/json" },
     ...init,
   });
-const stub = (response: Response) => (() => Promise.resolve(response)) as unknown as typeof fetch;
+const asFetch = (
+  handler: (input: string | URL | Request, init?: RequestInit) => Promise<Response>,
+): typeof fetch => Object.assign(handler, { preconnect: () => {} });
+const stub = (response: Response) => asFetch(() => Promise.resolve(response));
 
 test("FND-R4 the client returns a schema-valid status", async () => {
   const status = await fetchScaffoldStatus(stub(json({ kind: "synthetic-scaffold", ready: true })));
@@ -16,10 +20,13 @@ test("FND-R4 the client returns a schema-valid status", async () => {
 
 test("FND-R4 the client requests the contract route with a JSON accept header", async () => {
   let seen: { url: string; accept: string | null } | undefined;
-  const spy = ((input: string, init?: RequestInit) => {
-    seen = { url: String(input), accept: new Headers(init?.headers).get("accept") };
+  const spy = asFetch((input, init) => {
+    seen = {
+      url: typeof input === "string" ? input : input instanceof URL ? input.href : input.url,
+      accept: new Headers(init?.headers).get("accept"),
+    };
     return Promise.resolve(json({ kind: "synthetic-scaffold", ready: true }));
-  }) as unknown as typeof fetch;
+  });
   await fetchScaffoldStatus(spy);
   expect(seen).toEqual({ url: "/api/scaffold/status", accept: "application/json" });
 });
@@ -41,6 +48,6 @@ for (const [name, response] of [
 }
 
 test("FND-R4 a network failure rejects", async () => {
-  const failing = (() => Promise.reject(new TypeError("offline"))) as unknown as typeof fetch;
+  const failing = asFetch(() => Promise.reject(new TypeError("offline")));
   await expect(fetchScaffoldStatus(failing)).rejects.toThrow("offline");
 });

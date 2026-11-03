@@ -1,5 +1,7 @@
 import { expect, test } from "bun:test";
+
 import { getScaffoldStatus } from "@metro/core";
+
 import {
   errorEnvelopeSchema,
   parseErrorEnvelope,
@@ -32,8 +34,8 @@ test("FND-R4 exposes a Standard Schema v1 interface", () => {
   expect(scaffoldStatusSchema["~standard"].version).toBe(1);
   expect(errorEnvelopeSchema["~standard"].version).toBe(1);
   const result = scaffoldStatusSchema["~standard"].validate({ ready: false });
-  expect(result instanceof Promise).toBe(false);
-  expect((result as { issues?: unknown }).issues).toBeDefined();
+  if (result instanceof Promise) throw new Error("expected a synchronous validation result");
+  expect(result.issues).toBeDefined();
 });
 
 test("FND-R4 error envelope accepts { error: { code, message } } only", () => {

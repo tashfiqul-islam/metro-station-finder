@@ -45,5 +45,5 @@ export function neverCalled() {
     loader,
   );
   expect(result.code).not.toBe(0);
-  expect(result.output).toMatch(/subject.tss*|s*50.00s*|s*16.67/);
+  expect(result.output).toMatch(/subject.tss*|s*50.00s*|s*16.67/u);
 });

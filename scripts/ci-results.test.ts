@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+
 import { requiredJobsSucceeded } from "./ci-results";
 
 const passing = {
@@ -28,9 +29,16 @@ for (const value of [null, undefined, [], "success", {}, { checks: null }]) {
     expect(requiredJobsSucceeded(value)).toBe(false));
 }
 
-const script = new URL("./ci-results.ts", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
+const script = new URL("./ci-results.ts", import.meta.url).pathname.replace(
+  /^\/([A-Za-z]:)/u,
+  "$1",
+);
 function runAggregate(value: string | undefined) {
-  const env: Record<string, string> = { ...(process.env as Record<string, string>) };
+  const env = Object.fromEntries(
+    Object.entries(process.env).filter(
+      (entry): entry is [string, string] => entry[1] !== undefined,
+    ),
+  );
   delete env["REQUIRED_JOB_RESULTS"];
   if (value !== undefined) env["REQUIRED_JOB_RESULTS"] = value;
   return Bun.spawnSync(["node", script], { env });

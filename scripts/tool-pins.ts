@@ -3,7 +3,7 @@ import { join } from "node:path";
 
 export function exactToolVersion(tools: Record<string, unknown>, tool: string): string {
   const version = tools[tool];
-  if (typeof version !== "string" || !/^\d+\.\d+\.\d+$/.test(version))
+  if (typeof version !== "string" || !/^\d+\.\d+\.\d+$/u.test(version))
     throw new Error(`mise.toml tools.${tool}: exact stable version required`);
   return version;
 }
@@ -15,7 +15,7 @@ export function exactToolVersion(tools: Record<string, unknown>, tool: string): 
  */
 export async function gitleaksVersion(root: string): Promise<string> {
   const source = await readFile(join(root, "mise.toml"), "utf8");
-  const table = /^\[tools\]\s*$([\s\S]*?)(?=^\[|(?![\s\S]))/m.exec(source)?.[1] ?? "";
-  const pin = /^gitleaks\s*=\s*"([^"]*)"\s*(?:#.*)?$/m.exec(table)?.[1];
+  const table = /^\[tools\]\s*$([\s\S]*?)(?=^\[|(?![\s\S]))/mu.exec(source)?.[1] ?? "";
+  const pin = /^gitleaks\s*=\s*"([^"]*)"\s*(?:#.*)?$/mu.exec(table)?.[1];
   return exactToolVersion({ gitleaks: pin }, "gitleaks");
 }
