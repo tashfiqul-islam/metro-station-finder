@@ -33,6 +33,13 @@ function envelope(code: string, message: string): ErrorEnvelope {
   return { error: { code, message } };
 }
 
+const STATUS_ROUTE = "/api/scaffold/status";
+
+/** The route pattern to log. Anything but a known route collapses to `/api/*`, so a raw path is never logged. */
+function routeLabel(pathname: string): string {
+  return pathname === STATUS_ROUTE ? STATUS_ROUTE : "/api/*";
+}
+
 function previewSha(env: unknown): string | undefined {
   if (typeof env !== "object" || env === null || !("PREVIEW_SHA" in env)) return undefined;
   const value = env.PREVIEW_SHA;
@@ -61,7 +68,7 @@ export function createApp(
       event: "request",
       requestId,
       method: context.req.method,
-      path: new URL(context.req.url).pathname,
+      path: routeLabel(new URL(context.req.url).pathname),
       status: context.res.status,
       durationMs: Math.round(performance.now() - started),
     });
@@ -79,7 +86,7 @@ export function createApp(
       level: "error",
       event: "error",
       requestId: context.get("requestId"),
-      errorName: error.name,
+      errorName: error.name.slice(0, 64),
     });
     return context.json(envelope("internal_error", "Internal server error"), 500);
   });

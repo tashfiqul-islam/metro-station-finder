@@ -127,7 +127,7 @@ jobs:
     name: Cloudflare preview
     # Same-repository pull requests only: forks must never receive the Cloudflare secrets. This job is
     # deliberately outside the "Quality gates" aggregate so Cloudflare availability cannot block merges.
-    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]' }}
     needs: [checks, build, security]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -139,11 +139,10 @@ jobs:
       url: ${{ steps.url.outputs.url }}
     permissions:
       contents: read
+      pull-requests: read # read the pull request state so a closed pull request is never deployed
     env:
       PR_NUMBER: ${{ github.event.pull_request.number }}
       PREVIEW_SHA: ${{ github.sha }}
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -159,6 +158,16 @@ jobs:
       - run: bun run bootstrap
       - name: Require the Cloudflare secrets
         run: node scripts/preview.ts secrets
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Stop when the pull request is no longer open
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          state="$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER" --jq .state)"
+          if [ "$state" != "open" ]; then echo "Pull request $PR_NUMBER is $state; not deploying a preview that cleanup would miss." >&2; exit 1; fi
       - name: Name the preview Worker
         id: name
         run: node scripts/preview.ts name
@@ -170,6 +179,8 @@ jobs:
         id: deploy
         env:
           WORKER: ${{ steps.name.outputs.name }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -o pipefail
           bunx wrangler deploy --config apps/web/dist/metro_scaffold/wrangler.json --name "$WORKER" --var "PREVIEW_SHA:$PREVIEW_SHA" 2>&1 | tee "$RUNNER_TEMP/deploy.log"
@@ -186,6 +197,8 @@ jobs:
         id: deployments
         env:
           WORKER: ${{ steps.name.outputs.name }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           bunx wrangler deployments list --name "$WORKER" --json > "$RUNNER_TEMP/deployments.json"
           node scripts/preview.ts deployments "$RUNNER_TEMP/deployments.json"
@@ -194,14 +207,18 @@ jobs:
         env:
           WORKER: ${{ steps.name.outputs.name }}
           PREVIEW_URL: ${{ steps.url.outputs.url }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           bunx wrangler rollback --name "$WORKER" --message "Preview rollback exercise for $PREVIEW_SHA"
           node scripts/preview.ts smoke "$PREVIEW_URL"
       - name: Redeploy the checked commit after the rollback exercise
-        if: ${{ steps.deployments.outputs.deployments >= 2 }}
+        if: ${{ always() && steps.deployments.outputs.deployments >= 2 }}
         env:
           WORKER: ${{ steps.name.outputs.name }}
           PREVIEW_URL: ${{ steps.url.outputs.url }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           bunx wrangler deploy --config apps/web/dist/metro_scaffold/wrangler.json --name "$WORKER" --var "PREVIEW_SHA:$PREVIEW_SHA"
           node scripts/preview.ts smoke "$PREVIEW_URL" "$PREVIEW_SHA"

@@ -84,3 +84,29 @@ test("METRO-13 the preview SHA is exposed only when the PREVIEW_SHA var is set",
   const malformed = await app.request("/api/scaffold/status", {}, { PREVIEW_SHA: "not a sha" });
   expect(malformed.headers.has("x-preview-sha")).toBe(false);
 });
+
+test("METRO-13 a secret in the URL path or in x-request-id never reaches a log line", async () => {
+  const { app, lines } = recorded();
+  await app.request("/api/SECRET-IN-PATH/12.345,67.890");
+  await app.request("/api/scaffold/status", {
+    headers: { "x-request-id": "SECRET-IN-HEADER with space" },
+  });
+  const text = JSON.stringify(lines);
+  for (const secret of ["SECRET", "12.345", "67.890"]) expect(text).not.toContain(secret);
+  expect(lines[0]).toMatchObject({ path: "/api/*", status: 404 });
+});
+
+test("METRO-13 an error name is capped", async () => {
+  class LongName extends Error {
+    override name = "N".repeat(500);
+  }
+  const lines: LogLine[] = [];
+  const failing = createApp(
+    () => {
+      throw new LongName("x");
+    },
+    (line) => lines.push(line),
+  );
+  await failing.request("/api/scaffold/status");
+  expect(lines[0]).toMatchObject({ level: "error", errorName: "N".repeat(64) });
+});
