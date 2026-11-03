@@ -1,6 +1,3 @@
-import { Hono } from "hono";
-import { getScaffoldStatus } from "@metro/core";
+import { createApp } from "./app";
 
-const app = new Hono();
-app.get("/__scaffold/status", (context) => context.json(getScaffoldStatus()));
-export default app;
+export default createApp();

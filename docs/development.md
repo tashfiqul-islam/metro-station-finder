@@ -1,6 +1,6 @@
 # Local workspace
 
-**Confirmed / Repo-verified:** this independent rebuild contains a React/Vite web app, a Hono Cloudflare Worker and a shared dependency-free TypeScript package. Both apps consume `{ kind: 'synthetic-scaffold', ready: true }`. This demonstrates wiring only; it is not product health, data correctness or Metro feature parity.
+**Confirmed / Repo-verified:** this independent rebuild contains a React/Vite web app, a Hono Cloudflare Worker, a dependency-free core package and a schema-validated contracts package. The Worker serves `{ kind: 'synthetic-scaffold', ready: true }` at `GET /api/scaffold/status` and the page fetches and validates it. This demonstrates wiring only; it is not product health, data correctness or Metro feature parity.
 
 ## Bootstrap and commands
 
@@ -16,7 +16,7 @@ mise exec bun@1.4.4 node@26.13.0 -- bun run build
 mise exec bun@1.4.4 node@26.13.0 -- bun run dev
 ```
 
-`bootstrap` verifies exact runtimes and installs the committed single `bun.lock` with `--frozen-lockfile`; dependency drift fails. `check` runs the narrow core import guard, Bun tests, isolated browser, Worker, Node tools, Bun tests and pure-core typechecks, plus source/config formatting, type-aware lint, unused-code and import-graph gates. See [METRO-12 evidence](evidence/metro-12.md) for canonical commands and budgets. `build` creates `apps/web/dist` and dry-runs Wrangler into `apps/api/dist`; it uploads/deploys nothing. `dev` starts web at `http://127.0.0.1:5173` and local workerd at `http://127.0.0.1:8787`; Ctrl+C disposes both. Ports must be free. Worker status is `GET /__scaffold/status`; unknown routes return 404. The web consumes core directly and makes no API request.
+`bootstrap` verifies exact runtimes and installs the committed single `bun.lock` with `--frozen-lockfile`; dependency drift fails. `check` runs the narrow core import guard, Bun tests, isolated browser, Worker, Node tools, Bun tests and pure-core typechecks, plus source/config formatting, type-aware lint, unused-code and import-graph gates. See [METRO-12 evidence](evidence/metro-12.md) for canonical commands and budgets. `build` runs `vite build` (client assets in `apps/web/dist/client`, Worker bundle in `apps/web/dist/metro_scaffold`) and then dry-runs Wrangler against that generated configuration into `apps/api/dist`; it uploads/deploys nothing. `dev` runs Vite with `@cloudflare/vite-plugin`: the SPA and the Worker API share one origin, `http://127.0.0.1:5173`, with the Worker running in workerd and React Fast Refresh. Ctrl+C stops it. The port must be free (`strictPort` makes an occupied port fail visibly). `GET /api/scaffold/status` returns the status; unknown `/api/*` returns 404 with `{ error: { code, message } }`; other unknown paths serve the SPA. See [ADR-0002](adr/0002-runtime-topology.md) and [ADR-0003](adr/0003-contracts.md).
 
 For the real browser/local Worker smoke after build:
 
@@ -25,7 +25,7 @@ mise exec bun@1.4.4 node@26.13.0 -- bun run playwright install chromium
 mise exec bun@1.4.4 node@26.13.0 -- bun run smoke
 ```
 
-Smoke starts the built web preview on 4173 and local Worker on 8787, checks actual HTTP status/JSON/404, renders the shared result in Chromium and rejects page/console errors and axe accessibility violations. Worker local execution bundles source; the separate dry-run verifies the production Worker bundle. Playwright browser downloads are environment tooling, not part of `bootstrap`. Smoke always closes its local servers and browser on assertion failure.
+Smoke runs `vite preview` on 4173 (web and Worker together in workerd), checks real HTTP status and schema-valid bodies for the status route, the 404 envelope and a deep link, renders the success state in Chromium, injects a 500 to prove the `role="alert"` error state, and rejects page/console errors and axe accessibility violations. The dry-run verifies the production Worker bundle. Playwright browser downloads are environment tooling, not part of `bootstrap`. Smoke always stops the preview process tree and the browser on assertion failure.
 
 On this managed Windows runner, per-call temporary/profile directories changed. Native package install needed a permitted execution context and stable paths. This environment-specific setup was used; ordinary machines need not override these:
 
@@ -40,10 +40,11 @@ $env:PLAYWRIGHT_BROWSERS_PATH = Join-Path (Get-Location) '.local/browsers'
 ## Boundaries and choices
 
 - `packages/core/src/domain`: synthetic contract; `src/application`: executable shared result. No dependencies, provider globals, apps or adapters. Its separate `types: []`, ES-only typecheck runs without browser/Bun/Node globals.
-- `apps/web`: React DOM composition; `apps/api`: Hono composition with Worker default export. Apps depend inward on `@metro/core`; no framework imports cross into core.
+- `packages/contracts`: Valibot (Standard Schema v1) schemas and parsers for the status and the error envelope; it imports only core and Valibot. `apps/web`: React DOM composition and a typed fetch client; `apps/api`: Hono composition with Worker default export and the Worker configuration. Apps depend inward on contracts and core, never on each other; dependency-cruiser enforces these layers (see [architecture](agents/architecture.md)).
+- `apps/api/worker-configuration.d.ts` is generated by `bun run --cwd apps/api types` (`wrangler types`, without runtime types); `bun run types:check` fails when it is stale.
 - Root owns build/test tooling. App manifests own runtime dependencies. Exact direct versions plus the single Bun lock pin the resolved graph; there is no workspace orchestrator.
 - `scripts/boundaries.ts` parses core source imports, exports, import types, dynamic imports and require calls. It rejects non-relative/computed/escaping references, symlinks and declared dependencies. Test files may import Bun. This narrow smoke guard is not a security sandbox or full architecture policy; the import-graph and CI gates are described in [quality gates](agents/quality-gates.md).
-- Node runs Vite/Wrangler tooling and native TypeScript scripts; Bun installs/tests/orchestrates. Wrangler's local Node API is explicitly `unstable_startWorker`, pinned to 4.156.2. Upgrades require rechecking that API and runtime smoke.
+- Node runs Vite/Wrangler tooling and native TypeScript scripts; Bun installs/tests/orchestrates. The local runtime is Vite plus `@cloudflare/vite-plugin` (no unstable Wrangler API). Upgrades of Vite, the plugin or Wrangler require rechecking dev, preview smoke and the dry-run; the Worker `compatibility_date` must not be newer than the installed workerd supports.
 
 No station/fare functionality, provider integration, product API contract, data store, Docker/native scaffolding, deployment or release automation is implemented. CI quality gates exist; see [quality gates](agents/quality-gates.md). Existing preparation checks remain separate; see [reviewed skills](agents/skills.md).
 
