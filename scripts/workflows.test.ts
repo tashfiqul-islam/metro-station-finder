@@ -19,10 +19,12 @@ jobs:
     name: Fixture job
     runs-on: ubuntu-latest
     steps:
-      - uses: ${options.uses ?? CHECKOUT}
+      - name: Check out
+        uses: ${options.uses ?? CHECKOUT}
         with:
           persist-credentials: false
-      - run: ${options.run ?? "echo ok"}
+      - name: Say ok
+        run: ${options.run ?? "echo ok"}
 `;
 }
 
@@ -74,3 +76,10 @@ test("FND-S4 an empty directory fails visibly", async () => {
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test("METRO-23 rejects a step without a name", async () => {
+  const unnamed = workflow({}).replace("      - name: Say ok\n        run:", "      - run:");
+  const result = await lint(unnamed);
+  expect(result.ok).toBe(false);
+  expect(result.output).toContain("step without a name");
+}, 60000);
