@@ -10,9 +10,14 @@
       "source": "https://github.com/mattpocock/skills",
       "provenance": "Installer .agents/.skill-lock.json names source and folder hashes; no upstream commit attested. SHA256 below pins reviewed bytes.",
       "root": "pocock"
+    },
+    {
+      "root": "tooling",
+      "source": "Installed local skill copies",
+      "provenance": "Reviewed installed Bun and Context7 guidance; upstream commit and collection version not attested. SHA256 below pins reviewed bytes."
     }
   ],
-  "reviewedAt": "2026-11-02",
+  "reviewedAt": "2026-11-03",
   "files": [
     {
       "path": ".codex-plugin/plugin.json",
@@ -123,6 +128,46 @@
       "path": "triage/SKILL.md",
       "sha256": "ACDC9B0A40F8821CE9A6479E5781C37C30AC2E1E1E27A8377437AF09472C16FE",
       "root": "pocock"
+    },
+    {
+      "sha256": "1A38AD9B188C393052F58D95657A1C35EA6AAFC8B5A27F198F3922912F70BBE7",
+      "path": "skills/using-superpowers/references/codex-tools.md",
+      "root": "superpowers"
+    },
+    {
+      "sha256": "3EA21C5FC1AF1A190AC8A9D19CEB0849B47BF2FFE27B87DFFCC21B6A0539776C",
+      "path": "skills/subagent-driven-development/references/preflight.md",
+      "root": "superpowers"
+    },
+    {
+      "sha256": "BFED55C8F19D0FF6ED57B0FE09127C92890E9311C6C73917129598826BF9EBE8",
+      "path": "skills/subagent-driven-development/task-reviewer-prompt.md",
+      "root": "superpowers"
+    },
+    {
+      "sha256": "2FD999D86E5DD0B9B32AAF93F2A41663EF30B3E3CB78FB2FD5CB450EB59EB9DE",
+      "path": "skills/subagent-driven-development/references/final-review.md",
+      "root": "superpowers"
+    },
+    {
+      "sha256": "82E370BE6B3447523816286195571E4216BA56BA1AD6AD0E87862294C4C78DCB",
+      "path": "skills/requesting-code-review/code-reviewer.md",
+      "root": "superpowers"
+    },
+    {
+      "sha256": "51471C853306FF92CA8BB41DCAEA05F31C0E46B03651F8F3C99754B7172F4AE1",
+      "path": "skills/test-driven-development/writing-good-tests.md",
+      "root": "superpowers"
+    },
+    {
+      "sha256": "53594800844CD234FEA2569C17C7CD5F6854A53C34A1C32C6E1C073B485A8003",
+      "path": "bun/SKILL.md",
+      "root": "tooling"
+    },
+    {
+      "sha256": "8BC999D5162EDC202D618B096F84FF4E18252E3375B6F8D1796AB79A8301B8C6",
+      "path": "context7-mcp/SKILL.md",
+      "root": "tooling"
     }
   ],
   "schemaVersion": 1

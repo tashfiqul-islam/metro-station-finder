@@ -16,7 +16,7 @@ Use isolated checkout/worktree when required. Preserve explicit exclusions. Subm
 
 ## Integration exception
 
-Owner currently requires ticket PRs target `feature/metro-rebuild`. Merge only under explicit ticket authorization; do not change default branch or delete master under METRO-10. For the authorized rebuild tickets, the owner permits Done after verified merge to `feature/metro-rebuild`, required CI and resolved applicable review. This overrides the source guide main-only rule for those tickets. Native Merged-to-Done automation cannot check PR base or CI; flag/reconcile premature state transitions rather than redefine Done. METRO-11 owns creating main from the independent rebuild lineage and switching default; no migration occurs in METRO-10.
+Owner currently requires ticket PRs target `feature/metro-rebuild`. Merge only under explicit ticket authorization. For the authorized rebuild tickets, the owner permits Done after verified merge to `feature/metro-rebuild`, required CI and resolved applicable review. This overrides the source guide main-only rule for those tickets. Native Merged-to-Done automation cannot check PR base or CI; flag/reconcile premature state transitions rather than redefine Done. METRO-11 prepares main from reviewed independent rebuild lineage. Default stays unchanged until v1.0.0 is fully ready to release; follow the [release-time transition](../development.md#release-time-branch-transition). Master removal remains separately authorized.
 
 Done does not mean released. Release assignment records intended shipping; GitHub tag/release SHA plus deployment/smoke evidence establishes shipping. See [maintenance](maintenance.md) and [quality gates](quality-gates.md).
 
