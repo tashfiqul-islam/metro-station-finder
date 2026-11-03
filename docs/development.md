@@ -9,20 +9,20 @@ Prerequisites: mise, PowerShell 7 for preparation checks, and an OS supported by
 Review `mise.toml`, then trust it through your mise installation if prompted. Use explicit tool versions so unrelated globally configured tools are not installed:
 
 ```powershell
-mise install bun@1.4.0 node@24.22.2
-mise exec bun@1.4.0 node@24.22.2 -- bun run bootstrap
-mise exec bun@1.4.0 node@24.22.2 -- bun run check
-mise exec bun@1.4.0 node@24.22.2 -- bun run build
-mise exec bun@1.4.0 node@24.22.2 -- bun run dev
+mise install bun@1.4.4 node@26.13.0
+mise exec bun@1.4.4 node@26.13.0 -- bun run bootstrap
+mise exec bun@1.4.4 node@26.13.0 -- bun run check
+mise exec bun@1.4.4 node@26.13.0 -- bun run build
+mise exec bun@1.4.4 node@26.13.0 -- bun run dev
 ```
 
-`bootstrap` verifies exact runtimes and installs the committed single `bun.lock` with `--frozen-lockfile`; dependency drift fails. `check` runs the narrow core import guard, Bun tests, root typecheck and a standalone pure-core typecheck. `build` creates `apps/web/dist` and dry-runs Wrangler into `apps/api/dist`; it uploads/deploys nothing. `dev` starts web at `http://127.0.0.1:5173` and local workerd at `http://127.0.0.1:8787`; Ctrl+C disposes both. Ports must be free. Worker status is `GET /__scaffold/status`; unknown routes return 404. The web consumes core directly and makes no API request.
+`bootstrap` verifies exact runtimes and installs the committed single `bun.lock` with `--frozen-lockfile`; dependency drift fails. `check` runs the narrow core import guard, Bun tests, isolated browser, Worker, Node tools, Bun tests and pure-core typechecks, plus configuration formatting. `build` creates `apps/web/dist` and dry-runs Wrangler into `apps/api/dist`; it uploads/deploys nothing. `dev` starts web at `http://127.0.0.1:5173` and local workerd at `http://127.0.0.1:8787`; Ctrl+C disposes both. Ports must be free. Worker status is `GET /__scaffold/status`; unknown routes return 404. The web consumes core directly and makes no API request.
 
 For the real browser/local Worker smoke after build:
 
 ```powershell
-mise exec bun@1.4.0 node@24.22.2 -- bunx --no-install playwright install chromium
-mise exec bun@1.4.0 node@24.22.2 -- bun run smoke
+mise exec bun@1.4.4 node@26.13.0 -- bunx --no-install playwright install chromium
+mise exec bun@1.4.4 node@26.13.0 -- bun run smoke
 ```
 
 Smoke starts the built web preview on 4173 and local Worker on 8787, checks actual HTTP status/JSON/404, renders the shared result in Chromium and rejects page/console errors. Worker local execution bundles source; the separate dry-run verifies the production Worker bundle. Playwright browser downloads are environment tooling, not part of `bootstrap`. Smoke always closes its local servers and browser on assertion failure.
@@ -62,3 +62,14 @@ Before the eventual authorized switch:
 **Confirmed / controller-observed, 2026-11-03:** GitHub readback had default master at `af903d7a2c1bf08165cfcf4a00ca0c0d73eedead`, rebuild at `92739bd32ba948106d600a4f73fcf6deb0036a8b`, main absent, both observed branches unprotected, rulesets empty. These are a dated snapshot, not a release-time protection guarantee. No protection/default/deployment mutation belongs to this scaffold.
 
 See [version and verification evidence](evidence/metro-11.md).
+
+
+## Configuration ownership
+
+**Confirmed / Repo-verified:** `package.json` owns exact runtime metadata and direct dependency pins; `mise.toml` mirrors runtime versions and delegates task commands. `scripts/tools.ts` parses required package/mise/bunfig files, rejects malformed/missing/mismatched fields and checks effective Bun/Node versions before normal commands. `bunfig.toml` enforces exact additions, disabled automatic install, isolated linking and text lockfiles. Bootstrap explicitly uses the frozen committed lockfile. Update pins and lock together; run all gates after changes.
+
+`bun run format:check` checks tracked and newly added non-ignored JSON/JSONC/TOML using pinned Oxfmt. It never writes; `bun run format` writes configuration formatting. This checks syntax/layout, not arbitrary configuration schemas. The explicit guard checks runtime/install semantics; TypeScript, Vite and Wrangler validate their own configuration during the gates. `.editorconfig` and `.gitattributes` specify UTF-8/LF/indent policy. Ignore rules cover local secrets and generated files, while nested `.env.example` and `.dev.vars.example` remain trackable; examples must contain safe dummy values.
+
+Shared compiler policy lives in `tsconfig.base.json`. Browser uses DOM+React types; Worker uses Cloudflare types; Node tools use Node types; tests and Bun-only tooling use Bun types; core uses ES types only. All enable strict checks including unchecked indexing, exact optional properties, returns, unused declarations/parameters and explicit property access. `scripts/types.test.ts` compiles real fixture programs with positive controls and rejected foreign globals.
+
+**Confirmed / Repo-verified compatibility exception:** only `scripts/tsconfig.json` sets `skipLibCheck: true`. Pinned Playwright declarations reference browser Node/HTMLElement/SVGElement, and Wrangler's imported Miniflare declarations reference unpublished internal packages and missing declarations. Explicit `types: ["node"]` cannot prevent declarations reached by actual imports from being checked. Adding DOM would leak browser globals; removing typed runtime imports or introducing ambient stubs would hide API usage. Source checking stays strict and real negative source tests remain active. All other projects check library declarations. TypeScript 7 supplies `tsc`; `@typescript/typescript6` supplies only the JavaScript compiler API used by the core import guard. Revisit both exceptions on upgrades. See [METRO-16 evidence](evidence/metro-16.md).

@@ -1,0 +1,6 @@
+# Explicit installs only; exact direct pins and one readable workspace lock.
+[install]
+exact = true
+auto = "disable"
+linker = "isolated"
+saveTextLockfile = true

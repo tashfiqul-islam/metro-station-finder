@@ -4,5 +4,5 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-11-02",
   "workers_dev": false,
-  "send_metrics": false
+  "send_metrics": false,
 }

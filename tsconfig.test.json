@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": { "types": ["bun"] },
+  "include": [
+    "scripts/**/*.test.ts",
+    "packages/**/*.test.ts",
+    "scripts/configuration.ts",
+    "scripts/tools.ts"
+  ]
+}

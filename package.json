@@ -1,24 +1,38 @@
 {
   "name": "metro-workspace",
   "private": true,
+  "description": "Independent Metro rebuild workspace",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "type": "module",
-  "packageManager": "bun@1.4.0",
-  "engines": { "node": "24.22.2", "bun": "1.4.0" },
-  "workspaces": ["apps/*", "packages/*"],
   "scripts": {
     "bootstrap": "bun run scripts/tools.ts && bun install --frozen-lockfile",
     "dev": "bun run scripts/tools.ts && node scripts/dev.ts",
-    "check": "bun run scripts/tools.ts && bun run scripts/boundaries.ts && bun test && tsc -p tsconfig.json && tsc -p packages/core/tsconfig.json",
+    "check": "bun run scripts/tools.ts && bun run format:check && bun run scripts/boundaries.ts && bun test && bun run typecheck",
     "build": "bun run scripts/tools.ts && bun run --cwd apps/web build && bun run --cwd apps/api build",
-    "smoke": "bun run scripts/tools.ts && node scripts/smoke.ts"
+    "smoke": "bun run scripts/tools.ts && node scripts/smoke.ts",
+    "typecheck": "tsc -p apps/web/tsconfig.json && tsc -p apps/api/tsconfig.json && tsc -p scripts/tsconfig.json && tsc -p tsconfig.test.json && tsc -p packages/core/tsconfig.json",
+    "format": "node scripts/format.ts --write",
+    "format:check": "node scripts/format.ts --check"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "5.20261103.1",
     "@types/bun": "1.4.4",
+    "@types/node": "26.6.6",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
+    "@typescript/typescript6": "6.0.2",
+    "oxfmt": "0.75.0",
     "playwright": "1.64.1",
-    "typescript": "6.0.2",
+    "typescript": "7.0.2",
     "vite": "8.3.5",
     "wrangler": "4.156.2"
-  }
+  },
+  "engines": {
+    "bun": "1.4.4",
+    "node": "26.13.0"
+  },
+  "packageManager": "bun@1.4.4"
 }
