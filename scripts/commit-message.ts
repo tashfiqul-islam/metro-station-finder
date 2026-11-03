@@ -25,7 +25,6 @@ function validateRange(range: string): string[] {
     env: cleanGitEnv(),
   });
   const commits = output.split("\n").filter(Boolean);
-  if (!commits.length) throw new Error(`No commits in range ${range}`);
   return commits.flatMap((entry) => {
     const [sha = "", subject = ""] = entry.split("\0");
     const error = validateSubject(subject);

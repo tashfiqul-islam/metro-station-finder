@@ -12,7 +12,14 @@ const GITLINK_MODE = "160000";
 const history = process.argv[2] === "--history";
 const root = resolve((history ? process.argv[3] : process.argv[2]) ?? ".");
 if (history) {
-  // Full Git history, redacted. Needs full clone depth (CI checks out with fetch-depth: 0).
+  // Full Git history, redacted. Needs full clone depth (CI checks out with fetch-depth: 0); a shallow
+  // clone would silently scan only part of the history, so it fails visibly instead.
+  const shallow = execFileSync("git", ["-C", root, "rev-parse", "--is-shallow-repository"], {
+    encoding: "utf8",
+    env: cleanGitEnv(),
+  }).trim();
+  if (shallow !== "false")
+    throw new Error("History scan requires a full clone; fetch with fetch-depth: 0");
   const version = await gitleaksVersion(fileURLToPath(new URL("..", import.meta.url)));
   const result = spawnSync(
     "mise",

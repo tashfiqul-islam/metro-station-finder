@@ -162,3 +162,15 @@ test("FND-S5 installed commit-msg hook accepts a Git merge subject", async () =>
     await rm(root, { recursive: true, force: true });
   }
 }, 120000);
+
+test("FND-S5 range mode accepts an empty range (nothing to validate)", async () => {
+  const { root, run, ok } = await repo();
+  try {
+    await writeFile(join(root, "a.txt"), "1\n");
+    ok(["git", "add", "."]);
+    ok(["git", "commit", "-m", "feat: base"]);
+    expect(run(["node", "scripts/commit-message.ts", "--range", "HEAD..HEAD"]).exitCode).toBe(0);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}, 60000);
