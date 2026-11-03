@@ -1,6 +1,8 @@
 import { spawnSync } from "node:child_process";
-import { readdirSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+
+import { unnamedSteps } from "./workflow-steps.ts";
 
 /**
  * Lints GitHub workflow files with the mise-pinned actionlint (syntax and expressions) and zizmor
@@ -34,6 +36,12 @@ export function lintWorkflows(directory: string): { ok: boolean; output: string 
     if (result.error) throw result.error;
     output += `${result.stdout}${result.stderr}`;
     if (result.status !== 0) ok = false;
+  }
+  for (const file of files) {
+    for (const step of unnamedSteps(readFileSync(file, "utf8"))) {
+      output += `${file}: step without a name (${step})\n`;
+      ok = false;
+    }
   }
   // Tool chatter on success ("No findings to report") is not signal.
   return { ok, output: ok ? "" : output };
