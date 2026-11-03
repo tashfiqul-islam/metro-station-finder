@@ -18,13 +18,13 @@ Identity lookup: the filtered external-identity request returned 404 (ambiguous)
 
 **Controller-reported local runs** (command output not committed; commands reproducible from the repository), on this branch on 2026-11-03 under `mise exec --` (Bun 1.4.4, Node 26.13.0) after `bun run bootstrap` (frozen lockfile):
 
-| Criterion | Check | Result |
-| --- | --- | --- |
-| SKL-1 | Relative-link resolution over `AGENTS.md`, `issue-tracker.md`, `triage-labels.md`, `domain.md` and the specification mirror; count of `## Agent skills` headings | 0 broken links; exactly 1 section |
-| SKL-2/3/4 | Text scan for `gh issue`, label creation and `CONTEXT.md` in `AGENTS.md`, `issue-tracker.md`, `triage-labels.md` and `domain.md` | Only prohibitions match; no instruction to use them |
-| SKL-5 | `bun run check` | Format clean (17 files), boundary passed, 80 tests / 134 expectations, five type projects passed |
-| SKL-5 | `scripts/verify-metro-preparation.ps1` with reviewed roots | PASS: 30 skill files, 2 tickets |
-| SKL-5 | `scripts/test-metro-preparation.ps1` with reviewed roots | PASS: 11 negative cases |
+| Criterion | Check                                                                                                                                                            | Result                                                                                           |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| SKL-1     | Relative-link resolution over `AGENTS.md`, `issue-tracker.md`, `triage-labels.md`, `domain.md` and the specification mirror; count of `## Agent skills` headings | 0 broken links; exactly 1 section                                                                |
+| SKL-2/3/4 | Text scan for `gh issue`, label creation and `CONTEXT.md` in `AGENTS.md`, `issue-tracker.md`, `triage-labels.md` and `domain.md`                                 | Only prohibitions match; no instruction to use them                                              |
+| SKL-5     | `bun run check`                                                                                                                                                  | Format clean (17 files), boundary passed, 80 tests / 134 expectations, five type projects passed |
+| SKL-5     | `scripts/verify-metro-preparation.ps1` with reviewed roots                                                                                                       | PASS: 30 skill files, 2 tickets                                                                  |
+| SKL-5     | `scripts/test-metro-preparation.ps1` with reviewed roots                                                                                                         | PASS: 11 negative cases                                                                          |
 
 Fail-on-base: base `AGENTS.md` has no Agent skills section and base has no `docs/agents/issue-tracker.md`, so SKL-1 cannot pass on base.
 
