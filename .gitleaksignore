@@ -1,0 +1,5 @@
+# Legacy Next build output committed in 2024 (pre-rebuild lineage). Two gcp-api-key hits: the browser
+# Maps key the legacy app shipped to clients. Owner approved these two exact fingerprints on 2026-11-03
+# (METRO-20). The key value is not recorded here; restrict or rotate it with the provider.
+c36908bd0da23b41884d16b1f54e9f4bd7485b0a:out/_next/static/chunks/658.703ec5399e572adf.js:gcp-api-key:1
+c36908bd0da23b41884d16b1f54e9f4bd7485b0a:out/_next/static/chunks/pages/index-0de7add5c530ff48.js:gcp-api-key:1

@@ -25,3 +25,4 @@
 /.vscode/ @tashfiqul-islam
 /docs/adr/ @tashfiqul-islam
 /.github/pull_request_template.md @tashfiqul-islam
+/.gitleaksignore @tashfiqul-islam

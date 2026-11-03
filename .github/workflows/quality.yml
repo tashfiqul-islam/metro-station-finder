@@ -87,6 +87,8 @@ jobs:
           restore-keys: bun-${{ runner.os }}-
       - run: bun run bootstrap
       - run: bun run scan
+      - name: Scan full Git history for secrets
+        run: bun run scan:history
   quality:
     name: Quality gates
     if: ${{ always() }}
