@@ -23,5 +23,5 @@ async function sizes(directory: string): Promise<{ raw: number; gzip: number }> 
 const measured = await sizes(root);
 if (measured.raw === 0) throw new Error("No production JS/CSS artifacts found");
 console.log(`Production JS/CSS: ${measured.raw} bytes raw; ${measured.gzip} bytes gzip`);
-if (measured.raw > 250_000 || measured.gzip > 80_000)
+if (measured.raw > 1_000 || measured.gzip > 80_000)
   throw new Error("Bundle budget exceeded: 250000 raw / 80000 gzip bytes");
