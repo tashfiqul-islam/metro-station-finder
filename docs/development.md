@@ -18,14 +18,14 @@ mise exec bun@1.4.4 node@26.13.0 -- bun run dev
 
 `bootstrap` verifies exact runtimes and installs the committed single `bun.lock` with `--frozen-lockfile`; dependency drift fails. `check` runs the narrow core import guard, Bun tests, isolated browser, Worker, Node tools, Bun tests and pure-core typechecks, plus source/config formatting, type-aware lint, unused-code and import-graph gates. See [METRO-12 evidence](evidence/metro-12.md) for canonical commands and budgets. `build` runs `vite build` (client assets in `apps/web/dist/client`, Worker bundle in `apps/web/dist/metro_scaffold`) and then dry-runs Wrangler against that generated configuration into `apps/api/dist`; it uploads/deploys nothing. `dev` runs Vite with `@cloudflare/vite-plugin`: the SPA and the Worker API share one origin, `http://127.0.0.1:5173`, with the Worker running in workerd and React Fast Refresh. Ctrl+C stops it. The port must be free (`strictPort` makes an occupied port fail visibly). `GET /api/scaffold/status` returns the status; unknown `/api/*` returns 404 with `{ error: { code, message } }`; other unknown paths serve the SPA. See [ADR-0002](adr/0002-runtime-topology.md) and [ADR-0003](adr/0003-contracts.md).
 
-For the real browser/local Worker smoke after build:
+For the Playwright Test E2E smoke after build (Chromium locally; with `CI=true` it also runs Firefox, WebKit and a mobile viewport, which need `bun run playwright install firefox webkit`):
 
 ```powershell
 mise exec bun@1.4.4 node@26.13.0 -- bun run playwright install chromium
 mise exec bun@1.4.4 node@26.13.0 -- bun run smoke
 ```
 
-Smoke runs `vite preview` on 4173 (web and Worker together in workerd), checks real HTTP status and schema-valid bodies for the status route, the 404 envelope and a deep link, renders the success state in Chromium, injects a 500 to prove the `role="alert"` error state, and rejects page/console errors and axe accessibility violations. The dry-run verifies the production Worker bundle. Playwright browser downloads are environment tooling, not part of `bootstrap`. Smoke always stops the preview process tree and the browser on assertion failure.
+Smoke runs `playwright test` (`@playwright/test`, config in `playwright.config.ts`, specs in `e2e/`) against the built app served by `vite preview` on 4173 (web and Worker together in workerd). It checks real HTTP status and schema-valid bodies for the status route, the 404 and 405 envelopes and a deep link, renders the success state, injects a 500 to prove the `role="alert"` error state, and fails any test on a console or page error or an axe accessibility violation. No retries. Failures keep a trace, a screenshot and an HTML report (`playwright-report/`). The dry-run verifies the production Worker bundle. Playwright browser downloads are environment tooling, not part of `bootstrap`.
 
 On this managed Windows runner, per-call temporary/profile directories changed. Native package install needed a permitted execution context and stable paths. This environment-specific setup was used; ordinary machines need not override these:
 

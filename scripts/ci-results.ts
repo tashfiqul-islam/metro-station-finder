@@ -20,8 +20,12 @@ export function requiredJobsSucceeded(needs: unknown): boolean {
   return REQUIRED_JOBS.every((job) => job in jobs) && Object.values(jobs).every(succeeded);
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const needs: unknown = JSON.parse(process.env["REQUIRED_JOB_RESULTS"] ?? "null");
+/** CLI body: fails unless every required quality job succeeded. */
+export function runCiResults(env: NodeJS.ProcessEnv): void {
+  const needs: unknown = JSON.parse(env["REQUIRED_JOB_RESULTS"] ?? "null");
   if (!requiredJobsSucceeded(needs)) throw new Error("Required quality jobs did not all succeed");
   console.log("All required quality jobs succeeded");
 }
+
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url))
+  runCiResults(process.env);

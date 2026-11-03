@@ -6,3 +6,10 @@ linker = "isolated"
 saveTextLockfile = true
 # 3-day release cooldown in seconds; must equal the Renovate minimumReleaseAge.
 minimumReleaseAge = 259200
+
+[test]
+# Per-file gate (Bun enforces coverageThreshold file by file). No coveragePathIgnorePatterns on purpose.
+coverage = true
+coverageReporter = ["text", "lcov"]
+coverageDir = "coverage"
+coverageThreshold = { lines = 0.9, functions = 0.9 }

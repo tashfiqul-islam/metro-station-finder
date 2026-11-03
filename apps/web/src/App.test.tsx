@@ -1,0 +1,89 @@
+import { afterAll, afterEach, beforeAll, expect, spyOn, test } from "bun:test";
+import { GlobalRegistrator } from "@happy-dom/global-registrator";
+
+// The DOM must exist before React and Testing Library are imported.
+GlobalRegistrator.register();
+const { cleanup, render, screen } = await import("@testing-library/react");
+const { App } = await import("./App");
+
+const realFetch = globalThis.fetch;
+const json = (body: unknown, init: ResponseInit = {}) =>
+  new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { "content-type": "application/json" },
+    ...init,
+  });
+const stubFetch = (handler: () => Promise<Response>) => {
+  globalThis.fetch = handler as unknown as typeof fetch;
+};
+
+beforeAll(() => {
+  (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+});
+afterEach(() => {
+  cleanup();
+  globalThis.fetch = realFetch;
+});
+afterAll(async () => {
+  delete (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT;
+  await GlobalRegistrator.unregister();
+});
+
+test("FND-T2 shows the loading state while the request is pending", () => {
+  stubFetch(() => new Promise<Response>(() => {}));
+  render(<App />);
+  expect(screen.getByRole("heading", { name: "Metro scaffold" })).toBeTruthy();
+  expect(screen.getByRole("status").textContent).toContain("Loading");
+  expect(screen.queryByRole("alert")).toBeNull();
+});
+
+test("FND-T2 shows the validated status on success", async () => {
+  stubFetch(() => Promise.resolve(json({ kind: "synthetic-scaffold", ready: true })));
+  render(<App />);
+  const output = await screen.findByLabelText("Scaffold status");
+  expect(JSON.parse(output.textContent ?? "")).toEqual({ kind: "synthetic-scaffold", ready: true });
+  expect(screen.queryByRole("alert")).toBeNull();
+});
+
+test("FND-T2 shows an alert for an HTTP error", async () => {
+  stubFetch(() =>
+    Promise.resolve(json({ error: { code: "internal_error", message: "x" } }, { status: 500 })),
+  );
+  render(<App />);
+  const alert = await screen.findByRole("alert");
+  expect(alert.textContent).toContain("unavailable");
+  expect(alert.textContent).toContain("HTTP 500");
+  expect(screen.queryByLabelText("Scaffold status")).toBeNull();
+});
+
+test("FND-T2 shows an alert for a body that breaks the contract", async () => {
+  stubFetch(() => Promise.resolve(json({ kind: "synthetic-scaffold", ready: false })));
+  render(<App />);
+  expect((await screen.findByRole("alert")).textContent).toContain("unavailable");
+  expect(screen.queryByLabelText("Scaffold status")).toBeNull();
+});
+
+test("FND-T2 shows an alert for a network failure", async () => {
+  stubFetch(() => Promise.reject(new TypeError("offline")));
+  render(<App />);
+  expect((await screen.findByRole("alert")).textContent).toContain("offline");
+});
+
+test("FND-T2 shows a generic message for a non-Error rejection", async () => {
+  stubFetch(() => Promise.reject("boom" as unknown as Error));
+  render(<App />);
+  expect((await screen.findByRole("alert")).textContent).toContain("Unknown error");
+});
+
+test("FND-T2 unmounting before the response arrives updates nothing and throws nothing", async () => {
+  let resolve: (response: Response) => void = () => {};
+  stubFetch(() => new Promise<Response>((done) => (resolve = done)));
+  const errors = spyOn(console, "error").mockImplementation(() => {});
+  const view = render(<App />);
+  view.unmount();
+  resolve(json({ kind: "synthetic-scaffold", ready: true }));
+  await new Promise((done) => setTimeout(done, 10));
+  expect(document.body.textContent).toBe("");
+  expect(errors).not.toHaveBeenCalled();
+  errors.mockRestore();
+});

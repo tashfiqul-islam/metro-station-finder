@@ -2,8 +2,8 @@
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "workspaces": {
     ".": {
-      "entry": ["scripts/*.ts"],
-      "project": ["scripts/**/*.ts"],
+      "entry": ["scripts/*.ts", "e2e/**/*.ts"],
+      "project": ["scripts/**/*.ts", "e2e/**/*.ts"],
       "ignoreBinaries": ["mise", "renovate-config-validator"]
     },
     "apps/web": {
