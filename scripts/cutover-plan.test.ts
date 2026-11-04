@@ -126,10 +126,24 @@ test("METRO-61 development.md replaces the transition text with a pointer to ADR
 
 test("METRO-61 quality.yml keeps the feature-branch push trigger and says why", () => {
   const workflow = read(".github/workflows/quality.yml");
-  expect(JSON.stringify(Bun.YAML.parse(workflow))).toContain(
-    '"push":{"branches":["feature/metro-rebuild","main"]}',
-  );
-  expect(workflow).toMatch(/#[^\n]*runbook step 6\.3/u);
+  const parsed: unknown = Bun.YAML.parse(workflow);
+  const on = Reflect.get(Object(parsed), "on") as unknown;
+  const push = Reflect.get(Object(on), "push") as unknown;
+  const branches = Reflect.get(Object(push), "branches") as unknown;
+  expect(branches).toEqual(["feature/metro-rebuild", "main"]);
+  const block = /^ {2}push:\n((?: {4}.*\n)+)/mu.exec(workflow)?.[1] ?? "";
+  expect(block).toMatch(/^ {4}#[^\n]*runbook step 6\.3/mu);
+});
+
+test("METRO-61 the ADR no longer says a Renovate base branch must change at the switch", () => {
+  expect(adr).not.toContain('baseBranchPatterns: ["feature/metro-rebuild"]');
+  expect(adr).not.toMatch(/baseBranchPatterns[^\n]{0,200}must change/u);
+  expect(adr).toContain("no Renovate edit");
+});
+
+test("METRO-61 the runbook separates retiring the branch (6.3) from the 6.4 pull request", () => {
+  expect(runbook).toContain("window between");
+  expect(runbook).toMatch(/6\.3[^\n]*retires?[^\n]*6\.4|6\.4[^\n]*removes the[^\n]*trigger/u);
 });
 
 test("METRO-61 the ADR says the base-branch documents flip at runbook step 6.4", () => {
