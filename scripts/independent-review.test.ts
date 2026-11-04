@@ -119,4 +119,21 @@ test("METRO-60 the docs name both required checks and the pull request Reviewer 
   expect(gates).toContain("`Quality gates`");
   expect(gates).toContain("`Reviewer record`");
   expect(gates).toMatch(/required (status )?check/iu);
+
+  const rules =
+    gates.split(/\r?\n/u).find((line) => line.startsWith("External branch rules")) ?? "";
+  expect(rules).toContain("`Quality gates`");
+  expect(rules).toContain("`Reviewer record`");
+  expect(rules).toContain("`feature/metro-rebuild`");
+  expect(rules).toContain("`main`");
+  expect(enforcement).toContain("15368");
+  expect(enforcement).toMatch(
+    /`## Reviewer` section carrying a reference \(a URL, a `#<number>` reference, or a `session:` \/ `run:` token\)/u,
+  );
+  const negative = /Reviewer record[^.]{0,40}not required/iu;
+  expect(workflow).not.toMatch(negative);
+  expect(gates).not.toMatch(negative);
+  const adr = read("docs/adr/0004-supply-chain-and-ci-policy.md");
+  expect(adr).toContain("2026-11-05");
+  expect(adr).toMatch(/`Quality gates` and `Reviewer record`/u);
 });
