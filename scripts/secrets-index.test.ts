@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
 import { cleanGitEnv } from "./git-env";
+import { gitArgs, objectSizes, planChunks, readChunk, stagingPath } from "./secrets-index";
 
 /**
  * METRO-28: the secret scan reads what the index holds (what the next commit would contain), never
@@ -49,9 +50,24 @@ test(
         await mkdir(outside, { recursive: true });
         await writeFile(join(outside, "stolen.txt"), leaking);
         await rm(join(root, "AGENTS.md"));
-        await symlink(join(outside, "stolen.txt"), join(root, "AGENTS.md"));
+        try {
+          await symlink(join(outside, "stolen.txt"), join(root, "AGENTS.md"));
+        } catch (error) {
+          // Never skip silently: this test is the proof for acceptance criterion 1.
+          throw new Error(
+            "Cannot create a symlink, so the METRO-28 symlink test cannot run. On Windows enable " +
+              "Developer Mode (Settings > System > For developers) or run with symlink privilege; " +
+              `on POSIX check file system support. Cause: ${String(error)}`,
+            { cause: error },
+          );
+        }
         // Unstaged typechange: the index still holds the plain regular file.
-        expect(git(root, "status", "--porcelain").stdout.toString()).toContain("T AGENTS.md");
+        const status = git(root, "status", "--porcelain").stdout.toString();
+        if (!status.includes("T AGENTS.md"))
+          throw new Error(
+            "Git does not see the working-tree symlink as a typechange (core.symlinks=false?), so " +
+              `the METRO-28 symlink test cannot prove anything here. Enable symlink support. Status: ${status}`,
+          );
         const result = secretScan(root);
         // Following the link would copy the outside credential into the scan and fail the gate.
         expect(output(result)).toContain("no leaks found");
@@ -116,16 +132,125 @@ test(
   30000,
 );
 
+/** Object id staged for `path` (stage 0). */
+function indexedObject(root: string, path: string): string {
+  const line = git(root, "ls-files", "-s", "--", path).stdout.toString().trim();
+  return line.split(/\s+/u)[1] ?? "";
+}
+
 test(
-  "METRO-28 the committed bytes are scanned without line-ending conversion",
+  "METRO-28 the scan reads the stored (LF) bytes, not the CRLF working-tree bytes",
+  () =>
+    fixture(async (root) => {
+      expect(git(root, "config", "core.autocrlf", "true").exitCode).toBe(0);
+      await writeFile(join(root, "crlf.txt"), "first\r\nsecond\r\n");
+      expect(git(root, "add", "crlf.txt").exitCode).toBe(0);
+      const object = indexedObject(root, "crlf.txt");
+      const sizes = objectSizes(root, [object]);
+      const stored = readChunk(root, [object], sizes).get(object);
+      expect(stored?.toString("utf8")).toBe("first\nsecond\n");
+      // The working tree still holds CRLF, so reading it (the METRO-27 behaviour) would differ.
+      expect(await Bun.file(join(root, "crlf.txt")).text()).toBe("first\r\nsecond\r\n");
+    }),
+  30000,
+);
+
+test(
+  "METRO-28 a local replace ref cannot change the scanned bytes",
   () =>
     fixture(async (root) => {
       await track(root, "AGENTS.md", "plain\n");
-      await writeFile(join(root, "crlf.txt"), `a\r\ntoken = ${FAKE_TOKEN}\r\n`);
-      expect(git(root, "-c", "core.autocrlf=false", "add", "crlf.txt").exitCode).toBe(0);
+      await track(root, "fixture.ts", leaking);
+      await writeFile(join(root, "clean.txt"), "clean\n");
+      const clean = git(root, "hash-object", "-w", "clean.txt").stdout.toString().trim();
+      expect(
+        git(root, "replace", "--force", indexedObject(root, "fixture.ts"), clean).exitCode,
+      ).toBe(0);
       const result = secretScan(root);
       expect(output(result)).toContain("leaks found");
       expect(result.exitCode).not.toBe(0);
+    }),
+  30000,
+);
+
+test(
+  "METRO-28 paths that differ only by case are all scanned",
+  () =>
+    fixture(async (root) => {
+      await track(root, "AGENTS.md", "plain\n");
+      const stage = async (path: string, content: string) => {
+        await Bun.write(join(root, "scratch.txt"), content);
+        const hash = git(root, "hash-object", "-w", "scratch.txt").stdout.toString().trim();
+        expect(
+          git(root, "update-index", "--add", "--cacheinfo", `100644,${hash},${path}`).exitCode,
+        ).toBe(0);
+      };
+      // Sorted order puts "A.txt" first; on a case-insensitive disk "a.txt" would overwrite it.
+      await stage("A.txt", leaking);
+      await stage("a.txt", "clean\n");
+      const result = secretScan(root);
+      expect(output(result)).toContain("leaks found");
+      expect(result.exitCode).not.toBe(0);
+    }),
+  30000,
+);
+
+test(
+  "METRO-28 many chunks: every file is staged and scanned when each blob is its own chunk",
+  () =>
+    fixture(async (root) => {
+      await track(root, "AGENTS.md", "plain\n");
+      await track(root, "b.txt", "other\n");
+      await track(root, "fixture.ts", leaking);
+      const result = Bun.spawnSync(["node", resolve("scripts/secrets.ts"), root], {
+        env: { ...cleanGitEnv(), METRO_SECRETS_CHUNK_BYTES: "1" },
+      });
+      expect(output(result)).toContain("leaks found");
+      expect(result.exitCode).not.toBe(0);
+      const bad = Bun.spawnSync(["node", resolve("scripts/secrets.ts"), root], {
+        env: { ...cleanGitEnv(), METRO_SECRETS_CHUNK_BYTES: "0" },
+      });
+      expect(bad.stderr.toString()).toContain("METRO_SECRETS_CHUNK_BYTES");
+      expect(bad.exitCode).not.toBe(0);
+    }),
+  60000,
+);
+
+test("METRO-28 planChunks bounds each chunk and isolates an oversized blob", () => {
+  const sizes = new Map([
+    ["a", 60],
+    ["b", 60],
+    ["c", 10],
+    ["d", 500],
+    ["e", 1],
+  ]);
+  const chunks = planChunks(sizes, 100);
+  expect(chunks).toEqual([["a"], ["b", "c"], ["d"], ["e"]]);
+  for (const chunk of chunks) {
+    const total = chunk.reduce((sum, object) => sum + (sizes.get(object) ?? 0), 0);
+    expect(chunk.length === 1 || total <= 100).toBe(true);
+  }
+  expect(planChunks(new Map(), 100)).toEqual([]);
+});
+
+test("METRO-28 staging names are index-numbered and git runs without replace objects", () => {
+  expect(stagingPath("/s", 3, "A.txt")).not.toBe(stagingPath("/s", 4, "a.txt"));
+  expect(stagingPath("/s", 3, "docs/a.md").replaceAll("\\", "/")).toBe("/s/3/docs/a.md");
+  expect(gitArgs("/r", ["ls-files"])).toEqual(["--no-replace-objects", "-C", "/r", "ls-files"]);
+});
+
+test(
+  "METRO-28 unreadable index objects fail visibly",
+  () =>
+    fixture(async (root) => {
+      await track(root, "fixture.ts", "x\n");
+      const object = indexedObject(root, "fixture.ts");
+      expect(objectSizes(root, [])).toEqual(new Map());
+      const tree = git(root, "write-tree").stdout.toString().trim();
+      expect(() => objectSizes(root, [tree])).toThrow("not a readable blob");
+      expect(() => objectSizes(root, ["0".repeat(object.length)])).toThrow("not a readable blob");
+      const wrong = new Map([[object, 999]]);
+      expect(() => readChunk(root, [object], wrong)).toThrow();
     }),
   30000,
 );
