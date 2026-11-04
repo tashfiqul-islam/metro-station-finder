@@ -31,6 +31,7 @@ test("FND-T1 runCiResults passes only when every required job succeeded", () => 
       checks: { result: "success" },
       build: { result: "success" },
       security: { result: "success" },
+      review: { result: "success" },
     });
     runCiResults({ REQUIRED_JOB_RESULTS: ok });
     expect(spies.log).toHaveBeenCalledWith("All required quality jobs succeeded");

@@ -6,6 +6,7 @@ const passing = {
   checks: { result: "success" },
   build: { result: "success" },
   security: { result: "success" },
+  review: { result: "success" },
 };
 test("aggregate accepts all required successes", () =>
   expect(requiredJobsSucceeded(passing)).toBe(true));

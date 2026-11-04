@@ -22,7 +22,7 @@ test("METRO-13 the preview job waits for every quality job and only runs for sam
 });
 
 test("METRO-13 the required aggregate does not depend on the preview job", () => {
-  expect(job(quality, "quality")).toContain("needs: [checks, build, security]");
+  expect(job(quality, "quality")).toContain("needs: [checks, build, security, review]");
   expect(job(quality, "quality")).not.toContain("preview");
 });
 

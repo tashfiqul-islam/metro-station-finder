@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 
 import { isRecord } from "./guards.ts";
 
-const REQUIRED_JOBS = ["checks", "build", "security"] as const;
+const REQUIRED_JOBS = ["checks", "build", "security", "review"] as const;
 
 function succeeded(entry: unknown): boolean {
   return (

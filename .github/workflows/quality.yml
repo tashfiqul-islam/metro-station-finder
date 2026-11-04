@@ -2,6 +2,8 @@ name: Quality
 on:
   pull_request:
     branches: [feature/metro-rebuild, main]
+    # "edited" re-runs the reviewer record check when the body changes; it is not a default type.
+    types: [opened, synchronize, reopened, edited]
   push:
     branches: [feature/metro-rebuild]
 permissions: {}
@@ -123,10 +125,38 @@ jobs:
         run: bun run scan
       - name: Scan full Git history for secrets
         run: bun run scan:history
+  review:
+    name: Reviewer record
+    # Reads the untrusted pull request body only through the PR_BODY environment variable. It needs no token
+    # beyond reading contents: changed paths come from git history, not the API. On push the step is skipped
+    # and the job still succeeds so the "Quality gates" aggregate stays green.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Install pinned tools with mise
+        uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          version: 2026.10.25
+          install_args: node
+          cache: false
+      - name: Require a recorded independent reviewer
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/reviewer-record.ts
   quality:
     name: Quality gates
     if: ${{ always() }}
-    needs: [checks, build, security]
+    needs: [checks, build, security, review]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
