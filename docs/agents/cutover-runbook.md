@@ -11,31 +11,33 @@ Stop at the first unexpected output. Never force-push, never move a tag, never s
 
 ## 0. Prepare (days before)
 
-1. Read-only preflight. It writes nothing and prints PASS, FAIL, INFO or MANUAL; a pass is not authorization.
+1. Read-only preflight. It writes nothing and prints PASS, FAIL, INFO or MANUAL; a pass is not authorization. Re-run it after the pull request to `main` exists (step 2), because the `Quality gates` run of that pull request is attached to the head commit.
 
    ```powershell
    mise exec -- bun run cutover:preflight -- --repo $R --tag $TAG
    ```
 
-2. Offline backup of the legacy history (the only copy of the commits after `v0.0.2`). Store the file outside the repository and outside the cloud copy of the project.
+2. Offline backup of the legacy history (the only copy of the commits after `v0.0.2`). Store the file outside the repository and outside the cloud copy of the project, and keep a second copy on a different medium.
 
    ```powershell
-   git fetch origin --tags
+   git fetch origin --tags --prune
+   $RECORDED = git rev-parse origin/master      # record this SHA in the release ticket (2026-11-04: af903d7a2c1bf08165cfcf4a00ca0c0d73eedead)
    git bundle create master-final.bundle origin/master
    git bundle verify master-final.bundle
-   git rev-parse origin/master   # record this SHA in the release ticket (2026-11-04: af903d7a2c1bf08165cfcf4a00ca0c0d73eedead)
+   git bundle list-heads master-final.bundle    # the SHA on the origin/master line must equal $RECORDED
+   Get-FileHash master-final.bundle -Algorithm SHA256   # record the hash in the release ticket
    ```
 
-3. Owner decisions before the window: the fate of the legacy Pages site and the `github-pages` environment (ADR-0008 item 6); who is rollback owner; the time window.
-4. Optional dress rehearsal of draft, publish and sync with a prerelease. The tag is permanent; use a number you accept (`v1.0.0-rc.1`), create the Plane release of that name first.
+3. Save what the retirement step deletes, so it can be recreated:
 
    ```powershell
-   gh workflow run release-draft.yml --repo $R --ref feature/metro-rebuild -f tag=v1.0.0-rc.1 -f target=feature/metro-rebuild
+   gh api repos/$R/rulesets/26426527 > ruleset-26426527.json
+   gh api repos/$R/environments/release/deployment-branch-policies > release-env-policies.json
    ```
 
-   The workflow must already be registered on GitHub (see the live-test notes in [release-draft](../specifications/release-draft.md)); if it is not, skip the rehearsal and rely on step 4.3.
-
-5. Cutover-prep pull request to `feature/metro-rebuild` (ADR-0008 item 8). It must pass `bun run check` (including `branches:check`) and have a recorded independent review.
+4. Owner decisions before the window (delegated and recorded 2026-11-04): the legacy Pages site is unpublished at cutover after production is live; soak 24 hours to 14 days; the offline bundle is accepted as the only copy of the later `master` history. Still to name: the rollback owner and the time window.
+5. No dress rehearsal before the switch. `release-draft` is `workflow_dispatch` only, and a dispatch needs the workflow file on the default branch (the manual-run page says "your workflow must be in the default branch", Web-verified); the live-test trick that registered it with a throwaway tag is not repeated. The rehearsal is step 3.6, after the switch, and never uses a `v1.0.0-rc.N` tag.
+6. Cutover-prep pull request to `feature/metro-rebuild` (its own ticket; ADR-0008 item 8). It must pass `bun run check` (including `branches:check`) and have a recorded independent review. It keeps a push trigger for `feature/metro-rebuild` in `quality.yml` until step 6.3.
 
 ## 1. Freeze
 
@@ -48,10 +50,11 @@ gh run list --repo $R --branch feature/metro-rebuild --limit 5
 
 ## 2. Bring the rebuild into main
 
-The pull request is required by the `main` ruleset (pull_request, signed commits, `Quality gates` and `Reviewer record`, branch up to date). Use a merge commit, not squash or rebase: `main` is an ancestor, so a merge commit keeps the 101 reviewed commits and their signatures.
+The pull request is required by the `main` ruleset (pull_request, signed commits, `Quality gates` and `Reviewer record`, branch up to date). Use a merge commit, not squash or rebase: `main` is an ancestor, so a merge commit keeps the reviewed commits and their signatures.
 
 ```powershell
 gh pr create --repo $R --base main --head feature/metro-rebuild --title "chore(release): bring the rebuild to main for v1.0.0" --body-file cutover-pr.md
+mise exec -- bun run cutover:preflight -- --repo $R --tag $TAG   # now quality-gates-green and commits-verified must pass
 gh pr checks <number> --repo $R --watch
 gh pr merge <number> --repo $R --merge
 git fetch origin
@@ -59,7 +62,7 @@ git diff --stat origin/main origin/feature/metro-rebuild   # must print nothing:
 git rev-parse origin/main                                   # MAIN_SHA, record it
 ```
 
-`cutover-pr.md` follows [the pull request template](../../.github/pull_request_template.md) with a real `Reviewer` section (the cutover-prep review); `none (docs only)` is not allowed because the diff contains code. GitHub signs its own merge commits; that this satisfies `required_signatures` on `main` is Unverified for `main` specifically (it works on `feature/metro-rebuild`, Repo-verified by earlier ticket merges).
+`cutover-pr.md` follows [the pull request template](../../.github/pull_request_template.md) with a real `Reviewer` section (the cutover-prep review); `none (docs only)` is not allowed because the diff contains code. GitHub signs its own merge commits; that this satisfies `required_signatures` on `main` specifically is Unverified (it works on `feature/metro-rebuild`, Repo-verified by earlier ticket merges). The preflight lists every commit in the range that GitHub does not mark verified.
 
 ## 3. Switch the default
 
@@ -88,6 +91,20 @@ Then, in order:
 
 3. Renovate: confirm the Dependency Dashboard issue appears and a first pull request targets `main` (if the Renovate app is installed; Unverified today).
 4. Check the repository's security settings page shows alerts for `main` (Dependabot alerts follow the default branch).
+5. Unpublish the legacy Pages site only after step 4.1 (production live) succeeded:
+
+   ```powershell
+   gh api -X DELETE repos/$R/pages
+   ```
+
+6. Optional rehearsal of draft, publish and sync, only when the preflight line `immutable-releases` says PASS (off), because the throwaway tag must be deletable. Create the Plane release `v0.0.0-cutover-test` first:
+
+   ```powershell
+   gh workflow run release-draft.yml --repo $R --ref main -f tag=v0.0.0-cutover-test -f target=<MAIN_SHA>
+   gh release edit v0.0.0-cutover-test --repo $R --draft=false --prerelease
+   ```
+
+   Approve the runs, check the Plane release and its tag, then delete everything: `gh release delete v0.0.0-cutover-test --repo $R --cleanup-tag --yes`, and the Plane release and release tag by hand. Skip this step if anything about it is unclear; the production release does not depend on it.
 
 ## 4. Production, then the release
 
@@ -115,16 +132,31 @@ Keep `master` for at least 24 hours and until the first scheduled `cloudflare-to
 
 ## 6. Delete master and retire the integration branch (separate owner go)
 
-1. Preconditions: nothing open targets `master`; the bundle verifies again; the Pages decision is executed (if unpublishing: `gh api -X DELETE repos/$R/pages`); the `master` head SHA is recorded.
+1. Gate. All of these must hold; the first two are the backstop for checklist item 15, because the preflight cannot see Actions history of a future schedule:
 
    ```powershell
-   gh pr list --repo $R --state open --base master    # must be empty
-   git bundle verify master-final.bundle
+   gh run list --repo $R --workflow cloudflare-token-check.yml --event schedule --branch main --status success --limit 1   # must list a run; the owner confirms it
+   gh pr list --repo $R --state open --base master                      # must be empty
+   gh pr list --repo $R --state open --base feature/metro-rebuild        # must be empty (or deliberately closed)
    ```
 
-2. Delete `master` (the default is `main`, so GitHub allows it; open pull requests on it would be closed):
+   Then prove the backup is still the live `master`, not a stale copy (the recorded SHA is the one from step 0.2 and the ticket):
 
    ```powershell
+   git fetch origin --prune
+   $live = (git ls-remote origin refs/heads/master).Split("`t")[0]
+   $bundled = ((git bundle list-heads master-final.bundle) | Where-Object { $_ -match 'refs/remotes/origin/master$' }).Split(' ')[0]
+   git bundle verify master-final.bundle
+   Get-FileHash master-final.bundle -Algorithm SHA256   # equals the hash recorded in step 0.2
+   mise exec -- bun run cutover:preflight -- --repo $R --tag $TAG --master-sha $RECORDED
+   ```
+
+   Read only the `master-sha` line of that report: it fails if the live head moved. Other lines are pre-cutover checks and fail by design now (`default-branch`, `main-fast-forward` because `main` is ahead, `release-tag-free` because the tag exists).
+
+2. Delete `master`, only if all three SHAs agree. The default is `main`, so GitHub allows it:
+
+   ```powershell
+   if ($live -ne $RECORDED -or $bundled -ne $RECORDED) { throw "master moved or the bundle is stale: live=$live bundled=$bundled recorded=$RECORDED" }
    gh api -X DELETE repos/$R/git/refs/heads/master
    ```
 
@@ -134,24 +166,27 @@ Keep `master` for at least 24 hours and until the first scheduled `cloudflare-to
    gh api -X DELETE repos/$R/git/refs/heads/feature/metro-rebuild
    ```
 
-4. Update the docs in one reviewed pull request to `main`: remove the integration exception in [workflow](workflow.md), and the release-time transition text in [development](../development.md) and [maintenance](maintenance.md), keeping the `branches:check` gate green. Tell collaborators to run `git fetch origin --prune` and `git remote set-head origin -a`.
+   After this step the rollback to the master arrangement is not supported (see Stage C).
 
-## Rollback
+4. Update the docs in one reviewed pull request to `main`. The exact edit that keeps `branches:check` meaningful: in [workflow](workflow.md) replace the whole "Integration exception" section with one paragraph that starts "Owner requires ticket PRs target `main`." (the gate reads the phrase `ticket PRs target` followed by a backticked branch, and `CONTRIBUTING.md` and `plane.md` keep theirs); remove the release-time transition text in [development](../development.md) and [maintenance](maintenance.md); keep `branches:check` green. Tell collaborators to run `git fetch origin --prune` and `git remote set-head origin -a`.
 
-Before step 6.2 (master still exists):
+## Rollback by stage
+
+The rollback owner is the repository owner. The deployment rollback is `wrangler rollback` on the production Worker only (METRO-57 procedure). `main` is never rewritten; fix forward by a reviewed pull request. A faulty version number is never reused; if the faulty release was published, delete it and its tag (`gh release delete $TAG --repo $R --cleanup-tag --yes`; `release-sync` then resets the Plane release to `unreleased`, or dispatch it by hand) and release the next number. The preflight reported immutable releases off on 2026-11-04; if that changes, a published tag cannot be deleted.
+
+**Stage A, after step 3 and before step 6.2 (`master` and `feature/metro-rebuild` both exist).** Full rollback:
 
 ```powershell
 gh api -X PATCH repos/$R -f default_branch=master
 gh pr edit <number> --repo $R --base feature/metro-rebuild      # for each pull request retargeted in step 3
-gh release delete $TAG --repo $R --cleanup-tag --yes             # only if v1.0.0 was published and is faulty
 ```
 
-Deleting the release makes `release-sync` reset the Plane release to `unreleased` (if the delete event does not fire, dispatch the sync by hand). Roll the Worker back with the METRO-57 procedure (`wrangler rollback` on the production Worker only). `main` keeps its content; fix forward by a reviewed pull request. A faulty version number is never reused. If immutable releases are enabled, the tag cannot be deleted; release the next number.
+Scheduled and dispatch workflows stop being available from the default branch again; the Pages site, if already unpublished, stays unpublished.
 
-After step 6.2 (master deleted):
+**Stage B, after step 6.2 and before step 6.3 (`master` deleted, `feature/metro-rebuild` still exists).** First recreate `master`, then run Stage A:
 
 ```powershell
-gh api repos/$R/git/refs -f ref=refs/heads/master -f sha=<RECORDED_MASTER_SHA>
+gh api repos/$R/git/refs -f ref=refs/heads/master -f sha=$RECORDED
 ```
 
 If GitHub no longer has the commit (retention of unreferenced commits is Unverified), restore from the bundle:
@@ -162,4 +197,9 @@ git -C restored fetch ../master-final.bundle refs/remotes/origin/master:refs/hea
 git -C restored push https://github.com/$R.git refs/heads/master:refs/heads/master
 ```
 
-Then run the first block of this section.
+**Stage C, after step 6.3 (`feature/metro-rebuild` and its ruleset deleted).** Rolling back to the master and integration-branch arrangement is not supported. Fix forward on `main`. If the owner nevertheless decides to restore the arrangement, it is best effort and untested: recreate `master` as in Stage B, recreate the branch and its ruleset, then run Stage A:
+
+```powershell
+gh api repos/$R/git/refs -f ref=refs/heads/feature/metro-rebuild -f sha=<MAIN_SHA>
+gh api -X POST repos/$R/rulesets --input ruleset-26426527.json   # edit the saved file down to the writable fields first (name, target, enforcement, conditions, rules, bypass_actors)
+```

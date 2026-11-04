@@ -1,9 +1,12 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 import { validateTag } from "./release-sync.ts";
 
-const policy = readFileSync("docs/agents/release-policy.md", "utf8");
+const root = join(import.meta.dir, "..");
+const read = (file: string): string => readFileSync(join(root, file), "utf8");
+const policy = read("docs/agents/release-policy.md");
 
 test("METRO-34 the tag rule examples in the policy match the code that enforces them", () => {
   for (const tag of ["v1.0.0", "v0.0.2", "v1.0.0-rc.1", "v1.2.0-beta.2", "v10.20.30"])
@@ -19,7 +22,7 @@ test("METRO-34 the release-sync and release-draft specifications refer to the on
     "docs/specifications/release-sync.md",
     "docs/specifications/release-draft.md",
   ])
-    expect(readFileSync(file, "utf8")).toContain("(../agents/release-policy.md)");
+    expect(read(file)).toContain("(../agents/release-policy.md)");
 });
 
 test("METRO-34 the policy names who bumps and where release notes come from", () => {

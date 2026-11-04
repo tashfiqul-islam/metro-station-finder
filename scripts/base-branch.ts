@@ -5,7 +5,9 @@ import { fileURLToPath } from "node:url";
 /**
  * METRO-34 criterion 3: CONTRIBUTING.md, docs/agents/workflow.md and docs/agents/plane.md must name
  * the same pull request base branch. At the default-branch switch all three change in one reviewed
- * edit; this check fails when only some do. Each document is matched by one fixed phrase so a
+ * edit; this check fails when only some do. Limitation: it proves the documents agree with each
+ * other, not that they match GitHub's actual default branch or the Renovate and workflow
+ * configuration; the runbook's readback and the cutover preflight cover the live side. Each document is matched by one fixed phrase so a
  * rewording that drops the branch fails visibly instead of passing silently.
  */
 

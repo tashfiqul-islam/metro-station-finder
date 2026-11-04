@@ -6,6 +6,7 @@ Status: accepted with [ADR-0008](../adr/0008-default-branch-switch.md) (METRO-34
 
 - Scheme: [Semantic Versioning 2.0.0](https://semver.org/) (Web-verified, read 2026-11-04): MAJOR for breaking changes to the public API, MINOR for backward-compatible features, PATCH for backward-compatible fixes. `1.0.0` defines the public API; `0.y.z` is initial development.
 - Tag: `v<major>.<minor>.<patch>` for a stable release, `v<major>.<minor>.<patch>-<prerelease>` for a prerelease (`v1.0.0-rc.1`, `v1.2.0-beta.2`). Numbers have no leading zeros. The prerelease part starts with a letter or digit and may contain letters, digits, `.` and `-`. SemVer build metadata (`+...`) is not used and is rejected.
+- The grammar enforced in code is a SemVer-compatible subset: `validateTag` checks the shape above, but it does not check that prerelease identifiers are non-empty or free of leading zeros in numeric parts (`v1.0.0-rc..1` passes). Write prereleases as SemVer defines them (`rc.1`, `beta.2`); the code is not tightened here.
 - One name everywhere: the git tag, the GitHub release name, the Plane release name and the Plane release tag `version` are the same string. Plane finds its release by that name.
 - The public API for MAJOR/MINOR/PATCH decisions is the HTTP contract in `packages/contracts` (see [API](api.md)) and the documented user-facing behaviour in the [parity matrix](../product/feature-parity.md). A change that breaks either is MAJOR.
 - `v0.0.1` and `v0.0.2` are legacy releases from before the rebuild. They stay as they are. The first release of the rebuild is `v1.0.0`; ADR-0008 explains why it is not a `0.x` release.
@@ -15,7 +16,7 @@ Status: accepted with [ADR-0008](../adr/0008-default-branch-switch.md) (METRO-34
 
 - A stable tag points at a commit on the default branch that passed `Quality gates`. A prerelease tag may point at any commit the owner approves.
 - A published tag is never moved, re-pointed or reused, and never deleted except to retract a faulty release (then the next release uses the next number, never the same one). Throwaway test tags (`v0.0.0-*-test`) are the only tags created and deleted routinely.
-- Dry runs use a prerelease tag (`v1.0.0-rc.N`), never a stable tag.
+- Dry runs use a deletable throwaway tag named `v0.0.0-<name>-test`, never a stable tag, and only while immutable releases are off (`cutover:preflight` reads the setting). A `v1.0.0-rc.N` tag is not planned: it would stay in the history for good.
 
 ## Who bumps
 
@@ -27,4 +28,5 @@ Status: accepted with [ADR-0008](../adr/0008-default-branch-switch.md) (METRO-34
 - First draft: the Plane release log, copied into the GitHub draft by `release-draft`.
 - Before publishing, the owner edits the draft on GitHub. After publishing, GitHub is canonical and `release-sync` copies the rendered notes back to the Plane release log.
 - The notes list the METRO tickets and pull requests included and have a `Deferred` heading naming unfinished tickets. `release-sync` reports a missing `Deferred` heading and does not block.
+- Tickets that do not make a release move to the next planned Plane release, `v1.1.0` (reported to exist in Plane by the coordinator on 2026-11-04; not checked from here, so Unverified), and are named under `Deferred`.
 - A release is not shipped until the tagged commit has a successful `production` deployment and smoke evidence; `release-sync` marks a stable Plane release `released` only then.
