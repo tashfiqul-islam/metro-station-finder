@@ -3,6 +3,7 @@ import { expect, spyOn, test } from "bun:test";
 import { isRecord } from "./guards";
 import { draftRelease, releaseDraftMain, validateTarget, type DraftConfig } from "./release-draft";
 import type { Deps, FetchedResponse, FetchInit } from "./release-sync";
+import { expectRejection } from "./test-support";
 
 const KEY = "plane-secret-key-value";
 const TOKEN = "gh-token-value";
@@ -156,13 +157,13 @@ test("METRO-24 a released or GitHub-linked Plane release is skipped and nothing 
 
 test("METRO-24 a missing Plane release fails with a clear message and creates nothing", async () => {
   const w = world({ planeReleases: [planned({ name: "v9.9.9" })] });
-  await expect(run(w)).rejects.toThrow("No Plane release named v1.2.0");
+  await expectRejection(run(w), "No Plane release named v1.2.0");
   expect(w.created).toEqual([]);
 });
 
 test("METRO-24 duplicate Plane names refuse instead of guessing", async () => {
   const w = world({ planeReleases: [planned(), planned({ id: "rel-2" })] });
-  await expect(run(w)).rejects.toThrow("fix the duplicate first");
+  await expectRejection(run(w), "fix the duplicate first");
 });
 
 test("METRO-24 the prerelease flag follows Plane or the tag suffix", async () => {
@@ -204,9 +205,7 @@ test("METRO-24 the target is passed through and validated", async () => {
 test("METRO-24 a bad tag is refused before any request", async () => {
   const w = world();
   const deps = server(w);
-  await expect(draftRelease({ ...config, tag: "1.2.0" }, deps)).rejects.toThrow(
-    "Tag must look like",
-  );
+  await expectRejection(draftRelease({ ...config, tag: "1.2.0" }, deps), "Tag must look like");
   expect(deps.calls).toEqual([]);
 });
 
@@ -259,7 +258,7 @@ test("METRO-24 a GitHub release list that never ends is a visible failure", asyn
       draft: false,
     })),
   });
-  await expect(run(w)).rejects.toThrow("did not end after 20 pages");
+  await expectRejection(run(w), "did not end after 20 pages");
 });
 
 test("METRO-24 a Plane release log without the documented shape is a visible failure", async () => {
@@ -272,7 +271,7 @@ test("METRO-24 a Plane release log without the documented shape is a visible fai
         ? Promise.resolve(reply(200, { changelog: null }))
         : deps.fetch(url, init),
   };
-  await expect(draftRelease(config, odd)).rejects.toThrow("no changelog object");
+  await expectRejection(draftRelease(config, odd), "no changelog object");
 });
 
 test("METRO-24 the entry point's default network and log edges are used when none are injected", async () => {

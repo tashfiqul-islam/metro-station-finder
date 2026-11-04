@@ -4,6 +4,8 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 import { validateConfiguration, validateRuntimes } from "./configuration";
+import { isRecord } from "./guards";
+import { expectRejection } from "./test-support";
 import { gitleaksVersion } from "./tool-pins";
 
 async function fixture() {
@@ -44,7 +46,7 @@ for (const file of ["package.json", "mise.toml", "bunfig.toml"]) {
     const root = await fixture();
     try {
       await writeFile(join(root, file), "{ invalid [");
-      await expect(validateConfiguration(root)).rejects.toThrow(file);
+      await expectRejection(validateConfiguration(root), file);
     } finally {
       await rm(root, { recursive: true });
     }
@@ -62,14 +64,17 @@ for (const change of [
     const root = await fixture();
     try {
       const path = join(root, "package.json");
-      const manifest = JSON.parse(await readFile(path, "utf8"));
-      if (change === "missing engines") delete manifest.engines;
-      if (change === "wrong node") manifest.engines.node = "24.22.2";
-      if (change === "wrong bun") manifest.engines.bun = "1.4.0";
-      if (change === "wrong packageManager") manifest.packageManager = "bun@1.4.0";
+      const manifest: unknown = JSON.parse(await readFile(path, "utf8"));
+      if (!isRecord(manifest)) throw new Error("package.json is not an object");
+      const engines = manifest["engines"];
+      if (!isRecord(engines)) throw new Error("package.json has no engines object");
+      if (change === "missing engines") delete manifest["engines"];
+      if (change === "wrong node") engines["node"] = "24.22.2";
+      if (change === "wrong bun") engines["bun"] = "1.4.0";
+      if (change === "wrong packageManager") manifest["packageManager"] = "bun@1.4.0";
       await writeFile(path, JSON.stringify(manifest));
       if (change === "missing install") await writeFile(join(root, "bunfig.toml"), "");
-      await expect(validateConfiguration(root)).rejects.toThrow();
+      await expectRejection(validateConfiguration(root));
     } finally {
       await rm(root, { recursive: true });
     }
@@ -80,7 +85,7 @@ for (const file of ["package.json", "mise.toml", "bunfig.toml"]) {
     const root = await fixture();
     try {
       await rm(join(root, file));
-      await expect(validateConfiguration(root)).rejects.toThrow(file);
+      await expectRejection(validateConfiguration(root), file);
     } finally {
       await rm(root, { recursive: true });
     }
@@ -101,7 +106,7 @@ for (const [field, value] of [
         path,
         source.replace(new RegExp(`${field} = [^\\r\\n]+`, "u"), `${field} = ${value}`),
       );
-      await expect(validateConfiguration(root)).rejects.toThrow(`install.${field}`);
+      await expectRejection(validateConfiguration(root), `install.${field}`);
     } finally {
       await rm(root, { recursive: true });
     }
@@ -129,7 +134,7 @@ test("rejects missing secret scanner pin", async () => {
   try {
     const path = join(root, "mise.toml");
     await writeFile(path, (await readFile(path, "utf8")).replace('gitleaks = "8.30.1"', ""));
-    await expect(validateConfiguration(root)).rejects.toThrow("tools.gitleaks");
+    await expectRejection(validateConfiguration(root), "tools.gitleaks");
   } finally {
     await rm(root, { recursive: true });
   }
@@ -160,8 +165,8 @@ test("FND-H6 rejects a missing Gitleaks pin naming tools.gitleaks", async () => 
   await withMise(
     (source) => source.replace(/gitleaks = "[^"]+"\n/u, ""),
     async (root) => {
-      await expect(validateConfiguration(root)).rejects.toThrow("tools.gitleaks");
-      await expect(gitleaksVersion(root)).rejects.toThrow("tools.gitleaks");
+      await expectRejection(validateConfiguration(root), "tools.gitleaks");
+      await expectRejection(gitleaksVersion(root), "tools.gitleaks");
     },
   );
 });
@@ -170,7 +175,7 @@ test("FND-H6 rejects a non-exact Gitleaks pin", async () => {
   await withMise(
     (source) => source.replace(/gitleaks = "[^"]+"/u, 'gitleaks = "latest"'),
     async (root) => {
-      await expect(validateConfiguration(root)).rejects.toThrow("tools.gitleaks");
+      await expectRejection(validateConfiguration(root), "tools.gitleaks");
     },
   );
 });
@@ -185,7 +190,7 @@ test("FND-H6 every mise task has a description", async () => {
   await withMise(
     (source) => source.replace(/\[tasks\.scan\]\ndescription = "[^"]+"\n/u, "[tasks.scan]\n"),
     async (root) => {
-      await expect(validateConfiguration(root)).rejects.toThrow("tasks.scan.description");
+      await expectRejection(validateConfiguration(root), "tasks.scan.description");
     },
   );
 });
@@ -196,7 +201,7 @@ test("FND-S3 rejects a bunfig without minimumReleaseAge naming install.minimumRe
     await editFile(root, "bunfig.toml", (source) =>
       source.replace(/minimumReleaseAge = \d+\r?\n/u, ""),
     );
-    await expect(validateConfiguration(root)).rejects.toThrow("install.minimumReleaseAge");
+    await expectRejection(validateConfiguration(root), "install.minimumReleaseAge");
   } finally {
     await rm(root, { recursive: true });
   }
@@ -208,7 +213,7 @@ test("FND-S3 rejects a shorter Bun cooldown", async () => {
     await editFile(root, "bunfig.toml", (source) =>
       source.replace(/minimumReleaseAge = \d+/u, "minimumReleaseAge = 86400"),
     );
-    await expect(validateConfiguration(root)).rejects.toThrow("install.minimumReleaseAge");
+    await expectRejection(validateConfiguration(root), "install.minimumReleaseAge");
   } finally {
     await rm(root, { recursive: true });
   }
@@ -220,7 +225,7 @@ test("FND-S2 rejects a Renovate cooldown that differs from bunfig", async () => 
     await editFile(root, ".github/renovate.json5", (source) =>
       source.replace('minimumReleaseAge: "3 days"', 'minimumReleaseAge: "2 days"'),
     );
-    await expect(validateConfiguration(root)).rejects.toThrow("minimumReleaseAge");
+    await expectRejection(validateConfiguration(root), "minimumReleaseAge");
   } finally {
     await rm(root, { recursive: true });
   }
@@ -242,7 +247,7 @@ test("FND-S2 rejects a missing Renovate configuration", async () => {
   const root = await fixture();
   try {
     await rm(join(root, ".github/renovate.json5"));
-    await expect(validateConfiguration(root)).rejects.toThrow("renovate.json5");
+    await expectRejection(validateConfiguration(root), "renovate.json5");
   } finally {
     await rm(root, { recursive: true });
   }
@@ -254,7 +259,7 @@ test("FND-S2 rejects a Renovate configuration without minimumReleaseAge", async 
     await editFile(root, ".github/renovate.json5", (source) =>
       source.replace(/^\s*minimumReleaseAge: "3 days",\r?\n/mu, ""),
     );
-    await expect(validateConfiguration(root)).rejects.toThrow("minimumReleaseAge");
+    await expectRejection(validateConfiguration(root), "minimumReleaseAge");
   } finally {
     await rm(root, { recursive: true });
   }
@@ -265,7 +270,7 @@ for (const tool of ["actionlint", "zizmor"]) {
     await withMise(
       (source) => source.replace(new RegExp(`${tool} = "[^"]+"`, "u"), `${tool} = "latest"`),
       async (root) => {
-        await expect(validateConfiguration(root)).rejects.toThrow(`tools.${tool}`);
+        await expectRejection(validateConfiguration(root), `tools.${tool}`);
       },
     );
   });

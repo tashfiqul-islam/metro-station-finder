@@ -37,7 +37,8 @@ SOFTWARE.
 
 test("FND-H4 LICENSE holds the exact MIT text and the manifest declares MIT", async () => {
   expect((await read("LICENSE")).replaceAll("\r\n", "\n")).toBe(MIT);
-  expect(JSON.parse(await read("package.json")).license).toBe("MIT");
+  const manifest: unknown = JSON.parse(await read("package.json"));
+  expect(isRecord(manifest) ? manifest["license"] : undefined).toBe("MIT");
 });
 
 test("FND-H4 README links licensing, security, contribution and the PR template", async () => {

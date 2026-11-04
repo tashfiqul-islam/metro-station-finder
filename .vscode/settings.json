@@ -5,6 +5,5 @@
     "source.fixAll.oxc": "always"
   },
   "oxc.typeAware": true,
-  "typescript.tsdk": "node_modules/@typescript/typescript6/lib",
-  "typescript.enablePromptUseWorkspaceTsdk": true
+  "js/ts.experimental.useTsgo": true
 }

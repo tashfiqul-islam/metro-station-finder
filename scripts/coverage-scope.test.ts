@@ -10,6 +10,7 @@ import {
   trackedFiles,
   unmeasuredProductSources,
 } from "./coverage-scope";
+import { expectRejection } from "./test-support";
 
 afterEach(() => {
   process.exitCode = 0;
@@ -62,7 +63,7 @@ test("FND-T1 runCoverageScope fails visibly for a missing lcov file and an unmea
   const log = spyOn(console, "log").mockImplementation(() => {});
   const root = await mkdtemp(join(tmpdir(), "metro-scope-"));
   try {
-    await expect(runCoverageScope(root, ["apps/api/src/app.ts"])).rejects.toThrow("lcov.info");
+    await expectRejection(runCoverageScope(root, ["apps/api/src/app.ts"]), "lcov.info");
     await mkdir(join(root, "coverage"));
     await writeFile(join(root, "coverage", "lcov.info"), lcov("apps/api/src/app.ts"));
     await runCoverageScope(root, ["apps/api/src/app.ts"]);

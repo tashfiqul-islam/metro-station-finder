@@ -16,6 +16,7 @@ import {
   type FetchedResponse,
   type FetchInit,
 } from "./release-sync";
+import { expectRejection } from "./test-support";
 
 const SHA = "0123456789abcdef0123456789abcdef01234567";
 const KEY = "plane-secret-key-value";
@@ -370,7 +371,7 @@ test("METRO-14 invalid tags are rejected before any request", async () => {
     expect(validateTag(tag)).toBe(tag);
   const w = world();
   const deps = server(w);
-  await expect(syncRelease({ ...config, tag: "bad" }, deps)).rejects.toThrow("Tag must look like");
+  await expectRejection(syncRelease({ ...config, tag: "bad" }, deps), "Tag must look like");
   expect(deps.calls).toEqual([]);
 });
 
@@ -414,9 +415,10 @@ test("METRO-14 deployment lookups reject malformed answers", async () => {
         url.includes("/deployments?") ? reply(200, { not: "a list" }) : reply(200, []),
       ),
   };
-  await expect(hasProductionDeployment(config, bad, SHA)).rejects.toThrow("not a list");
+  await expectRejection(hasProductionDeployment(config, bad, SHA), "not a list");
   const failing: Deps = { ...deps, fetch: () => Promise.resolve(reply(403)) };
-  await expect(hasProductionDeployment(config, failing, SHA)).rejects.toThrow(
+  await expectRejection(
+    hasProductionDeployment(config, failing, SHA),
     "Listing deployments failed with HTTP 403",
   );
 });
@@ -502,7 +504,7 @@ test("METRO-14 a published release whose tag does not resolve is an error", asyn
     fetch: (url, init) =>
       url.includes("/commits/") ? Promise.resolve(reply(404)) : deps.fetch(url, init),
   };
-  await expect(syncRelease(config, gone)).rejects.toThrow("does not resolve to a commit");
+  await expectRejection(syncRelease(config, gone), "does not resolve to a commit");
 });
 
 test("METRO-14 duplicate Plane names are an error, never an arbitrary pick", async () => {
@@ -512,14 +514,14 @@ test("METRO-14 duplicate Plane names are an error, never an arbitrary pick", asy
       { id: "b", name: "v1.2.0", status: "unreleased" },
     ],
   });
-  await expect(run(w)).rejects.toThrow("2 releases named");
+  await expectRejection(run(w), "2 releases named");
   const t = world({
     tags: [
       { id: "x", version: "v1.2.0" },
       { id: "y", version: "v1.2.0" },
     ],
   });
-  await expect(run(t)).rejects.toThrow("2 release tags named");
+  await expectRejection(run(t), "2 release tags named");
 });
 
 test("METRO-14 a github-sourced release with another external id is not managed", async () => {
