@@ -28,7 +28,7 @@ TypeScript 7's own language server (`tsc --lsp --stdio`, 7.0.2) was driven over 
 
 ## Editor setup facts (Web-verified, dated 2026-11-04)
 
-- TypeScript 7.0 went GA on 2026-07-08 and ships no JavaScript API; the new API is part of 7.1 (beta 2026-10-20; RC planned 2026-11-10, stable 2026-11-24, may slip). `@typescript/typescript6` is Microsoft's documented side-by-side package for tools that still need the API. npm `latest` for `typescript` is 7.0.2.
+- TypeScript 7.0 went GA on 2026-07-08 and ships no JavaScript API; the new API is part of 7.1 (beta 2026-10-20; Microsoft says a release candidate follows "in about a month" and gives no stable date; earlier dates in this file came from a third-party summary and were removed). `@typescript/typescript6` is Microsoft's documented side-by-side package for tools that still need the API. npm `latest` for `typescript` is 7.0.2.
 - TypeScript 7 has no classic `lib/tsserver.js`; `typescript.tsdk` / "Select TypeScript Version" cannot load it. The TypeScript Native Preview extension (`TypeScriptTeam.native-preview`) with `js/ts.experimental.useTsgo: true` enables the native server.
 - Cursor forum thread (Cursor staff, Jul to Aug 2026): Cursor bundles TypeScript 6.0.3, does not bundle TypeScript 7, and does not apply tsdk-style path settings from workspace settings. Cursor's current behaviour was not re-tested here.
 - The previous `typescript.tsdk` pointed at `@typescript/typescript6/lib`, which has no `tsserver.js`; it is removed.
