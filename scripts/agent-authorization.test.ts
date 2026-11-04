@@ -12,8 +12,10 @@ import {
   decide,
   defaultIo,
   hookOutcome,
+  isEntryPoint,
   matchesCodeowners,
   parseCodeowners,
+  runEntry,
   runHook,
 } from "./agent-authorization";
 import { isRecord } from "./guards";
@@ -61,6 +63,15 @@ const file = (tool: string, path: unknown, key = "file_path") => ({
   tool_name: tool,
   tool_input: { [key]: path },
 });
+const PLANE_VARIANTS = [
+  "mcp__plane__workitem",
+  "mcp__claude_ai_plane__workitem",
+  "mcp__PLANE__workitem",
+  "mcp__claude_ai_Plane__workitem",
+  "mcp__plane-mcp__workitem",
+  "mcp__plugin_plane_plane__workitem",
+  "mcp__my_PlAnE_server__workitem",
+];
 const planeOk = { "plane-write": marker("plane-write") };
 const gateOk = { "gate-edit": marker("gate-edit") };
 
@@ -90,8 +101,23 @@ test("METRO-38 unknown or odd actions are mutating, never read", () => {
     expect(classifyPlaneCall("workitem", action)).toBe("mutating");
   expect(classifyPlaneCall("brand_new_tool", "create")).toBe("mutating");
 });
-test("METRO-38 an unknown tool with a read-shaped action is read", () =>
-  expect(classifyPlaneCall("brand_new_tool", "list_things")).toBe("read"));
+test("METRO-38 read is an allow-list: a read-shaped action that is not in the table is mutating", () => {
+  expect(classifyPlaneCall("brand_new_tool", "list_things")).toBe("mutating");
+  expect(classifyPlaneCall("brand_new_tool", "list")).toBe("mutating");
+  expect(classifyPlaneCall("workitem", "list_things")).toBe("mutating");
+  expect(classifyPlaneCall("workitem", "get_everything")).toBe("mutating");
+  expect(classifyPlaneCall("state", "search")).toBe("mutating");
+  expect(classifyPlaneCall("get_pql_reference", "read")).toBe("mutating");
+  expect(classifyPlaneCall("get_pql_reference")).toBe("read");
+});
+test("METRO-38 every action in the read column is read-shaped by name, so a mutating verb cannot be filed as read", () => {
+  const shaped =
+    /^(?:list|get|retrieve|search|count)(?:_[a-z_]+)?$|^(?:me|read|download_url|worklog_summary)$/u;
+  for (const { read, mutating } of Object.values(PLANE_ACTIONS)) {
+    for (const action of read) expect(shaped.test(action)).toBe(true);
+    for (const action of mutating) expect(read).not.toContain(action);
+  }
+});
 test("METRO-38 workitem_type resolve is mutating because it can create", () =>
   expect(classifyPlaneCall("workitem_type", "resolve")).toBe("mutating"));
 
@@ -127,15 +153,12 @@ test("METRO-38 the denial names the tool and action but never the payload", () =
   expect(decision.reason).not.toContain("uuid-1");
 });
 test("METRO-38 other server spellings of Plane are guarded too", () => {
-  for (const tool_name of [
-    "mcp__plane__workitem",
-    "mcp__claude_ai_plane__workitem",
-    "mcp__PLANE__workitem",
-  ])
-    expect(
-      decide({ tool_name, tool_input: { action: "delete" }, hook_event_name: "PreToolUse" }, ctx())
-        .allow,
-    ).toBe(false);
+  for (const tool_name of PLANE_VARIANTS) {
+    const call = (action: string) =>
+      decide({ tool_name, tool_input: { action }, hook_event_name: "PreToolUse" }, ctx()).allow;
+    expect(call("delete")).toBe(false);
+    expect(call("list")).toBe(true);
+  }
 });
 test("METRO-38 a Plane call with no, or a non-string, action is denied", () => {
   for (const action of [undefined, 3, null, ["list"], { a: 1 }])
@@ -390,13 +413,11 @@ test("METRO-38 a denial exits 2 with the reason; an allow exits 0 and prints not
   expect(allowed).toEqual({ exitCode: 0, stdout: "", stderr: "" });
   expect(runHook(json(plane("workitem", "create")), io(planeOk)).exitCode).toBe(0);
 });
-test("METRO-38 the project directory falls back to the payload cwd, and fails closed without either", () => {
-  const input = { ...file("Write", `${PROJECT}/scripts/a.ts`), cwd: PROJECT };
+test("METRO-38 the payload cwd never widens trust: without CLAUDE_PROJECT_DIR file edits fail closed", () => {
   const noEnv: HookIo = { ...io(), env: {} };
-  expect(runHook(json(input), noEnv).exitCode).toBe(2);
-  expect(runHook(json({ ...input, cwd: undefined }), noEnv).exitCode).toBe(2);
-  expect(runHook(json({ ...file("Write", "D:/x/a.ts"), cwd: undefined }), noEnv).exitCode).toBe(2);
-  expect(runHook(json(plane("workitem", "list")), noEnv).exitCode).toBe(0);
+  for (const path of [`${PROJECT}/scripts/a.ts`, `${PROJECT}/src/a.ts`, "D:/x/a.ts", "src/a.ts"])
+    expect(runHook(json({ ...file("Write", path), cwd: PROJECT }), noEnv).exitCode).toBe(2);
+  expect(runHook(json({ ...plane("workitem", "list"), cwd: PROJECT }), noEnv).exitCode).toBe(0);
 });
 test("METRO-38 an unexpected exception in the decision fails closed", () => {
   const throwing: HookIo = {
@@ -464,7 +485,8 @@ test("METRO-38 settings.json wires PreToolUse for Plane and file edits, fails cl
   const planeMatcher = new RegExp(String(at(settings, "hooks", "PreToolUse", 0, "matcher")), "u");
   for (const tool of [...Object.keys(PLANE_ACTIONS), "get_pql_reference"])
     expect(planeMatcher.test(`mcp__claude_ai_Plane__${tool}`)).toBe(true);
-  expect(planeMatcher.test("mcp__plane__workitem")).toBe(true);
+  for (const name of PLANE_VARIANTS) expect(planeMatcher.test(name)).toBe(true);
+  expect(planeMatcher.test("mcp__claude_ai_Github_MCP__merge_pull_request")).toBe(false);
   expect(planeMatcher.test("mcp__claude_ai_Github_MCP__merge_pull_request")).toBe(false);
   expect(planeMatcher.test("Bash")).toBe(false);
   same(String(at(settings, "hooks", "PreToolUse", 1, "matcher")).split("|"), [
@@ -577,4 +599,233 @@ test("METRO-38 defaultIo reads real files, treats a missing file as absent and p
   } finally {
     await rm(home, { recursive: true, force: true });
   }
+});
+
+// ---------- review round: messages, markers, entry point, paths ----------
+
+test("METRO-38 block messages never reveal the marker path, only that the owner must act", () => {
+  const cases = [
+    decide(plane("workitem", "create"), ctx()),
+    decide(file("Write", `${PROJECT}/scripts/a.ts`), ctx()),
+    decide(file("Write", `${MARKERS}/gate-edit.json`), ctx(gateOk)),
+  ];
+  for (const decision of cases) {
+    expect(decision.allow).toBe(false);
+    if (decision.allow) throw new Error("unreachable");
+    expect(decision.reason).not.toContain("metro-authorization");
+    expect(decision.reason).not.toContain("C:/Users");
+  }
+  const first = cases[0];
+  expect(first && !first.allow ? first.reason : "").toContain("ask the owner");
+});
+test("METRO-38 a UTF-8 byte order mark before the JSON does not invalidate a marker", () =>
+  expect(
+    decide(plane("workitem", "create"), ctx({ "plane-write": `\uFEFF${marker("plane-write")}` }))
+      .allow,
+  ).toBe(true));
+test("METRO-38 a marker written as UTF-16 text is rejected, not trusted", () =>
+  expect(
+    decide(
+      plane("workitem", "create"),
+      ctx({ "plane-write": Buffer.from(marker("plane-write"), "utf16le").toString("latin1") }),
+    ).allow,
+  ).toBe(false));
+
+// entry point
+test("METRO-38 the entry point runs for bun's import.meta.main and for a script path match on older node", () => {
+  const url = "file:///D:/work/metro/scripts/agent-authorization.ts";
+  expect(isEntryPoint({ main: true, url })).toBe(true);
+  expect(
+    isEntryPoint({ url: url, argv1: "D:\\work\\metro\\scripts\\agent-authorization.ts" }),
+  ).toBe(true);
+  expect(isEntryPoint({ url: url, argv1: "D:/work/metro/scripts/agent-authorization.ts" })).toBe(
+    true,
+  );
+  expect(isEntryPoint({ main: false, url, argv1: "D:/work/metro/scripts/other.ts" })).toBe(false);
+  expect(isEntryPoint({ url })).toBe(false);
+  expect(
+    isEntryPoint({
+      url: "file:///home/u/s/agent-authorization.ts",
+      argv1: "/home/u/s/agent-authorization.ts",
+    }),
+  ).toBe(true);
+});
+async function* chunks(...items: unknown[]): AsyncGenerator {
+  await Promise.resolve();
+  for (const item of items) yield item;
+}
+test("METRO-38 runEntry reads text and byte chunks, then decides", async () => {
+  const text = json(plane("workitem", "create"));
+  const half = Math.floor(text.length / 2);
+  const result = await runEntry(
+    chunks(text.slice(0, half), new TextEncoder().encode(text.slice(half)), 42),
+    io(),
+  );
+  expect(result.exitCode).toBe(2);
+  expect(result.stderr).toContain("plane-write");
+  expect((await runEntry(chunks(json(plane("workitem", "list"))), io())).exitCode).toBe(0);
+});
+test("METRO-38 runEntry fails closed when reading stdin or building the context throws", async () => {
+  const broken: AsyncIterable<unknown> = {
+    [Symbol.asyncIterator]: () => ({ next: () => Promise.reject(new Error("stdin exploded")) }),
+  };
+  const read = await runEntry(broken, io());
+  expect(read.exitCode).toBe(2);
+  expect(read.stderr).toContain("stdin exploded");
+  const ctxFailure = await runEntry(chunks(json(plane("workitem", "create"))), {
+    ...io(),
+    readText: () => {
+      throw new Error("no disk");
+    },
+  });
+  expect(ctxFailure.exitCode).toBe(2);
+  expect((await runEntry(chunks(), io())).exitCode).toBe(2);
+});
+test("METRO-38 running the script by path blocks with exit 2", () => {
+  const result = Bun.spawnSync(["node", resolve("scripts", "agent-authorization.ts")], {
+    stdin: new TextEncoder().encode(json(plane("workitem", "delete"))),
+    env: {
+      ...process.env,
+      CLAUDE_PROJECT_DIR: process.cwd(),
+      HOME: tmpdir(),
+      USERPROFILE: tmpdir(),
+    },
+  });
+  expect(result.exitCode).toBe(2);
+});
+
+// paths
+const denyPath = (path: string, markers: Record<string, string> = {}, tool = "Write") =>
+  expect(decide(file(tool, path), ctx(markers)).allow).toBe(false);
+const allowPath = (path: string, markers: Record<string, string> = {}, tool = "Write") =>
+  expect(decide(file(tool, path), ctx(markers)).allow).toBe(true);
+
+test("METRO-38 device and network path prefixes are denied even with a gate-edit marker", () => {
+  for (const path of [
+    "\\\\?\\D:\\work\\metro\\scripts\\a.ts",
+    "\\\\?\\D:\\work\\metro\\src\\a.ts",
+    "\\\\.\\D:\\work\\metro\\src\\a.ts",
+    "//?/D:/work/metro/src/a.ts",
+    "\\\\server\\share\\scripts\\a.ts",
+    "//server/share/a.ts",
+  ]) {
+    denyPath(path);
+    denyPath(path, gateOk);
+  }
+});
+test("METRO-38 alternate data streams and NUL bytes are denied", () => {
+  for (const path of [
+    "D:/work/metro/src/a.ts:stream",
+    "D:/work/metro/package.json::$DATA",
+    "D:\\work\\metro\\scripts\\a.ts:hidden",
+    "D:/elsewhere/a.ts:s",
+    "D:/work/metro/src/a.ts\0.txt",
+  ])
+    denyPath(path, gateOk);
+  allowPath("D:/work/metro/src/a.ts");
+});
+test("METRO-38 trailing dots and spaces on a segment do not dodge the gate match", () => {
+  for (const path of [
+    "D:/work/metro/scripts./a.ts",
+    "D:/work/metro/scripts /a.ts",
+    "D:/work/metro/package.json.",
+    "D:/work/metro/package.json ",
+    "D:/work/metro/package.json. .",
+    "D:/work/metro/.claude./settings.json",
+    "D:/work/metro/.claude/settings.json.",
+  ])
+    denyPath(path);
+  allowPath("D:/work/metro/src./a.ts");
+});
+test("METRO-38 8.3 short names inside the project are denied; outside the project they are not this hook's business", () => {
+  denyPath("D:/work/metro/SCRIPT~1/a.ts", gateOk);
+  denyPath("D:/work/metro/src/PACKAG~1.JSO", gateOk);
+  allowPath("D:/other/PROGRA~1/x.ts");
+});
+test("METRO-38 MSYS, WSL and Cygwin drive roots resolve to the same files", () => {
+  for (const root of ["/d", "/mnt/d", "/cygdrive/d", "/D", "/mnt/D"]) {
+    denyPath(`${root}/work/metro/scripts/a.ts`);
+    denyPath(`${root}/work/metro/.claude/settings.json`);
+    allowPath(`${root}/work/metro/scripts/a.ts`, gateOk);
+    allowPath(`${root}/work/metro/src/a.ts`);
+    allowPath(`${root}/other/a.ts`);
+  }
+  for (const root of ["/c", "/mnt/c"]) {
+    denyPath(`${root}/Users/o/.claude/metro-authorization/gate-edit.json`, {
+      ...planeOk,
+      ...gateOk,
+    });
+    denyPath(`${root}/Users/o/.claude/settings.json`);
+  }
+});
+test("METRO-38 a POSIX project directory is matched without drive translation getting in the way", () => {
+  const posix: Context = {
+    ...ctx(),
+    projectDir: "/home/u/repo",
+    markerDir: "/home/u/.claude/metro-authorization",
+  };
+  const run = (path: string, c = posix) => decide(file("Write", path), c).allow;
+  expect(run("/home/u/repo/scripts/a.ts")).toBe(false);
+  expect(run("/home/u/repo/src/a.ts")).toBe(true);
+  expect(run("/home/u/.claude/metro-authorization/plane-write.json")).toBe(false);
+  expect(run("/home/u/.claude/settings.json")).toBe(false);
+  expect(
+    run("/home/u/repo/scripts/a.ts", {
+      ...posix,
+      readMarker: (scope) => (scope === "gate-edit" ? gateOk["gate-edit"] : undefined),
+    }),
+  ).toBe(true);
+  expect(run("/tmp/a.ts")).toBe(true);
+});
+test("METRO-38 paths outside the project stay allowed, except settings files and the marker directory", () => {
+  allowPath("D:/elsewhere/scripts/guards.ts");
+  allowPath("E:/data/package.json");
+  allowPath("/tmp/package.json");
+  denyPath("E:/data/.claude/settings.json");
+  denyPath(`${MARKERS}/plane-write.json`, planeOk);
+});
+
+// docs
+test("METRO-38 the documented marker timestamp format is what the hook parses reliably", async () => {
+  const text = await readFile(resolve("docs", "agents", "permissions.md"), "utf8");
+  const format = "yyyy-MM-ddTHH:mm:ss.fffZ";
+  expect(text).toContain(`.ToString('${format}', [Globalization.CultureInfo]::InvariantCulture)`);
+  const sample = /"issuedAt": "([^"]+)"[\s\S]*?"expiresAt": "([^"]+)"/u.exec(text);
+  for (const value of [sample?.[1] ?? "", sample?.[2] ?? ""]) {
+    expect(value).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u);
+    expect(new Date(Date.parse(value)).toISOString()).toBe(value);
+  }
+  const issued = new Date(Date.parse(sample?.[1] ?? ""));
+  const raw = JSON.stringify({
+    scope: "plane-write",
+    issuedAt: sample?.[1],
+    expiresAt: sample?.[2],
+  });
+  const later = new Date(issued.getTime() + 60_000);
+  expect(
+    decide(plane("workitem", "create"), { ...ctx({ "plane-write": raw }), now: later }).allow,
+  ).toBe(true);
+  expect(text).toContain("UTF8Encoding]::new($false)");
+  expect(text).toMatch(/UTF-16/u);
+});
+test("METRO-38 the docs carry the operating procedure and the stated limits", async () => {
+  const text = (await readFile(resolve("docs", "agents", "permissions.md"), "utf8")).toLowerCase();
+  for (const needle of [
+    "operating procedure",
+    "gate-edit",
+    "before any gate-touching work",
+    "settings.local.json",
+    "global",
+    "wsl",
+    "create_or_update_file",
+    "push_files",
+    "powershell",
+    "option b",
+    "only after",
+    "paths outside the project",
+    "claude_project_dir",
+    "does not protect",
+    "model, not a proof",
+  ])
+    expect(text).toContain(needle);
 });

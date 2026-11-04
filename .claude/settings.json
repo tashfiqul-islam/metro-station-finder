@@ -3,7 +3,7 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "^mcp__(claude_ai_)?[Pp]lane__",
+        "matcher": "^mcp__.*[Pp][Ll][Aa][Nn][Ee]",
         "hooks": [
           {
             "type": "command",
