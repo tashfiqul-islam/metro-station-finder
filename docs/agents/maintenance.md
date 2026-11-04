@@ -30,6 +30,10 @@ Publishing, editing, unpublishing or deleting a GitHub release runs `.github/wor
 - **Retraction:** delete or unpublish the GitHub release; the next run resets the Plane release to `unreleased`. Specification: [release-sync](../specifications/release-sync.md).
 - **Not covered:** creating a GitHub release from Plane (separate ticket, needs a trigger that works before the default-branch switch).
 
+## Default-branch switch and version policy (METRO-34)
+
+[ADR-0008](../adr/0008-default-branch-switch.md) plans how and when the default moves from `master` to `main` for v1.0.0 (readiness checklist, order, rollback, deletion of `master` after a soak). [Cutover runbook](cutover-runbook.md): exact commands, not executed. `mise exec -- bun run cutover:preflight` is the read-only precondition report (GitHub `GET` calls and `gh pr list` only, enforced in code). Version and tag naming, who bumps and the release-notes source: [release policy](release-policy.md). `bun run branches:check` (part of `check`) fails when CONTRIBUTING.md, workflow.md and plane.md name different pull request base branches, so the three change together at the switch. The weekly Cloudflare token check below starts running when the default switches.
+
 ## Cloudflare token rotation and expiry alarm (METRO-33)
 
 Cloudflare has no first-party OIDC for wrangler, so preview (and later production) deploys depend on a long-lived `CLOUDFLARE_API_TOKEN`; rotating it on time is the control. Without it an expired token fails every preview deploy. **Current expiry: 2027-11-04** (confirmed by the owner in the Cloudflare dashboard on 2026-11-04, after extending the existing token's expiry instead of creating a new token; the first live run of the check below, on 2026-11-04, reported "Token is active and expires in 365 days (2027-11-04T17:59:59.000Z)", so the date is verified through Cloudflare's token-verify API). Extend or rotate before 2027-10-21 (the alarm below fails from 14 days out). Extending the existing token is an accepted alternative to the rotation steps below: after extending, run the check (step 3) and record the date (step 5).
