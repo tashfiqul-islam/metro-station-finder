@@ -39,7 +39,8 @@ export async function validateConfiguration(root: string): Promise<void> {
   }
   if (manifest["packageManager"] !== `bun@${String(engines["bun"])}`)
     throw new Error("package.json packageManager must match engines.bun");
-  const install = record((await parse("bunfig.toml", true))["install"], "bunfig.toml install");
+  const bunfig = await parse("bunfig.toml", true);
+  const install = record(bunfig["install"], "bunfig.toml install");
   for (const [key, value] of Object.entries({
     exact: true,
     auto: "disable",
@@ -51,6 +52,12 @@ export async function validateConfiguration(root: string): Promise<void> {
   }
   if (install["minimumReleaseAge"] !== RELEASE_COOLDOWN_SECONDS)
     throw new Error(`bunfig.toml install.minimumReleaseAge must be ${RELEASE_COOLDOWN_SECONDS}`);
+  // METRO-35: tests run in a random order; the seed is chosen per run and printed by Bun, so a fixed seed
+  // here would defeat the randomization. Reproduce a failure with `bun test --seed <printed seed>`.
+  const testTable = record(bunfig["test"], "bunfig.toml test");
+  if (testTable["randomize"] !== true) throw new Error("bunfig.toml test.randomize must be true");
+  if (testTable["seed"] !== undefined)
+    throw new Error("bunfig.toml test.seed must not be set (a fixed seed defeats randomization)");
   const renovate = await readRenovate(root);
   const renovateAge = renovate["minimumReleaseAge"];
   if (typeof renovateAge !== "string")
