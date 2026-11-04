@@ -28,7 +28,8 @@ Dependencies, tools and Actions were pinned by hand with no update automation, n
 ## Legacy Maps key record (METRO-32)
 
 - 2026-11-05 (owner-stated 2026-11-04/05): the owner reported that the legacy Google Maps API key found in Git history (the two `gcp-api-key` fingerprints allowlisted in `.gitleaksignore`) was deleted in Google Cloud.
-- Unverified: no agent checked this. No credentialed Google Cloud read was made.
+- Unverified: the deletion itself, its date and the original owning project are owner-stated; no agent confirmed them.
+- Agent check (CLI-verified 2026-11-05, read-only `gcloud services api-keys list --show-deleted` on project `metro-station-finder-513617`; key strings were not fetched): the project lists exactly two keys, both created 2026-11-03 (one active, one deleted 2026-11-03). No key predating 2026-11-03 exists there, deleted or not. Absence is confirmed in this project only. Google Cloud retains deleted keys for about 30 days, so a 2024-era deletion cannot be confirmed from the API now, and the legacy key may have lived in another project.
 - A usage-by-credential check (for example filtering API usage by credential id) is no longer possible because the key no longer exists; whether anyone else used the key before deletion is Unknown.
 - The key value is not recorded here or anywhere in the repository. The `.gitleaksignore` entries remain, because the key still appears in unchanged history and the fingerprints must stay allowlisted for `bun run scan:history` to pass; they now point at this record.
 - This supersedes the earlier statement that the key's restriction or rotation status was unknown. Restriction and rotation are moot for a deleted key.
