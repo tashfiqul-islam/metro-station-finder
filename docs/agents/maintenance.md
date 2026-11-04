@@ -27,3 +27,21 @@ Publishing, editing, unpublishing or deleting a GitHub release runs `.github/wor
 - **Release notes** list the METRO tickets and pull requests included and have a "Deferred" heading for unfinished tickets; the sync reports a missing heading in the Plane description.
 - **Retraction:** delete or unpublish the GitHub release; the next run resets the Plane release to `unreleased`. Specification: [release-sync](../specifications/release-sync.md).
 - **Not covered:** creating a GitHub release from Plane (separate ticket, needs a trigger that works before the default-branch switch).
+
+## Cloudflare token rotation and expiry alarm (METRO-33)
+
+Cloudflare has no first-party OIDC for wrangler, so preview (and later production) deploys depend on a long-lived `CLOUDFLARE_API_TOKEN`; rotating it on time is the control. Without it an expired token fails every preview deploy. **Current expiry: 2026-12-03.** Rotate before 2026-11-19 (the alarm below fails from 14 days out).
+
+**Alarm.** `.github/workflows/cloudflare-token-check.yml` (Actions, Cloudflare token check, Run workflow) runs `scripts/cloudflare-token-check.ts` in the `preview` environment. It calls Cloudflare's token-verify API and fails on HTTP 401/403, on a status other than `active`, and when the token expires within 14 days; it prints the days remaining, never the token. It also has a weekly schedule (Mondays 06:17 UTC) that is inert until the default-branch switch, because GitHub only runs schedules from the default branch; until then dispatch it by hand, at least weekly during the last 30 days before expiry. A token with no expiry date passes with a note; set an expiry when rotating. Endpoints (Cloudflare docs, read 2026-11-04): `GET /accounts/{account_id}/tokens/verify` for account-owned tokens, falling back to `GET /user/tokens/verify` for user-owned ones ([account](https://developers.cloudflare.com/api/resources/accounts/subresources/tokens/methods/verify/), [user](https://developers.cloudflare.com/api/resources/user/subresources/tokens/methods/verify/)).
+
+**Where a failure is announced (open decision for the owner).** No channel is configured. A failed run only notifies through GitHub's normal workflow-failure notifications (the person who triggered it or last edited the schedule, per their notification settings). Decide whether that is enough or whether to add a channel; until decided, do not assume anyone is paged.
+
+**Owner steps (the agent cannot rotate the token).**
+
+1. In the Cloudflare dashboard create a new API token (account API token preferred; user token works): permission **Account, Workers Scripts, Edit**; resources **Include, the one Metro account** only (no zones, no other accounts, no other permissions); set an expiry about 90 days out; no IP filtering unless GitHub-hosted runners are accounted for.
+2. In GitHub, repository Settings, Environments, `preview`, replace the secret `CLOUDFLARE_API_TOKEN` with the new value. Do not put it in a repository secret, a variable, a file, an issue or a chat. Leave the variable `CLOUDFLARE_ACCOUNT_ID` unchanged.
+3. Verify: run the Cloudflare token check workflow by hand and confirm it passes and reports about the expected days remaining. Then push or re-run a same-repository pull request and confirm its `preview` job deploys.
+4. Revoke the old token in the Cloudflare dashboard only after step 3 passes.
+5. Record the new expiry: update the date in this section and in the METRO-13 paragraph above, and note the rotation in the ticket. Set a calendar reminder about 30 days before it.
+
+Accepted checks for this procedure are in `scripts/cloudflare-token-check.test.ts` and `scripts/cloudflare-token-check-workflow.test.ts`. The live workflow has not been run: it needs owner approval of the `preview` environment and registration of the workflow on the default branch.
