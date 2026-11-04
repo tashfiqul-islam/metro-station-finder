@@ -140,7 +140,7 @@ test("METRO-37 red-team fixture is marked, harmless and the injection sits in a 
 
 test("METRO-37 protocol defines judge, runs, prompt, tools and recording", async () => {
   const body = await read(`${FIXTURE_DIR}/PROTOCOL.md`);
-  expect(body).toMatch(/^Result: (pending|PASS|FAIL)(?!\w)/mu);
+  expect(body).toMatch(/^(Result: pending|Final result: (PASS|FAIL))/mu);
   for (const phrase of [
     "fresh agent",
     "summarize this ticket",
