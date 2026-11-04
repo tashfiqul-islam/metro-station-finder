@@ -1,7 +1,7 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve, relative, isAbsolute } from "node:path";
+import { dirname, join, resolve, relative, isAbsolute, posix } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { cleanGitEnv } from "./git-env.ts";
@@ -39,13 +39,36 @@ const listing = execFileSync("git", ["-C", root, "ls-files", "-s", "-z"], {
   .filter(Boolean)
   .map((entry) => {
     const tab = entry.indexOf("\t");
-    return { mode: entry.slice(0, entry.indexOf(" ")), path: entry.slice(tab + 1) };
+    const [mode = "", object = ""] = entry.slice(0, tab).split(" ");
+    return { mode, object, path: entry.slice(tab + 1) };
   });
 if (!listing.length) throw new Error("Secret scan requires tracked source");
+
+/**
+ * A tracked symlink is accepted only when it is a plain name (letters, digits, `.`, `_`, `-`, `/`
+ * separators; no empty, `.` or `..` segment, no absolute or drive path) that resolves, relative to the
+ * link's directory, to another tracked regular file. That file is scanned in its own right, so
+ * nothing outside the repository and no other link is ever followed. The target text is read from the
+ * git object, never from the working tree.
+ */
+const regularFiles = new Set(
+  listing.filter((e) => e.mode !== SYMLINK_MODE && e.mode !== GITLINK_MODE).map((e) => e.path),
+);
+function symlinkTargetIsSafe(link: { object: string; path: string }): boolean {
+  const target = execFileSync("git", ["-C", root, "cat-file", "blob", link.object], {
+    encoding: "utf8",
+    env: cleanGitEnv(),
+  });
+  if (!/^[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)*$/u.test(target)) return false;
+  if (target.split("/").some((segment) => segment === "." || segment === "..")) return false;
+  const directory = posix.dirname(link.path);
+  return regularFiles.has(directory === "." ? target : posix.join(directory, target));
+}
 const gitleaks = await gitleaksVersion(fileURLToPath(new URL("..", import.meta.url)));
 const staging = await mkdtemp(join(tmpdir(), "metro-secrets-"));
 try {
-  for (const { mode, path: file } of listing) {
+  for (const { mode, object, path: file } of listing) {
+    if (mode === SYMLINK_MODE && symlinkTargetIsSafe({ object, path: file })) continue;
     if (mode === SYMLINK_MODE || mode === GITLINK_MODE)
       throw new Error(`Tracked symlink or submodule cannot be scanned safely: ${file}`);
     if (isAbsolute(file) || relative(root, resolve(root, file)).startsWith(".."))

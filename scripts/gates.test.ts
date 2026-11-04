@@ -147,3 +147,113 @@ test("bundle gate accepts artifacts within budget", () =>
     const result = Bun.spawnSync(["node", resolve("scripts/bundle.ts"), root]);
     expect(result.exitCode).toBe(0);
   }));
+
+const FAKE_TOKEN = ["gh", "p_", "Ab3dEf6hIj9kLm2nOp5qRs8tUv1wXy4zAB7c"].join("");
+const secretScan = (root: string) =>
+  Bun.spawnSync(["node", resolve("scripts/secrets.ts"), root], { env: cleanGitEnv() });
+
+/** Track `path` as a git symlink with the given target text, without touching the file system. */
+async function trackLink(root: string, path: string, target: string, scratch: string) {
+  await writeFile(join(root, scratch), target);
+  const hash = git(root, "hash-object", "-w", scratch).stdout.toString().trim();
+  expect(git(root, "update-index", "--add", "--cacheinfo", `120000,${hash},${path}`).exitCode).toBe(
+    0,
+  );
+}
+
+async function trackFile(root: string, path: string, content: string) {
+  await mkdir(join(root, path, ".."), { recursive: true });
+  await writeFile(join(root, path), content);
+  expect(git(root, "add", path).exitCode).toBe(0);
+}
+
+test(
+  "secret gate accepts a symlink to a tracked regular file",
+  () =>
+    fixture(async (root) => {
+      expect(Bun.spawnSync(["git", "init", root], { env: cleanGitEnv() }).exitCode).toBe(0);
+      await trackFile(root, "AGENTS.md", "plain instructions\n");
+      await trackLink(root, "CLAUDE.md", "AGENTS.md", "scratch-link.txt");
+      const result = secretScan(root);
+      expect(result.stderr.toString()).not.toContain("Tracked symlink");
+      expect(result.exitCode).toBe(0);
+    }),
+  30000,
+);
+
+test(
+  "secret gate still finds a credential behind an accepted symlink",
+  () =>
+    fixture(async (root) => {
+      expect(Bun.spawnSync(["git", "init", root], { env: cleanGitEnv() }).exitCode).toBe(0);
+      await trackFile(root, "AGENTS.md", `export const token = ${JSON.stringify(FAKE_TOKEN)};\n`);
+      await trackLink(root, "CLAUDE.md", "AGENTS.md", "scratch-link.txt");
+      const result = secretScan(root);
+      expect(result.stdout.toString() + result.stderr.toString()).toContain("leaks found");
+      expect(result.exitCode).not.toBe(0);
+    }),
+  30000,
+);
+
+test(
+  "secret gate resolves a symlink target relative to the link's directory",
+  () =>
+    fixture(async (root) => {
+      expect(Bun.spawnSync(["git", "init", root], { env: cleanGitEnv() }).exitCode).toBe(0);
+      await trackFile(root, "docs/guide.md", "guide\n");
+      await trackLink(root, "docs/alias.md", "guide.md", "scratch-link.txt");
+      expect(secretScan(root).exitCode).toBe(0);
+    }),
+  30000,
+);
+
+for (const target of [
+  "/etc/passwd",
+  "../outside",
+  "sub/../AGENTS.md",
+  "./AGENTS.md",
+  "..\\outside",
+  "C:\\secret",
+  "missing.md",
+  "other-link",
+  "AGENTS.md\nsecond",
+  "",
+]) {
+  test(
+    `secret gate rejects an unsafe symlink target ${JSON.stringify(target)}`,
+    () =>
+      fixture(async (root) => {
+        expect(Bun.spawnSync(["git", "init", root], { env: cleanGitEnv() }).exitCode).toBe(0);
+        await trackFile(root, "AGENTS.md", "plain\n");
+        await trackLink(root, "other-link", "AGENTS.md", "scratch-a.txt");
+        await trackLink(root, "bad-link", target, "scratch-b.txt");
+        const result = secretScan(root);
+        expect(result.stderr.toString()).toContain("Tracked symlink or submodule");
+        expect(result.stderr.toString()).toContain("bad-link");
+        expect(result.exitCode).not.toBe(0);
+      }),
+    30000,
+  );
+}
+
+test(
+  "secret gate still rejects a submodule entry",
+  () =>
+    fixture(async (root) => {
+      expect(Bun.spawnSync(["git", "init", root], { env: cleanGitEnv() }).exitCode).toBe(0);
+      await trackFile(root, "AGENTS.md", "plain\n");
+      expect(
+        git(
+          root,
+          "update-index",
+          "--add",
+          "--cacheinfo",
+          "160000,0123456789abcdef0123456789abcdef01234567,vendor/sub",
+        ).exitCode,
+      ).toBe(0);
+      const result = secretScan(root);
+      expect(result.stderr.toString()).toContain("Tracked symlink or submodule");
+      expect(result.exitCode).not.toBe(0);
+    }),
+  30000,
+);
