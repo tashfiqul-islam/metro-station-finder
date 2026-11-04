@@ -1,0 +1,45 @@
+name: Release draft
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Plane release name to draft on GitHub, for example v1.0.0
+        required: true
+        type: string
+      target:
+        description: Branch or commit the draft will tag when published
+        required: false
+        default: main
+        type: string
+permissions: {}
+concurrency:
+  group: release-draft-${{ inputs.tag }}
+  cancel-in-progress: false
+jobs:
+  draft:
+    name: Draft GitHub release from Plane
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    # The environment requires the owner's approval and holds the Plane API key.
+    environment: release
+    permissions:
+      contents: write # the minimum GitHub requires to list and create a draft release; nothing is published
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install pinned tools with mise
+        uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          version: 2026.10.25
+          install_args: node
+          cache: false # this job holds the release credential; never restore a cache into it
+      - name: Create the draft GitHub release
+        run: node scripts/release-draft.ts
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+          RELEASE_TARGET: ${{ inputs.target }}
+          PLANE_WORKSPACE: metro-station-finder
+          PLANE_API_KEY: ${{ secrets.PLANE_API_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}
