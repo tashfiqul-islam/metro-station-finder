@@ -2,7 +2,7 @@
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
   extends: ["config:recommended", "helpers:pinGitHubActionDigests"],
   enabledManagers: ["bun", "mise", "github-actions"],
-  baseBranchPatterns: ["feature/metro-rebuild"],
+  // No baseBranchPatterns on purpose (ADR-0008, METRO-61): Renovate reads this file only from the default branch and, without the option, processes only that branch, so it targets main after the cutover with no edit. scripts/cutover-plan.test.ts enforces it.
   rangeStrategy: "pin",
   // Must equal bunfig.toml install.minimumReleaseAge (259200 seconds); scripts/configuration.ts enforces it.
   minimumReleaseAge: "3 days",

@@ -14,7 +14,7 @@ Install-script trust (METRO-46): `trustedDependencies` in the root `package.json
 
 Updates require frozen install, canonical checks, real hook regression tests and [independent review](workflow.md#independent-review). Keep TypeScript 7 compiler settings and the documented TypeScript 6 dependency-parser seam intact. Never relax budgets, assertions or thresholds to obtain green gates. Secret and dependency scans run through `bun run scan`; inspect failures before changing exclusions.
 
-There is no deployment or rollback automation in this ticket. Integration targets `feature/metro-rebuild`; no default-branch switch, preview, production deployment or release is authorized by a gate pass. Use a reviewed revert for bad changes, preserving independent rebuild history and signed commits.
+There is no deployment or rollback automation in this ticket. Integration targets `feature/metro-rebuild`; no default-branch switch, preview, production deployment or release is authorized by a gate pass. The default-branch switch, its order and its rollback are in [ADR-0008](../adr/0008-default-branch-switch.md) and the [cutover runbook](cutover-runbook.md); the integration-branch wording here is removed at runbook step 6.4. Use a reviewed revert for bad changes, preserving independent rebuild history and signed commits.
 
 ## Cloudflare preview (METRO-13)
 

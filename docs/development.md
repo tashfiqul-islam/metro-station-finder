@@ -62,21 +62,7 @@ No station/fare functionality, provider integration, product API contract, data 
 
 ## Release-time branch transition
 
-Superseded in detail by [ADR-0008](adr/0008-default-branch-switch.md) (METRO-34, 2026-11-04): the plan, readiness checklist and rollback are there, the ordered commands are in the [cutover runbook](agents/cutover-runbook.md), and `bun run cutover:preflight` is the read-only precondition report. Below, the owner decision of 2026-11-04 replaces item 5's "do not delete master": master is deleted after a soak, behind a separate owner go. The text below is kept as history until the cutover-prep pull request replaces it.
-
-Owner correction, 2026-11-03: METRO-11 may prepare `main` from reviewed independent rebuild history. It must not make it default. Keep `master` default until v1.0.0 is fully ready to release. Controller records actual creation/merge evidence separately; these instructions do not claim it occurred.
-
-Before the eventual authorized switch:
-
-1. Verify reviewed release SHA, independent ancestry and required METRO-12 checks. Finish METRO-13 preview/deployment and METRO-14 release/rollback evidence; confirm v1.0.0 readiness.
-2. Inspect live branch rules/protections, required checks, Actions branch/tag filters and environment/deployment branch policies. Establish applicable protection/check rules on `main`; do not assume changing default transfers them.
-3. Audit open PR bases and automation/webhook/release branch assumptions. Retarget only reviewed rebuild PRs; never merge legacy ancestry. Confirm CI and deployment policies accept the exact intended branch/revision.
-4. Under release-time authorization, switch default, read it back, then verify required CI, release/deploy routing and smoke at the released SHA. Record rollback owner, previous default and deployment/release rollback procedure before switching.
-5. If validation fails, stop release progression; restore the recorded prior default/policies under authorization and follow the reviewed deployment rollback. Do not delete master or force-update histories. Master removal/archive remains separate scope.
-
-**Confirmed / controller-observed, 2026-11-03:** GitHub readback had default master at `af903d7a2c1bf08165cfcf4a00ca0c0d73eedead`, rebuild at `92739bd32ba948106d600a4f73fcf6deb0036a8b`, main absent, both observed branches unprotected, rulesets empty. These are a dated snapshot, not a release-time protection guarantee. No protection/default/deployment mutation belongs to this scaffold.
-
-See [version and verification evidence](evidence/metro-11.md).
+The plan, readiness checklist, order and rollback for moving the default branch from `master` to `main` at v1.0.0 are in [ADR-0008](adr/0008-default-branch-switch.md); the ordered commands are in the [cutover runbook](agents/cutover-runbook.md); `bun run cutover:preflight` is the read-only precondition report. Until the owner says go, the default stays `master` and ticket pull requests target `feature/metro-rebuild`. The base-branch documents change together at runbook step 6.4 (`bun run branches:check` fails if only some do). Earlier controller observations of 2026-11-03 are history in the [METRO-11 evidence](evidence/metro-11.md).
 
 ## Configuration ownership
 
