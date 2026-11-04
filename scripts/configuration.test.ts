@@ -330,3 +330,55 @@ test("FND-S2 a Renovate fixture with an unknown option fails the pinned validato
     await rm(root, { recursive: true });
   }
 }, 60000);
+
+test("METRO-35 the real bunfig enables randomized test order without a fixed seed", async () => {
+  await validateConfiguration(resolve("."));
+  const parsed: unknown = Bun.TOML.parse(await readFile(resolve("bunfig.toml"), "utf8"));
+  if (!isRecord(parsed) || !isRecord(parsed["test"])) throw new Error("bunfig.toml has no [test]");
+  expect(parsed["test"]["randomize"]).toBe(true);
+  expect(parsed["test"]["seed"]).toBeUndefined();
+});
+
+test("METRO-35 rejects a bunfig without randomize naming test.randomize", async () => {
+  const root = await fixture();
+  try {
+    await editFile(root, "bunfig.toml", (source) => source.replace(/randomize = true\r?\n/u, ""));
+    await expectRejection(validateConfiguration(root), "test.randomize");
+  } finally {
+    await rm(root, { recursive: true });
+  }
+});
+
+test("METRO-35 rejects randomize switched off", async () => {
+  const root = await fixture();
+  try {
+    await editFile(root, "bunfig.toml", (source) =>
+      source.replace("randomize = true", "randomize = false"),
+    );
+    await expectRejection(validateConfiguration(root), "test.randomize");
+  } finally {
+    await rm(root, { recursive: true });
+  }
+});
+
+test("METRO-35 rejects a fixed seed in bunfig naming test.seed", async () => {
+  const root = await fixture();
+  try {
+    await editFile(root, "bunfig.toml", (source) =>
+      source.replace("randomize = true", "randomize = true\nseed = 2444615283"),
+    );
+    await expectRejection(validateConfiguration(root), "test.seed");
+  } finally {
+    await rm(root, { recursive: true });
+  }
+});
+
+test("METRO-35 rejects a bunfig without a [test] table", async () => {
+  const root = await fixture();
+  try {
+    await editFile(root, "bunfig.toml", (source) => source.slice(0, source.indexOf("[test]")));
+    await expectRejection(validateConfiguration(root), "bunfig.toml test");
+  } finally {
+    await rm(root, { recursive: true });
+  }
+});

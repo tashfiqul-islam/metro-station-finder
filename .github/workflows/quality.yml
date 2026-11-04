@@ -83,7 +83,8 @@ jobs:
       - name: Build the application
         run: bun run build
       - name: Run browser smoke tests
-        run: bun run smoke
+        # --shuffle picks a seed and prints it ("shuffle seed N"); reproduce with `bun run smoke -- --shuffle N`.
+        run: bun run smoke -- --shuffle
       - name: Upload Playwright report and traces
         if: ${{ failure() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
