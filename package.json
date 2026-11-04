@@ -13,7 +13,7 @@
     "dev": "bun run scripts/tools.ts && bun run --cwd apps/web dev",
     "build": "bun run scripts/tools.ts && bun run --cwd apps/web build && bun run --cwd apps/api build",
     "smoke": "bun run scripts/tools.ts && node node_modules/@playwright/test/cli.js test",
-    "typecheck": "tsc -p apps/web/tsconfig.json && tsc -p tsconfig.dom-test.json && tsc -p apps/api/tsconfig.json && tsc -p packages/contracts/tsconfig.json && tsc -p scripts/tsconfig.json && tsc -p tsconfig.e2e.json && tsc -p tsconfig.test.json && tsc -p packages/core/tsconfig.json",
+    "typecheck": "tsc -b",
     "format": "node scripts/format.ts --write",
     "format:check": "node scripts/format.ts --check",
     "lint": "oxlint --type-aware --deny-warnings apps packages scripts e2e playwright.config.ts",
