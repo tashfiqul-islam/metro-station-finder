@@ -2,11 +2,15 @@ import { expect, test } from "bun:test";
 import { readFile, readdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
+import { cleanGitEnv } from "./git-env";
 import { isRecord } from "./guards";
 import { checkLinks, formatProblem } from "./links";
 
 const root = resolve(import.meta.dir, "..");
 const read = (file: string) => readFile(join(root, file), "utf8");
+/** Raw git output: callers decide what to trim, so a stray trailing newline stays visible. */
+const git = (...args: string[]) =>
+  Bun.spawnSync(["git", ...args], { cwd: root, env: cleanGitEnv() }).stdout.toString();
 
 const MIT = `MIT License
 
@@ -56,8 +60,13 @@ test("FND-H4 pull request template asks for the required evidence", async () => 
     expect(template).toContain(field);
 });
 
-test("FND-H5 CLAUDE.md contains only the AGENTS.md import", async () => {
-  expect((await read("CLAUDE.md")).trim()).toBe("@AGENTS.md");
+test("FND-H5 CLAUDE.md is a git symlink to AGENTS.md", () => {
+  // Read from git objects, not the working tree: a checkout without symlink support turns the link
+  // into a text file, and the committed content is what every other checkout gets.
+  const [entry = ""] = git("ls-files", "-s", "--", "CLAUDE.md").trim().split("\t");
+  const [mode = "", object = ""] = entry.split(" ");
+  expect(mode).toBe("120000");
+  expect(git("cat-file", "blob", object)).toBe("AGENTS.md");
 });
 
 test("FND-H3 ADR template and Accepted ADR-0001 are linked from architecture and domain guides", async () => {
