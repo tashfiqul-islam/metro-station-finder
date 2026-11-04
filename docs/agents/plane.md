@@ -1,6 +1,6 @@
 # Plane preparation adapter
 
-**Confirmed / Repo-verified:** this adapter is based on the connected Plane tool schemas read on 2026-11-02 and project guide/spec pages. [Evidence](../evidence/metro-10.md) records sources and limits. Tools may change: inspect their live schema before publishing. This document authorizes no writes. Research → settled spec → approved slices → authorized publishing → readiness review → separately authorized implementation. No parallel dispatch is implied.
+**Confirmed / Repo-verified:** this adapter is based on the connected Plane tool schemas read on 2026-11-02 and project guide/spec pages. [Evidence](../evidence/metro-10.md) records sources and limits. Tools may change: inspect their live schema before publishing. This document authorizes no writes, and a `PreToolUse` hook blocks mutating Plane calls unless the owner has created an authorization marker (see [permissions](permissions.md)). Research → settled spec → approved slices → authorized publishing → readiness review → separately authorized implementation. No parallel dispatch is implied.
 
 ## Project and storage
 

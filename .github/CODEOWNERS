@@ -35,3 +35,4 @@
 /apps/*/package.json @tashfiqul-islam
 /packages/*/package.json @tashfiqul-islam
 /.oxfmtrc.json @tashfiqul-islam
+/.claude/ @tashfiqul-islam
