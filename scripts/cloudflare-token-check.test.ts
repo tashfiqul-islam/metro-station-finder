@@ -1,4 +1,4 @@
-import { afterEach, expect, spyOn, test } from "bun:test";
+import { afterEach, beforeEach, expect, spyOn, test } from "bun:test";
 
 import {
   checkCloudflareToken,
@@ -70,6 +70,11 @@ async function failureOf(promise: Promise<unknown>): Promise<string> {
   return reason.message;
 }
 
+// Start every test from a known exit code (assertions below read it) and leave none behind: the
+// suite runs in a random order, so no test may rely on a previous test or an earlier afterEach.
+beforeEach(() => {
+  process.exitCode = 0;
+});
 afterEach(() => {
   process.exitCode = 0;
 });
