@@ -1,0 +1,42 @@
+name: Release sync
+on:
+  release:
+    types: [published, edited, unpublished, deleted]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to reconcile, for example v1.0.0
+        required: true
+        type: string
+permissions: {}
+concurrency:
+  group: release-sync-${{ github.event.release.tag_name || inputs.tag }}
+  cancel-in-progress: false
+jobs:
+  sync:
+    name: Sync release to Plane
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    # The environment requires the owner's approval and holds the Plane API key.
+    environment: release
+    permissions:
+      contents: read
+      deployments: read # find a successful production deployment for the tagged commit
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install pinned tools with mise
+        uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          version: 2026.10.25
+          install_args: node
+          cache: false # this job holds the release credential; never restore a cache into it
+      - name: Sync the release to Plane
+        run: node scripts/release-sync.ts
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+          PLANE_WORKSPACE: metro-station-finder
+          PLANE_API_KEY: ${{ secrets.PLANE_API_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}

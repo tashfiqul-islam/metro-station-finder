@@ -17,3 +17,13 @@ There is no deployment or rollback automation in this ticket. Integration target
 ## Cloudflare preview (METRO-13)
 
 Same-repository pull requests get a Worker `metro-scaffold-pr-<number>` on workers.dev, deployed by the `preview` job of `.github/workflows/quality.yml` after `checks`, `build` and `security` pass; `preview-cleanup.yml` deletes it when the pull request closes. The job is outside the `Quality gates` aggregate. `CLOUDFLARE_API_TOKEN` (secret) and `CLOUDFLARE_ACCOUNT_ID` (variable) live only in the GitHub environment `preview`; a missing one fails the job with a message naming it. The token needs Workers Scripts edit for this account only; the owner rotates it (the first token expires 2026-12-03). Rollback: `wrangler rollback --name metro-scaffold-pr-<number>` returns the preview to its previous version (the job exercises it, then redeploys the checked commit). Never run these against `metro-scaffold` (production). Decisions: [specification](../specifications/cloudflare-preview.md), [ADR-0006](../adr/0006-cloudflare-preview.md).
+
+## Release sync (METRO-14)
+
+Publishing, editing, unpublishing or deleting a GitHub release runs `.github/workflows/release-sync.yml`, which keeps Plane aligned through `scripts/release-sync.ts`: the Plane release (looked up by tag name, never duplicated), its release tag (`git_tag`, `commit_hash`) and its release log (the GitHub notes rendered to HTML). GitHub is canonical. A stable release becomes `released` only when a successful `production` deployment exists for the tagged commit (none exists before METRO-11); a prerelease, draft or retracted release never does. Historical released Plane releases (`v0.0.1`, `v0.0.2`) are never modified. Publishing a release never changes work item states.
+
+- **Run it by hand:** Actions, Release sync, Run workflow, tag `vX.Y.Z`. Use this after a failed run; the run is idempotent.
+- **Credential:** `PLANE_API_KEY` is a secret in the GitHub environment `release`, which requires the owner's approval for every run and only accepts tags `v*` and the branches `main` and `feature/metro-rebuild`. The key acts as its owner in Plane and expires 2027-02-03; rotate it before then.
+- **Release notes** list the METRO tickets and pull requests included and have a "Deferred" heading for unfinished tickets; the sync reports a missing heading in the Plane description.
+- **Retraction:** delete or unpublish the GitHub release; the next run resets the Plane release to `unreleased`. Specification: [release-sync](../specifications/release-sync.md).
+- **Not covered:** creating a GitHub release from Plane (separate ticket, needs a trigger that works before the default-branch switch).
