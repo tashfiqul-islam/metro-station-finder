@@ -37,7 +37,9 @@ Stop at the first unexpected output. Never force-push, never move a tag, never s
 
 4. Owner decisions before the window (delegated and recorded 2026-11-04): the legacy Pages site is unpublished at cutover after production is live; soak 24 hours to 14 days; the offline bundle is accepted as the only copy of the later `master` history. Still to name: the rollback owner and the time window.
 5. No dress rehearsal before the switch. `release-draft` is `workflow_dispatch` only, and a dispatch needs the workflow file on the default branch (the manual-run page says "your workflow must be in the default branch", Web-verified); the live-test trick that registered it with a throwaway tag is not repeated. The rehearsal is step 3.6, after the switch, and never uses a `v1.0.0-rc.N` tag.
-6. Cutover-prep pull request to `feature/metro-rebuild` (its own ticket; ADR-0008 item 8). It must pass `bun run check` (including `branches:check`) and have a recorded independent review. It keeps a push trigger for `feature/metro-rebuild` in `quality.yml` until step 6.3.
+6. Cutover-prep pull request to `feature/metro-rebuild` (its own ticket; ADR-0008 item 8). It must pass `bun run check` (including `branches:check`) and have a recorded independent review. It keeps a push trigger for `feature/metro-rebuild` in `quality.yml` until step 6.3 (a comment in the file and `scripts/cutover-plan.test.ts` say so; step 6.3 removes it in the step 6.4 pull request). It also:
+   - names `feature/metro-rebuild` as the current base branch in CONTRIBUTING.md, workflow.md and plane.md and points each at step 6.4, which flips all three at once (`branches:check` keeps them in agreement);
+   - leaves `.github/renovate.json5` without `baseBranchPatterns` (formerly `baseBranches`; Web-verified in the Renovate docs, 2026-11-05). Renovate reads its config from the default branch only and, with no option set, processes only the default branch, so there is no Renovate edit at the flip: the file arrives on `main` with step 2 and Renovate targets `main` once step 3 makes it the default. A test fails if the option comes back. If a base branch is ever pinned again, `"$default"` denotes the default branch.
 
 ## 1. Freeze
 
@@ -168,7 +170,7 @@ Keep `master` for at least 24 hours and until the first scheduled `cloudflare-to
 
    After this step the rollback to the master arrangement is not supported (see Stage C).
 
-4. Update the docs in one reviewed pull request to `main`. The exact edit that keeps `branches:check` meaningful: in [workflow](workflow.md) replace the whole "Integration exception" section with one paragraph that starts "Owner requires ticket PRs target `main`." (the gate reads the phrase `ticket PRs target` followed by a backticked branch, and `CONTRIBUTING.md` and `plane.md` keep theirs); remove the release-time transition text in [development](../development.md) and [maintenance](maintenance.md); keep `branches:check` green. Tell collaborators to run `git fetch origin --prune` and `git remote set-head origin -a`.
+4. Update the docs in one reviewed pull request to `main`. The exact edit that keeps `branches:check` meaningful: in [workflow](workflow.md) replace the whole "Integration exception" section with one paragraph that starts "Owner requires ticket PRs target `main`." (the gate reads the phrase `ticket PRs target` followed by a backticked branch, and `CONTRIBUTING.md` and `plane.md` keep theirs); change the base branch named in `CONTRIBUTING.md` and `plane.md` to `main`; reword the integration-branch sentences in [development](../development.md) and [maintenance](maintenance.md) (their transition text is already a pointer to this runbook); remove `feature/metro-rebuild` from the `quality.yml` push trigger and its comment; keep `branches:check` green. Tell collaborators to run `git fetch origin --prune` and `git remote set-head origin -a`.
 
 ## Rollback by stage
 
