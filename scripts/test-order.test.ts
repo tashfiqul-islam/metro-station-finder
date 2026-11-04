@@ -21,8 +21,7 @@ for (const expected of [0, 1, 2, 3, 4]) {
 }
 `;
 
-/** A seed under which Bun 1.4.4 runs the coupled fixture out of source order. */
-const EXPOSING_SEED = 7;
+const SEARCH_SEEDS = Array.from({ length: 50 }, (_, index) => index + 1);
 
 async function withCoupledFixture(run: (root: string) => void | Promise<void>) {
   await mkdir(".local", { recursive: true });
@@ -63,19 +62,30 @@ test("METRO-35 the coupled fixture passes in source order, so only the order can
     expect(result.order).toBe("0,1,2,3,4");
   }));
 
+/** The first of seeds 1..50 under which the coupled fixture fails; independent of Bun's shuffle details. */
+async function findExposingSeed(root: string): Promise<number> {
+  for (const seed of SEARCH_SEEDS) {
+    if ((await bunTest(root, "--seed", String(seed))).exitCode !== 0) return seed;
+  }
+  throw new Error(`No seed in ${SEARCH_SEEDS[0]}..${SEARCH_SEEDS.at(-1)} exposed the coupling`);
+}
+
 test("METRO-35 a seeded random order exposes the coupling and prints the seed", () =>
   withCoupledFixture(async (root) => {
-    const result = await bunTest(root, "--seed", String(EXPOSING_SEED));
+    const seed = await findExposingSeed(root);
+    const result = await bunTest(root, "--seed", String(seed));
     expect(result.exitCode).not.toBe(0);
-    expect(result.output).toContain(`--seed=${EXPOSING_SEED}`);
+    expect(result.output).toContain(`--seed=${seed}`);
     expect(result.order).not.toBe("0,1,2,3,4");
     expect(result.failed.length).toBeGreaterThan(0);
   }));
 
 test("METRO-35 the same seed reproduces the identical order and failures", () =>
   withCoupledFixture(async (root) => {
-    const first = await bunTest(root, "--seed", String(EXPOSING_SEED));
-    const second = await bunTest(root, "--seed", String(EXPOSING_SEED));
+    const seed = await findExposingSeed(root);
+    const first = await bunTest(root, "--seed", String(seed));
+    const second = await bunTest(root, "--seed", String(seed));
+    expect(first.exitCode).not.toBe(0);
     expect(second.exitCode).toBe(first.exitCode);
     expect(second.order).toBe(first.order);
     expect(second.failed).toEqual(first.failed);
