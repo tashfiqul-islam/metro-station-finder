@@ -45,3 +45,8 @@ A `release` event needs write access to the repository, and the workflow file ru
 ## Out of scope
 
 Production deployment, the Plane GitHub integration (split out), changing work item states, release automation for versions other than tag-driven sync.
+
+## Live-test notes (2026-11-04)
+
+- Converting a published release to a draft did not fire the `unpublished` event in the live test; reconcile with `workflow_dispatch(tag)` from a `v*` tag or a protected branch. The dispatch ref must be allowed by the `release` environment policy (the ticket branch is not).
+- Evidence: [metro-release-sync](../evidence/metro-release-sync.md).
