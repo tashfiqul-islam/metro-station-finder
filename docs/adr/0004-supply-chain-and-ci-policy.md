@@ -15,7 +15,7 @@ Dependencies, tools and Actions were pinned by hand with no update automation, n
 - We will validate the Renovate configuration with the pinned `renovate-config-validator` in `check`. Renovate is pinned in `mise.toml` as `npm:renovate` with one scoped exception, `trust_policy_excludes = ["@yarnpkg/libzip@3.2.2"]`, approved by the owner on 2026-11-03 because that transitive release has no provenance although 3.2.0 had. As a Bun dependency Renovate would make `bun audit` fail (deepmerge has no fix). Remove the exception when upstream publishes provenance again.
 - We will lint workflows with pinned actionlint and zizmor (offline, no config file, pedantic persona) in `check`. Workflows use `permissions: {}` at the top, explicit `contents: read` per job, full-SHA Actions with version comments, `persist-credentials: false`, a pinned runner image and untrusted values only through `env`.
 - We will require Conventional Commits through a `commit-msg` hook and the same script over the pull-request range in CI.
-- We will scan the full Git history with the pinned Gitleaks (`bun run scan:history`, redacted) in the `security` job. Two legacy `gcp-api-key` findings (commit `c36908bd`, built Next output) are allowlisted by exact fingerprint in `.gitleaksignore` with the owner's approval. The key's restriction or rotation status is unknown and is the owner's follow-up with the provider.
+- We will scan the full Git history with the pinned Gitleaks (`bun run scan:history`, redacted) in the `security` job. Two legacy `gcp-api-key` findings (commit `c36908bd`, built Next output) are allowlisted by exact fingerprint in `.gitleaksignore` with the owner's approval. The key is deleted (see the 2026-11-05 note below).
 - Remote enforcement is a ruleset on `feature/metro-rebuild` (required `Quality gates`, up-to-date branch, pull request, signed commits, resolved threads, no force-push or deletion, no bypass). The same ruleset for `main` is owner-applied. Note 2026-11-05: both rulesets now exist and require `Quality gates` and `Reviewer record`; see [workflow](../agents/workflow.md#independent-review).
 
 ## Consequences
@@ -24,6 +24,10 @@ Dependencies, tools and Actions were pinned by hand with no update automation, n
 - The tool trust exception and the history allowlist are standing, reviewed exceptions that must be revisited, not silently extended.
 - Renovate behavior on this repository is unobserved until the app processes the configuration.
 - Intermediate, unreviewed commits cannot land with non-conventional subjects.
+
+## Notes
+
+- 2026-11-05: The legacy Google Maps API key is deleted (confirmed by the owner).
 
 ## Alternatives considered
 
