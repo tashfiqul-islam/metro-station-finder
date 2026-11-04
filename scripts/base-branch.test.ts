@@ -100,7 +100,7 @@ test("METRO-34 the command sets a failing exit code and prints the problem when 
     expect(process.exitCode).toBe(1);
   } finally {
     console.error = originalError;
-    process.exitCode = previous;
+    process.exitCode = previous ?? 0;
   }
   expect(errors.join("\n")).toContain("base branches differ");
 });
@@ -117,7 +117,7 @@ test("METRO-34 the command keeps a zero exit code and reports success when docum
     expect(process.exitCode).toBe(0);
   } finally {
     console.log = originalLog;
-    process.exitCode = previous;
+    process.exitCode = previous ?? 0;
   }
   expect(lines.join("\n")).toContain("Base branch ok");
 });

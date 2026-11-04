@@ -499,7 +499,7 @@ test("METRO-34 the command prints the report and sets the exit code from the fin
     await expectRejection(runCli(["--repo", REPO, "--tag", "nope"], fakeGh().gh), "Tag must");
   } finally {
     console.log = originalLog;
-    process.exitCode = previous;
+    process.exitCode = previous ?? 0;
   }
 });
 
