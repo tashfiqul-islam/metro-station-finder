@@ -43,6 +43,6 @@ The rebuild branch tracks zero `.js`, `.jsx`, `.mjs` or `.cjs` files (`.dependen
 
 - Apply the `main` ruleset (payload in [supply-chain evidence](metro-foundation-supply-chain.md)).
 - Confirm the license holder name `Tashfiqul Islam`.
-- ~~Restrict or rotate the legacy Google Maps key allowlisted in `.gitleaksignore`.~~ Superseded 2026-11-05: the owner states the key was deleted (unverified by an agent); see [ADR-0004](../adr/0004-supply-chain-and-ci-policy.md#legacy-maps-key-record-metro-32).
+- Done 2026-11-05: the legacy Google Maps key allowlisted in `.gitleaksignore` is deleted (confirmed by the owner).
 - Observe Renovate's first run on `feature/metro-rebuild`.
 - Answer the METRO-13 questions (Plane comment).
