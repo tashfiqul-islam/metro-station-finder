@@ -100,3 +100,11 @@ test("METRO-36 the pull request template asks for the reviewer", () => {
   expect(template).toMatch(/^## Reviewer\s*$/mu);
   expect(template).toContain("none (docs only)");
 });
+
+test("METRO-37 the reviewer definition carries the embedded-instruction rules", () => {
+  const agent = read(".claude/agents/independent-reviewer.md");
+  expect(agent).toContain("docs/agents/untrusted-input.md");
+  expect(agent).toMatch(/quote it/iu);
+  expect(agent).toMatch(/defang/iu);
+  expect(agent).toMatch(/tell the owner/iu);
+});
