@@ -74,6 +74,103 @@ afterEach(() => {
   process.exitCode = 0;
 });
 
+const okBody = (extra: Record<string, unknown>): unknown => ({
+  success: true,
+  result: { id: "x", status: "active", ...extra },
+});
+const iso = (days: number): string => new Date(NOW.getTime() + days * DAY).toISOString();
+
+test("METRO-33 every request, including the fallback, carries a timeout signal", async () => {
+  const signals: (AbortSignal | undefined)[] = [];
+  const deps: Deps = {
+    log: () => {},
+    fetch: (url, init) => {
+      signals.push(init?.signal);
+      return Promise.resolve(url === ACCOUNT_URL ? reply(401) : reply(200, verified("active", 60)));
+    },
+  };
+  await checkCloudflareToken(config, deps);
+  expect(signals).toHaveLength(2);
+  for (const signal of signals) expect(signal).toBeInstanceOf(AbortSignal);
+});
+
+test("METRO-33 a hung request times out with a clear message and no secret", async () => {
+  const hanging: Deps = {
+    log: () => {},
+    fetch: (_url, init) =>
+      new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => reject(init.signal?.reason));
+      }),
+  };
+  const message = await failureOf(checkCloudflareToken({ ...config, timeoutMs: 20 }, hanging));
+  expect(message).toContain("request timed out after 0.02 s");
+  expect(message).not.toContain(SECRET);
+  const refused: Deps = {
+    log: () => {},
+    fetch: () => Promise.reject(new DOMException(`aborted ${SECRET}`, "AbortError")),
+  };
+  const aborted = await failureOf(checkCloudflareToken(config, refused));
+  expect(aborted).toContain("request timed out after 15 s");
+  expect(aborted).not.toContain(SECRET);
+});
+
+test("METRO-33 a timeout on the fallback request also fails as a timeout", async () => {
+  const deps: Deps = {
+    log: () => {},
+    fetch: (url) =>
+      url === ACCOUNT_URL
+        ? Promise.resolve(reply(403))
+        : Promise.reject(new DOMException("slow", "TimeoutError")),
+  };
+  await expectRejection(checkCloudflareToken(config, deps), "timed out");
+});
+
+test("METRO-33 a not_before date in the future fails; an absent or past one passes", async () => {
+  const future = accountOnly(() => reply(200, okBody({ not_before: iso(2), expires_on: iso(90) })));
+  const message = await failureOf(checkCloudflareToken(config, future.deps));
+  expect(message).toContain(`token not valid until ${iso(2)}`);
+  for (const extra of [{}, { not_before: iso(-3) }]) {
+    const h = accountOnly(() => reply(200, okBody({ ...extra, expires_on: iso(90) })));
+    expect(await checkCloudflareToken(config, h.deps)).toEqual({
+      status: "active",
+      daysRemaining: 90,
+    });
+  }
+  for (const notBefore of ["nonsense", 5]) {
+    const h = accountOnly(() => reply(200, okBody({ not_before: notBefore })));
+    await expectRejection(checkCloudflareToken(config, h.deps), "not_before that is not a date");
+  }
+});
+
+test("METRO-33 whitespace around the token and account id is trimmed before use", async () => {
+  const h = accountOnly(() => reply(200, verified("active", 60)));
+  await checkCloudflareToken(
+    { ...config, token: `${SECRET}\r\n`, accountId: ` ${ACCOUNT}\n` },
+    h.deps,
+  );
+  expect(h.calls).toEqual([{ url: ACCOUNT_URL, auth: `Bearer ${SECRET}` }]);
+  const env = { CLOUDFLARE_API_TOKEN: `${SECRET}\n`, CLOUDFLARE_ACCOUNT_ID: `${ACCOUNT}\n` };
+  const viaMain = accountOnly(() => reply(200, verified("active", 60)));
+  await cloudflareTokenCheckMain(env, viaMain.deps, NOW);
+  expect(process.exitCode).toBe(0);
+  expect(viaMain.calls).toEqual([{ url: ACCOUNT_URL, auth: `Bearer ${SECRET}` }]);
+  const bad = accountOnly(() => reply(401));
+  const text = await failureOf(checkCloudflareToken({ ...config, token: `${SECRET}\n` }, bad.deps));
+  expect(text).not.toContain(SECRET);
+});
+
+test("METRO-33 an account 401 followed by a user endpoint 5xx fails naming both statuses", async () => {
+  const h = harness({
+    [ACCOUNT_URL]: () => reply(401, { errors: [{ message: SECRET }] }),
+    [USER_URL]: () => reply(502, { errors: [{ message: SECRET }] }),
+  });
+  const message = await failureOf(checkCloudflareToken(config, h.deps));
+  expect(message).toContain("502");
+  expect(message).toContain("401");
+  expect(message).not.toContain(SECRET);
+  expect(h.logs.join("\n")).not.toContain(SECRET);
+});
+
 test("METRO-33 a valid token with a far expiry passes and reports the days left, not the token", async () => {
   const h = accountOnly(() => reply(200, verified("active", 29)));
   const result = await checkCloudflareToken(config, h.deps);
