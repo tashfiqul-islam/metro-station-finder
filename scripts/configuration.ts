@@ -39,6 +39,15 @@ export async function validateConfiguration(root: string): Promise<void> {
   }
   if (manifest["packageManager"] !== `bun@${String(engines["bun"])}`)
     throw new Error("package.json packageManager must match engines.bun");
+  const trusted = manifest["trustedDependencies"];
+  if (
+    !Array.isArray(trusted) ||
+    trusted.some((entry) => typeof entry !== "string") ||
+    JSON.stringify(trusted) !== JSON.stringify(REVIEWED_TRUSTED_DEPENDENCIES)
+  )
+    throw new Error(
+      `package.json trustedDependencies must equal the reviewed list ${JSON.stringify(REVIEWED_TRUSTED_DEPENDENCIES)}`,
+    );
   const bunfig = await parse("bunfig.toml", true);
   const install = record(bunfig["install"], "bunfig.toml install");
   for (const [key, value] of Object.entries({
@@ -69,6 +78,8 @@ export async function validateConfiguration(root: string): Promise<void> {
 }
 
 const RELEASE_COOLDOWN_SECONDS = 259200;
+/** Reviewed install-script allow list (METRO-46). Empty: no dependency may run install scripts. */
+const REVIEWED_TRUSTED_DEPENDENCIES: readonly string[] = [];
 const RENOVATE_FILE = ".github/renovate.json5";
 
 async function readRenovate(root: string): Promise<Record<string, unknown>> {
