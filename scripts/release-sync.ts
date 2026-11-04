@@ -225,22 +225,26 @@ export function decide(input: DecideInput): Decision {
 
 // ---- HTTP edges ---------------------------------------------------------------------------------
 
-function field(record: Record<string, unknown>, key: string): string | null {
+export function field(record: Record<string, unknown>, key: string): string | null {
   const value = record[key];
   return typeof value === "string" ? value : null;
 }
 
-function fail(what: string, response: FetchedResponse): never {
+export function fail(what: string, response: FetchedResponse): never {
   throw new Error(`${what} failed with HTTP ${response.status}`);
 }
 
-const GITHUB_HEADERS = (token: string): Record<string, string> => ({
+export const GITHUB_HEADERS = (token: string): Record<string, string> => ({
   accept: "application/vnd.github+json",
   authorization: `Bearer ${token}`,
   "x-github-api-version": "2022-11-28",
 });
 
-async function githubGet(config: Config, deps: Deps, path: string): Promise<FetchedResponse> {
+export async function githubGet(
+  config: Config,
+  deps: Deps,
+  path: string,
+): Promise<FetchedResponse> {
   return deps.fetch(`https://api.github.com/repos/${config.repository}${path}`, {
     headers: GITHUB_HEADERS(config.githubToken),
   });
@@ -326,12 +330,12 @@ export async function renderNotes(config: Config, deps: Deps, notes: string): Pr
   return response.text();
 }
 
-function planeUrl(config: Config, suffix: string): string {
+export function planeUrl(config: Config, suffix: string): string {
   const base = config.planeBase ?? "https://api.plane.so";
   return `${base}/api/v1/workspaces/${encodeURIComponent(config.workspace)}/releases/${suffix}`;
 }
 
-async function planeRequest(
+export async function planeRequest(
   config: Config,
   deps: Deps,
   url: string,
@@ -346,7 +350,7 @@ async function planeRequest(
 }
 
 /** Walks a Plane cursor-paginated list and returns every item `pick` accepts. */
-async function planeFindAll<T>(
+export async function planeFindAll<T>(
   config: Config,
   deps: Deps,
   suffix: string,
@@ -373,7 +377,7 @@ async function planeFindAll<T>(
   throw new Error(`Plane ${what} list did not end after 20 pages`);
 }
 
-function single<T>(matches: readonly T[], what: string, name: string): T | undefined {
+export function single<T>(matches: readonly T[], what: string, name: string): T | undefined {
   if (matches.length > 1)
     throw new Error(
       `Plane has ${matches.length} ${what} named ${JSON.stringify(name)}; fix the duplicate first`,
