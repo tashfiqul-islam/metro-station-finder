@@ -281,6 +281,38 @@ test("FND-S2 the real Renovate configuration passes the pinned strict validator"
   expect(result.exitCode).toBe(0);
 });
 
+async function setTrusted(root: string, value: unknown): Promise<void> {
+  const path = join(root, "package.json");
+  const manifest: unknown = JSON.parse(await readFile(path, "utf8"));
+  if (!isRecord(manifest)) throw new Error("package.json is not an object");
+  if (value === undefined) delete manifest["trustedDependencies"];
+  else manifest["trustedDependencies"] = value;
+  await writeFile(path, JSON.stringify(manifest));
+}
+
+test("METRO-46 the repository trusts no dependency install scripts", async () => {
+  const manifest: unknown = JSON.parse(await readFile(resolve("package.json"), "utf8"));
+  if (!isRecord(manifest)) throw new Error("package.json is not an object");
+  expect(manifest["trustedDependencies"]).toEqual([]);
+});
+
+for (const [change, value] of [
+  ["removed", undefined],
+  ["widened", ["esbuild"]],
+  ["not an array", "esbuild"],
+  ["with a non-string entry", [1]],
+] as const) {
+  test(`METRO-46 rejects trustedDependencies ${change}`, async () => {
+    const root = await fixture();
+    try {
+      await setTrusted(root, value);
+      await expectRejection(validateConfiguration(root), "trustedDependencies");
+    } finally {
+      await rm(root, { recursive: true });
+    }
+  });
+}
+
 test("FND-S2 a Renovate fixture with an unknown option fails the pinned validator", async () => {
   const root = await fixture();
   try {
