@@ -1,5 +1,9 @@
 import { expect, test } from "bun:test";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
+import { cleanGitEnv } from "./git-env";
 import {
   evaluateReviewer,
   gitChangedPaths,
@@ -9,7 +13,7 @@ import {
 } from "./reviewer-record";
 
 const valid =
-  "independent-reviewer subagent (.claude/agents/independent-reviewer.md), fresh session 2026-11-04 run r-123, disposition in the Review disposition section";
+  "independent-reviewer subagent (.claude/agents/independent-reviewer.md), session: r-123 on 2026-11-04, disposition https://github.com/o/r/pull/35#issuecomment-1";
 const body = (reviewer: string): string =>
   `## Ticket\n\n- Ticket ID: METRO-1\n\n## Reviewer\n\n${reviewer}\n\n## Checks run\n\nbun run check: pass\n`;
 const code = ["scripts/x.ts"];
@@ -110,14 +114,91 @@ test("METRO-36 an extremely long body is handled quickly and still decided corre
   const started = performance.now();
   expect(evaluateReviewer(`${filler}\n${body(valid)}`, code).ok).toBe(true);
   expect(evaluateReviewer(`${filler}\n## Reviewer\n<!-- ${filler}`, code).ok).toBe(false);
-  expect(evaluateReviewer(`## Reviewer\n${filler}`, code).ok).toBe(true);
+  expect(evaluateReviewer(`## Reviewer\n${filler}\n${valid}`, code).ok).toBe(true);
+  expect(evaluateReviewer(`## Reviewer\n${filler}`, code).ok).toBe(false);
+  expect(evaluateReviewer(`${"```\n".repeat(50_001)}## Reviewer\n${valid}`, code).ok).toBe(false);
   expect(evaluateReviewer("<!--".repeat(100_000), code).ok).toBe(false);
   expect(performance.now() - started).toBeLessThan(2000);
 });
-test("METRO-36 only the first Reviewer section is read", () =>
+test("METRO-36 a duplicate heading falls back to the first non-empty section", () => {
   expect(readReviewerValue(`## Reviewer\nfirst value here\n## Reviewer\nsecond`)).toBe(
     "first value here",
-  ));
+  );
+  expect(readReviewerValue(`## Reviewer\n\n## Ticket\nx\n## Reviewer\nsecond value`)).toBe(
+    "second value",
+  );
+  expect(evaluateReviewer(`## Reviewer\n\n## Reviewer\n${valid}`, code).ok).toBe(true);
+});
+
+const identity = "independent-reviewer subagent";
+for (const [name, value] of [
+  ["a repeated character", "aaaaaaaaaaaa"],
+  ["a short sentence", "Reviewer: me"],
+  ["a pending statement", "Independent review pending (to be recorded)"],
+  ["tbd with a link", `${identity} TBD https://example.com/x`],
+  ["todo with a link", `${identity} todo https://example.com/x`],
+  ["to be added", `${identity} session: later, to be added #12`],
+  ["to be done", `${identity}, to be done, #12`],
+  ["to be filled", `${identity}, to be filled in, #12`],
+  ["n/a", `${identity} n/a https://example.com/x`],
+  ["none yet", `${identity} none yet #12`],
+  ["not yet", `${identity} not yet run #12`],
+  ["will be", `${identity} will be run, session: 1`],
+  ["placeholder", `${identity} placeholder https://example.com/x`],
+  ["fill in", `${identity} fill in later #12`],
+  ["upper-case pending", `${identity} PENDING #12`],
+  ["identity text without any reference", `${identity} reviewed the change carefully`],
+] as const) {
+  test(`METRO-36 rejects ${name}`, () =>
+    expect(evaluateReviewer(body(value), code).ok).toBe(false));
+}
+for (const [name, value] of [
+  ["a url", `${identity}, output at https://example.com/review/1`],
+  ["a PR or comment number", `${identity}, findings and disposition in #35`],
+  ["a session token", `${identity}, session: 2026-11-04-a`],
+  ["a run token", `${identity}; Run: 42`],
+] as const) {
+  test(`METRO-36 accepts ${name} as the reference`, () =>
+    expect(evaluateReviewer(body(value), code).ok).toBe(true));
+}
+test("METRO-36 'pending' inside another word is not a placeholder", () =>
+  expect(evaluateReviewer(body(`${identity}, dependency graph checked, #35`), code).ok).toBe(true));
+
+const crlf = (text: string): string => text.replaceAll("\n", "\r\n");
+test("METRO-36 a body edited in the web UI uses CRLF and is still read", () => {
+  expect(evaluateReviewer(crlf(body(valid)), code).ok).toBe(true);
+  expect(evaluateReviewer(crlf(`## Reviewer\n${valid}`), code).ok).toBe(true);
+  expect(evaluateReviewer(crlf(body("none (docs only)")), ["docs/a.md"]).ok).toBe(true);
+  expect(evaluateReviewer(crlf(body("none (docs only)")), ["scripts/x.ts"]).ok).toBe(false);
+  expect(evaluateReviewer(crlf(body("<!-- hidden -->\n")), code).ok).toBe(false);
+  expect(readReviewerValue(crlf(body(valid)))).toBe(valid);
+});
+
+test("METRO-36 a deeper sub-heading stays inside the Reviewer section", () => {
+  const text = `## Reviewer\n\n### Details\n${valid}\n\n#### More\nextra\n\n## Checks run\nnone`;
+  expect(evaluateReviewer(text, code).ok).toBe(true);
+  expect(readReviewerValue(text)).toContain("extra");
+  expect(readReviewerValue(text)).not.toContain("none");
+});
+test("METRO-36 a heading of the same or a higher level ends the section", () => {
+  expect(readReviewerValue(`### Reviewer\nabc\n### Next\ndef`)).toBe("abc");
+  expect(readReviewerValue(`### Reviewer\nabc\n## Next\ndef`)).toBe("abc");
+  expect(readReviewerValue(`## Reviewer\nabc\n# Next\ndef`)).toBe("abc");
+});
+test("METRO-36 headings inside fenced code blocks are ignored", () => {
+  const fenced = `## Reviewer\n\`\`\`\n## Ticket\n${valid}\n\`\`\`\n## Checks run\nx`;
+  expect(evaluateReviewer(fenced, code).ok).toBe(true);
+  expect(evaluateReviewer("```\n## Reviewer\n" + valid + "\n```", code).ok).toBe(false);
+  expect(evaluateReviewer(`~~~\n## Reviewer\n${valid}\n~~~`, code).ok).toBe(false);
+  const longer = "````\n```\n## Reviewer\n" + valid + "\n````";
+  expect(evaluateReviewer(longer, code).ok).toBe(false);
+  const unclosed = `## Reviewer\n\`\`\`\n${valid}`;
+  expect(evaluateReviewer(unclosed, code).ok).toBe(true);
+});
+test("METRO-36 Setext headings are not supported and count as no section", () => {
+  expect(evaluateReviewer(`Reviewer\n--------\n${valid}`, code).ok).toBe(false);
+  expect(evaluateReviewer(`Reviewer\n========\n${valid}`, code).ok).toBe(false);
+});
 
 const sha = "a".repeat(40);
 /** Read through a function so TypeScript does not narrow it to the value just assigned. */
@@ -129,7 +210,7 @@ function run(env: Record<string, string | undefined>, files: string[] | Error = 
   const logs: string[] = [];
   const calls: string[][] = [];
   const previous = process.exitCode;
-  process.exitCode = undefined;
+  process.exitCode = 0;
   reviewerRecordMain(env, {
     changedPaths: (base, head) => {
       calls.push([base, head]);
@@ -146,7 +227,7 @@ function run(env: Record<string, string | undefined>, files: string[] | Error = 
 test("METRO-36 the entry point passes a valid body and reports success", () => {
   const result = run({ PR_BODY: body(valid), BASE_SHA: sha, HEAD_SHA: sha });
   expect(result.exitCode ?? 0).toBe(0);
-  expect(result.logs.join("\n")).toContain("Reviewer recorded");
+  expect(result.logs.join("\n")).toContain("carries a reference");
   expect(result.calls).toEqual([[sha, sha]]);
 });
 test("METRO-36 the entry point fails with the reason for an unset body", () => {
@@ -171,6 +252,35 @@ test("METRO-36 git changed paths come from the merge base and fail visibly on a 
   expect(() => gitChangedPaths(sha, sha)).toThrow("git diff failed");
 });
 
+test("METRO-36 a rename from code to docs lists both paths, so the deletion counts", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "metro-rename-"));
+  try {
+    const git = (...args: string[]): string => {
+      const result = Bun.spawnSync(["git", "-C", dir, ...args], { env: cleanGitEnv() });
+      if (result.exitCode !== 0) throw new Error(result.stderr.toString());
+      return result.stdout.toString().trim();
+    };
+    git("init", "-q");
+    git("config", "user.email", "test@example.com");
+    git("config", "user.name", "Test");
+    git("config", "commit.gpgsign", "false");
+    await mkdir(join(dir, "scripts"));
+    await writeFile(join(dir, "scripts", "x.ts"), "export const answer = 42;\n".repeat(20));
+    git("add", "scripts/x.ts");
+    git("commit", "-q", "-m", "base");
+    const base = git("rev-parse", "HEAD");
+    await mkdir(join(dir, "docs"));
+    git("mv", "scripts/x.ts", "docs/x.md");
+    git("commit", "-q", "-m", "rename");
+    const head = git("rev-parse", "HEAD");
+    const paths = gitChangedPaths(base, head, dir);
+    expect(new Set(paths)).toEqual(new Set(["docs/x.md", "scripts/x.ts"]));
+    expect(isDocsOnly(paths)).toBe(false);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test("METRO-36 the default dependencies use real git and the console", () => {
   const head = Bun.spawnSync(["git", "rev-parse", "HEAD"]).stdout.toString().trim();
   const out: string[] = [];
@@ -179,10 +289,12 @@ test("METRO-36 the default dependencies use real git and the console", () => {
   const previous = process.exitCode;
   console.log = (m: string) => void out.push(`log:${m}`);
   console.error = (m: string) => void out.push(`error:${m}`);
-  process.exitCode = undefined;
+  process.exitCode = 0;
   try {
     reviewerRecordMain({ PR_BODY: body(valid), BASE_SHA: head, HEAD_SHA: head });
-    expect(out).toEqual([`log:Reviewer recorded.`]);
+    expect(out).toEqual([
+      `log:Reviewer section present, not a placeholder, and carries a reference.`,
+    ]);
     reviewerRecordMain({ PR_BODY: "", BASE_SHA: head, HEAD_SHA: head });
     expect(currentExit()).toBe(1);
   } finally {

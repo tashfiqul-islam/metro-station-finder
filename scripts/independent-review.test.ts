@@ -66,6 +66,35 @@ test("METRO-36 a tracked read-only reviewer definition and checklist exist", () 
   expect(agent).toContain("docs/agents/review-checklist.md");
 });
 
+test("METRO-36 the docs say exactly what the check proves and cannot prove", () => {
+  const definition = section(workflow, "Independent review").toLowerCase();
+  for (const term of [
+    "carries a reference",
+    "cannot prove",
+    "that a review happened",
+    "setext",
+    "32768",
+    "crlf",
+  ])
+    expect(definition).toContain(term);
+  expect(read("docs/agents/review-checklist.md").toLowerCase()).toContain("cannot prove");
+});
+
+test("METRO-36 the docs say the check is separate and not required until the owner acts", () => {
+  const definition = section(workflow, "Independent review").toLowerCase();
+  for (const term of [
+    ".github/workflows/reviewer-record.yml",
+    "ruleset",
+    "visible but not required",
+    "stale",
+    "edited",
+  ])
+    expect(definition).toContain(term);
+  const gates = read("docs/agents/quality-gates.md");
+  expect(gates).toContain("reviewer-record.yml");
+  expect(gates).not.toContain("`security` and `review`");
+});
+
 test("METRO-36 the pull request template asks for the reviewer", () => {
   const template = read(".github/pull_request_template.md");
   expect(template).toMatch(/^## Reviewer\s*$/mu);

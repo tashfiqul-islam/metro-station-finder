@@ -24,6 +24,10 @@ Tool-neutral source of truth for the reviewer in [independent review](workflow.m
 - Each finding: file and line, evidence quoted or described, why it matters.
 - **Verified:** what was checked and how. **Could not verify:** what was not, and why. Never claim a check that was not performed.
 
+## What the CI record check does and does not do
+
+It checks that the pull request `Reviewer` section is present, is not a placeholder and carries a reference. It cannot prove that a review happened: the linked reviewer output and disposition are the evidence, and a reader should follow them.
+
 ## Disposition by the orchestrator
 
 A report is a set of leads, not authority. The orchestrator verifies each finding against the code, then records exactly one disposition per finding: fixed (commit), disproved (with evidence), accepted (with reason and who accepted) or deferred (with a ticket). See [workflow](workflow.md#independent-review).
