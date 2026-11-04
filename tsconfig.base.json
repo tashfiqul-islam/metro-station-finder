@@ -15,6 +15,7 @@
     "noUnusedParameters": true,
     "noPropertyAccessFromIndexSignature": true,
     "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true,
     "skipLibCheck": false,
     "types": [],
     "lib": ["ES2022"]
