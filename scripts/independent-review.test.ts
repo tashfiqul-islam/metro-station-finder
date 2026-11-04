@@ -80,18 +80,15 @@ test("METRO-36 the docs say exactly what the check proves and cannot prove", () 
   expect(read("docs/agents/review-checklist.md").toLowerCase()).toContain("cannot prove");
 });
 
-test("METRO-36 the docs say the check is separate and not required until the owner acts", () => {
+test("METRO-36 the docs say the check is separate and required by both rulesets", () => {
   const definition = section(workflow, "Independent review").toLowerCase();
-  for (const term of [
-    ".github/workflows/reviewer-record.yml",
-    "ruleset",
-    "visible but not required",
-    "stale",
-    "edited",
-  ])
+  for (const term of [".github/workflows/reviewer-record.yml", "ruleset", "stale", "edited"])
     expect(definition).toContain(term);
+  expect(definition).not.toContain("visible but not required");
+  expect(definition).not.toContain("until the owner adds");
   const gates = read("docs/agents/quality-gates.md");
   expect(gates).toContain("reviewer-record.yml");
+  expect(gates).not.toContain("required only after the owner adds");
   expect(gates).not.toContain("`security` and `review`");
 });
 
@@ -107,4 +104,19 @@ test("METRO-37 the reviewer definition carries the embedded-instruction rules", 
   expect(agent).toMatch(/quote it/iu);
   expect(agent).toMatch(/defang/iu);
   expect(agent).toMatch(/tell the owner/iu);
+});
+
+test("METRO-60 the docs name both required checks and the pull request Reviewer rule", () => {
+  const enforcement = section(workflow, "Independent review");
+  expect(enforcement).toContain("`Quality gates`");
+  expect(enforcement).toContain("`Reviewer record`");
+  expect(enforcement).toContain("feature/metro-rebuild");
+  expect(enforcement).toContain("`main`");
+  expect(enforcement).toContain("26426527");
+  expect(enforcement).toContain("26467450");
+  expect(enforcement).toMatch(/require both status checks/iu);
+  const gates = read("docs/agents/quality-gates.md");
+  expect(gates).toContain("`Quality gates`");
+  expect(gates).toContain("`Reviewer record`");
+  expect(gates).toMatch(/required (status )?check/iu);
 });
