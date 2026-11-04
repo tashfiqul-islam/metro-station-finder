@@ -1,7 +1,9 @@
 import { expect, test } from "bun:test";
+import { realpathSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join, relative, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
 import {
   type Context,
@@ -20,6 +22,9 @@ import {
 } from "./agent-authorization";
 import { isRecord } from "./guards";
 
+// Paths come from the repository root, never from the process cwd.
+const ROOT = resolve(import.meta.dir, "..");
+const repo = (...parts: string[]) => join(ROOT, ...parts);
 const NOW = new Date("2026-11-04T12:00:00.000Z");
 const PROJECT = "D:/work/metro";
 const MARKERS = "C:/Users/o/.claude/metro-authorization";
@@ -83,6 +88,8 @@ test("METRO-38 every documented read action classifies as read and every mutatin
     for (const action of mutating) expect(classifyPlaneCall(tool, action)).toBe("mutating");
   }
 });
+// The connector listed 30 tools on 2026-11-04, one of them (get_pql_reference) without an action.
+// Update this number together with PLANE_ACTIONS and the docs table when the connector changes.
 test("METRO-38 the table covers the whole connector (30 tools minus the action-less one)", () =>
   expect(Object.keys(PLANE_ACTIONS)).toHaveLength(29));
 test("METRO-38 unknown or odd actions are mutating, never read", () => {
@@ -352,7 +359,7 @@ test("METRO-38 CODEOWNERS: comments, blanks and owners are ignored; unsupported 
     expect(() => parseCodeowners(line)).toThrow(/unsupported/u);
 });
 test("METRO-38 the real CODEOWNERS parses and covers the policy, hook and settings files", async () => {
-  const patterns = parseCodeowners(await readFile(resolve(".github", "CODEOWNERS"), "utf8"));
+  const patterns = parseCodeowners(await readFile(repo(".github", "CODEOWNERS"), "utf8"));
   for (const path of [
     "scripts/agent-authorization.ts",
     ".claude/settings.json",
@@ -463,7 +470,7 @@ function at(value: unknown, ...path: (string | number)[]): unknown {
 const same = (left: Iterable<string>, right: Iterable<string>) =>
   expect(new Set(left)).toEqual(new Set(right));
 async function readSettings(): Promise<unknown> {
-  return parseJson(await readFile(resolve(".claude", "settings.json"), "utf8"));
+  return parseJson(await readFile(repo(".claude", "settings.json"), "utf8"));
 }
 
 test("METRO-38 settings.json wires PreToolUse for Plane and file edits, fails closed, and grants nothing", async () => {
@@ -487,7 +494,6 @@ test("METRO-38 settings.json wires PreToolUse for Plane and file edits, fails cl
     expect(planeMatcher.test(`mcp__claude_ai_Plane__${tool}`)).toBe(true);
   for (const name of PLANE_VARIANTS) expect(planeMatcher.test(name)).toBe(true);
   expect(planeMatcher.test("mcp__claude_ai_Github_MCP__merge_pull_request")).toBe(false);
-  expect(planeMatcher.test("mcp__claude_ai_Github_MCP__merge_pull_request")).toBe(false);
   expect(planeMatcher.test("Bash")).toBe(false);
   same(String(at(settings, "hooks", "PreToolUse", 1, "matcher")).split("|"), [
     "Edit",
@@ -503,7 +509,7 @@ test("METRO-38 the configured command blocks and allows over a real process boun
   const command = at(settings, ...handler, "command");
   const args = at(settings, ...handler, "args");
   if (typeof command !== "string" || !Array.isArray(args)) throw new Error("no handler");
-  const root = process.cwd();
+  const root = ROOT;
   const home = await mkdtemp(join(tmpdir(), "metro-auth-"));
   try {
     const run = (stdin: string) =>
@@ -537,7 +543,7 @@ test("METRO-38 the configured command blocks and allows over a real process boun
 // ---------- docs and real I/O ----------
 
 test("METRO-38 docs/agents/permissions.md carries the same classification table as the code", async () => {
-  const text = await readFile(resolve("docs", "agents", "permissions.md"), "utf8");
+  const text = await readFile(repo("docs", "agents", "permissions.md"), "utf8");
   const block =
     /<!-- plane-actions:start -->([\s\S]*?)<!-- plane-actions:end -->/u.exec(text)?.[1] ?? "";
   const documented: Record<string, { read: string[]; mutating: string[] }> = {};
@@ -557,7 +563,7 @@ test("METRO-38 docs/agents/permissions.md carries the same classification table 
   expect(documented).toEqual(expected);
 });
 test("METRO-38 the recommended allow rules in the docs are valid whole-tool rules for the Plane server", async () => {
-  const text = await readFile(resolve("docs", "agents", "permissions.md"), "utf8");
+  const text = await readFile(repo("docs", "agents", "permissions.md"), "utf8");
   const blocks = [...text.matchAll(/```json\n([\s\S]*?)```/gu)].map((match) => match[1] ?? "");
   // The marker example is the JSON block without a permissions key.
   const lists = blocks
@@ -632,24 +638,6 @@ test("METRO-38 a marker written as UTF-16 text is rejected, not trusted", () =>
   ).toBe(false));
 
 // entry point
-test("METRO-38 the entry point runs for bun's import.meta.main and for a script path match on older node", () => {
-  const url = "file:///D:/work/metro/scripts/agent-authorization.ts";
-  expect(isEntryPoint({ main: true, url })).toBe(true);
-  expect(
-    isEntryPoint({ url: url, argv1: "D:\\work\\metro\\scripts\\agent-authorization.ts" }),
-  ).toBe(true);
-  expect(isEntryPoint({ url: url, argv1: "D:/work/metro/scripts/agent-authorization.ts" })).toBe(
-    true,
-  );
-  expect(isEntryPoint({ main: false, url, argv1: "D:/work/metro/scripts/other.ts" })).toBe(false);
-  expect(isEntryPoint({ url })).toBe(false);
-  expect(
-    isEntryPoint({
-      url: "file:///home/u/s/agent-authorization.ts",
-      argv1: "/home/u/s/agent-authorization.ts",
-    }),
-  ).toBe(true);
-});
 async function* chunks(...items: unknown[]): AsyncGenerator {
   await Promise.resolve();
   for (const item of items) yield item;
@@ -682,11 +670,11 @@ test("METRO-38 runEntry fails closed when reading stdin or building the context 
   expect((await runEntry(chunks(), io())).exitCode).toBe(2);
 });
 test("METRO-38 running the script by path blocks with exit 2", () => {
-  const result = Bun.spawnSync(["node", resolve("scripts", "agent-authorization.ts")], {
+  const result = Bun.spawnSync(["node", repo("scripts", "agent-authorization.ts")], {
     stdin: new TextEncoder().encode(json(plane("workitem", "delete"))),
     env: {
       ...process.env,
-      CLAUDE_PROJECT_DIR: process.cwd(),
+      CLAUDE_PROJECT_DIR: ROOT,
       HOME: tmpdir(),
       USERPROFILE: tmpdir(),
     },
@@ -787,9 +775,9 @@ test("METRO-38 paths outside the project stay allowed, except settings files and
 
 // docs
 test("METRO-38 the documented marker timestamp format is what the hook parses reliably", async () => {
-  const text = await readFile(resolve("docs", "agents", "permissions.md"), "utf8");
-  const format = "yyyy-MM-ddTHH:mm:ss.fffZ";
-  expect(text).toContain(`.ToString('${format}', [Globalization.CultureInfo]::InvariantCulture)`);
+  const text = await readFile(repo("docs", "agents", "permissions.md"), "utf8");
+  expect(text).toContain('$f="yyyy-MM-ddTHH:mm:ss.fffZ"');
+  expect(text).toContain("InvariantCulture");
   const sample = /"issuedAt": "([^"]+)"[\s\S]*?"expiresAt": "([^"]+)"/u.exec(text);
   for (const value of [sample?.[1] ?? "", sample?.[2] ?? ""]) {
     expect(value).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u);
@@ -809,7 +797,7 @@ test("METRO-38 the documented marker timestamp format is what the hook parses re
   expect(text).toMatch(/UTF-16/u);
 });
 test("METRO-38 the docs carry the operating procedure and the stated limits", async () => {
-  const text = (await readFile(resolve("docs", "agents", "permissions.md"), "utf8")).toLowerCase();
+  const text = (await readFile(repo("docs", "agents", "permissions.md"), "utf8")).toLowerCase();
   for (const needle of [
     "operating procedure",
     "gate-edit",
@@ -828,4 +816,149 @@ test("METRO-38 the docs carry the operating procedure and the stated limits", as
     "model, not a proof",
   ])
     expect(text).toContain(needle);
+});
+
+// ---------- second review round ----------
+
+test("METRO-38 a drive letter not followed by a separator is denied (drive-relative paths)", () => {
+  for (const path of [
+    "D:scripts\\guards.ts",
+    "D:scripts/guards.ts",
+    "D:..\\scripts\\guards.ts",
+    "d:package.json",
+    "C:",
+    "E:data.txt",
+  ]) {
+    denyPath(path);
+    denyPath(path, gateOk);
+  }
+  allowPath("D:/work/metro/src/a.ts");
+  allowPath("D:\\work\\metro\\src\\a.ts");
+});
+test("METRO-38 ~, $VAR and %VAR% prefixes are denied, including the marker directory through ~", () => {
+  for (const path of [
+    "~/.claude/metro-authorization/plane-write.json",
+    "~\\.claude\\metro-authorization\\gate-edit.json",
+    "~",
+    "~user/x.ts",
+    "$HOME/.claude/metro-authorization/plane-write.json",
+    "${HOME}/x.ts",
+    "$env:USERPROFILE\\x.ts",
+    "%USERPROFILE%\\.claude\\metro-authorization\\plane-write.json",
+    "%APPDATA%/x.ts",
+  ]) {
+    denyPath(path);
+    denyPath(path, { ...planeOk, ...gateOk });
+  }
+  allowPath("D:/work/metro/src/~notes.ts");
+  allowPath("D:/work/metro/src/a$b.ts");
+});
+test("METRO-38 segments made only of dots and spaces are denied, not dropped", () => {
+  for (const path of [
+    "D:/work/metro/src/.. /scripts/x.ts",
+    "D:/work/metro/src/... /scripts/x.ts",
+    "D:/work/metro/src/ /x.ts",
+    "D:/work/metro/src/.../x.ts",
+    "src/.. /scripts/x.ts",
+  ]) {
+    denyPath(path);
+    denyPath(path, gateOk);
+  }
+  allowPath("D:/work/metro/src/../src/x.ts");
+  allowPath("D:/work/metro/src/./x.ts");
+});
+test("METRO-38 gate messages echo only a project-relative path, and the Plane message a sanitized truncated action", () => {
+  const gate = decide(file("Write", "D:\\work\\metro\\scripts\\guards.ts"), ctx());
+  const settings = decide(file("Write", "C:\\Users\\o\\.claude\\settings.json"), ctx());
+  const action = `de'lete"${"x".repeat(100)}\n<secret>`;
+  const planeCall = decide(plane("workitem", action), ctx());
+  for (const decision of [gate, settings, planeCall]) {
+    expect(decision.allow).toBe(false);
+    if (decision.allow) throw new Error("unreachable");
+    expect(decision.reason).not.toContain("D:");
+    expect(decision.reason).not.toContain("C:");
+    expect(decision.reason).not.toContain("Users");
+    expect(decision.reason).not.toContain("\n<secret>");
+    expect(decision.reason).not.toContain("<");
+  }
+  if (!gate.allow) expect(gate.reason).toContain("scripts/guards.ts");
+  if (!settings.allow) expect(settings.reason).toContain(".claude/settings.json");
+  if (!planeCall.allow) {
+    expect(planeCall.reason).toContain("de?lete?");
+    expect(planeCall.reason).not.toContain("x".repeat(41));
+  }
+});
+
+// entry point with real files
+test("METRO-38 isEntryPoint compares the real path of argv1 with the module URL, absolute or relative", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "metro-entry-"));
+  try {
+    const script = join(dir, "agent-authorization.ts");
+    await writeFile(script, "// entry");
+    const url = pathToFileURL(realpathSync(script)).href;
+    expect(isEntryPoint({ url, argv1: script })).toBe(true);
+    expect(isEntryPoint({ url, argv1: relative(process.cwd(), script) })).toBe(true);
+    expect(isEntryPoint({ url, argv1: join(dir, "other.ts") })).toBe(false);
+    expect(isEntryPoint({ url })).toBe(false);
+    expect(isEntryPoint({ main: true, url: "file:///nowhere.ts" })).toBe(true);
+    expect(isEntryPoint({ main: false, url, argv1: join(dir, "missing.ts") })).toBe(false);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+// docs
+test("METRO-38 the docs say who creates markers, give the one-line commands, and cover recovery and scope", async () => {
+  const text = await readFile(repo("docs", "agents", "permissions.md"), "utf8");
+  const lower = text.toLowerCase();
+  for (const needle of [
+    "! pwsh -noprofile -command",
+    "owner's own words",
+    "never create or extend a marker",
+    "agent messages are never consent",
+    "technically",
+    "process, not by the hook",
+    "recovery",
+    "mise shim",
+    "no shell",
+    "unverified until",
+    "/packages/contracts/",
+    "/e2e/",
+    "/docs/specifications/",
+    "/apps/*/package.json",
+    "gate-edit marker",
+    "over-block",
+  ])
+    expect(lower).toContain(needle);
+  for (const scope of ["plane-write", "gate-edit"]) {
+    expect(text).toContain(`${scope}.json`);
+    expect(text).toMatch(new RegExp(`! pwsh -NoProfile -Command '.*${scope}.*'`, "u"));
+  }
+  expect(text).toMatch(/Remove-Item -LiteralPath .*plane-write\.json/u);
+  expect(text).toMatch(/Remove-Item -LiteralPath .*gate-edit\.json/u);
+  expect(lower).not.toContain("tested on node 26");
+});
+test("METRO-38 the one-line owner commands in the docs produce a marker the hook accepts", async () => {
+  const text = await readFile(repo("docs", "agents", "permissions.md"), "utf8");
+  const body = /^! pwsh -NoProfile -Command '(.*plane-write.*)'$/mu.exec(text)?.[1];
+  expect(body).toBeDefined();
+  expect(body).not.toContain("'");
+  const home = await mkdtemp(join(tmpdir(), "metro-owner-"));
+  try {
+    const run = Bun.spawnSync(["pwsh", "-NoProfile", "-Command", body ?? ""], {
+      env: { ...process.env, HOME: home, USERPROFILE: home },
+    });
+    expect(run.stderr.toString()).toBe("");
+    const raw = await readFile(
+      join(home, ".claude", "metro-authorization", "plane-write.json"),
+      "utf8",
+    );
+    expect(raw.codePointAt(0)).not.toBe(0xfe_ff);
+    const created = new Date();
+    expect(
+      decide(plane("workitem", "create"), { ...ctx({ "plane-write": raw }), now: created }).allow,
+    ).toBe(true);
+  } finally {
+    await rm(home, { recursive: true, force: true });
+  }
 });

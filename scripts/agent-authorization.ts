@@ -1,6 +1,7 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
 import { isRecord } from "./guards.ts";
 
@@ -20,7 +21,8 @@ import { isRecord } from "./guards.ts";
  * 0 or 2 only: every failure path, including reading stdin and building the context, is caught and
  * becomes exit 2. A crash before it runs (missing runtime, a node too old to strip types, a syntax
  * error) exits non-zero, which blocks only because `.claude/settings.json` sets `onFailure: "block"`.
- * Reasons never echo tool input values.
+ * Reasons name the tool, a sanitized action cut to 40 characters and a project-relative path, and
+ * never echo any other tool input value.
  *
  * Limits are documented in docs/agents/permissions.md; this hook cannot see shell commands.
  */
@@ -285,7 +287,16 @@ function cleanSegments(body: string): string[] {
  */
 function analysePath(raw: string): Analysis {
   if (raw.includes("\0")) return { problem: "path contains a NUL byte", candidates: [] };
+  if (/^[~$%]/u.test(raw)) {
+    return {
+      problem: "paths starting with ~, $ or % are not expanded and cannot be classified",
+      candidates: [],
+    };
+  }
   const text = raw.replaceAll("\\", "/");
+  if (DRIVE.test(text) && !/^[A-Za-z]:\//u.test(text)) {
+    return { problem: "drive-relative paths cannot be classified", candidates: [] };
+  }
   if (/^\/\/[?.](?:\/|$)/u.test(text)) {
     return { problem: "device path prefixes cannot be classified", candidates: [] };
   }
@@ -296,6 +307,9 @@ function analysePath(raw: string): Analysis {
   const rest = text.slice(drive.length);
   if (rest.includes(":")) {
     return { problem: "alternate data streams cannot be classified", candidates: [] };
+  }
+  if (rest.split("/").some((part) => part !== "." && part !== ".." && /^[. ]+$/u.test(part))) {
+    return { problem: "segments of only dots and spaces cannot be classified", candidates: [] };
   }
   const absolute = drive !== "" || rest.startsWith("/");
   const candidates: Parts[] = [
@@ -390,7 +404,9 @@ function decidePlane(tool: string, input: Record<string, unknown>, ctx: Context)
   const action: unknown = input["action"];
   if (classifyPlaneCall(tool, action) === "read") return NEUTRAL;
   const shown =
-    typeof action === "string" ? JSON.stringify(action.slice(0, 40)) : "(none or not a string)";
+    typeof action === "string"
+      ? `"${action.slice(0, 40).replaceAll(/[^A-Za-z0-9_-]/gu, "?")}"`
+      : "(none or not a string)";
   const problem = authorized(ctx, "plane-write");
   if (problem === undefined) return NEUTRAL;
   return deny(
@@ -442,7 +458,7 @@ function decideEdit(input: Record<string, unknown>, ctx: Context): Decision {
     return deny("Blocked: the authorization marker directory cannot be edited with file tools.");
   }
   if (files.some((file) => isSettingsFile(file))) {
-    return gate("Claude Code settings", raw.replaceAll("\\", "/"));
+    return gate("Claude Code settings", files[0]?.segments.slice(-2).join("/") ?? "settings");
   }
   if (ctx.projectDir === undefined) {
     return deny("Blocked: project directory unknown, cannot classify the edit (fail closed).");
@@ -588,11 +604,11 @@ export function isEntryPoint(meta: {
   const { argv1, url: metaUrl } = meta;
   if (meta.main === true) return true;
   if (argv1 === undefined) return false;
-  const normal = argv1.replaceAll("\\", "/");
-  const absolute =
-    DRIVE.test(normal) || normal.startsWith("/") ? normal : resolve(argv1).replaceAll("\\", "/");
-  const href = `file://${absolute.startsWith("/") ? "" : "/"}${encodeURI(absolute)}`;
-  return href.toLowerCase() === metaUrl.toLowerCase();
+  try {
+    return pathToFileURL(realpathSync(resolve(argv1))).href.toLowerCase() === metaUrl.toLowerCase();
+  } catch {
+    return false;
+  }
 }
 
 if (isEntryPoint({ main: import.meta.main, url: import.meta.url, argv1: process.argv[1] })) {
