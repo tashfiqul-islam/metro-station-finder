@@ -217,6 +217,7 @@ for (const target of [
   "missing.md",
   "other-link",
   "AGENTS.md\nsecond",
+  "AGENTS.md\n",
   "",
 ]) {
   test(

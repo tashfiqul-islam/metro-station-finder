@@ -8,10 +8,9 @@ import { checkLinks, formatProblem } from "./links";
 
 const root = resolve(import.meta.dir, "..");
 const read = (file: string) => readFile(join(root, file), "utf8");
+/** Raw git output: callers decide what to trim, so a stray trailing newline stays visible. */
 const git = (...args: string[]) =>
-  Bun.spawnSync(["git", ...args], { cwd: root, env: cleanGitEnv() })
-    .stdout.toString()
-    .trim();
+  Bun.spawnSync(["git", ...args], { cwd: root, env: cleanGitEnv() }).stdout.toString();
 
 const MIT = `MIT License
 
@@ -64,7 +63,7 @@ test("FND-H4 pull request template asks for the required evidence", async () => 
 test("FND-H5 CLAUDE.md is a git symlink to AGENTS.md", () => {
   // Read from git objects, not the working tree: a checkout without symlink support turns the link
   // into a text file, and the committed content is what every other checkout gets.
-  const [entry = ""] = git("ls-files", "-s", "--", "CLAUDE.md").split("\t");
+  const [entry = ""] = git("ls-files", "-s", "--", "CLAUDE.md").trim().split("\t");
   const [mode = "", object = ""] = entry.split(" ");
   expect(mode).toBe("120000");
   expect(git("cat-file", "blob", object)).toBe("AGENTS.md");
