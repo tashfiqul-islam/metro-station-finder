@@ -100,21 +100,6 @@
         "jest/no-identical-title": "error",
         "jest/valid-expect": "error"
       }
-    },
-    {
-      // These files are compiled by Bun-typed projects (tsconfig.test.json, tsconfig.dom-test.json, the
-      // `bun run` entry scripts), but the type-aware linter discovers the nearest tsconfig.json, which has
-      // no `bun` types, so `bun:test`, `expect` and `Bun` resolve to `error` types. The unsafe-* family then
-      // reports the missing types, not real unsafe code. The real compiler gates (`bun run typecheck`) still
-      // check these files strictly.
-      "files": ["**/*.test.ts", "**/*.test.tsx", "scripts/tools.ts", "scripts/configuration.ts"],
-      "rules": {
-        "typescript/no-unsafe-argument": "off",
-        "typescript/no-unsafe-assignment": "off",
-        "typescript/no-unsafe-call": "off",
-        "typescript/no-unsafe-member-access": "off",
-        "typescript/no-unsafe-return": "off"
-      }
     }
   ],
   "ignorePatterns": [

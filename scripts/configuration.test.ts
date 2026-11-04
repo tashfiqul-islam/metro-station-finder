@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 import { validateConfiguration, validateRuntimes } from "./configuration";
+import { isRecord } from "./guards";
 import { expectRejection } from "./test-support";
 import { gitleaksVersion } from "./tool-pins";
 
@@ -63,11 +64,14 @@ for (const change of [
     const root = await fixture();
     try {
       const path = join(root, "package.json");
-      const manifest = JSON.parse(await readFile(path, "utf8"));
-      if (change === "missing engines") delete manifest.engines;
-      if (change === "wrong node") manifest.engines.node = "24.22.2";
-      if (change === "wrong bun") manifest.engines.bun = "1.4.0";
-      if (change === "wrong packageManager") manifest.packageManager = "bun@1.4.0";
+      const manifest: unknown = JSON.parse(await readFile(path, "utf8"));
+      if (!isRecord(manifest)) throw new Error("package.json is not an object");
+      const engines = manifest["engines"];
+      if (!isRecord(engines)) throw new Error("package.json has no engines object");
+      if (change === "missing engines") delete manifest["engines"];
+      if (change === "wrong node") engines["node"] = "24.22.2";
+      if (change === "wrong bun") engines["bun"] = "1.4.0";
+      if (change === "wrong packageManager") manifest["packageManager"] = "bun@1.4.0";
       await writeFile(path, JSON.stringify(manifest));
       if (change === "missing install") await writeFile(join(root, "bunfig.toml"), "");
       await expectRejection(validateConfiguration(root));

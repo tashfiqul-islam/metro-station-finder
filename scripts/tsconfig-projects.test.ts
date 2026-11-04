@@ -74,7 +74,11 @@ test("METRO-26 every tracked TypeScript file belongs to a referenced project", a
   const owned = new Set<string>();
   for (const config of await referencedConfigs())
     for (const file of filesOf(config)) owned.add(file);
-  const orphans = tracked(["*.ts", "*.tsx"])
+  const sources = tracked(["*.ts", "*.tsx", "*.mts", "*.cts"]);
+  // A failed `git ls-files` would otherwise yield an empty list and pass vacuously.
+  expect(sources.length).toBeGreaterThan(0);
+  expect(owned.size).toBeGreaterThan(0);
+  const orphans = sources
     .map((file) => resolve(root, file))
     .filter((file) => !file.endsWith(".d.ts") && !owned.has(file));
   expect(orphans).toEqual([]);
