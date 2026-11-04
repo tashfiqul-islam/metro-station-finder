@@ -51,3 +51,8 @@ Scheduled reconcile and Plane webhook receiver (follow-ups once the default bran
 - The target is not checked against the environment policy or for existence before the POST; the owner's approval of the run is the gate, and GitHub rejects an unknown target with an error.
 - A Plane log larger than GitHub's release body limit makes the create fail with its HTTP status.
 - The `main` default follows the ticket decision; pass `target` explicitly (for example `feature/metro-rebuild`) while `main` is not the rebuild line. A dispatch from a ref other than the default branch works (proven for METRO-14), but must come from a ref the `release` environment allows.
+
+## Live-test notes (2026-11-04)
+
+- A workflow that only has `workflow_dispatch` is not registered with GitHub until some run of it exists, so `gh workflow run` answers "not found on the default branch" for a file that lives only on a feature branch or tag. The live test registered it by pushing a throwaway tag whose copy of the file also triggered on that tag push, cancelling that run before approval, and then dispatching from a second throwaway tag. After the default-branch switch the file is registered normally.
+- Evidence: [metro-release-draft](../evidence/metro-release-draft.md).
