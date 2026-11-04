@@ -37,6 +37,10 @@ $env:PLAYWRIGHT_BROWSERS_PATH = Join-Path (Get-Location) '.local/browsers'
 
 `.local`, dependencies, bundle outputs and Wrangler state are ignored. Use the same absolute paths when checking an exported copy, so the copy gets its own dependencies while reusing installed runtimes/browser binaries.
 
+## Symlinked agent entry point
+
+`CLAUDE.md` is a git symlink to `AGENTS.md` (one file, no import line to drift). On Windows, enable Developer Mode (or run git with symlink rights) and set `git config core.symlinks true` before cloning or re-checkout, or the link is materialised as a text file containing `AGENTS.md` and agents will not see the instructions. CI and Linux checkouts are unaffected. `scripts/repository.test.ts` (FND-H5) reads the committed link from git, so it passes either way.
+
 ## Boundaries and choices
 
 - `packages/core/src/domain`: synthetic contract; `src/application`: executable shared result. No dependencies, provider globals, apps or adapters. Its separate `types: []`, ES-only typecheck runs without browser/Bun/Node globals.
