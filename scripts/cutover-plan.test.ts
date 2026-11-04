@@ -84,3 +84,69 @@ test("METRO-34 the policy states its SemVer subset and names the next Plane rele
   expect(policy).toContain("SemVer-compatible subset");
   expect(policy).toContain("v1.1.0");
 });
+
+/**
+ * METRO-61: the repository is cutover-ready. These read the real files, so a later edit that makes
+ * the cutover more than the documented single flip fails here.
+ */
+
+const BASE_BRANCH_DOCUMENTS = [
+  "CONTRIBUTING.md",
+  "docs/agents/workflow.md",
+  "docs/agents/plane.md",
+  "docs/development.md",
+  "docs/agents/maintenance.md",
+];
+
+test("METRO-61 Renovate pins no base branch, so it follows the default branch after the switch", () => {
+  const config: unknown = Bun.JSON5.parse(read(".github/renovate.json5"));
+  expect(JSON.stringify(config)).toContain("minimumReleaseAge");
+  expect(JSON.stringify(config)).not.toMatch(/"baseBranch/u);
+});
+
+test("METRO-61 the runbook says Renovate needs no edit at the flip and why", () => {
+  expect(runbook).toContain("baseBranchPatterns");
+  expect(runbook).toContain("default branch");
+  expect(runbook).toContain("no Renovate edit");
+});
+
+test("METRO-61 every base-branch document points at the cutover runbook", () => {
+  for (const file of BASE_BRANCH_DOCUMENTS)
+    expect(read(file), file).toContain("cutover-runbook.md");
+  for (const file of ["CONTRIBUTING.md", "docs/agents/workflow.md", "docs/agents/plane.md"])
+    expect(read(file), file).toContain("step 6.4");
+});
+
+test("METRO-61 development.md replaces the transition text with a pointer to ADR-0008", () => {
+  const development = read("docs/development.md");
+  expect(development).not.toContain("Before the eventual authorized switch");
+  expect(development).toContain("## Release-time branch transition");
+  expect(development).toContain("0008-default-branch-switch.md");
+});
+
+test("METRO-61 quality.yml keeps the feature-branch push trigger and says why", () => {
+  const workflow = read(".github/workflows/quality.yml");
+  const parsed: unknown = Bun.YAML.parse(workflow);
+  const on = Reflect.get(Object(parsed), "on") as unknown;
+  const push = Reflect.get(Object(on), "push") as unknown;
+  const branches = Reflect.get(Object(push), "branches") as unknown;
+  expect(branches).toEqual(["feature/metro-rebuild", "main"]);
+  const block = /^ {2}push:\n((?: {4}.*\n)+)/mu.exec(workflow)?.[1] ?? "";
+  expect(block).toMatch(/^ {4}#[^\n]*runbook step 6\.3/mu);
+});
+
+test("METRO-61 the ADR no longer says a Renovate base branch must change at the switch", () => {
+  expect(adr).not.toContain('baseBranchPatterns: ["feature/metro-rebuild"]');
+  expect(adr).not.toMatch(/baseBranchPatterns[^\n]{0,200}must change/u);
+  expect(adr).toContain("no Renovate edit");
+});
+
+test("METRO-61 the runbook separates retiring the branch (6.3) from the 6.4 pull request", () => {
+  expect(runbook).toContain("window between");
+  expect(runbook).toMatch(/6\.3[^\n]*retires?[^\n]*6\.4|6\.4[^\n]*removes the[^\n]*trigger/u);
+});
+
+test("METRO-61 the ADR says the base-branch documents flip at runbook step 6.4", () => {
+  expect(adr).toContain("runbook step 6.4");
+  expect(adr).toContain("no Renovate edit");
+});
