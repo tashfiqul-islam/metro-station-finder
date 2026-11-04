@@ -13,6 +13,7 @@ import {
   secretsMessage,
   smokePreview,
 } from "./preview";
+import { expectRejection } from "./test-support";
 
 const SHA = "0123456789abcdef0123456789abcdef01234567";
 const base = "https://metro-scaffold-pr-7.example.workers.dev";
@@ -126,7 +127,8 @@ test("METRO-13 smoke fails visibly for each broken observation", async () => {
     ["404 without envelope", { missing: new Response('{"x":1}', { status: 404 }) }, ""],
   ];
   for (const [, routes, message] of cases)
-    await expect(smokePreview(base, SHA, { ...fast, fetch: serve(routes) })).rejects.toThrow(
+    await expectRejection(
+      smokePreview(base, SHA, { ...fast, fetch: serve(routes) }),
       message === "" ? "Smoke failed after 1 attempts" : message,
     );
 });
@@ -143,7 +145,8 @@ test("METRO-13 smoke retries a not-yet-resolvable hostname and then succeeds", a
 });
 
 test("METRO-13 smoke gives up after the attempts and keeps the cause", async () => {
-  await expect(smokePreview(base, SHA, { attempts: 2, delayMs: 0, fetch: down })).rejects.toThrow(
+  await expectRejection(
+    smokePreview(base, SHA, { attempts: 2, delayMs: 0, fetch: down }),
     "after 2 attempts",
   );
 });
@@ -189,16 +192,16 @@ test("METRO-13 the smoke command uses the network fetch and reports the URL", as
 });
 
 test("METRO-13 the CLI runs each command and rejects unknown ones", async () => {
-  await expect(runPreviewCli(["secrets"], {})).rejects.toThrow("Missing");
+  await expectRejection(runPreviewCli(["secrets"], {}), "Missing");
   expect(
     await runPreviewCli(["secrets"], { CLOUDFLARE_API_TOKEN: "a", CLOUDFLARE_ACCOUNT_ID: "b" }),
   ).toContain("present");
   expect(await runPreviewCli(["name"], { PR_NUMBER: "12" })).toBe("metro-scaffold-pr-12");
-  await expect(runPreviewCli(["name"], {})).rejects.toThrow("positive integer");
-  await expect(runPreviewCli(["bogus"], {})).rejects.toThrow("Unknown command");
-  await expect(runPreviewCli([], {})).rejects.toThrow("Unknown command");
-  await expect(runPreviewCli(["url"], {})).rejects.toThrow("usage");
-  await expect(runPreviewCli(["smoke"], {})).rejects.toThrow("usage");
+  await expectRejection(runPreviewCli(["name"], {}), "positive integer");
+  await expectRejection(runPreviewCli(["bogus"], {}), "Unknown command");
+  await expectRejection(runPreviewCli([], {}), "Unknown command");
+  await expectRejection(runPreviewCli(["url"], {}), "usage");
+  await expectRejection(runPreviewCli(["smoke"], {}), "usage");
   const directory = await mkdtemp(join(tmpdir(), "metro-preview-"));
   try {
     const file = join(directory, "deploy.log");
@@ -216,7 +219,7 @@ test("METRO-13 deployments are counted from a JSON array and anything else fails
   expect(countDeployments('[{"id":"a"},{"id":"b"}]')).toBe(2);
   expect(() => countDeployments('{"id":"a"}')).toThrow("JSON array");
   expect(() => countDeployments("not json")).toThrow();
-  await expect(runPreviewCli(["deployments"], {})).rejects.toThrow("usage");
+  await expectRejection(runPreviewCli(["deployments"], {}), "usage");
   const directory = await mkdtemp(join(tmpdir(), "metro-preview-count-"));
   try {
     const file = join(directory, "deployments.json");

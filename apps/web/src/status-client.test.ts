@@ -43,11 +43,21 @@ for (const [name, response] of [
   ["invalid JSON", new Response("{", { headers: { "content-type": "application/json" } })],
 ] as const) {
   test(`FND-R4 the client rejects: ${name}`, async () => {
-    await expect(fetchScaffoldStatus(stub(response))).rejects.toThrow();
+    const outcome = await fetchScaffoldStatus(stub(response)).then(
+      () => "fulfilled",
+      () => "rejected",
+    );
+    expect(outcome).toBe("rejected");
   });
 }
 
 test("FND-R4 a network failure rejects", async () => {
   const failing = asFetch(() => Promise.reject(new TypeError("offline")));
-  await expect(fetchScaffoldStatus(failing)).rejects.toThrow("offline");
+  const reason = await fetchScaffoldStatus(failing).then(
+    () => null,
+    (error: unknown) => error,
+  );
+  expect(reason instanceof Error ? reason.message : "did not reject with an Error").toContain(
+    "offline",
+  );
 });

@@ -41,6 +41,12 @@ $env:PLAYWRIGHT_BROWSERS_PATH = Join-Path (Get-Location) '.local/browsers'
 
 `CLAUDE.md` is a git symlink to `AGENTS.md` (one file, no import line to drift). On Windows, enable Developer Mode (or run git with symlink rights) and set `git config core.symlinks true` before cloning or re-checkout, or the link is materialised as a text file containing `AGENTS.md` and agents will not see the instructions. CI and Linux checkouts are unaffected. `scripts/repository.test.ts` (FND-H5) reads the committed link from git, so it passes either way.
 
+## TypeScript projects and the editor
+
+Test code is kept out of the production projects on purpose, so the repository has several project configs (`apps/web`, `apps/api`, `packages/core`, `packages/contracts`, `scripts`, `tsconfig.dom-test.json`, `tsconfig.e2e.json`, `tsconfig.test.json`). The root `tsconfig.json` is a solution file (`files: []` plus `references` to every one of them) so an editor, and the type-aware linter, open each file in the project the gates check it with. Without it a test file falls into an editor "inferred project" with no `types`, and `bun:test`, `node:*`, `process` and `Bun` all show as missing. `scripts/tsconfig-projects.test.ts` fails if a project config is not referenced or a tracked TypeScript file belongs to no referenced project. Add a new project config to the references. The `bun run typecheck` script still checks each project directly.
+
+Bun types `expect(promise).rejects` as `void`, which the type-aware lint reports as an unnecessary `await`. Use `expectRejection(promise, message?)` from `scripts/test-support.ts` in `scripts/` tests instead; the web tests use a plain `.then` outcome.
+
 ## Boundaries and choices
 
 - `packages/core/src/domain`: synthetic contract; `src/application`: executable shared result. No dependencies, provider globals, apps or adapters. Its separate `types: []`, ES-only typecheck runs without browser/Bun/Node globals.
