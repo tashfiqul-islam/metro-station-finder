@@ -30,6 +30,7 @@ interface PlaneRelease extends Record<string, unknown> {
 }
 interface GithubRelease {
   tag_name: string;
+  name?: string;
   draft: boolean;
 }
 interface World {
@@ -268,10 +269,10 @@ test("METRO-24 a Plane release log without the documented shape is a visible fai
     ...deps,
     fetch: (url, init) =>
       url.endsWith("changelog/")
-        ? Promise.resolve(reply(200, { changelog: {} }))
+        ? Promise.resolve(reply(200, { changelog: null }))
         : deps.fetch(url, init),
   };
-  await expect(draftRelease(config, odd)).rejects.toThrow("no changelog.description_html");
+  await expect(draftRelease(config, odd)).rejects.toThrow("no changelog object");
 });
 
 test("METRO-24 the entry point's default network and log edges are used when none are injected", async () => {
@@ -295,4 +296,26 @@ test("METRO-24 the entry point's default network and log edges are used when non
     Reflect.set(globalThis, "fetch", original);
     log.mockRestore();
   }
+});
+
+test("METRO-24 a release log that was never written (null html) drafts an empty body", async () => {
+  const w = world();
+  const deps = server(w);
+  const unwritten: Deps = {
+    ...deps,
+    fetch: (url, init) =>
+      url.endsWith("changelog/")
+        ? Promise.resolve(reply(200, { changelog: { description_html: null } }))
+        : deps.fetch(url, init),
+  };
+  expect(await draftRelease(config, unwritten)).toBe("created");
+  expect(w.created[0]?.["body"]).toBe("");
+});
+
+test("METRO-24 a hand-made untagged draft with the same name still counts as existing", async () => {
+  const w = world({
+    githubReleases: [{ tag_name: "untagged-3f2a", name: "v1.2.0", draft: true }],
+  });
+  expect((await run(w)).outcome).toBe("unchanged");
+  expect(w.created).toEqual([]);
 });

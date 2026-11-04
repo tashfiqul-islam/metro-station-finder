@@ -1,6 +1,6 @@
 # Specification: Plane release to draft GitHub release (METRO-24)
 
-Identity: release-draft. Immutable revision: 2026-11-04-r1. Decision owner: Tashfiqul Islam. Requested in chat on 2026-11-04 ("either I create the release on Plane or on Github, it syncs automatically"); the owner asked to start METRO-24 and the ticket's own recommendations are adopted as the defaults, to be corrected by the owner if wrong. Builds on [release-sync](release-sync.md) (METRO-14), which carries the return direction.
+Identity: release-draft. Immutable revision: 2026-11-04-r2 (r2 after independent review: name match for untagged drafts, empty-page pagination stop, null log is empty). Decision owner: Tashfiqul Islam. Requested in chat on 2026-11-04 ("either I create the release on Plane or on Github, it syncs automatically"); the owner asked to start METRO-24 and the ticket's own recommendations are adopted as the defaults, to be corrected by the owner if wrong. Builds on [release-sync](release-sync.md) (METRO-14), which carries the return direction.
 
 ## Decisions (defaults taken from the ticket recommendations)
 
@@ -15,18 +15,18 @@ Identity: release-draft. Immutable revision: 2026-11-04-r1. Decision owner: Tash
 
 The workflow `.github/workflows/release-draft.yml` runs only on manual `workflow_dispatch`. It calls `scripts/release-draft.ts`.
 
-| #   | Rule                                                                                                                                                                                                                                                           |
-| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | The tag must match `v<major>.<minor>.<patch>[-<prerelease>]` (same rule as METRO-14). The target must be a plain branch name or SHA: letters, digits, `.`, `_`, `-`, `/`, no `..`, at most 100 characters.                                                     |
-| 2   | A Plane release named exactly as the tag must exist (names are unique). Without it the job fails with a clear message.                                                                                                                                         |
-| 3   | The Plane release must be `unreleased` with no external source. A release that is already `released`, or already linked to GitHub, is skipped with a reason and nothing is written.                                                                            |
-| 4   | If GitHub already has any release for the tag, draft or published (found by listing releases, because the tag lookup hides drafts), nothing is created: outcome `unchanged`. Replays therefore create nothing.                                                 |
-| 5   | Otherwise exactly one request creates a **draft** release: `tag_name` and `name` = tag, `target_commitish` = target, `body` = the Plane release log (HTML, which GitHub's markdown accepts), `prerelease` = Plane `is_prerelease` or the tag has a `-` suffix. |
-| 6   | The job never publishes, never creates, moves or deletes a git tag, never edits or deletes a release, and never writes to Plane. The only mutating call is the single draft-creation POST.                                                                     |
-| 7   | If the git tag already exists without a release, the log says the draft will use that tag and the target is ignored; the tag is not touched.                                                                                                                   |
-| 8   | Publishing the draft fires METRO-14's sync: the Plane release is claimed (it is unreleased with no external source), the release tag gets the commit, and the release log is rewritten from GitHub's rendered notes.                                           |
-| 9   | An empty Plane release log yields a draft with an empty body, and the log says so.                                                                                                                                                                             |
-| 10  | Any HTTP failure fails the job with the status code, never the key or the token.                                                                                                                                                                               |
+| #   | Rule                                                                                                                                                                                                                                                                                                             |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | The tag must match `v<major>.<minor>.<patch>[-<prerelease>]` (same rule as METRO-14). The target must be a plain branch name or SHA: letters, digits, `.`, `_`, `-`, `/`, no `..`, at most 100 characters.                                                                                                       |
+| 2   | A Plane release named exactly as the tag must exist (names are unique). Without it the job fails with a clear message.                                                                                                                                                                                           |
+| 3   | The Plane release must be `unreleased` with no external source. A release that is already `released`, or already linked to GitHub, is skipped with a reason and nothing is written.                                                                                                                              |
+| 4   | If GitHub already has any release for the tag, draft or published (found by listing releases, because the tag lookup hides drafts; matched by tag name or release name, so a hand-made `untagged-…` draft with the same name counts), nothing is created: outcome `unchanged`. Replays therefore create nothing. |
+| 5   | Otherwise exactly one request creates a **draft** release: `tag_name` and `name` = tag, `target_commitish` = target, `body` = the Plane release log (HTML, which GitHub's markdown accepts), `prerelease` = Plane `is_prerelease` or the tag has a `-` suffix.                                                   |
+| 6   | The job never publishes, never creates, moves or deletes a git tag, never edits or deletes a release, and never writes to Plane. The only mutating call is the single draft-creation POST.                                                                                                                       |
+| 7   | If the git tag already exists without a release, the log says the draft will use that tag and the target is ignored; the tag is not touched.                                                                                                                                                                     |
+| 8   | Publishing the draft fires METRO-14's sync: the Plane release is claimed (it is unreleased with no external source), the release tag gets the commit, and the release log is rewritten from GitHub's rendered notes.                                                                                             |
+| 9   | An empty or never-written Plane release log (no HTML, null or empty) yields a draft with an empty body, and the log says so.                                                                                                                                                                                     |
+| 10  | Any HTTP failure fails the job with the status code, never the key or the token.                                                                                                                                                                                                                                 |
 
 ## Credentials and permissions
 
@@ -43,3 +43,11 @@ The workflow `.github/workflows/release-draft.yml` runs only on manual `workflow
 ## Out of scope
 
 Scheduled reconcile and Plane webhook receiver (follow-ups once the default branch moves or a production Worker exists), updating an existing draft, converting Plane HTML to Markdown, publishing, any Plane state change.
+
+## Known limits (accepted after independent review)
+
+- "Exactly one" holds per workflow run: the concurrency group stops two draft runs for one tag, but a draft made by hand or by another tool between the list and the create can still produce a second draft. Delete the extra draft manually.
+- A skipped run (Plane release already released or linked) exits successfully and says why in the log.
+- The target is not checked against the environment policy or for existence before the POST; the owner's approval of the run is the gate, and GitHub rejects an unknown target with an error.
+- A Plane log larger than GitHub's release body limit makes the create fail with its HTTP status.
+- The `main` default follows the ticket decision; pass `target` explicitly (for example `feature/metro-rebuild`) while `main` is not the rebuild line. A dispatch from a ref other than the default branch works (proven for METRO-14), but must come from a ref the `release` environment allows.

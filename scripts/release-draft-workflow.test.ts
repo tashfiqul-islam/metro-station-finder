@@ -58,6 +58,9 @@ test("METRO-24 the Plane key is set only on the draft step; inputs reach the scr
 });
 
 test("METRO-24 runs for one tag never overlap or cancel each other", () => {
-  expect(workflow).toContain("release-draft-${{ inputs.tag }}");
-  expect(workflow).toContain("cancel-in-progress: false");
+  const { doc } = draftJob();
+  expect(doc["concurrency"]).toEqual({
+    group: "release-draft-${{ inputs.tag }}",
+    "cancel-in-progress": false,
+  });
 });

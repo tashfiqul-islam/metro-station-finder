@@ -46,8 +46,12 @@ async function githubReleaseExists(config: DraftConfig, deps: Deps): Promise<boo
     const releases: unknown = await response.json();
     if (!Array.isArray(releases)) throw new Error("GitHub releases response was not a list");
     const items = releases as unknown[];
-    if (items.some((r) => isRecord(r) && r["tag_name"] === config.tag)) return true;
-    if (items.length < 100) return false;
+    // A draft made in the GitHub UI without a chosen tag is listed as `untagged-…`; its name still matches.
+    if (
+      items.some((r) => isRecord(r) && (r["tag_name"] === config.tag || r["name"] === config.tag))
+    )
+      return true;
+    if (items.length === 0) return false;
   }
   throw new Error("GitHub release list did not end after 20 pages");
 }
@@ -69,10 +73,9 @@ async function readPlaneLog(config: DraftConfig, deps: Deps, releaseId: string):
   if (!response.ok) return fail("Reading the Plane release log", response);
   const data: unknown = await response.json();
   const log = isRecord(data) ? data["changelog"] : undefined;
-  const html = isRecord(log) ? field(log, "description_html") : null;
-  if (html === null)
-    throw new Error("Plane release log response has no changelog.description_html");
-  return html;
+  if (!isRecord(log)) throw new Error("Plane release log response has no changelog object");
+  // A log nobody has written yet has no HTML (null or empty); that is a valid, empty log.
+  return field(log, "description_html") ?? "";
 }
 
 export async function draftRelease(config: DraftConfig, deps: Deps): Promise<DraftOutcome> {
