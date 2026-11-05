@@ -3,6 +3,7 @@ import { expect, test } from "bun:test";
 import { requiredJobsSucceeded } from "./ci-results";
 
 const passing = {
+  changes: { result: "success", outputs: { docs_only: "false" } },
   checks: { result: "success" },
   build: { result: "success" },
   security: { result: "success" },
@@ -20,6 +21,47 @@ for (const job of Object.keys(passing)) {
     expect(requiredJobsSucceeded(incomplete)).toBe(false);
   });
 }
+const docsOnly = { ...passing, changes: { result: "success", outputs: { docs_only: "true" } } };
+test("METRO-62 a build skipped because the change is docs-only passes", () =>
+  expect(requiredJobsSucceeded({ ...docsOnly, build: { result: "skipped" } })).toBe(true));
+test("METRO-62 a successful build on a docs-only change still passes", () =>
+  expect(requiredJobsSucceeded(docsOnly)).toBe(true));
+for (const docs_only of ["false", "", "TRUE", "1"]) {
+  test(`METRO-62 an unexpected build skip fails when docs_only is ${JSON.stringify(docs_only)}`, () =>
+    expect(
+      requiredJobsSucceeded({
+        ...passing,
+        changes: { result: "success", outputs: { docs_only } },
+        build: { result: "skipped" },
+      }),
+    ).toBe(false));
+}
+test("METRO-62 an unexpected build skip fails when changes has no outputs", () =>
+  expect(
+    requiredJobsSucceeded({
+      ...passing,
+      changes: { result: "success" },
+      build: { result: "skipped" },
+    }),
+  ).toBe(false));
+for (const result of ["failure", "cancelled"]) {
+  test(`METRO-62 a ${result} build fails even on a docs-only change`, () =>
+    expect(requiredJobsSucceeded({ ...docsOnly, build: { result } })).toBe(false));
+}
+for (const job of ["checks", "security"]) {
+  test(`METRO-62 a skipped ${job} fails even on a docs-only change`, () =>
+    expect(requiredJobsSucceeded({ ...docsOnly, [job]: { result: "skipped" } })).toBe(false));
+}
+test("METRO-62 a docs-only claim cannot excuse a skipped build when changes did not succeed", () => {
+  for (const result of ["failure", "cancelled", "skipped"])
+    expect(
+      requiredJobsSucceeded({
+        ...docsOnly,
+        changes: { result, outputs: { docs_only: "true" } },
+        build: { result: "skipped" },
+      }),
+    ).toBe(false);
+});
 test("aggregate rejects an extra job that did not succeed", () =>
   expect(requiredJobsSucceeded({ ...passing, extra: { result: "failure" } })).toBe(false));
 test("aggregate accepts an extra job that succeeded", () =>
