@@ -30,6 +30,10 @@ Publishing, editing, unpublishing or deleting a GitHub release runs `.github/wor
 - **Retraction:** delete or unpublish the GitHub release; the next run resets the Plane release to `unreleased`. Specification: [release-sync](../specifications/release-sync.md).
 - **Not covered:** creating a GitHub release from Plane (separate ticket, needs a trigger that works before the default-branch switch).
 
+## Production deploy (METRO-57)
+
+`.github/workflows/production-deploy.yml` deploys a stable `v*` tag (or `main` by dispatch) to the Worker `metro-scaffold` through the approval-gated `production` environment: upload a version, stage it at 0 percent, smoke it, roll it to 100 percent, smoke, soak, smoke, with automatic `wrangler rollback` on failure. It is off until the owner sets `PRODUCTION_DEPLOY_ENABLED=true`. Decisions: [ADR-0012](../adr/0012-production-deploy.md); owner setup, read-only checks and manual rollback: [deploy runbook](deploy-runbook.md). The production Cloudflare token is separate from the preview token; rotate it on its own schedule.
+
 ## Default-branch switch and version policy (METRO-34)
 
 [ADR-0008](../adr/0008-default-branch-switch.md) plans how and when the default moves from `master` to `main` for v1.0.0 (readiness checklist, order, rollback, deletion of `master` after a soak). [Cutover runbook](cutover-runbook.md): exact commands, not executed. `mise exec -- bun run cutover:preflight` is the read-only precondition report (GitHub `GET` calls and `gh pr list` only, enforced in code). Version and tag naming, who bumps and the release-notes source: [release policy](release-policy.md). `bun run branches:check` (part of `check`) fails when CONTRIBUTING.md, workflow.md and plane.md name different pull request base branches, so the three change together at the switch. The weekly Cloudflare token check below starts running when the default switches.

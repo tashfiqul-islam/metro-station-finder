@@ -1,0 +1,154 @@
+name: Production deploy
+# Inert until the owner creates the `production` environment (required reviewer, tag and branch policy,
+# secrets) and sets the repository variables PRODUCTION_DEPLOY_ENABLED=true and PRODUCTION_URL. See
+# docs/agents/deploy-runbook.md and docs/adr/0012-production-deploy.md. The first trigger is a pushed
+# stable `v*` tag; the branch `main` can be dispatched by hand (cutover runbook step 4.1).
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+permissions: {}
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+jobs:
+  deploy:
+    name: Deploy to production
+    # The job condition is the off switch: while the variable is not exactly "true" the job is skipped, so
+    # the `production` environment is never referenced (a workflow that names a missing environment
+    # creates it unprotected on its first run). The guard step checks the same variable again.
+    if: ${{ vars.PRODUCTION_DEPLOY_ENABLED == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    # The environment requires the owner's approval and holds the Cloudflare token. A job-level
+    # environment makes GitHub create the `production` deployment that release-sync looks for.
+    environment:
+      name: production
+      url: ${{ vars.PRODUCTION_URL }}
+    permissions:
+      contents: read
+    env:
+      WORKER: metro-scaffold
+      PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}
+      SOAK_SECONDS: "120"
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install pinned tools with mise
+        uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          version: 2026.10.25
+          cache: false # this job holds the Cloudflare token; never restore a cache into it
+      - name: Install dependencies
+        run: bun run bootstrap
+      - name: Refuse unless production deploys are enabled and the ref is allowed
+        env:
+          PRODUCTION_DEPLOY_ENABLED: ${{ vars.PRODUCTION_DEPLOY_ENABLED }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/production.ts guard
+      - name: Name the version
+        id: label
+        run: node scripts/production.ts label # reads the runner's own GITHUB_SHA and GITHUB_RUN_ID
+      - name: Build the production environment
+        run: bun run build
+      - name: Record the version that serves production now
+        id: previous
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          bunx wrangler deployments status --name "$WORKER" --json > "$RUNNER_TEMP/current.json"
+          node scripts/production.ts current "$RUNNER_TEMP/current.json"
+      - name: Upload the new version without deploying it
+        id: upload
+        env:
+          LABEL: ${{ steps.label.outputs.label }}
+          REF_NAME: ${{ github.ref_name }}
+          COMMIT: ${{ github.sha }}
+          WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/wrangler-output.ndjson
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          bunx wrangler versions upload --config apps/web/dist/metro_scaffold/wrangler.json --name "$WORKER" --tag "$LABEL" --message "Production $REF_NAME $COMMIT" --var "PREVIEW_SHA:$COMMIT"
+          node scripts/production.ts version "$WRANGLER_OUTPUT_FILE_PATH"
+      - name: Stage the new version at 0 percent
+        id: stage
+        env:
+          PREVIOUS: ${{ steps.previous.outputs.current }}
+          VERSION: ${{ steps.upload.outputs.version }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: bunx wrangler versions deploy "$PREVIOUS@100%" "$VERSION@0%" --name "$WORKER" --message "Stage $VERSION at 0 percent" --yes
+      - name: Smoke the staged version through a version override
+        env:
+          COMMIT: ${{ github.sha }}
+          VERSION: ${{ steps.upload.outputs.version }}
+        run: node scripts/production.ts smoke "$PRODUCTION_URL" "$COMMIT" "$VERSION"
+      - name: Roll the new version out to 100 percent
+        id: promote
+        env:
+          VERSION: ${{ steps.upload.outputs.version }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: bunx wrangler versions deploy "$VERSION@100%" --name "$WORKER" --message "Roll out $VERSION to 100 percent" --yes
+      - name: Smoke production and prove it serves the released commit
+        env:
+          COMMIT: ${{ github.sha }}
+        run: node scripts/production.ts smoke "$PRODUCTION_URL" "$COMMIT"
+      - name: Soak
+        run: sleep "$SOAK_SECONDS"
+      - name: Smoke production again after the soak
+        env:
+          COMMIT: ${{ github.sha }}
+        run: node scripts/production.ts smoke "$PRODUCTION_URL" "$COMMIT"
+      - name: Roll back to the previous version
+        if: ${{ failure() && steps.previous.outputs.current != '' && steps.stage.outcome != 'skipped' }}
+        id: rollback
+        env:
+          PREVIOUS: ${{ steps.previous.outputs.current }}
+          COMMIT: ${{ github.sha }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: bunx wrangler rollback "$PREVIOUS" --name "$WORKER" --message "Automatic rollback of $COMMIT after a failed deploy" --yes
+      - name: Smoke production after the rollback
+        if: ${{ failure() && steps.rollback.outcome == 'success' }}
+        run: node scripts/production.ts smoke "$PRODUCTION_URL"
+      - name: Record the deploy in the job summary
+        if: ${{ always() }}
+        env:
+          PREVIOUS: ${{ steps.previous.outputs.current }}
+          VERSION: ${{ steps.upload.outputs.version }}
+          COMMIT: ${{ github.sha }}
+          ROLLBACK: ${{ steps.rollback.outcome }}
+          RESULT: ${{ job.status }}
+        run: |
+          {
+            echo "### Production deploy"
+            echo "- Result: $RESULT"
+            echo "- Commit: $COMMIT"
+            echo "- New version: ${VERSION:-none}"
+            echo "- Previous version: ${PREVIOUS:-unknown}"
+            echo "- Automatic rollback: ${ROLLBACK:-not needed}"
+          } >> "$GITHUB_STEP_SUMMARY"
+  sync:
+    name: Ask release-sync to reconcile the release
+    # A tag deploy normally finishes after the release was published, so release-sync (which ran when the
+    # release was published) saw no production deployment yet. Dispatch it again once the deploy succeeded.
+    needs: [deploy]
+    if: ${{ needs.deploy.result == 'success' && github.ref_type == 'tag' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: write # the minimum GitHub requires to dispatch a workflow; no checkout, no secrets
+    steps:
+      - name: Dispatch release-sync for this tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: gh workflow run release-sync.yml --ref "$TAG" -f tag="$TAG"

@@ -110,7 +110,7 @@ Then, in order:
 
 ## 4. Production, then the release
 
-1. Deploy `MAIN_SHA` to production with the METRO-57 workflow and run its smoke. This must succeed on exactly `MAIN_SHA` or the Plane release cannot become `released`. (The workflow and its command are defined by METRO-57, not here.)
+1. Deploy `MAIN_SHA` to production with the METRO-57 workflow and run its smoke. This must succeed on exactly `MAIN_SHA` or the Plane release cannot become `released`. The workflow and its owner setup are in the [deploy runbook](deploy-runbook.md) and [ADR-0012](../adr/0012-production-deploy.md): after its setup steps, `gh workflow run production-deploy.yml --repo $R --ref main`.
 2. Ensure the Plane release `v1.0.0` exists, is `unreleased` and has no external source; fill its release log with the tickets, pull requests and a `Deferred` heading ([policy](release-policy.md#release-notes)).
 3. Create the draft on the exact commit and approve the `release` environment prompt after checking tag and commit:
 
