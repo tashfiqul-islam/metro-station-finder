@@ -1,5 +1,5 @@
 import { AxeBuilder } from "@axe-core/playwright";
-import { expect, test as base } from "@playwright/test";
+import { expect, test as base, type Page } from "@playwright/test";
 
 interface Options {
   /** A console error a test provokes on purpose (for example an injected HTTP 500). */
@@ -18,6 +18,26 @@ const WEBKIT_REPORT_ONLY_NOISE = [
   /^The Content Security Policy '[^]+' was delivered in report-only mode, but does not specify a 'report-to'; the policy will have no effect\. Please either add a 'report-to' directive, or deliver the policy via the 'Content-Security-Policy' header\.$/u,
   /^\[Report Only\] Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy\.$/u,
 ];
+
+/**
+ * Target: WCAG 2.2 AA. axe-core 4.14.0 tags WCAG 2.0/2.1/2.2 rules by level, and `wcag22aa` is the
+ * only tag that selects `target-size` (SC 2.5.8), which axe leaves disabled by default.
+ * `best-practice` keeps every rule axe ran before tags were set: a tag filter replaces the default
+ * rule set, and without it 27 default rules (landmark-one-main, region, heading-order, ...) drop out. Measured in axe-core 4.14.0 by listing the ids from `axe.getRules()` with `enabled !== false` that `axe.getRules(tags)` lacks.
+ */
+export const AXE_TAGS = [
+  "wcag2a",
+  "wcag2aa",
+  "wcag21a",
+  "wcag21aa",
+  "wcag22aa",
+  "best-practice",
+] as const;
+
+/** Axe runs through this one builder, in the guard and in the tests that prove its configuration. */
+export function axeBuilder(page: Page): AxeBuilder {
+  return new AxeBuilder({ page }).withTags([...AXE_TAGS]);
+}
 
 export function isWebKitReportOnlyNoise(browserName: string, text: string): boolean {
   return browserName === "webkit" && WEBKIT_REPORT_ONLY_NOISE.some((pattern) => pattern.test(text));
@@ -42,7 +62,7 @@ export const test = base.extend<{ guards: void } & Options>({
       await use();
       expect(problems, "console and page errors").toEqual([]);
       if (page.url() !== "about:blank") {
-        const results = await new AxeBuilder({ page }).analyze();
+        const results = await axeBuilder(page).analyze();
         expect(results.violations, "axe violations").toEqual([]);
       }
     },
