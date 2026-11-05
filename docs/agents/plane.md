@@ -54,7 +54,7 @@ Labels classify a work item. They never duplicate a Plane state, module, milesto
 | Merged                    | Done        |
 | Closed (not merged)       | no change   |
 
-"Prevent issues from moving to an earlier state due to PR updates" is on. Project issue sync is off: GitHub issues are not used, work lives in Plane.
+"Prevent issues from moving to an earlier state due to PR updates" is on. The project is bound to the repository under Project Issue Sync, direction **Unidirectional** (GitHub to Plane only; Issue Open → Backlog, Issue Closed → Cancelled). Never choose Bidirectional: it would copy Plane tickets into the public repository. The repository has no GitHub issues, so the binding imports nothing. Without the binding the bot links a PR to its ticket but the mapping above did not move any state (observed on PR #69, 2026-11-05).
 
 A pull request links to a ticket by its `METRO-NN` identifier in the branch name, title or body. Because Merged maps to Done, merge only when the hosted `Quality gates` check is green and review is resolved (see rule 8 above). A premature Done is reconciled by hand. Observed behavior is recorded on METRO-25.
 
