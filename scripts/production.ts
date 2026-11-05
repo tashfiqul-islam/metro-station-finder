@@ -141,10 +141,14 @@ export function versionOverrideHeader(versionId: string): Record<string, string>
 
 /** Raw read-only GitHub API answers that describe how the `production` environment is configured. */
 export interface SettingsInput {
+  /** `GET /users/<owner>`: the expected reviewer's id and login. */
+  owner: unknown;
   environment: unknown;
   policies: unknown;
   repoSecrets: unknown;
   repoVariables: unknown;
+  organizationSecrets: unknown;
+  organizationVariables: unknown;
   environmentSecrets: unknown;
   environmentVariables: unknown;
 }
@@ -152,9 +156,16 @@ export interface SettingsInput {
 const OWNER = "tashfiqul-islam";
 const CLOUDFLARE_NAMES = ["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID"] as const;
 
+/**
+ * Names in a GitHub list answer, or null when the answer is not a list or is incomplete: every list is
+ * requested with `per_page=100`, so `total_count` above the returned items means a name could sit on a
+ * page that was never read (fail closed).
+ */
 function namesIn(value: unknown, key: "secrets" | "variables"): string[] | null {
   const list = isRecord(value) ? value[key] : undefined;
   if (!Array.isArray(list)) return null;
+  const total = isRecord(value) ? value["total_count"] : undefined;
+  if (typeof total === "number" && total > list.length) return null;
   return (list as unknown[]).flatMap((item) =>
     isRecord(item) && typeof item["name"] === "string" ? [item["name"]] : [],
   );
@@ -162,28 +173,39 @@ function namesIn(value: unknown, key: "secrets" | "variables"): string[] | null 
 
 function leaked(names: string[] | null): string[] {
   return names === null
-    ? ["unreadable"]
+    ? ["unreadable or incomplete"]
     : names.filter((n) => (CLOUDFLARE_NAMES as readonly string[]).includes(n));
 }
 
-function reviewers(environment: unknown): string[] {
+/** Every entry of every required-reviewers rule, as `type:login-or-slug` (`invalid` for a malformed entry). */
+function reviewerEntries(
+  environment: unknown,
+): { label: string; type: unknown; id: unknown; login: unknown }[] {
   const rules = isRecord(environment) ? environment["protection_rules"] : undefined;
   if (!Array.isArray(rules)) return [];
   return (rules as unknown[]).flatMap((rule) => {
     if (!isRecord(rule) || rule["type"] !== "required_reviewers") return [];
     const list = rule["reviewers"];
     if (!Array.isArray(list)) return [];
-    return (list as unknown[]).flatMap((entry) => {
+    return (list as unknown[]).map((entry) => {
       const reviewer = isRecord(entry) ? entry["reviewer"] : undefined;
-      const login = isRecord(reviewer) ? reviewer["login"] : undefined;
-      return typeof login === "string" ? [login] : [];
+      if (!isRecord(entry) || !isRecord(reviewer))
+        return { label: "invalid", type: undefined, id: undefined, login: undefined };
+      const name = reviewer["login"] ?? reviewer["slug"] ?? reviewer["name"] ?? reviewer["id"];
+      return {
+        label: `${String(entry["type"])}:${String(name)}`,
+        type: entry["type"],
+        id: reviewer["id"],
+        login: reviewer["login"],
+      };
     });
   });
 }
 
 /**
- * Pre-enable check (ADR-0012 item 7): the `production` environment has the owner as the required reviewer
- * and exactly the tag `v*` and branch `main` policies, and no repository-level secret or variable can
+ * Pre-enable check (ADR-0012 item 7): the `production` environment's only required reviewer is the owner,
+ * as a `User` with the owner's id (a team entry, another user or an extra entry fails), it has exactly the
+ * tag `v*` and branch `main` policies, and no repository- or organization-level secret or variable can
  * carry the Cloudflare credentials (a repository-level token would let an unprotected, auto-created
  * environment deploy). Pure: it only reads what `check-settings` fetched.
  */
@@ -192,11 +214,25 @@ export function evaluateSettings(input: SettingsInput): { ok: boolean; lines: st
   const check = (ok: boolean, name: string, detail: string): void => {
     lines.push(`${ok ? "PASS" : "FAIL"} ${name}: ${detail}`);
   };
-  const found = reviewers(input.environment);
+  const ownerId = isRecord(input.owner) ? input.owner["id"] : undefined;
+  const found = reviewerEntries(input.environment);
+  const [only] = found;
   check(
-    found.length === 1 && found[0] === OWNER,
+    typeof ownerId === "number" &&
+      found.length === 1 &&
+      only?.type === "User" &&
+      only.id === ownerId &&
+      only.login === OWNER,
     "required reviewer",
-    found.length === 0 ? "none" : found.join(", "),
+    `${found.length === 0 ? "none" : found.map((entry) => entry.label).join(", ")} (expected exactly User ${OWNER}, id ${typeof ownerId === "number" ? ownerId : "unresolved"})`,
+  );
+  const bypass = isRecord(input.environment) ? input.environment["can_admins_bypass"] : undefined;
+  check(
+    typeof bypass === "boolean",
+    "admin bypass",
+    typeof bypass === "boolean"
+      ? `can_admins_bypass=${String(bypass)} (reported only: a sole-admin owner can bypass protection rules either way)`
+      : "can_admins_bypass is not reported by the API",
   );
   const policy = isRecord(input.environment) ? input.environment["deployment_branch_policy"] : null;
   check(
@@ -205,8 +241,11 @@ export function evaluateSettings(input: SettingsInput): { ok: boolean; lines: st
     "environment must use custom branch and tag policies",
   );
   const listed = isRecord(input.policies) ? input.policies["branch_policies"] : undefined;
+  const policyTotal = isRecord(input.policies) ? input.policies["total_count"] : undefined;
   if (!Array.isArray(listed)) {
     check(false, "deployment policies", "the policies answer is not a list");
+  } else if (typeof policyTotal === "number" && policyTotal > listed.length) {
+    check(false, "deployment policies", "the policies answer is incomplete (more than one page)");
   } else {
     const entries = (listed as unknown[]).flatMap((item) =>
       isRecord(item) ? [`${String(item["type"])}:${String(item["name"])}`] : [],
@@ -216,71 +255,78 @@ export function evaluateSettings(input: SettingsInput): { ok: boolean; lines: st
     const extra = entries.filter((entry) => entry !== "tag:v*" && entry !== "branch:main");
     check(extra.length === 0, "no unexpected policies", extra.join(", ") || "none");
   }
-  const repoSecrets = namesIn(input.repoSecrets, "secrets");
-  const repoVariables = namesIn(input.repoVariables, "variables");
+  const scoped: [string, string, unknown, "secrets" | "variables"][] = [
+    ["no repository secret", "repository", input.repoSecrets, "secrets"],
+    ["no repository variable", "repository", input.repoVariables, "variables"],
+    ["no organization secret", "organization", input.organizationSecrets, "secrets"],
+    ["no organization variable", "organization", input.organizationVariables, "variables"],
+  ];
+  for (const [name, level, value, key] of scoped) {
+    const names = leaked(namesIn(value, key));
+    check(
+      names.length === 0,
+      name,
+      `Cloudflare names at ${level} level: ${names.join(", ") || "none"}`,
+    );
+  }
+  const envSecrets = namesIn(input.environmentSecrets, "secrets");
   check(
-    leaked(repoSecrets).length === 0,
-    "no repository secret",
-    `Cloudflare names at repository level: ${leaked(repoSecrets).join(", ") || "none"}`,
-  );
-  check(
-    leaked(repoVariables).length === 0,
-    "no repository variable",
-    `Cloudflare names at repository level: ${leaked(repoVariables).join(", ") || "none"}`,
-  );
-  check(
-    namesIn(input.environmentSecrets, "secrets")?.includes("CLOUDFLARE_API_TOKEN") === true,
+    envSecrets?.includes("CLOUDFLARE_API_TOKEN") === true,
     "environment secret",
-    "CLOUDFLARE_API_TOKEN exists in production",
+    envSecrets === null
+      ? "the answer is unreadable or incomplete"
+      : "CLOUDFLARE_API_TOKEN must exist in production",
   );
+  const envVariables = namesIn(input.environmentVariables, "variables");
   check(
-    namesIn(input.environmentVariables, "variables")?.includes("CLOUDFLARE_ACCOUNT_ID") === true,
+    envVariables?.includes("CLOUDFLARE_ACCOUNT_ID") === true,
     "environment variable",
-    "CLOUDFLARE_ACCOUNT_ID exists in production",
+    envVariables === null
+      ? "the answer is unreadable or incomplete"
+      : "CLOUDFLARE_ACCOUNT_ID must exist in production",
   );
   return { ok: lines.every((line) => line.startsWith("PASS ")), lines };
 }
 
 /** Runs `gh` with fixed arguments and no shell; the check below only ever passes `api <path>`. */
 export type GhRunner = (args: readonly string[]) => string;
-const runGh: GhRunner = (args) => execFileSync("gh", [...args], { encoding: "utf8" });
+const runGh: GhRunner = (args) =>
+  execFileSync("gh", [...args], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
 
-function readJson(gh: GhRunner, path: string): unknown {
-  return JSON.parse(gh(["api", path]));
-}
-
-/** Read-only: six `gh api` GET calls. A missing environment is reported as a failure, not thrown. */
+/**
+ * Read-only: nine `gh api` GET calls. A failed read becomes a `FAIL read <path>` line and a null answer
+ * (which the evaluation then fails too), never an exception. A 404 on the organization endpoints means
+ * the repository has no organization (a personal account) and counts as an empty list.
+ */
 export function checkSettings(repo: string, gh: GhRunner): { ok: boolean; lines: string[] } {
   if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/u.test(repo))
     throw new Error(`Expected owner/repo, got ${JSON.stringify(repo)}`);
+  const failures: string[] = [];
+  const read = (path: string, emptyWhenMissing = false): unknown => {
+    try {
+      return JSON.parse(gh(["api", path]));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (emptyWhenMissing && message.includes("HTTP 404"))
+        return { total_count: 0, secrets: [], variables: [] };
+      failures.push(`FAIL read ${path.split("?")[0] ?? path}: ${message.split("\n")[0] ?? ""}`);
+      return null;
+    }
+  };
   const env = `repos/${repo}/environments/production`;
-  const repoSecrets = readJson(gh, `repos/${repo}/actions/secrets?per_page=100`);
-  const repoVariables = readJson(gh, `repos/${repo}/actions/variables?per_page=100`);
-  let environment: unknown;
-  try {
-    environment = readJson(gh, env);
-  } catch {
-    const result = evaluateSettings({
-      environment: null,
-      policies: null,
-      repoSecrets,
-      repoVariables,
-      environmentSecrets: null,
-      environmentVariables: null,
-    });
-    return {
-      ok: false,
-      lines: [`FAIL environment: ${env} does not exist or is not readable`, ...result.lines],
-    };
-  }
-  return evaluateSettings({
-    environment,
-    policies: readJson(gh, `${env}/deployment-branch-policies`),
-    repoSecrets,
-    repoVariables,
-    environmentSecrets: readJson(gh, `${env}/secrets?per_page=100`),
-    environmentVariables: readJson(gh, `${env}/variables?per_page=100`),
+  const actions = `repos/${repo}/actions`;
+  const result = evaluateSettings({
+    owner: read(`users/${OWNER}`),
+    environment: read(env),
+    policies: read(`${env}/deployment-branch-policies?per_page=100`),
+    repoSecrets: read(`${actions}/secrets?per_page=100`),
+    repoVariables: read(`${actions}/variables?per_page=100`),
+    organizationSecrets: read(`${actions}/organization-secrets?per_page=100`, true),
+    organizationVariables: read(`${actions}/organization-variables?per_page=100`, true),
+    environmentSecrets: read(`${env}/secrets?per_page=100`),
+    environmentVariables: read(`${env}/variables?per_page=100`),
   });
+  return { ok: result.ok && failures.length === 0, lines: [...failures, ...result.lines] };
 }
 
 type SmokeOptions = NonNullable<Parameters<typeof smokePreview>[2]>;

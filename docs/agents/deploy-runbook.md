@@ -50,7 +50,7 @@ The domain cutover is its own owner-authorized step ([cutover runbook](cutover-r
 
 ## 5. Check the settings, then switch the workflow on (last)
 
-First run the read-only settings check. It makes six `gh api` GET calls and changes nothing; it must print only `PASS` lines and exit 0 before you set the variable. A repository-level Cloudflare secret or variable would let a run in an unprotected, auto-created `production` environment proceed, which is why the check fails on one.
+First run the read-only settings check. It makes nine `gh api` GET calls and changes nothing; it must print only `PASS` lines and exit 0 before you set the variable. A repository-level Cloudflare secret or variable would let a run in an unprotected, auto-created `production` environment proceed, which is why the check fails on one.
 
 ```powershell
 mise exec -- node scripts/production.ts check-settings $R
@@ -59,18 +59,21 @@ mise exec -- node scripts/production.ts check-settings $R
 Expected output:
 
 ```text
-PASS required reviewer: tashfiqul-islam
+PASS required reviewer: User:tashfiqul-islam (expected exactly User tashfiqul-islam, id <your id>)
+PASS admin bypass: can_admins_bypass=true (reported only: a sole-admin owner can bypass protection rules either way)
 PASS custom deployment policies: environment must use custom branch and tag policies
 PASS tag policy: v* must be allowed
 PASS branch policy: main must be allowed
 PASS no unexpected policies: none
 PASS no repository secret: Cloudflare names at repository level: none
 PASS no repository variable: Cloudflare names at repository level: none
+PASS no organization secret: Cloudflare names at organization level: none
+PASS no organization variable: Cloudflare names at organization level: none
 PASS environment secret: CLOUDFLARE_API_TOKEN exists in production
 PASS environment variable: CLOUDFLARE_ACCOUNT_ID exists in production
 ```
 
-Any `FAIL` line names what to fix (a missing reviewer or policy, a Cloudflare secret or variable at repository level, a missing environment secret). Do not set `PRODUCTION_DEPLOY_ENABLED` until it is clean. Only after that:
+The reviewer must be exactly one entry of type `User` with your numeric id; a team, a second reviewer or another user fails. Lists are read with `per_page=100`; an answer whose `total_count` exceeds the returned items fails as incomplete, because a Cloudflare name could sit on an unread page. The organization endpoints answer 404 for a personal account, which counts as no organization secrets (Unverified: not run against this account); any other error, such as 403, prints `FAIL read <path>: ...` and must be fixed or checked by hand in Settings, Secrets and variables. `can_admins_bypass` is reported, not enforced: as the sole admin you can bypass protection rules either way, so the reviewer gate protects against everyone else and against mistakes, not against you. Any `FAIL` line names what to fix (a missing reviewer or policy, a Cloudflare secret or variable at repository level, a missing environment secret). Do not set `PRODUCTION_DEPLOY_ENABLED` until it is clean. Only after that:
 
 ```powershell
 gh variable set PRODUCTION_URL --repo $R --body "https://<domain>"          # origin only: https, no path, no query
@@ -84,6 +87,8 @@ gh workflow run production-deploy.yml --repo $R --ref main
 ```
 
 Create the tag only on a commit that is already merged to `main`: the first steps of the job fail the run otherwise (`git merge-base --is-ancestor`), before any repository script runs. A tag on any other commit never deploys.
+
+The lineage check accepts any commit that is an ancestor of `main`, so a tag on an older, already merged commit would deploy that older reviewed code. That is accepted. On the approval prompt, verify that the tag points at the commit you intend to ship (compare the commit SHA shown with the tag's commit and with the `main` commit you mean to release) before approving.
 
 Approve the `production` prompt after checking the ref and commit. The job: records the serving version; uploads the new version; stages it at 0 percent; smokes it through a version override; moves it to 100 percent; smokes; soaks 120 seconds; smokes again. Any failure runs `wrangler rollback` to the recorded version and smokes that. On a tag run a green deploy then dispatches `release-sync` for the tag; approve its `release` prompt.
 

@@ -147,10 +147,19 @@ test("METRO-57 the Cloudflare token is set only on steps that call Wrangler, in 
   const { job: deploy, steps } = job("deploy");
   expect(workflow).not.toContain("actions/cache");
   expect(JSON.stringify(deploy["env"])).not.toContain("CLOUDFLARE_");
+  // Structural: any CLOUDFLARE_* key in a step's env (not a string search of the file).
   const holders = steps.filter((s) =>
-    JSON.stringify(s["env"] ?? {}).includes("CLOUDFLARE_API_TOKEN"),
+    Object.keys(isRecord(s["env"]) ? s["env"] : {}).some((key) => key.startsWith("CLOUDFLARE_")),
   );
-  expect(holders.length).toBeGreaterThanOrEqual(5);
+  expect(holders.map((s) => s["name"])).toEqual([
+    "Require the Cloudflare credentials",
+    "Read the deployment that serves production now",
+    "Upload the new version without deploying it",
+    "Stage the new version at 0 percent",
+    "Roll the new version out to 100 percent",
+    "Roll back to the previous version",
+  ]);
+  expect(holders).toHaveLength(6);
   for (const step of holders) {
     const run = typeof step["run"] === "string" ? step["run"] : "";
     expect(run).toMatch(/^(bunx wrangler|test -n)/u);

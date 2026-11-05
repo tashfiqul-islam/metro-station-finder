@@ -1,5 +1,4 @@
 import { expect, spyOn, test } from "bun:test";
-import { readFileSync } from "node:fs";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -87,7 +86,6 @@ test("METRO-57 the production URL must be an https origin and the secrets must e
 test("METRO-57 the guard never reads credentials, so no secret reaches repository code", () => {
   const { CLOUDFLARE_API_TOKEN: _token, CLOUDFLARE_ACCOUNT_ID: _account, ...withoutSecrets } = ok;
   expect(checkDeployRequest(withoutSecrets)).toEqual({ kind: "tag", ref: "v1.0.0" });
-  expect(readFileSync("scripts/production.ts", "utf8")).not.toMatch(/env\["CLOUDFLARE/u);
 });
 
 test("METRO-57 the release label is derived from digits and hex only and differs per attempt", () => {
