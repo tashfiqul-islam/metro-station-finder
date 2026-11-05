@@ -13,7 +13,7 @@ env:
   MISE_LOCKED: "1"
 concurrency:
   group: reviewer-record-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   review:
     name: Reviewer record
