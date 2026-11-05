@@ -41,6 +41,8 @@ Zero-based positions; exact strings preserved.
 
 **Inferred:** same positions probably refer to the same physical stations. **Unknown:** official spelling and authoritative identity mapping. Rebuild display names for the five stations: Mirpur 11, Mirpur 10, Agargaon, Farmgate, Karwan Bazar (owner, 2026-11-05). Display language is English only for now.
 
+**Update (METRO-67, 2026-11-05):** the rebuild now displays `Shahbag` and `Bijoy Sarani` (ids `shahbagh`, `bijoy-sharani` unchanged); the legacy spellings `Shahbagh` and `Bijoy Sharani` and DMTCL's `Bijoy Sarawni` are exact aliases. The Bijoy Sarani coordinate is corrected to the OSM station node. See [deliberate parity deviations](../specifications/nearest-station.md).
+
 ## Rebuild terms (METRO-40)
 
 Defined in [nearest-station specification](../specifications/nearest-station.md); they describe the rebuild, not the baseline.
@@ -50,4 +52,4 @@ Defined in [nearest-station specification](../specifications/nearest-station.md)
 | Station ID       | Branded lowercase kebab-case slug (for example `farmgate`), permanent and never positional. Legacy labels resolve to it as exact, case-sensitive aliases. |
 | Alias            | Another exact label (such as `Farmagate`) that resolves to a Station ID. No case folding or guessing.                                                     |
 | Unknown fare     | Explicit result with no amount (`unknown-station` or `no-fare-entry`); never zero. Distinct from the same-station zero fare, which the UI never offers.   |
-| Baseline dataset | Versioned `baseline-v1` module of the 16 stations and 256 fares copied from the legacy snapshot.                                                          |
+| Baseline dataset | Versioned `baseline-v2` module of the 16 stations and 256 fares copied from the legacy snapshot, with three documented corrections (METRO-67).            |

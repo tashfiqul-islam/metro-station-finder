@@ -1,6 +1,8 @@
 # ADR-0006: Per-pull-request Cloudflare preview
 
-Status: Accepted (2026-11-03). Specification: [cloudflare-preview](../specifications/cloudflare-preview.md).
+- Status: Accepted
+- Date: 2026-11-03
+- Ticket and specification: [cloudflare-preview](../specifications/cloudflare-preview.md)
 
 ## Context
 
@@ -18,3 +20,11 @@ Reviewers need a URL tied to the checked commit. No production Worker exists, an
 - A Cloudflare outage or an expired token turns the preview job red but does not block merges.
 - After the default-branch switch, a `workflow_run` split could replace the gated job; that is a new decision.
 - The job cannot be proven end to end until the `preview` environment secrets exist (see METRO-13 evidence).
+
+## Alternatives considered
+
+Not recorded when this ADR was written; not reconstructed here.
+
+## Confirmation
+
+- `scripts/preview-workflow.test.ts` and `scripts/preview.test.ts`. The end-to-end deploy is Unverified until the `preview` environment secrets exist.
