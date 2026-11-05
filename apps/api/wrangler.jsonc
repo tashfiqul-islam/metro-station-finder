@@ -5,6 +5,15 @@
   "compatibility_date": "2026-10-30",
   "workers_dev": false,
   "send_metrics": false,
+  // Production and preview each set every observability key explicitly instead of relying on inheritance
+  // or platform defaults (METRO-43, docs/agents/observability.md). The app's own request line is the one log per request.
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+    "redact_query_string": true,
+    "logs": { "invocation_logs": false },
+    "traces": { "enabled": false },
+  },
   // `directory` is supplied by @cloudflare/vite-plugin (the client build output).
   "assets": {
     "not_found_handling": "single-page-application",
@@ -19,7 +28,13 @@
       "name": "metro-scaffold-preview",
       "workers_dev": true,
       "preview_urls": false,
-      "observability": { "enabled": true },
+      "observability": {
+        "enabled": true,
+        "head_sampling_rate": 1,
+        "redact_query_string": true,
+        "logs": { "invocation_logs": false },
+        "traces": { "enabled": false },
+      },
     },
   },
 }
