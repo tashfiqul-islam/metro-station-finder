@@ -1,9 +1,11 @@
 {
+  "agent": "claude-code",
+  "pins": "SHA256 of reviewed skill files as installed for Claude Code (superpowers from the superpowers-marketplace plugin cache, Pocock and tooling skills from ~/.agents/skills). Roots are supplied at verification time; no machine path is recorded. Bytes were identical to the earlier Codex-cache review except the plugin manifest, which now pins the Claude Code manifest. Other agents need their own review.",
   "collections": [
     {
       "source": "https://github.com/obra/superpowers",
       "version": "7.0.1",
-      "provenance": "Installed Codex plugin manifest; upstream commit not attested. SHA256 below pins reviewed bytes.",
+      "provenance": "Installed Claude Code plugin manifest (version 7.0.1); upstream commit not attested. SHA256 below pins reviewed bytes.",
       "root": "superpowers"
     },
     {
@@ -17,11 +19,11 @@
       "provenance": "Reviewed installed Bun and Context7 guidance; upstream commit and collection version not attested. SHA256 below pins reviewed bytes."
     }
   ],
-  "reviewedAt": "2026-11-03",
+  "reviewedAt": "2026-11-05",
   "files": [
     {
-      "path": ".codex-plugin/plugin.json",
-      "sha256": "1A8DDAB7B9B6D8C5077A3A4B3A3B4EFB8E4FC50E3B60430F5EA7E662B7974577",
+      "path": ".claude-plugin/plugin.json",
+      "sha256": "FA3B15088F102C31B7CF1ABD4D329FD50D76A99222083638AAB810D81930B162",
       "root": "superpowers"
     },
     {

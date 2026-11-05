@@ -93,3 +93,7 @@ What can be undone depends on the stage; the commands are in the [runbook](../ag
 - **Keep `master` as an archive branch.** Contradicts the owner's decision, and the tags already keep the released history.
 - **Switch the default now.** The legacy implementation would be replaced by an unfinished product before v1.0.0 is ready.
 - **Tag first, switch later.** A stable release becomes `released` only with a successful `production` deployment on the tagged commit ([ADR-0007](0007-release-sync.md)), and a published tag must be treated as permanent. Tagging after the switch and the production deployment avoids a permanent tag on a commit that has no production proof.
+
+## Confirmation
+
+- `scripts/cutover-plan.test.ts` and `scripts/cutover-preflight.test.ts` (`bun run cutover:preflight`) check the plan and preconditions. The switch itself is an owner action: `None (policy)`.

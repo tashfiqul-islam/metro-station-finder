@@ -13,10 +13,13 @@ function station(
 }
 
 /**
- * Baseline dataset v1: the 16 stations and 16x16 fare matrix of legacy commit
+ * Baseline dataset v2: the 16 stations and 16x16 fare matrix of legacy commit
  * af903d7a2c1bf08165cfcf4a00ca0c0d73eedead (src/utils/constants.ts, src/services/fareCalculation.ts),
- * copied without change except for stable ids and reviewed aliases. Array order is the legacy order
- * and is the tie-break order. No publisher or effective date is known.
+ * copied without change except for stable ids, reviewed aliases and three METRO-67 corrections
+ * (docs/evidence/dhaka-mrt-line-6.md): display names "Shahbag" and "Bijoy Sarani" (the legacy
+ * spellings stay as aliases, with DMTCL's "Bijoy Sarawni"), and the Bijoy Sarani coordinate, taken
+ * from OpenStreetMap node 10294553601 (retrieved 2026-11-05). Array order is the legacy order and
+ * is the tie-break order. v1 was the uncorrected copy. No publisher or effective date is known.
  */
 const stations: readonly Station[] = [
   station("uttara-north", "Uttara North", 23.869076247909604, 90.36749888965423),
@@ -28,10 +31,13 @@ const stations: readonly Station[] = [
   station("kazipara", "Kazipara", 23.79997213706531, 90.37178936075442),
   station("shewrapara", "Shewrapara", 23.79073133067589, 90.37573063390592),
   station("agargaon", "Agargaon", 23.778528454849155, 90.38010541953432, ["Agaragaon"]),
-  station("bijoy-sharani", "Bijoy Sharani", 23.76767563448402, 90.38309390581901),
+  station("bijoy-sharani", "Bijoy Sarani", 23.7663936, 90.3830971, [
+    "Bijoy Sharani",
+    "Bijoy Sarawni",
+  ]),
   station("farmgate", "Farmgate", 23.75934419275316, 90.38721707002716, ["Farmagate"]),
   station("karwan-bazar", "Karwan Bazar", 23.751352896226248, 90.39297658085276, ["Kawran Bazar"]),
-  station("shahbagh", "Shahbagh", 23.739700935527747, 90.39608626094417),
+  station("shahbagh", "Shahbag", 23.739700935527747, 90.39608626094417, ["Shahbagh"]),
   station("dhaka-university", "Dhaka University", 23.73202420199298, 90.39661487611298),
   station(
     "bangladesh-secretariat",
@@ -62,7 +68,7 @@ const amounts: readonly (readonly number[])[] = [
 ];
 
 export const baselineDataset: StationDataset = {
-  version: "baseline-v1",
+  version: "baseline-v2",
   source: "legacy commit af903d7a2c1bf08165cfcf4a00ca0c0d73eedead",
   stations,
   fares: { order: stations.map((s) => s.id), amounts },
