@@ -147,3 +147,47 @@ test("FND-R6 api importing web is rejected", async () => {
   expect(result.code).not.toBe(0);
   expect(result.output).toContain("apps-never-import-each-other");
 });
+
+// METRO-54. "contracts importing an app" is already covered by the FND-R6 test above.
+test("METRO-54 web importing a runtime value from core is rejected", async () => {
+  const result = await cruise({
+    ...core,
+    "apps/web/src/main.ts":
+      'import { core } from "../../../packages/core/src/index.ts";\nexport const m = core;\n',
+  });
+  expect(result.code).not.toBe(0);
+  expect(result.output).toContain("web-never-imports-core-runtime");
+});
+
+test("METRO-54 web importing only a core type is allowed", async () => {
+  const result = await cruise({
+    "packages/core/src/index.ts": "export type Core = { readonly id: number };\n",
+    "apps/web/src/main.ts":
+      'import type { Core } from "../../../packages/core/src/index.ts";\nexport const m: Core = { id: 1 };\n',
+  });
+  expect(result.output).not.toContain("error");
+  expect(result.code).toBe(0);
+});
+
+for (const app of ["web", "api"]) {
+  test(`METRO-54 ${app} importing a contracts internal module is rejected`, async () => {
+    const result = await cruise({
+      ...core,
+      "packages/contracts/src/index.ts": "export const c = 1;\n",
+      "packages/contracts/src/internal.ts": "export const i = 1;\n",
+      [`apps/${app}/src/main.ts`]:
+        'import { i } from "../../../packages/contracts/src/internal.ts";\nexport const m = i;\n',
+    });
+    expect(result.code).not.toBe(0);
+    expect(result.output).toContain("contracts-public-entry-only");
+  });
+}
+
+test("METRO-54 contracts modules may import each other internally", async () => {
+  const result = await cruise({
+    "packages/contracts/src/index.ts": 'import { i } from "./internal.ts";\nexport const c = i;\n',
+    "packages/contracts/src/internal.ts": "export const i = 1;\n",
+  });
+  expect(result.output).not.toContain("error");
+  expect(result.code).toBe(0);
+});

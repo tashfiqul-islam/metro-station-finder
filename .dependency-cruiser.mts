@@ -28,6 +28,22 @@ export default {
       },
     },
     {
+      name: "web-never-imports-core-runtime",
+      comment:
+        "The browser app gets every runtime value through contracts (ADR-0003); importing a type from core is fine.",
+      severity: "error",
+      from: { path: "^apps/web/" },
+      to: { path: "^packages/core/", dependencyTypesNot: ["type-only"] },
+    },
+    {
+      name: "contracts-public-entry-only",
+      comment:
+        "Outside the package, contracts is reached only through its public entry (src/index.ts, the package exports map).",
+      severity: "error",
+      from: { pathNot: "^packages/contracts/" },
+      to: { path: "^packages/contracts/", pathNot: "^packages/contracts/src/index\\.ts$" },
+    },
+    {
       name: "apps-never-import-each-other",
       comment: "Web and API communicate over HTTP and the shared contract, never by import.",
       severity: "error",

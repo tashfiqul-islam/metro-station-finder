@@ -35,3 +35,8 @@ Dependencies, tools and Actions were pinned by hand with no update automation, n
 - Running the validator through unpinned `bunx`: outside the lockfile, audit and cooldown.
 - Dropping the in-`check` validator: gives up a pinned validation of the configuration.
 - Allowlisting history by commit range instead of fingerprint: hides future findings in that range.
+
+## Confirmation
+
+- `scripts/configuration.ts` (exact pins, matching Bun and Renovate cooldown, empty `trustedDependencies`), `scripts/commit-message.ts` with the `commit-msg` hook in `hk.pkl`, `bun run lint:workflows`, `bun run renovate:check` and `bun run scan:history`, all in `bun run check` or CI.
+- The standing exceptions (tool trust exception, history allowlist) have no automated expiry: `None (policy)`.
