@@ -1,7 +1,5 @@
 # Workflow
 
-Historical baseline: legacy implementation references and checks below concern commit `af903d7a2c1bf08165cfcf4a00ca0c0d73eedead`, not files or executable gates in this independent rebuild. See [rebuild boundary](../../README.md).
-
 ## Task preparation
 
 Separate discussion/research, settled specification, ticket preparation and implementation. Research/brainstorm, challenge domain terms against documents, settle spec and testing seams, then create bounded tickets. Superpowers selects process; reviewed Pocock skills deepen it. Inspect available skill files before claiming use. Use [reviewed skills](skills.md), the [Plane adapter](plane.md), [specification template](../templates/specification.md) and [ticket template](../templates/plane-ticket.md). `to-spec`/`to-tickets` are conceptual stages, not installed invocations.

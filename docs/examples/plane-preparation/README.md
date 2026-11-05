@@ -10,7 +10,7 @@ Run from repository root in PowerShell 7 (required for `ConvertFrom-Json -AsHash
 
 ```powershell
 $reviewedRoots = @{
-    superpowers = 'C:/Users/Tashfiq/.codex/plugins/cache/openai-curated-remote/superpowers/7.0.1'
+    superpowers = 'C:/Users/Tashfiq/.claude/plugins/cache/superpowers-marketplace/superpowers/7.0.1'
     pocock = 'C:/Users/Tashfiq/.agents/skills'
     tooling = 'C:/Users/Tashfiq/.agents/skills'
 }

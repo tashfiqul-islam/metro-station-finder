@@ -26,3 +26,8 @@ The independent Metro rebuild started with a scaffold whose decisions were recor
 ## Alternatives considered
 
 Alternatives were not recorded when these decisions were made; they are not reconstructed here. Evidence for each decision is linked above.
+
+## Confirmation
+
+- `scripts/configuration.ts` (pins, cooldown, trusted dependencies), `scripts/tools.ts` and `scripts/boundaries.ts` (core purity), all run by `bun run check`.
+- Decisions 3 to 6 (Hono Worker, React and Vite, Plane) have no dedicated test beyond the build, smoke and the documents they link: `None (policy)` for those.

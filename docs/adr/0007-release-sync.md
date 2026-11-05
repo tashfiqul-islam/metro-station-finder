@@ -1,6 +1,8 @@
 # ADR-0007: GitHub-canonical release sync to Plane
 
-Status: Accepted (2026-11-04). Specification: [release-sync](../specifications/release-sync.md).
+- Status: Accepted
+- Date: 2026-11-04
+- Ticket and specification: [release-sync](../specifications/release-sync.md)
 
 ## Context
 
@@ -19,3 +21,11 @@ Releases exist in two places: GitHub tags and releases, and Plane releases with 
 - Hand edits to the Plane release log persist until GitHub's notes change.
 - The reverse direction (Plane to GitHub) is a separate decision: an automatic trigger needs either a schedule on the default branch or a webhook receiver.
 - The Plane REST paths for workspace-level release patch and tags were taken from the vendor documentation; the live test on a throwaway tag proves them.
+
+## Alternatives considered
+
+Not recorded when this ADR was written; not reconstructed here.
+
+## Confirmation
+
+- `scripts/release-sync.test.ts` and `scripts/release-workflow.test.ts`.

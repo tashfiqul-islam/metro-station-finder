@@ -29,3 +29,8 @@ The status moved from the page importing core directly to a Worker response the 
 - Hono RPC (`hc`): ties the web app to API types and needs a declared type-only import; unnecessary for one route.
 - Plain type guards: no Standard Schema interface and no reuse in Hono validators.
 - Defer React Compiler: unnecessary, it is compatible with the pinned React, Vite and plugin-react.
+
+## Confirmation
+
+- `contracts-imports-only-core-and-schema-library` and `contracts-public-entry-only` in `.dependency-cruiser.mts`, proven red by `scripts/layering.test.ts`.
+- The compile-time `Equal` assertion in `packages/contracts/src/index.ts` (`bun run typecheck`) and `packages/contracts/src/contracts.test.ts`.
