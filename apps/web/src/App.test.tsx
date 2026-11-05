@@ -1,5 +1,3 @@
-import { afterAll, afterEach, beforeAll, expect, spyOn, test } from "bun:test";
-
 import { GlobalRegistrator } from "@happy-dom/global-registrator";
 
 // The DOM must exist before React and Testing Library are imported.
@@ -85,7 +83,7 @@ test("FND-T2 unmounting before the response arrives updates nothing and throws n
         deliver = resolve;
       }),
   );
-  const errors = spyOn(console, "error").mockImplementation(() => {});
+  const errors = jest.spyOn(console, "error").mockImplementation(() => {});
   const view = render(<App />);
   view.unmount();
   deliver(json({ kind: "synthetic-scaffold", ready: true }));

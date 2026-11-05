@@ -1,5 +1,3 @@
-import { expect, test } from "bun:test";
-
 import { expectRejection } from "./test-support";
 
 /** Runs `check` and returns what it threw, so these tests can assert that the helper fails correctly. */

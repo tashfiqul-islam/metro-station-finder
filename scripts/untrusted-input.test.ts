@@ -1,4 +1,3 @@
-import { expect, test } from "bun:test";
 import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
@@ -41,7 +40,7 @@ const HEAD = [
 const collapse = (text: string) => text.replaceAll(/\s+/gu, " ").trim();
 
 /** Returns the problems found in a policy text; empty means it is exactly the canonical policy. */
-export function policyProblems(text: string): string[] {
+function policyProblems(text: string): string[] {
   const problems: string[] = [];
   if (text.includes("<!--")) problems.push("HTML comment present");
   if (/^\s{0,3}(```|~~~)/mu.test(text)) problems.push("code fence present");

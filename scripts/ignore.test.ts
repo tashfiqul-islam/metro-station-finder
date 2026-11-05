@@ -1,5 +1,3 @@
-import { expect, test } from "bun:test";
-
 for (const path of [
   ".env",
   "apps/api/.env.local",

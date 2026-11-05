@@ -1,4 +1,3 @@
-import { expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 
 const read = (path: string): string => readFileSync(path, "utf8");

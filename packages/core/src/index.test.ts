@@ -1,5 +1,3 @@
-import { expect, test } from "bun:test";
-
 import * as core from "./index.ts";
 
 test("the package entry exposes the scaffold, domain, lookups and the baseline dataset", () => {

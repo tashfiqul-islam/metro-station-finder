@@ -1,4 +1,3 @@
-import { expect, test } from "bun:test";
 import { copyFile, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -72,18 +71,22 @@ test("METRO-45 names the exact install command when no hook is configured", asyn
   });
 });
 
+// A named function, so the jest rules see its assertions as part of a test: they do not follow the curried
+// `test.skipIf(...)(...)` form and would call the assertions standalone.
+async function realInstallReportsNothing(): Promise<void> {
+  await withRepository(async (root) => {
+    await copyFile(resolve("hk.pkl"), join(root, "hk.pkl"));
+    const install = Bun.spawnSync(["hk", "install", "--mise"], { cwd: root, env: env() });
+    expect(install.stderr.toString() + install.stdout.toString()).not.toContain("PANIC");
+    expect(install.exitCode).toBe(0);
+    expect(hookStatus(root, env())).toEqual({ state: "ok" });
+    expect(hookWarning(root, env())).toBeUndefined();
+  });
+}
+
 test.skipIf(skipReason !== undefined)(
   "METRO-45 reports nothing after the documented hk install --mise",
-  async () => {
-    await withRepository(async (root) => {
-      await copyFile(resolve("hk.pkl"), join(root, "hk.pkl"));
-      const install = Bun.spawnSync(["hk", "install", "--mise"], { cwd: root, env: env() });
-      expect(install.stderr.toString() + install.stdout.toString()).not.toContain("PANIC");
-      expect(install.exitCode).toBe(0);
-      expect(hookStatus(root, env())).toEqual({ state: "ok" });
-      expect(hookWarning(root, env())).toBeUndefined();
-    });
-  },
+  realInstallReportsNothing,
   60000,
 );
 

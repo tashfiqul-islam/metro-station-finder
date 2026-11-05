@@ -1,5 +1,3 @@
-import { expect, test } from "bun:test";
-
 import { createApp, type LogLine } from "./app";
 
 function recorded() {

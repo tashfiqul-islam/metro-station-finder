@@ -1,4 +1,3 @@
-import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
 type HeaderRules = Record<string, Record<string, string>>;

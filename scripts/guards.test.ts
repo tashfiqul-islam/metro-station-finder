@@ -1,5 +1,3 @@
-import { expect, test } from "bun:test";
-
 import { isRecord } from "./guards";
 
 test("isRecord accepts plain objects only", () => {

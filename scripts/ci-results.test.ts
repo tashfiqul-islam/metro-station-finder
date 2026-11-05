@@ -1,5 +1,3 @@
-import { expect, test } from "bun:test";
-
 import { requiredJobsSucceeded } from "./ci-results";
 
 const passing = {

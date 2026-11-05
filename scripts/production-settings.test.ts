@@ -1,5 +1,3 @@
-import { expect, test } from "bun:test";
-
 import { type SettingsInput, evaluateSettings, runProductionCli } from "./production";
 import { expectRejection } from "./test-support";
 
@@ -353,30 +351,28 @@ const withStderr = (stderr: string, stdout = ""): Error =>
   Object.assign(new Error("Command failed: gh api x"), { stderr, stdout });
 
 test("METRO-66 only the exact gh status line passes on the organization endpoints", async () => {
-  await orgFail(ghFailure(401, "Bad credentials"), "gh: Bad credentials (HTTP 401)");
-  await orgFail(
-    withStderr("To get started with GitHub CLI, please run:  gh auth login\n"),
-    "gh auth login",
-  );
-  await orgFail(new Error("gh: To use GitHub CLI, run: gh auth login"), "FAIL read");
-  // A 403 that merely mentions Validation Failed in its message or its (synthetic) JSON body.
-  await orgFail(ghFailure(403, "Validation Failed but Forbidden"), "(HTTP 403)");
-  await orgFail(
-    withStderr("gh: Forbidden (HTTP 403)\n", '{"message":"Validation Failed","status":"422"}'),
-    "gh: Forbidden (HTTP 403)",
-  );
-  // A 500 whose text contains HTTP 422, and a 404 inside a longer non-404 message.
-  await orgFail(
-    withStderr("gh: upstream said HTTP 422 Validation Failed (HTTP 500)\n"),
-    "(HTTP 500)",
-  );
-  await orgFail(withStderr("gh: Not Found (HTTP 404) while proxying (HTTP 502)\n"), "(HTTP 502)");
-  await orgFail(
-    withStderr("gh: Validation Failed for field (HTTP 422)\n"),
-    "Validation Failed for field",
-  );
-  // Decision: fail closed. A 422 with empty stderr and the status only in stdout JSON is not trusted.
-  await orgFail(withStderr("", '{"message":"Validation Failed","status":"422"}'), "FAIL read");
+  const cases: readonly (readonly [Error, string])[] = [
+    [ghFailure(401, "Bad credentials"), "gh: Bad credentials (HTTP 401)"],
+    [withStderr("To get started with GitHub CLI, please run:  gh auth login\n"), "gh auth login"],
+    [new Error("gh: To use GitHub CLI, run: gh auth login"), "FAIL read"],
+    // A 403 that merely mentions Validation Failed in its message or its (synthetic) JSON body.
+    [ghFailure(403, "Validation Failed but Forbidden"), "(HTTP 403)"],
+    [
+      withStderr("gh: Forbidden (HTTP 403)\n", '{"message":"Validation Failed","status":"422"}'),
+      "gh: Forbidden (HTTP 403)",
+    ],
+    // A 500 whose text contains HTTP 422, and a 404 inside a longer non-404 message.
+    [withStderr("gh: upstream said HTTP 422 Validation Failed (HTTP 500)\n"), "(HTTP 500)"],
+    [withStderr("gh: Not Found (HTTP 404) while proxying (HTTP 502)\n"), "(HTTP 502)"],
+    [withStderr("gh: Validation Failed for field (HTTP 422)\n"), "Validation Failed for field"],
+    // Decision: fail closed. A 422 with empty stderr and the status only in stdout JSON is not trusted.
+    [withStderr("", '{"message":"Validation Failed","status":"422"}'), "FAIL read"],
+  ];
+  for (const [error, expected] of cases)
+    for (const path of ORG_PATHS) {
+      const { gh } = fakeGh({ [path]: error });
+      await expectRejection(runProductionCli(["check-settings", "o/r"], {}, {}, gh), expected);
+    }
 });
 
 const buffered = (status: number, message: string): Error =>

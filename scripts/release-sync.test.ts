@@ -1,5 +1,3 @@
-import { expect, spyOn, test } from "bun:test";
-
 import { isRecord } from "./guards";
 import {
   contentHash,
@@ -424,7 +422,7 @@ test("METRO-14 deployment lookups reject malformed answers", async () => {
 });
 
 test("METRO-14 the entry point reads the environment, logs the outcome and fails the step on error", async () => {
-  const error = spyOn(console, "error").mockImplementation(() => {});
+  const error = jest.spyOn(console, "error").mockImplementation(() => {});
   try {
     await releaseSyncMain({});
     expect(process.exitCode).toBe(1);

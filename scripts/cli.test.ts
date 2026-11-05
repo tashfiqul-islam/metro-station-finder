@@ -1,4 +1,3 @@
-import { afterEach, expect, spyOn, test } from "bun:test";
 import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -15,8 +14,8 @@ afterEach(() => {
 
 function quiet() {
   return {
-    log: spyOn(console, "log").mockImplementation(() => {}),
-    error: spyOn(console, "error").mockImplementation(() => {}),
+    log: jest.spyOn(console, "log").mockImplementation(() => {}),
+    error: jest.spyOn(console, "error").mockImplementation(() => {}),
   };
 }
 

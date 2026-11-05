@@ -1,4 +1,3 @@
-import { expect, spyOn, test } from "bun:test";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -117,7 +116,7 @@ test("METRO-57 the uploaded version id comes from the Wrangler output file for t
   expect(() => uploadedVersionId(`${line({})}\n${line({ version_id: OLD })}`)).toThrow(
     "exactly one",
   );
-  expect(() => uploadedVersionId("{not json")).toThrow();
+  expect(() => uploadedVersionId("{not json")).toThrow("JSON");
 });
 
 test("METRO-57 the current version is the single one serving 100 percent", () => {
@@ -128,20 +127,23 @@ test("METRO-57 the current version is the single one serving 100 percent", () =>
   expect(() => currentVersionId(JSON.stringify([deployment(one)]))).toThrow("single deployment");
   expect(() =>
     currentVersionId(JSON.stringify({ result: { deployments: [deployment(one)] } })),
-  ).toThrow();
+  ).toThrow("lists no versions");
   const split = [
     { version_id: OLD, percentage: 90 },
     { version_id: NEW, percentage: 10 },
   ];
-  for (const bad of [
-    "[]",
-    "{}",
-    "null",
-    JSON.stringify(deployment(split)),
-    JSON.stringify(deployment([{ version_id: "x", percentage: 100 }])),
-    JSON.stringify(deployment([])),
-  ])
-    expect(() => currentVersionId(bad)).toThrow();
+  for (const [bad, reason] of [
+    ["[]", "single deployment"],
+    ["{}", "lists no versions"],
+    ["null", "lists no versions"],
+    [JSON.stringify(deployment(split)), "gradual deployment"],
+    [
+      JSON.stringify(deployment([{ version_id: "x", percentage: 100 }])),
+      "not a single valid version",
+    ],
+    [JSON.stringify(deployment([])), "lists no versions"],
+  ] as const)
+    expect(() => currentVersionId(bad)).toThrow(reason);
   expect(() => currentVersionId(JSON.stringify(deployment(split)))).toThrow("gradual deployment");
 });
 
@@ -197,8 +199,8 @@ test("METRO-57 the production smoke is the preview smoke with a version override
 test("METRO-57 productionMain prints results, writes step outputs and fails the step on error", async () => {
   const dir = await mkdtemp(join(tmpdir(), "metro-production-"));
   const out = join(dir, "output");
-  const log = spyOn(console, "log").mockImplementation(() => {});
-  const error = spyOn(console, "error").mockImplementation(() => {});
+  const log = jest.spyOn(console, "log").mockImplementation(() => {});
+  const error = jest.spyOn(console, "error").mockImplementation(() => {});
   const before = process.exitCode;
   try {
     await productionMain(["label"], { GITHUB_SHA: SHA, GITHUB_RUN_ID: "9", GITHUB_OUTPUT: out });
@@ -206,8 +208,8 @@ test("METRO-57 productionMain prints results, writes step outputs and fails the 
     expect(process.exitCode).toBe(before);
     await productionMain(["guard"], {});
     expect(process.exitCode).toBe(1);
-    expect(error).toHaveBeenCalled();
-    expect(log).toHaveBeenCalled();
+    expect(error).toHaveBeenCalledWith(expect.stringContaining("PRODUCTION_DEPLOY_ENABLED"));
+    expect(log).toHaveBeenCalledWith("0123456789ab-9-1");
   } finally {
     process.exitCode = before;
     log.mockRestore();

@@ -1,5 +1,3 @@
-import { expect, test } from "bun:test";
-
 import { createApp } from "./app";
 import app from "./index";
 

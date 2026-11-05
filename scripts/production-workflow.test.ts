@@ -1,4 +1,3 @@
-import { expect, test } from "bun:test";
 import { readFileSync, readdirSync } from "node:fs";
 
 import { isRecord } from "./guards";
@@ -175,9 +174,11 @@ test("METRO-57 the Cloudflare token is set only on steps that call Wrangler, in 
 });
 
 test("METRO-57 untrusted values reach shell code only through environment variables", () => {
-  for (const name of ["deploy", "sync"])
-    for (const step of job(name).steps)
-      if (typeof step["run"] === "string") expect(step["run"]).not.toContain("${{");
+  const runs = ["deploy", "sync"].flatMap((name) =>
+    job(name).steps.flatMap((step) => (typeof step["run"] === "string" ? [step["run"]] : [])),
+  );
+  expect(runs.length).toBeGreaterThan(0);
+  for (const run of runs) expect(run).not.toContain("${{");
 });
 
 test("METRO-57 release-sync is dispatched only after a successful tag deploy, without secrets", () => {
@@ -222,11 +223,11 @@ test("METRO-57 the tagged commit must be on main before any tool or repository s
 
 test("METRO-57 no step that runs Node or Bun ever receives the Cloudflare token", () => {
   const { steps } = job("deploy");
-  for (const step of steps) {
-    const run = typeof step["run"] === "string" ? step["run"] : "";
-    if (/\b(node|bun)\b/u.test(run))
-      expect(JSON.stringify(step["env"] ?? {})).not.toContain("secrets.");
-  }
+  const runners = steps.filter(
+    (step) => typeof step["run"] === "string" && /\b(node|bun)\b/u.test(step["run"]),
+  );
+  expect(runners.length).toBeGreaterThan(0);
+  for (const step of runners) expect(JSON.stringify(step["env"] ?? {})).not.toContain("secrets.");
   const credentials = stepNamed(steps, "Require the Cloudflare credentials");
   expect(String(credentials["run"])).toContain('test -n "$CLOUDFLARE_API_TOKEN"');
   expect(steps.indexOf(credentials)).toBeGreaterThan(

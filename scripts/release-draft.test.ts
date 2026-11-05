@@ -1,5 +1,3 @@
-import { expect, spyOn, test } from "bun:test";
-
 import { isRecord } from "./guards";
 import { draftRelease, releaseDraftMain, validateTarget, type DraftConfig } from "./release-draft";
 import type { Deps, FetchedResponse, FetchInit } from "./release-sync";
@@ -278,7 +276,7 @@ test("METRO-24 the entry point's default network and log edges are used when non
   const w = world();
   const deps = server(w);
   const original = globalThis.fetch;
-  const log = spyOn(console, "log").mockImplementation(() => {});
+  const log = jest.spyOn(console, "log").mockImplementation(() => {});
   Reflect.set(globalThis, "fetch", (url: string, init?: FetchInit) => deps.fetch(url, init));
   try {
     await releaseDraftMain({

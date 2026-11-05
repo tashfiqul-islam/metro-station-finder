@@ -1,4 +1,3 @@
-import { expect, test } from "bun:test";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
@@ -30,6 +29,18 @@ test("oxlint stays type-aware, strict and free of stale disable directives", asy
     "eslint/eqeqeq",
   ])
     expect(isRecord(rules) && rules[rule]).toBe("error");
+});
+
+test("METRO-50 bun-types (test globals) is pinned to the version @types/bun depends on", async () => {
+  const manifest: unknown = JSON.parse(await readFile(resolve("package.json"), "utf8"));
+  const dev = isRecord(manifest) ? manifest["devDependencies"] : undefined;
+  const types: unknown = JSON.parse(
+    await readFile(resolve("node_modules/@types/bun/package.json"), "utf8"),
+  );
+  const own = isRecord(types) ? types["dependencies"] : undefined;
+  const pinned = isRecord(dev) ? dev["bun-types"] : undefined;
+  expect(pinned).toBe(isRecord(own) ? own["bun-types"] : undefined);
+  expect(isRecord(dev) ? dev["@types/bun"] : undefined).toBe(pinned);
 });
 
 test("the lint script runs type-aware and denies warnings over every source folder", async () => {

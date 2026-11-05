@@ -2,7 +2,7 @@
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "jsx": "react-jsx",
-    "types": ["bun", "react", "react-dom"],
+    "types": ["bun", "bun-types/test-globals", "react", "react-dom"],
     "lib": ["ES2022", "DOM", "DOM.Iterable"]
   },
   "include": ["apps/web/src/**/*.test.tsx"]

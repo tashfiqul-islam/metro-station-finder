@@ -1,4 +1,3 @@
-import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
 const quality = readFileSync(".github/workflows/quality.yml", "utf8");

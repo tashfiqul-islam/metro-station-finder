@@ -1,4 +1,3 @@
-import { expect, test } from "bun:test";
 import { cp, mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { join, relative, resolve, sep } from "node:path";
 
@@ -80,7 +79,25 @@ async function scratchCopy(run: (copy: string) => Promise<void>) {
     }
     await run(copy);
   } finally {
-    await rm(copy, { recursive: true, force: true });
+    await removeWithRetry(copy);
+  }
+}
+
+/**
+ * Windows can briefly hold the copy (EBUSY) right after tsc exits, and Bun's `rm` does not retry that code
+ * itself. Only EBUSY is retried, a bounded number of times, and the last error is rethrown, so a copy that
+ * really cannot be removed still fails the test.
+ */
+async function removeWithRetry(path: string): Promise<void> {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      await rm(path, { recursive: true, force: true });
+      return;
+    } catch (error) {
+      const busy = error instanceof Error && "code" in error && error.code === "EBUSY";
+      if (!busy || attempt >= 10) throw error;
+      await Bun.sleep(300);
+    }
   }
 }
 
@@ -101,10 +118,12 @@ test("METRO-42 the base config enables erasableSyntaxOnly and no project turns i
   const baseOptions = base["compilerOptions"];
   if (!isRecord(baseOptions)) throw new Error("tsconfig.base.json has no compilerOptions");
   expect(baseOptions["erasableSyntaxOnly"]).toBe(true);
+  const overrides: string[] = [];
   for (const { config } of PROJECTS) {
     const options = (await readConfig(join(root, config)))["compilerOptions"];
-    if (isRecord(options)) expect(options["erasableSyntaxOnly"]).toBeUndefined();
+    if (isRecord(options) && options["erasableSyntaxOnly"] !== undefined) overrides.push(config);
   }
+  expect(overrides).toEqual([]);
 }, 30000);
 
 for (const [name, source] of [
@@ -167,8 +186,8 @@ for (const { config, fixture } of PROJECTS) {
         const result = typecheck(copy);
         expect(result.exitCode).not.toBe(0);
         expect(result.output).toContain(`${fixture}(1,14): error TS2322`);
-        for (const other of PROJECTS)
-          if (other.fixture !== fixture) expect(result.output).not.toContain(other.fixture);
+        for (const other of PROJECTS.filter((project) => project.fixture !== fixture))
+          expect(result.output).not.toContain(other.fixture);
       }),
     120000,
   );

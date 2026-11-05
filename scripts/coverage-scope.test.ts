@@ -1,4 +1,3 @@
-import { afterEach, expect, spyOn, test } from "bun:test";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -59,8 +58,8 @@ test("FND-T1 documented exemptions are the only files allowed to stay unmeasured
 });
 
 test("FND-T1 runCoverageScope fails visibly for a missing lcov file and an unmeasured file", async () => {
-  const error = spyOn(console, "error").mockImplementation(() => {});
-  const log = spyOn(console, "log").mockImplementation(() => {});
+  const error = jest.spyOn(console, "error").mockImplementation(() => {});
+  const log = jest.spyOn(console, "log").mockImplementation(() => {});
   const root = await mkdtemp(join(tmpdir(), "metro-scope-"));
   try {
     await expectRejection(runCoverageScope(root, ["apps/api/src/app.ts"]), "lcov.info");
@@ -68,7 +67,7 @@ test("FND-T1 runCoverageScope fails visibly for a missing lcov file and an unmea
     await writeFile(join(root, "coverage", "lcov.info"), lcov("apps/api/src/app.ts"));
     await runCoverageScope(root, ["apps/api/src/app.ts"]);
     expect(process.exitCode ?? 0).toBe(0);
-    expect(log).toHaveBeenCalled();
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("Coverage scope ok"));
     await runCoverageScope(root, ["apps/api/src/app.ts", "apps/api/src/forgotten.ts"]);
     expect(process.exitCode).toBe(1);
     expect(String(error.mock.calls[0]?.[0])).toContain("apps/api/src/forgotten.ts");

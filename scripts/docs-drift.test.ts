@@ -1,4 +1,3 @@
-import { expect, test } from "bun:test";
 import { readFile, readdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
@@ -130,9 +129,11 @@ test("METRO-51 the skills lock states what it pins and for which agent", async (
 
 test("METRO-51 skills.md marks any Codex install route as historical evidence", async () => {
   const skills = await read("docs/agents/skills.md");
-  for (const line of skills.split(/\r?\n/u))
-    if (/\bCodex\b/u.test(line))
-      expect(line, line.slice(0, 60)).toMatch(/historical|METRO-10|2026-11-03/iu);
+  const undated = skills
+    .split(/\r?\n/u)
+    .filter((line) => /\bCodex\b/u.test(line))
+    .filter((line) => !/historical|METRO-10|2026-11-03/iu.test(line));
+  expect(undated).toEqual([]);
 });
 
 test("METRO-51 quality-gates keeps a no-bypass policy with an owner-only emergency step skip", async () => {

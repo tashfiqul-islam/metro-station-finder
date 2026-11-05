@@ -1,4 +1,3 @@
-import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
 import { isRecord } from "./guards";
@@ -67,8 +66,10 @@ test("METRO-36 every step is named and every action is pinned to a commit", () =
   const { steps } = parsed();
   for (const step of steps) {
     expect(typeof step["name"] === "string" && step["name"] !== "").toBe(true);
-    if (typeof step["uses"] === "string") expect(step["uses"]).toMatch(/@[0-9a-f]{40} *$/u);
   }
+  const actions = steps.flatMap((step) => (typeof step["uses"] === "string" ? [step["uses"]] : []));
+  expect(actions.length).toBeGreaterThan(0);
+  for (const action of actions) expect(action).toMatch(/@[0-9a-f]{40} *$/u);
   expect(text).toContain("version: 2026.10.25");
 });
 
@@ -81,8 +82,9 @@ test("METRO-36 the untrusted body reaches the script only through an environment
     BASE_SHA: "${{ github.event.pull_request.base.sha }}",
     HEAD_SHA: "${{ github.event.pull_request.head.sha }}",
   });
-  for (const step of steps)
-    if (typeof step["run"] === "string") expect(step["run"]).not.toContain("${{");
+  const runs = steps.flatMap((step) => (typeof step["run"] === "string" ? [step["run"]] : []));
+  expect(runs.length).toBeGreaterThan(0);
+  for (const run of runs) expect(run).not.toContain("${{");
   expect(text.match(/pull_request\.body/gu)).toHaveLength(2);
 });
 

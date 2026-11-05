@@ -1,7 +1,7 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "types": ["bun"]
+    "types": ["bun", "bun-types/test-globals"]
   },
   "include": [
     "scripts/**/*.test.ts",
