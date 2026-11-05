@@ -24,6 +24,10 @@ Accepted decision (owner ticket METRO-28, "checks exactly what is committed"): t
 - Git behaviour checked against the official `git cat-file` and `git ls-files` manuals (Web-verified 2026-11-04): `--batch` prints `<oid> SP <type> SP <size> LF <contents> LF` and `<object> SP missing LF`; filters apply only with `--filters`/`--textconv`; `ls-files -s` prints `<mode> <object> <stage> <file>` with one line per unmerged stage.
 - A passing scan is not a security clearance: it does not cover application logic, permissions or runtime configuration.
 
+## Response headers (METRO-31)
+
+Static assets get headers from `apps/web/public/_headers` (Cloudflare applies it to asset responses only) and `/api/*` from `hono/secure-headers` in `apps/api/src/app.ts`. CSP is Report-Only until the first Maps slice; HSTS without `preload` waits for the custom domain. Referrer policy is `strict-origin-when-cross-origin` because the Maps key is referrer-restricted. Rationale, sources and unverified items: [ADR-0011](../adr/0011-security-headers.md).
+
 ## Install scripts (METRO-46)
 
 - The root `package.json` declares `"trustedDependencies": []`, so no dependency runs a lifecycle script on install.

@@ -1,6 +1,7 @@
 import { parseScaffoldStatus, type ErrorEnvelope } from "@metro/contracts";
 import { getScaffoldStatus } from "@metro/core";
 import { Hono } from "hono";
+import { secureHeaders } from "hono/secure-headers";
 
 /**
  * One structured log line. Only these fields exist, so nothing else (query string, headers, bodies,
@@ -33,6 +34,17 @@ function envelope(code: string, message: string): ErrorEnvelope {
   return { error: { code, message } };
 }
 
+/**
+ * Same values as apps/web/public/_headers. Every other secureHeaders default stays on except HSTS,
+ * which waits for the custom domain (ADR-0011). No CSP: these responses are JSON and never rendered.
+ */
+const SECURE_HEADERS = {
+  strictTransportSecurity: false,
+  referrerPolicy: "strict-origin-when-cross-origin",
+  xFrameOptions: "DENY",
+  permissionsPolicy: { geolocation: ["self"] },
+} as const satisfies Parameters<typeof secureHeaders>[0];
+
 const STATUS_ROUTE = "/api/scaffold/status";
 
 /** The route pattern to log. Anything but a known route collapses to `/api/*`, so a raw path is never logged. */
@@ -52,6 +64,10 @@ export function createApp(
   log: Logger = consoleLogger,
 ) {
   const app = new Hono<{ Bindings: Env; Variables: { requestId: string } }>();
+
+  // Worker-generated responses: /api/* and the /assets/* 404 and 405 (ADR-0011).
+  app.use("/api/*", secureHeaders(SECURE_HEADERS));
+  app.use("/assets/*", secureHeaders(SECURE_HEADERS));
 
   app.use("/api/*", async (context, next) => {
     const supplied = context.req.header("x-request-id");
@@ -76,6 +92,23 @@ export function createApp(
 
   app.get("/api/scaffold/status", (context) => context.json(parseScaffoldStatus(readStatus())));
   app.all("/api/scaffold/status", (context) => {
+    context.header("Allow", "GET, HEAD");
+    return context.json(envelope("method_not_allowed", "Use GET"), 405);
+  });
+  // Worker-first for /assets/* (see wrangler.jsonc). With run_worker_first patterns Cloudflare answers a
+  // missing file with the SPA's index.html (200), and _headers would mark that immutable. Only a real
+  // asset may pass; an HTML answer under /assets/ is a miss. That includes any .html or .htm file
+  // placed under /assets/ on purpose: it is indistinguishable from the SPA fallback and is a 404.
+  app.get("/assets/*", async (context) => {
+    const asset = await context.env.ASSETS.fetch(context.req.raw);
+    if (!(asset.headers.get("content-type") ?? "").toLowerCase().startsWith("text/html")) {
+      // The fetcher's response has immutable headers; copy it so secureHeaders can add its own.
+      return new Response(asset.body, asset);
+    }
+    context.header("Cache-Control", "no-store");
+    return context.json(envelope("not_found", "No such asset"), 404);
+  });
+  app.all("/assets/*", (context) => {
     context.header("Allow", "GET, HEAD");
     return context.json(envelope("method_not_allowed", "Use GET"), 405);
   });
