@@ -15,40 +15,50 @@ export function validateSubject(subject: string): string | null {
 }
 
 const POLICY = "docs/agents/attribution.md";
-const TRAILER_LINE = /^([A-Za-z0-9-]+):[ \t]+(\S.*)$/u;
-// Names and addresses of AI agents; a human Signed-off-by never matches these.
-const AGENT_IDENTITY =
-  /anthropic\.com|\bclaude\b|\bcopilot\b|\bcodex\b|\bgemini\b|\bcursor\b|\baider\b|\[bot\]/iu;
+const SIGNED_OFF = /^signed-off-by[ \t]*:[ \t]*(.*)$/iu;
+// Exact AI-agent email addresses (case-insensitive, whole address). The name is never matched, so a
+// person called Claude or Gemini passes. Ordinary automation bots (Renovate, Dependabot) are not AI
+// assistants and are not listed.
+const AGENT_EMAILS = [
+  /^noreply@anthropic\.com$/iu,
+  /^\d+\+claude\[bot\]@users\.noreply\.github\.com$/iu,
+  /^\d+\+copilot@users\.noreply\.github\.com$/iu,
+  /^\d+\+(?:copilot-swe-agent|github-copilot-cli)\[bot\]@users\.noreply\.github\.com$/iu,
+];
 
-/** Returns the key/value pairs of the final trailer block (every line a trailer), or []. */
-function trailerBlock(lines: string[]): [string, string][] {
-  const body = lines.filter((line) => !line.startsWith("#"));
-  while (body.length > 0 && body.at(-1)?.trim() === "") body.pop();
-  let start = body.length;
-  while (start > 0 && body[start - 1]?.trim() !== "") start -= 1;
-  // The subject paragraph is never a trailer block.
+/** Folded continuation lines (leading whitespace) are joined to the previous line. */
+function lastParagraphLines(message: string): string[] {
+  const lines = message.split(/\r?\n/u).filter((line) => !line.startsWith("#"));
+  while (lines.length > 0 && lines.at(-1)?.trim() === "") lines.pop();
+  let start = lines.length;
+  while (start > 0 && lines[start - 1]?.trim() !== "") start -= 1;
+  // A message of one paragraph is only a subject (and body prose), never a trailer block.
   if (start === 0) return [];
-  const block = body.slice(start).map((line) => TRAILER_LINE.exec(line));
-  return block.every((match) => match !== null)
-    ? block.map((match) => [match[1] ?? "", match[2] ?? ""])
-    : [];
+  const logical: string[] = [];
+  for (const line of lines.slice(start)) {
+    if (/^[ \t]/u.test(line) && logical.length > 0)
+      logical[logical.length - 1] += ` ${line.trim()}`;
+    else logical.push(line);
+  }
+  return logical;
+}
+
+function isAgentIdentity(value: string): boolean {
+  const email = /<([^<>]*)>\s*$/u.exec(value)?.[1]?.trim();
+  return email !== undefined && AGENT_EMAILS.some((pattern) => pattern.test(email));
 }
 
 /**
- * Agents never add Signed-off-by (see docs/agents/attribution.md): reject one whose value names an
- * agent, or one beside an agent Co-Authored-By trailer. Human-only commits are unaffected.
+ * Rejects a Signed-off-by in the last paragraph whose email is an AI agent identity (see
+ * docs/agents/attribution.md). It cannot tell who typed any other Signed-off-by.
  */
 export function validateTrailers(message: string): string | null {
-  const trailers = trailerBlock(message.split(/\r?\n/u));
-  const signed = trailers.filter(([key]) => key.toLowerCase() === "signed-off-by");
-  if (signed.length === 0) return null;
-  if (signed.some(([, value]) => AGENT_IDENTITY.test(value)))
-    return `Signed-off-by names an AI agent. Agents never add Signed-off-by; see ${POLICY}.`;
-  const agentCoAuthor = trailers.some(
-    ([key, value]) => key.toLowerCase() === "co-authored-by" && AGENT_IDENTITY.test(value),
-  );
-  return agentCoAuthor
-    ? `Signed-off-by appears beside an agent Co-Authored-By trailer. Agents never add Signed-off-by; see ${POLICY}.`
+  const agentSigned = lastParagraphLines(message).some((line) => {
+    const value = SIGNED_OFF.exec(line)?.[1];
+    return value !== undefined && isAgentIdentity(value);
+  });
+  return agentSigned
+    ? `Signed-off-by uses an AI agent identity. Agents never add Signed-off-by; see ${POLICY}.`
     : null;
 }
 
@@ -60,11 +70,21 @@ export function validateMessage(message: string): string | null {
 
 /** Validates every commit message (subject and trailers) in a Git range; `cwd` selects the repository. */
 export function validateRange(range: string, cwd?: string): string[] {
-  const output = execFileSync("git", ["log", "--format=%H%x00%B%x1e", range], {
-    encoding: "utf8",
-    env: cleanGitEnv(),
-    ...(cwd ? { cwd } : {}),
-  });
+  let output: string;
+  try {
+    output = execFileSync("git", ["log", "--format=%H%x00%B%x1e", range], {
+      encoding: "utf8",
+      env: cleanGitEnv(),
+      maxBuffer: 64 * 1024 * 1024,
+      ...(cwd ? { cwd } : {}),
+    });
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOBUFS")
+      throw new Error(`Commit messages in ${range} exceed the 64 MiB read limit.`, {
+        cause: error,
+      });
+    throw error;
+  }
   const commits = output.split("\x1e").filter((entry) => entry.trim() !== "");
   return commits.flatMap((entry) => {
     const [sha = "", message = ""] = entry.trim().split("\0");

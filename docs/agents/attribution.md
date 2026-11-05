@@ -4,10 +4,10 @@ Status: policy (METRO-52). One rule for how AI-assisted work is attributed in co
 
 ## Rule
 
-- **Agent commits carry one trailer**, in the final trailer block of the commit message, preceded by a blank line: `Co-Authored-By: <agent name and model> <noreply@anthropic.com>`. For Claude the value is the name and model Claude Code reports, for example `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`.
+- **Agent commits carry one trailer** (a convention; no hook requires it, see Enforcement), in the final trailer block of the commit message, preceded by a blank line: `Co-Authored-By: <agent name and model> <noreply@anthropic.com>`. For Claude the value is the name and model Claude Code reports, for example `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`.
 - **Agent pull request bodies end with the footer line** `🤖 Generated with [Claude Code](https://claude.com/claude-code)`. The `Reviewer` section rules in [workflow](workflow.md#independent-review) are unchanged.
 - **Agents never add `Signed-off-by`.** It is a person's own certification (the Developer Certificate of Origin statement), which an agent cannot make. The human owner signs commits cryptographically instead (signed commits are required by the rulesets, see [quality gates](quality-gates.md)).
-- **Human commits made without agent help carry no trailer.** A person who wants a `Signed-off-by` for their own commit may add it; it must not sit beside an agent trailer.
+- **Human commits made without agent help carry no trailer.** A person who wants a `Signed-off-by` for their own commit, including one made with agent help, may add it.
 
 ## Decisions
 
@@ -29,9 +29,11 @@ Squash can therefore drop the trailer. When a pull request with agent commits is
 
 ## Enforcement
 
-`scripts/commit-message.ts` (the `commit-msg` hook locally, `--range` in CI) enforces the negative rule only, on the final trailer block of each message:
+`scripts/commit-message.ts` (the `commit-msg` hook locally, `--range` in CI) enforces one narrow negative rule:
 
-- a `Signed-off-by` whose value names an agent (`anthropic.com`, Claude, Copilot, Codex, Gemini, Cursor, Aider or a `[bot]` account) is rejected;
-- any `Signed-off-by` beside a `Co-Authored-By` trailer naming an agent is rejected.
+- a `Signed-off-by` whose email is an exact AI-agent address is rejected, whatever the name: `noreply@anthropic.com`, `<id>+claude[bot]@users.noreply.github.com`, `<id>+Copilot@users.noreply.github.com`, and the `copilot-swe-agent[bot]` / `github-copilot-cli[bot]` noreply forms. The Copilot forms come from secondary sources (GitHub issues and pull requests found by search, 2026-11-05); the numeric ids vary by app, so the pattern accepts any id (Unverified against GitHub docs).
+- Names are never matched, so a person called Claude or Gemini, or a domain such as `notanthropic.com`, passes. Ordinary automation bots (Renovate, Dependabot) are not AI assistants, so their sign-offs pass. This is a recorded decision.
 
-Trailer-like text in the body, in `#` comment lines or in the subject is ignored. Requiring the trailer is deliberately not enforced (decision 3). Hooks are local feedback and CI is authoritative; the message points back to this page. Extend the identity list only with a test in `scripts/commit-message.test.ts`.
+Only the last paragraph is scanned. The key match is case-insensitive, allows whitespace around the colon, and folded lines (continuation lines starting with whitespace) join the line before; other lines in that paragraph do not hide a `Signed-off-by`. `#` comment lines and a one-paragraph message (subject only) are ignored. `--range` reads each commit's full message (64 MiB limit, an error beyond that); the subject check uses the first line, as in the hook.
+
+**What the hook cannot enforce.** "Agents never add `Signed-off-by`" beyond that identity check is policy only: a hook cannot tell who typed a sign-off, so an agent writing a human's name is caught by review, not by code. A human may still sign off a commit made with agent help; that is not rejected. Likewise the pull request footer rule and the `Co-Authored-By` trailer itself are not checked: `Reviewer record` (`scripts/reviewer-record.ts`) checks only the `Reviewer` section, and `.github/pull_request_template.md` carries no footer (Repo-verified). Requiring the trailer is deliberately not enforced (decision 3). Hooks are local feedback and CI is authoritative; the message points back to this page. Extend the identity list only with a test in `scripts/commit-message.test.ts`.
