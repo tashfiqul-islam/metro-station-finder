@@ -2,6 +2,8 @@
 /.github/ @tashfiqul-islam
 /hk.pkl @tashfiqul-islam
 /mise.toml @tashfiqul-islam
+/mise.lock @tashfiqul-islam
+/.mise/ @tashfiqul-islam
 /package.json @tashfiqul-islam
 /bun.lock @tashfiqul-islam
 /scripts/ @tashfiqul-islam

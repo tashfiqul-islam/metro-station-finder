@@ -2,5 +2,11 @@
   "extends": "../tsconfig.base.json",
   "compilerOptions": { "types": ["node"], "skipLibCheck": true },
   "include": ["./*.ts", "../apps/web/vite.config.ts", "../.dependency-cruiser.mts"],
-  "exclude": ["./*.test.ts", "./configuration.ts", "./tools.ts"]
+  "exclude": [
+    "./*.test.ts",
+    "./configuration.ts",
+    "./hooks-status.ts",
+    "./mise-lock.ts",
+    "./tools.ts"
+  ]
 }

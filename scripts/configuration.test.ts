@@ -10,8 +10,9 @@ import { gitleaksVersion } from "./tool-pins";
 
 async function fixture() {
   const root = await mkdtemp(join(tmpdir(), "metro-config-"));
-  for (const file of ["package.json", "mise.toml", "bunfig.toml"])
+  for (const file of ["package.json", "mise.toml", "mise.lock", "bunfig.toml"])
     await cp(resolve(file), join(root, file));
+  await cp(resolve(".mise"), join(root, ".mise"), { recursive: true });
   await mkdir(join(root, ".github"));
   await cp(resolve(".github/renovate.json5"), join(root, ".github/renovate.json5"));
   return root;
@@ -156,7 +157,8 @@ test("FND-H6 derives the Gitleaks version from mise.toml", async () => {
     (source) => source.replace(/gitleaks = "[^"]+"/u, 'gitleaks = "9.1.2"'),
     async (root) => {
       expect(await gitleaksVersion(root)).toBe("9.1.2");
-      await validateConfiguration(root);
+      // The lock still records 8.30.1, so the drift is caught too (METRO-45).
+      await expectRejection(validateConfiguration(root), "gitleaks");
     },
   );
 });
