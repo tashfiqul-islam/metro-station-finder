@@ -1,6 +1,7 @@
 import { parseScaffoldStatus, type ErrorEnvelope } from "@metro/contracts";
 import { getScaffoldStatus } from "@metro/core";
 import { Hono } from "hono";
+import { secureHeaders } from "hono/secure-headers";
 
 /**
  * One structured log line. Only these fields exist, so nothing else (query string, headers, bodies,
@@ -52,6 +53,18 @@ export function createApp(
   log: Logger = consoleLogger,
 ) {
   const app = new Hono<{ Bindings: Env; Variables: { requestId: string } }>();
+
+  // Same values as apps/web/public/_headers. Every other secureHeaders default stays on except HSTS,
+  // which waits for the custom domain (ADR-0011). No CSP: JSON responses are never rendered.
+  app.use(
+    "/api/*",
+    secureHeaders({
+      strictTransportSecurity: false,
+      referrerPolicy: "strict-origin-when-cross-origin",
+      xFrameOptions: "DENY",
+      permissionsPolicy: { geolocation: ["self"] },
+    }),
+  );
 
   app.use("/api/*", async (context, next) => {
     const supplied = context.req.header("x-request-id");
