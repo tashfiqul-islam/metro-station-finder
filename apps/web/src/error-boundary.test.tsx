@@ -1,9 +1,11 @@
 // The DOM must exist before React is imported (shared registration, see dom-test-env.ts).
-await import("./dom-test-env");
+const { restoreBunGlobals, enableDomGlobals } = await import("./dom-test-env");
+enableDomGlobals();
 const { act } = await import("react");
 const { createRoot } = await import("react-dom/client");
 const { ErrorBoundary } = await import("./error-boundary");
 const { rootErrorOptions } = await import("./report-error");
+restoreBunGlobals(); // non-DOM test files must see Bun's globals again
 
 const LEAK = "lat=23.81 lng=90.41 https://example.test/stations?lat=23.81&lng=90.41";
 let shouldThrow = true;
@@ -30,6 +32,7 @@ const alert = () => container.querySelector<HTMLElement>('[role="alert"]');
 const retryButton = () => container.querySelector("button");
 
 beforeAll(() => {
+  enableDomGlobals();
   Reflect.set(globalThis, "IS_REACT_ACT_ENVIRONMENT", true);
 });
 beforeEach(() => {
@@ -48,6 +51,7 @@ afterEach(async () => {
   errorSpy.mockRestore();
 });
 afterAll(() => {
+  restoreBunGlobals();
   Reflect.deleteProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT");
 });
 
@@ -111,7 +115,8 @@ test("METRO-58 an uncaught and a recoverable error are reported the same safe wa
   rootErrorOptions.onRecoverableError?.(new Error(LEAK), info);
   const logged = JSON.stringify(errorSpy.mock.calls);
   expect(logged).toContain("Render error: RangeError");
-  expect(logged).toContain("Render error: Error");
+  expect(logged).toContain("Recoverable error: Error");
+  expect(logged).not.toContain("Render error: Error");
   expect(logged).not.toContain("23.81");
   expect(logged).not.toContain("in Bomb");
 });

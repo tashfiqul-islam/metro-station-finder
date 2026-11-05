@@ -20,12 +20,16 @@ export function describeError(error: unknown): string {
   return BUILT_IN_NAMES.has(error.name) ? error.name : "Error";
 }
 
-export function reportError(error: unknown): void {
-  console.error(`Render error: ${describeError(error)}`);
+export function reportError(error: unknown, label = "Render error"): void {
+  console.error(`${label}: ${describeError(error)}`);
 }
 
 function report(error: unknown): void {
   reportError(error);
+}
+
+function reportRecoverable(error: unknown): void {
+  reportError(error, "Recoverable error");
 }
 
 /**
@@ -35,5 +39,5 @@ function report(error: unknown): void {
 export const rootErrorOptions: RootOptions = {
   onCaughtError: report,
   onUncaughtError: report,
-  onRecoverableError: report,
+  onRecoverableError: reportRecoverable,
 };

@@ -1,7 +1,9 @@
 // The DOM must exist before React and Testing Library are imported (shared, see dom-test-env.ts).
-await import("./dom-test-env");
+const { restoreBunGlobals, enableDomGlobals } = await import("./dom-test-env");
+enableDomGlobals();
 const { cleanup, render, screen } = await import("@testing-library/react");
 const { App } = await import("./App");
+restoreBunGlobals(); // non-DOM test files must see Bun's globals again
 
 const realFetch = globalThis.fetch;
 const json = (body: unknown, init: ResponseInit = {}) =>
@@ -16,6 +18,7 @@ const stubFetch = (handler: () => Promise<Response>) => {
 };
 
 beforeAll(() => {
+  enableDomGlobals();
   Reflect.set(globalThis, "IS_REACT_ACT_ENVIRONMENT", true);
 });
 afterEach(() => {
@@ -23,6 +26,7 @@ afterEach(() => {
   globalThis.fetch = realFetch;
 });
 afterAll(() => {
+  restoreBunGlobals();
   Reflect.deleteProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT");
 });
 
