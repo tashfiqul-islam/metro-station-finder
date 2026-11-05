@@ -29,6 +29,7 @@
     "links:check": "node scripts/links.ts",
     "branches:check": "node scripts/base-branch.ts",
     "cutover:preflight": "node scripts/cutover-preflight.ts",
+    "github:settings": "node scripts/github-settings.ts",
     "lint:workflows": "node scripts/workflows.ts .github/workflows",
     "renovate:check": "renovate-config-validator --strict .github/renovate.json5",
     "scan:history": "node scripts/secrets.ts --history",

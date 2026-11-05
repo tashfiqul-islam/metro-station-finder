@@ -53,6 +53,10 @@ Publishing, editing, unpublishing or deleting a GitHub release runs `.github/wor
 
 `.github/workflows/production-deploy.yml` deploys a stable `v*` tag (or `main` by dispatch) to the Worker `metro-scaffold` through the approval-gated `production` environment: upload a version, stage it at 0 percent, smoke it, roll it to 100 percent, smoke, soak, smoke, with automatic `wrangler rollback` on failure. It is off until the owner sets `PRODUCTION_DEPLOY_ENABLED=true`. Decisions: [ADR-0012](../adr/0012-production-deploy.md); owner setup, read-only checks and manual rollback: [deploy runbook](deploy-runbook.md). The production Cloudflare token is separate from the preview token; rotate it on its own schedule.
 
+## GitHub security settings (METRO-48)
+
+Secret scanning, push protection, code scanning default setup, private vulnerability reporting, SHA pinning enforcement and immutable releases are repository settings only the owner can change. `mise exec -- bun run github:settings -- check tashfiqul-islam/metro-station-finder` reads them (GET only) and fails on drift from the manifest. Owner steps, why it is not a CI job, and the effect of immutable releases on release sync and the cutover rehearsal: [GitHub settings](github-settings.md). Dependency review is advisory: [quality gates](quality-gates.md#dependency-review-metro-48).
+
 ## Default-branch switch and version policy (METRO-34)
 
 [ADR-0008](../adr/0008-default-branch-switch.md) plans how and when the default moves from `master` to `main` for v1.0.0 (readiness checklist, order, rollback, deletion of `master` after a soak). [Cutover runbook](cutover-runbook.md): exact commands, not executed. `mise exec -- bun run cutover:preflight` is the read-only precondition report (GitHub `GET` calls and `gh pr list` only, enforced in code). Version and tag naming, who bumps and the release-notes source: [release policy](release-policy.md). `bun run branches:check` (part of `check`) fails when CONTRIBUTING.md, workflow.md and plane.md name different pull request base branches, so the three change together at the switch. The weekly Cloudflare token check below starts running when the default switches.

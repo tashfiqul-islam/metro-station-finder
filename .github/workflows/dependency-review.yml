@@ -1,0 +1,23 @@
+name: Dependency review
+# METRO-48. Advisory: not part of the Quality gates aggregate and not a required check until the owner
+# decides (docs/agents/quality-gates.md). It holds no secret, restores no cache and needs no checkout: the
+# action compares the base and head dependency graphs through the dependency review API.
+on:
+  pull_request:
+    branches: [feature/metro-rebuild, main]
+permissions: {}
+concurrency:
+  group: dependency-review-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  review:
+    name: Dependency review
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Review dependency changes
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: high
