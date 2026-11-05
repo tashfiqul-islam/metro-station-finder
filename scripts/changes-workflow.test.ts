@@ -42,6 +42,13 @@ test("METRO-62 build waits for changes and is skipped unless docs_only is exactl
   expect(build["if"]).toBe(SKIP_GUARD);
 });
 
+test("METRO-62 build and preview stay fail-closed: no always() or !cancelled() in their conditions", () => {
+  for (const name of ["build", "preview"]) {
+    const condition = String(job(name)["if"]);
+    expect(condition).not.toMatch(/always\(\)|cancelled\(\)|failure\(\)|success\(\)/u);
+  }
+});
+
 test("METRO-62 the preview waits for changes and is skipped on docs-only changes", () => {
   const preview = job("preview");
   expect(preview["needs"]).toEqual(["changes", "checks", "build", "security"]);
