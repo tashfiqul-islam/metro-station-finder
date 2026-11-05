@@ -1,60 +1,123 @@
 # ADR-0016: Test runner for unit and integration tests
 
-- Status: Proposed (recommendation: go, staged; awaits the owner's acceptance)
+- Status: Proposed (recommendation: go for the API and web projects; scripts and packages decided later by a stated criterion; awaits the owner's acceptance)
 - Date: 2026-11-06
 - Ticket and specification: METRO-74; measurements in [the Vitest spike](../evidence/vitest-spike-2026-11.md)
 
 ## Context
 
-Unit, component and in-process API tests run on `bun test` ([ADR-0005](0005-test-strategy.md), [testing](../agents/testing.md)). Known gaps: Bun cannot measure branch coverage (METRO-50: lcov has `DA`, `FNF`, `FNH`, `LF`, `LH` only), so the per-file 90 percent gate in `bunfig.toml` covers lines and functions; Bun runs all files in one process, which forced the happy-dom global swap in `apps/web/src/dom-test-env.ts`; the API tests run on Bun, not on workerd, where the Worker runs ([ADR-0002](0002-runtime-topology.md)); and `jest/*` lint rules cannot see `bun:test` imports, so tests use injected globals and a ban on the import.
+Unit, component and in-process API tests run on `bun test` ([ADR-0005](0005-test-strategy.md), [testing](../agents/testing.md)). Known gaps:
 
-Cloudflare recommends Vitest through `@cloudflare/vitest-plugin` for Worker tests (Web-verified; requires Vitest 4.1 or later). The owner asked whether to move. A spike on this repository (Windows 11, Bun 1.4.4, Node 26.13.0, Vite 8.3.5) ported one web, one workerd and two scripts tests and measured the rest. Every number and its label is in the [evidence file](../evidence/vitest-spike-2026-11.md); the facts that decide this:
+- Bun cannot measure branch coverage (METRO-50: lcov has `DA`, `FNF`, `FNH`, `LF`, `LH` only), so the per-file 90 percent gate in `bunfig.toml` covers lines and functions.
+- Bun runs all files in one process, which forced the happy-dom global swap in `apps/web/src/dom-test-env.ts`.
+- The API tests run on Bun, not on workerd, where the Worker runs ([ADR-0002](0002-runtime-topology.md)).
+- The `jest/*` lint rules cannot see `bun:test` imports, so tests use injected globals and a ban on the import.
 
-- Branches are measured per file and `perFile` expresses our gate: `thresholds: { perFile: true, lines: 90, functions: 90, branches: 90 }` failed naming each file (Repo-verified). `App.tsx` is 100 percent lines and functions but 90 percent branches, the gap Bun hides.
-- The workerd test ran inside workerd on Windows with no workaround (`navigator.userAgent` is `Cloudflare-Workers`); the web test passed with the happy-dom swap deleted (Repo-verified, one file).
-- Vitest ran on Vite 8.3.5 and Node 26.13.0, both majors 4.1.12 and 5.1.0 with plugin 1.5.0, and also under `bun --bun` (Repo-verified).
-- The `jest/*` lint rules flag weak tests in files that import `vitest`, so the METRO-50 blindness ends with the Bun import (Repo-verified, Oxlint 1.90.0).
-- Randomised order prints a seed and `--sequence.seed=N` reproduces it (Repo-verified).
-- Costs: Vitest is slower per file alone (web 0.39 s Bun against 1.04 to 1.17 s; API 0.11 s against 1.7 to 2.0 s; Repo-verified), the subprocess-bound `tsc-build` file is equal (about 20 s), and a full-suite Vitest time was not measured (Unverified). Workerd coverage must be istanbul in a separate run (Web-verified, observed), the workerd tests need their own TypeScript project (Repo-verified: `tsc -b` failed on `cloudflare:workers` under Bun types), and the plugin brings its own wrangler, miniflare and workerd copies (Repo-verified). The "Bun is 2 to 3 times faster" claim did not hold as a whole-suite statement and is Unverified.
+Cloudflare documents Vitest through `@cloudflare/vitest-plugin` for running Worker tests inside the Workers runtime (Web-verified: <https://developers.cloudflare.com/workers/testing/vitest-integration/>). The plugin requires Vitest 4.1 or later, and it replaced `@cloudflare/vitest-pool-workers` on 2026-08-19 (Web-verified: <https://developers.cloudflare.com/changelog/post/2026-08-19-vitest-plugin/>). The owner asked whether to move.
+
+A spike on this repository (Windows 11, Bun 1.4.4, Node 26.13.0, Vite 8.3.5) ported one web, one workerd and two scripts tests and measured the rest. Every number and its label is in the [evidence file](../evidence/vitest-spike-2026-11.md). The findings that matter:
+
+- **Branches and the per-file gate.** Branches are measured per file, and `thresholds: { perFile: true, lines: 90, functions: 90, branches: 90 }` expressed our gate and failed naming each file (Repo-verified). `App.tsx` is 100 percent lines and functions but 90 percent branches, the gap Bun hides.
+- **Workerd.** The API test ran inside workerd on Windows with no workaround; `navigator.userAgent` was `Cloudflare-Workers` (Repo-verified).
+- **Web DOM.** The web test passed with the happy-dom swap deleted (Repo-verified for `App.test.tsx` only).
+- **Compatibility.** Vitest 4.1.12 and 5.1.0 with plugin 1.5.0 ran on Vite 8.3.5 and Node 26.13.0, and also under `bun --bun` (Repo-verified). Under `bun --bun` the web and scripts tests still run on Bun's runtime; only the API on workerd is a real change of runtime.
+- **Lint.** The `jest/*` rules flag weak tests in files that import `vitest` (Repo-verified, Oxlint 1.90.0), so the blindness to `bun:test` ends with the Bun import.
+- **Order.** `sequence.shuffle` prints a seed and `--sequence.seed=N` reproduces the order (Repo-verified).
+- **Speed, single files.** Vitest is slower: web 0.39 s on Bun against 1.04 to 1.17 s; API 0.11 s against 1.7 to 2.0 s (Repo-verified, roughly, with up to 50 percent drift between batches). The subprocess-bound `tsc-build` file is equal (about 20 s).
+- **Speed, whole suite.** Not measured for Vitest (Unverified). Bun takes 81 to 109 s. The claim "Bun is 2 to 3 times faster" is not supported as a whole-suite statement.
+- **Coverage cost.** Workerd coverage must be istanbul, in a separate run from v8 (Web-verified, and the second run was Repo-verified).
+- **TypeScript cost.** The workerd tests need their own TypeScript project (Repo-verified: `tsc -b` failed on `cloudflare:workers` under Bun types).
+- **Supply-chain cost.** The plugin brings its own wrangler, miniflare and workerd copies (Repo-verified), adds four direct dependencies, and its `workerd` postinstall stays blocked (`trustedDependencies` unchanged).
+- **Not covered.** Ubuntu, the other 78 test files, and a full-suite run.
 
 ## Decision
 
-We will move unit and integration tests from `bun test` to Vitest, in stages, and keep Bun as package manager and script runtime. Order: the API project on workerd first, then the web project, then `scripts`, `packages/core` and `packages/contracts`. `bun test` stays in `check` until the last stage lands, so there is never a window where a test file runs under neither runner.
+We will move the API and web test projects to Vitest (stages 1 and 2 below) and keep Bun as package manager and script runtime. We will decide the `scripts` and `packages` projects (stages 3 and 4) only after the full-suite Vitest time is measured, against the criterion below. Stopping after web is a valid end state: Bun would then keep running `scripts` and `packages` under the existing gate.
 
-- Version: the newest Vitest the release cooldown allows at the time of each ticket, pinned exactly (the spike passed on 4.1.12 and 5.1.0; 5.1.0 was 4 days old at spike time), with `@cloudflare/vitest-plugin`, `@vitest/coverage-v8` and `@vitest/coverage-istanbul` pinned to match.
-- The gate does not weaken: per-file 90 percent for lines and functions stays, and a 90 percent per-file branch threshold is added in the same stage that moves a project (METRO-50 follow-through). If a file cannot reach 90 percent branches, the test is improved; no threshold is lowered and no path is excluded without a reviewed `exclude` entry and a reason.
-- Order stays randomised with a printed seed (`sequence.shuffle`), no fixed seed, no retries.
-- Test files import from `vitest` (globals stay off) so the `jest/*` rules see them.
-- Scripts may run Vitest on the Bun runtime (`bun --bun`) while they call `Bun.YAML`, `Bun.TOML` and `Bun.spawnSync`; ADR amendments are needed only if that proves unstable in the scripts stage.
-- Playwright E2E is unchanged.
+`bun test` stays in `check` for every project not yet moved, so no test file runs under neither runner.
 
-This ADR is a plan and a recommendation until the owner accepts it; tickets below are drafts and have not been created.
+- **Versions.** The newest Vitest the release cooldown allows when each ticket starts, pinned exactly (the spike passed on 4.1.12 and 5.1.0), with the plugin and both coverage packages pinned to match.
+- **Gate.** The per-file 90 percent gate for lines and functions stays. A 90 percent per-file branch threshold is added in the stage that moves a project. "No threshold is weakened" means no existing number is lowered; it does not mean the new branch gate passes today (see Consequences).
+- **Order.** Randomised with a printed seed (`sequence.shuffle`), no fixed seed, no retries.
+- **Imports.** Test files import from `vitest` (globals stay off) so the `jest/*` rules see them.
+- **E2E.** Playwright is unchanged.
+
+Proposed criterion for stages 3 and 4 (numbers are a proposal for the owner to confirm or change). Continue only if all hold, measured on the same machine after stage 2:
+
+1. Full-suite wall time with Vitest (all projects, coverage on, median of 5 runs) is at most 1.25 times the Bun median measured in the same session.
+2. The CI `Checks` job median over at least 5 runs, with both runners present, grows by at most 30 s from the 1 m 50 s baseline in [CI timings](../evidence/ci-timings-2026-11.md).
+3. Running the `scripts` tests under Vitest with the 90 percent branch gate leaves at most 20 source files under the gate (a tractable amount of new tests). If more, the owner chooses between more tests and an explicit, recorded re-baseline.
+
+If any fails, stop after stage 2 and record a no-go note in [testing](../agents/testing.md). This ADR stays Proposed until the owner accepts it; the tickets below are drafts and have not been created.
 
 ## Consequences
 
-Easier: branch coverage under the same per-file gate; Worker code tested in the real runtime; no happy-dom global swap or import-order trick; lint rules see every test; a path to Vitest browser mode for components later (not evaluated).
+Easier: branch coverage under the same per-file gate; Worker code tested in the real runtime; no happy-dom global swap or import-order trick; lint rules see every test.
 
-Harder: about 60 more installed packages and a second set of wrangler, miniflare and workerd copies; two coverage runs (v8 and istanbul) whose lcov must be merged or uploaded beside each other; one more TypeScript project for the workerd tests; small tests start slower; a longer, wider-touching migration of 81 test files (62 in `scripts`, 62 `Bun.spawnSync` calls, 14 `import.meta.dir`).
+The branch gate is the dominant cost. Adding a 90 percent per-file branch gate (and v8 line numbers, which cannot be compared cleanly with Bun's, because the spike's two coverage runs used different file sets) means many existing files need new tests, or an owner-approved, recorded re-baseline. In the spike, `status-client.ts` was at 66.66 percent branches and `ci-results.ts` at 70.83. Extrapolation to all files is Unverified, but the 62 `scripts` test files are where most of the effort will be.
 
-Must be revisited: when the CI cost is first measured (first ticket's pull request, estimate 5 to 20 s on `Checks`, Unverified); when Bun ships branch coverage (the tripwire in `scripts/coverage.test.ts` fires; the case for the move then rests on workerd and isolation, which remain); at each Vitest or plugin major.
+Other costs:
+
+- About 63 more installed packages (four direct), and a second set of wrangler, miniflare and workerd copies (three, two and three versions in the spike).
+- Two coverage runs (v8 and istanbul) whose lcov must be merged or uploaded beside each other.
+- One more TypeScript project for the workerd tests.
+- Small test files start slower.
+- A migration that touches 81 test files (`scripts` 62; 62 `Bun.spawnSync` calls and 14 `import.meta.dir` uses across the suite).
+
+Must be revisited:
+
+- when the CI cost is first measured (first ticket's pull request; the 5 to 20 s estimate is Unverified);
+- when Bun ships branch coverage (the tripwire in `scripts/coverage.test.ts` fires; the case for Vitest then rests on workerd and isolation);
+- at each Vitest or plugin major.
 
 ## Alternatives considered
 
-1. **Stay on Bun.** Rejected as the end state, not because it is slower: it is faster for small files and equal for subprocess-bound ones. It leaves the branch gate, workerd fidelity and the DOM swap unsolved, and branch support in Bun is only an open pull request ([oven-sh/bun#46534](https://github.com/oven-sh/bun/pull/46534), Web-verified 2026-11-05). It remains the right call if the owner values speed and simplicity over those three gaps; this ADR then becomes Rejected and nothing else changes.
-2. **Vitest only for `apps/api` and `apps/web`, Bun for the rest.** The first two stages of the decision are this option, and it is an acceptable resting place. It is not the target because 62 of 81 test files and all repository tooling would keep no branch gate and keep two runners, two lint stories and two order mechanisms indefinitely.
-3. **`node:test`.** Rejected: it does not run in workerd, has no per-file coverage threshold of the same shape here (Unverified), and gives no gain over Vitest on the three gaps; not spiked.
-4. **Vitest browser mode with Playwright for components now.** Out of scope for this decision and not run; revisit after the web stage.
+1. **Stay on Bun.** Not chosen for the API and web projects. It is faster for small files and equal for subprocess-bound ones, but it leaves the branch gate, workerd fidelity and the DOM swap unsolved. Bun branch support is only an open pull request ([oven-sh/bun#46534](https://github.com/oven-sh/bun/pull/46534), Web-verified 2026-11-05 by METRO-50, merge status Unverified). It remains the right call for `scripts` and `packages` if the criterion above fails, and for everything if the owner values speed and simplicity over the three gaps; this ADR then becomes Rejected and nothing else changes.
+2. **Vitest for every project.** This is stages 3 and 4. It is not committed to now because the full-suite time and the branch-gate effort are unmeasured.
+3. **`node:test`.** Not spiked, so not rejected on evidence. Reasons it was not pursued: the plugin that runs Worker tests in workerd is a Vitest plugin, and I found no `node:test` equivalent (Unverified); any per-file branch threshold support was not checked. Reconsider if Vitest fails the criterion and the owner still wants a non-Bun runner.
+4. **Vitest browser mode with Playwright for components.** Out of scope and not run; revisit after the web stage.
 
 ## Confirmation
 
-Today: `scripts/adr.test.ts` checks this ADR's shape. When stages land, the gates are: `vitest.config.ts` thresholds (`perFile: true`, lines, functions, branches at 90) fail the stage's `check`; `scripts/configuration.ts` and `scripts/test-order.test.ts` are re-pointed to fail when `sequence.shuffle` is off or a fixed `seed` is set; `scripts/test-hygiene.test.ts` fixtures import `vitest` and keep proving each `jest/*` rule rejects a weak test; `eslint/no-restricted-imports` keeps rejecting `bun:test`; the tripwire in `scripts/coverage.test.ts` is removed only in the final stage. Until the owner accepts, nothing enforces this decision (None, policy).
+Today: `scripts/adr.test.ts` checks this ADR's shape. Nothing else enforces the decision until a ticket lands (None, policy). When stages land, the gates are:
+
+- the `vitest.config.ts` thresholds (`perFile: true`, lines, functions, branches at 90) fail that stage's `check`;
+- `scripts/configuration.ts` and `scripts/test-order.test.ts` fail when `sequence.shuffle` is off or a fixed `seed` is set in a Vitest config (added in ticket 1, so ordering is enforced from the first Vitest file);
+- `scripts/test-hygiene.test.ts` fixtures import `vitest` and prove each `jest/*` rule rejects a weak test;
+- `eslint/no-restricted-imports` keeps rejecting `bun:test`;
+- the tripwire in `scripts/coverage.test.ts` is removed only in the final stage, if there is one.
 
 ## Follow-up ticket drafts (not created in Plane)
 
-Each ticket: keeps per-file 90 percent lines and functions, adds a 90 percent branch threshold for the project it moves, randomised order with a printed seed, no weakened assertion or threshold, exact pins within the cooldown, lint rules re-pointed. Order is dependency order; the first is blocked on the owner accepting this ADR.
+Common acceptance for every ticket: per-file 90 percent lines and functions kept, a 90 percent branch threshold for the project it moves, randomised order with a printed seed, no weakened assertion or lowered number, exact pins within the cooldown, and lint rules re-pointed. Order is dependency order: 1, then 2, then the go/no-go in 3, then 4. There is no separate lint ticket: lint is part of ticket 1.
 
-1. **Vitest foundation and the workerd API project.** Scope: add `vitest`, `@cloudflare/vitest-plugin`, `@vitest/coverage-istanbul`; root `vitest.config.ts` with projects; `apps/api` project with `cloudflareTest`; a Worker test `wrangler` config (assets directory, same `compatibility_date`); a separate TypeScript project for Worker tests with `@cloudflare/vitest-plugin/types` and generated Worker types; port the 5 `apps/api/src/*.test.ts` files; add one `exports.default.fetch` test; run Vitest beside `bun test` in `check` and in CI; record the measured CI delta in the evidence. Acceptance: workerd proof test passes; branch, line and function thresholds per file for `app.ts` and `index.ts`; seed printed; `tsc -b` includes the new project and `scripts/tsc-build.test.ts` expectations updated; lcov for the API stage is uploaded as a CI artifact; the old API `bun test` files removed in the same pull request. Order: 1.
-2. **Web component tests on Vitest.** Scope: `apps/web` project with `environment: "happy-dom"`; port the 7 `apps/web/src/*.test.*` files; delete `dom-test-env.ts` and `dom-test-env.test.ts`; update `tsconfig.dom-test.json` (Vitest and DOM types, no Bun types); keep `main.test.tsx` as the one entry-file exception. Acceptance: no global swap anywhere; per-file thresholds incl. branches for every web source file; run on 12 seeds as before; docs/agents/testing.md "Component test DOM" paragraph replaced. Order: 2, after 1.
-3. **Scripts tests on Vitest.** Scope: port the 62 `scripts` tests; decide Node or `bun --bun` as the pool runtime by measuring (spike: both work for a sample); replace `Bun.spawnSync` with a shared helper in `scripts/test-support.ts`, `import.meta.dir` with `import.meta.dirname`, `jest.*` with `vi.*`; keep the `EBUSY` retry; define `coverage.include` and a reviewed `exclude` for the files no test loads (`bundle.ts`, `dependency-parser.ts`, `format.ts`, `secrets.ts`, `tools.ts`, `scaffold-status.ts`) so the unmeasured set is explicit. Acceptance: full-suite wall time measured against the Bun baseline (81.5 to 108.6 s on the spike machine) and recorded; branch threshold met per file or tests added; no test skipped. Order: 3, may split in halves by file group.
-4. **Packages on Vitest and remove Bun test.** Scope: port `packages/core` and `packages/contracts` tests; delete `bun test` from `check`, `bunfig.toml` `[test]` coverage settings, `bun-types/test-globals` in `tsconfig.test.json`; remove the tripwire in `scripts/coverage.test.ts`; re-point `scripts/configuration.ts`, `scripts/test-order.test.ts`, `scripts/coverage-scope.ts` and docs ([testing](../agents/testing.md), [quality gates](../agents/quality-gates.md), [development](../development.md)). Acceptance: `bun run check` green with one runner; `bun:test` ban and `jest/*` rules still proven by `scripts/test-hygiene.test.ts` against `vitest` imports. Order: 4, after 2 and 3.
-5. **Lint rules for Vitest.** Scope: switch the `jest/*` override to import-aware fixtures (or the `vitest` plugin with the same rule names), keep every justification comment, keep `bun:test` banned. Acceptance: each rule has a failing fixture in `scripts/test-hygiene.test.ts`. Can ship with 1 and tighten in 4.
+1. **Vitest foundation and the workerd API project.** Blocked on the owner accepting this ADR.
+   - Scope:
+     - add `vitest`, `@cloudflare/vitest-plugin`, `@vitest/coverage-istanbul` (exact pins, matching versions);
+     - root `vitest.config.ts` with projects, and the `apps/api` project with `cloudflareTest`;
+     - a Worker test `wrangler` config (assets directory, same `compatibility_date`);
+     - a separate TypeScript project for Worker tests with `@cloudflare/vitest-plugin/types` and the generated Worker types;
+     - port the 5 `apps/api/src/*.test.ts` files and add one `exports.default.fetch` test;
+     - run Vitest beside `bun test` in `check` and CI;
+     - a version-sync check or a Renovate group that keeps `wrangler`, `vitest` and the plugin's `miniflare` and `workerd` together, because the spike resolved three wrangler, three miniflare and two workerd copies;
+     - ordering enforced from the first Vitest file: `scripts/configuration.ts` and `scripts/test-order.test.ts` re-pointed to fail when a Vitest config lacks `sequence.shuffle` or sets a fixed `seed`;
+     - lint: `scripts/test-hygiene.test.ts` fixtures importing `vitest` for each `jest/*` rule, so vitest-importing files are covered from day one while Bun files keep the existing fixtures.
+   - Preconditions: run the three spike samples on ubuntu (the hosted runner image) and record the result, including whether the `workerd` postinstall must run there.
+   - Acceptance:
+     - the workerd proof test passes;
+     - `app.ts` meets the per-file thresholds including branches;
+     - for `index.ts`, either it appears in the coverage table and meets the thresholds, or the evidence explains why it does not and the gate is stated without it (in the spike it was absent from both tables, cause Unverified);
+     - seed printed;
+     - `tsc -b` includes the new project and `scripts/tsc-build.test.ts` expectations are updated;
+     - lcov uploaded as a CI artifact;
+     - the old API `bun test` files removed in the same pull request;
+     - the CI `Checks` delta measured and recorded.
+2. **Web component tests on Vitest.**
+   - Scope: `apps/web` project with `environment: "happy-dom"`; port the 7 `apps/web/src/*.test.*` files; delete `dom-test-env.ts` and `dom-test-env.test.ts`; update `tsconfig.dom-test.json` (Vitest and DOM types, no Bun types); keep `main.test.tsx` as the one entry-file exception.
+   - Acceptance: no global swap anywhere; per-file thresholds including branches for every web source file; run on 12 seeds as before; the "Component test DOM" paragraph in [testing](../agents/testing.md) replaced.
+3. **Go or no-go on `scripts` and `packages`, then the scripts tests.** First step is only measurement: run the `scripts` and `packages` tests under Vitest (try Node and `bun --bun` for the pool runtime), measure full-suite wall time and the files under the branch gate, and compare with the criterion in the Decision.
+   - If the criterion holds: port the 62 `scripts` tests (shared `spawnSync` helper in `scripts/test-support.ts`, `import.meta.dirname`, `vi` for `jest`, keep the `EBUSY` retry); define `coverage.include` and a reviewed `exclude` for the files no test loads (`bundle.ts`, `dependency-parser.ts`, `format.ts`, `secrets.ts`, `tools.ts`, `scaffold-status.ts`); add tests for files under the branch gate or get a recorded owner re-baseline.
+   - If it fails: stop. Record a no-go in [testing](../agents/testing.md) with the measured numbers. Stopping after web is a valid end state.
+4. **Packages on Vitest and remove Bun test.** Only after a go in ticket 3.
+   - Scope: port `packages/core` and `packages/contracts` tests; delete `bun test` from `check`, the `[test]` coverage settings in `bunfig.toml` and `bun-types/test-globals` in `tsconfig.test.json`; remove the tripwire in `scripts/coverage.test.ts`; re-point `scripts/coverage-scope.ts` and docs ([testing](../agents/testing.md), [quality gates](../agents/quality-gates.md), [development](../development.md)).
+   - Acceptance: `bun run check` green with one runner; the `bun:test` ban and every `jest/*` rule still proven by `scripts/test-hygiene.test.ts`.
