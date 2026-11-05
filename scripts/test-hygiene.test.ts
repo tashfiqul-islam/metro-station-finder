@@ -11,6 +11,15 @@ import { isRecord } from "./guards";
 
 const OXLINT = resolve("node_modules/oxlint/bin/oxlint");
 
+/** Oxlint prints a summary on some platforms (Linux CI) and nothing on others when clean; drop it so a clean run is "". */
+function withoutSummary(output: string): string {
+  return output
+    .split(/\r?\n/u)
+    .filter((line) => !/^(Found \d+ warnings? and \d+ errors?\.|Finished in )/u.test(line))
+    .join("\n")
+    .trim();
+}
+
 async function lintFixture(source: string): Promise<{ exitCode: number; output: string }> {
   const root = await mkdtemp(join(tmpdir(), "metro-hygiene-"));
   try {
@@ -25,7 +34,7 @@ async function lintFixture(source: string): Promise<{ exitCode: number; output: 
     );
     return {
       exitCode: result.exitCode ?? -1,
-      output: result.stdout.toString() + result.stderr.toString(),
+      output: withoutSummary(result.stdout.toString() + result.stderr.toString()),
     };
   } finally {
     await rm(root, { recursive: true, force: true });
