@@ -41,6 +41,23 @@ Labels classify a work item. They never duplicate a Plane state, module, milesto
   - `blocked`: an explicit `blocked_by` relation plus an explanation; keep the workflow state.
 - New labels need owner approval and a one-line description. Do not invent labels.
 
+## GitHub integration (pull request state mapping)
+
+**Confirmed (owner screenshot, 2026-11-05):** the Plane GitHub integration is installed for the repository only, with this pull request state mapping on project METRO:
+
+| GitHub pull request event | Plane state |
+| ------------------------- | ----------- |
+| Draft Open                | In Progress |
+| Open                      | In Review   |
+| Review Requested          | In Review   |
+| Ready for Merge           | In Review   |
+| Merged                    | Done        |
+| Closed (not merged)       | no change   |
+
+"Prevent issues from moving to an earlier state due to PR updates" is on. Project issue sync is off: GitHub issues are not used, work lives in Plane.
+
+A pull request links to a ticket by its `METRO-NN` identifier in the branch name, title or body. Because Merged maps to Done, merge only when the hosted `Quality gates` check is green and review is resolved (see rule 8 above). A premature Done is reconciled by hand. Observed behavior is recorded on METRO-25.
+
 ## Publish and retry without duplicates
 
 1. Confirm authorization names the spec, approved slices and external writes. Keep source revision and a local publishing ledger: stable key, returned UUID/URL, body revision, Page link, relations, memberships, state and readback evidence. Do not include tokens. The synthetic example is never publishable.
