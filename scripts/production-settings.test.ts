@@ -50,7 +50,7 @@ test("METRO-57 the settings check passes for the intended configuration and repo
   expect(result.ok).toBe(true);
   expect(result.lines.every((line) => line.startsWith("PASS "))).toBe(true);
   expect(result.lines.join("\n")).toContain("PASS admin bypass: can_admins_bypass=true");
-  expect(result.lines).toHaveLength(12);
+  expect(result.lines).toHaveLength(evaluateSettings(goodSettings()).lines.length);
 });
 
 test("METRO-57 only the owner as a User, matched by id, may be the required reviewer", () => {
@@ -236,17 +236,17 @@ test("METRO-57 every failed read prints a FAIL line instead of crashing", async 
 
 test("METRO-57 organization endpoints: 404 means none, anything else fails with a clear message", async () => {
   const notFound = fakeGh({
-    "repos/o/r/actions/organization-secrets?per_page=100": new Error("HTTP 404: Not Found"),
-    "repos/o/r/actions/organization-variables?per_page=100": new Error("HTTP 404: Not Found"),
+    "repos/o/r/actions/organization-secrets?per_page=100": ghFailure(404, "Not Found"),
+    "repos/o/r/actions/organization-variables?per_page=100": ghFailure(404, "Not Found"),
   });
   const output = await runProductionCli(["check-settings", "o/r"], {}, {}, notFound.gh);
   expect(output).toContain("PASS no organization secret");
   const forbidden = fakeGh({
-    "repos/o/r/actions/organization-secrets?per_page=100": new Error("HTTP 403: Forbidden"),
+    "repos/o/r/actions/organization-secrets?per_page=100": ghFailure(403, "Forbidden"),
   });
   await expectRejection(
     runProductionCli(["check-settings", "o/r"], {}, {}, forbidden.gh),
-    "FAIL read repos/o/r/actions/organization-secrets",
+    "FAIL read repos/o/r/actions/organization-secrets: gh: Forbidden (HTTP 403)",
   );
 });
 
@@ -264,7 +264,11 @@ const ORG_PATHS = [
   "repos/o/r/actions/organization-variables?per_page=100",
 ];
 
-/** What `execFileSync("gh", ...)` throws for a failed call: message, stderr text and the JSON body on stdout. */
+/**
+ * What `execFileSync("gh", ...)` throws for a failed call: message, stderr text and the JSON body on stdout.
+ * The JSON body is SYNTHETIC (shaped like GitHub's error body, not a recorded response); the stderr line
+ * `gh: Validation Failed (HTTP 422)` is the text observed live on 2026-11-05.
+ */
 function ghFailure(status: number, message: string): Error {
   const body = JSON.stringify({
     message,
@@ -289,7 +293,7 @@ test("METRO-66 a 422 Validation Failed on the organization endpoints means no or
     Object.fromEntries(ORG_PATHS.map((p) => [p, ghFailure(422, "Validation Failed")])),
   );
   const output = await runProductionCli(["check-settings", "o/r"], {}, {}, both.gh);
-  expect(output.split("\n")).toHaveLength(12);
+  expect(output.split("\n")).toHaveLength(evaluateSettings(goodSettings()).lines.length);
   // The status line alone (no stdout body) is enough.
   const bare = fakeGh({ [ORG_PATHS[0] ?? ""]: new Error("gh: Validation Failed (HTTP 422)") });
   expect(await runProductionCli(["check-settings", "o/r"], {}, {}, bare.gh)).toContain("PASS");
@@ -305,6 +309,7 @@ test("METRO-66 other errors on the organization endpoints still fail closed", as
     ghFailure(422, "Unprocessable: something else"),
     new Error("getaddrinfo ENOTFOUND api.github.com"),
     new Error("HTTP 4220 Validation Failed"),
+    new Error("HTTP 404: Not Found"),
   ];
   for (const path of ORG_PATHS) {
     for (const error of errors) {
@@ -336,4 +341,54 @@ test("METRO-66 a 422 or 404 on a non-organization endpoint is still a FAIL", asy
       );
     }
   }
+});
+
+const orgFail = async (error: Error, expected: string): Promise<void> => {
+  for (const path of ORG_PATHS) {
+    const { gh } = fakeGh({ [path]: error });
+    await expectRejection(runProductionCli(["check-settings", "o/r"], {}, {}, gh), expected);
+  }
+};
+const withStderr = (stderr: string, stdout = ""): Error =>
+  Object.assign(new Error("Command failed: gh api x"), { stderr, stdout });
+
+test("METRO-66 only the exact gh status line passes on the organization endpoints", async () => {
+  await orgFail(ghFailure(401, "Bad credentials"), "gh: Bad credentials (HTTP 401)");
+  await orgFail(
+    withStderr("To get started with GitHub CLI, please run:  gh auth login\n"),
+    "gh auth login",
+  );
+  await orgFail(new Error("gh: To use GitHub CLI, run: gh auth login"), "FAIL read");
+  // A 403 that merely mentions Validation Failed in its message or its (synthetic) JSON body.
+  await orgFail(ghFailure(403, "Validation Failed but Forbidden"), "(HTTP 403)");
+  await orgFail(
+    withStderr("gh: Forbidden (HTTP 403)\n", '{"message":"Validation Failed","status":"422"}'),
+    "gh: Forbidden (HTTP 403)",
+  );
+  // A 500 whose text contains HTTP 422, and a 404 inside a longer non-404 message.
+  await orgFail(
+    withStderr("gh: upstream said HTTP 422 Validation Failed (HTTP 500)\n"),
+    "(HTTP 500)",
+  );
+  await orgFail(withStderr("gh: Not Found (HTTP 404) while proxying (HTTP 502)\n"), "(HTTP 502)");
+  await orgFail(
+    withStderr("gh: Validation Failed for field (HTTP 422)\n"),
+    "Validation Failed for field",
+  );
+  // Decision: fail closed. A 422 with empty stderr and the status only in stdout JSON is not trusted.
+  await orgFail(withStderr("", '{"message":"Validation Failed","status":"422"}'), "FAIL read");
+});
+
+const buffered = (status: number, message: string): Error =>
+  Object.assign(new Error("Command failed: gh api x"), {
+    stderr: Buffer.from(`gh: ${message} (HTTP ${status})\n`),
+    stdout: Buffer.from("{}"),
+  });
+
+test("METRO-66 Buffer stderr and stdout are read like strings", async () => {
+  for (const error of [buffered(422, "Validation Failed"), buffered(404, "Not Found")]) {
+    const { gh } = fakeGh({ [ORG_PATHS[0] ?? ""]: error });
+    expect(await runProductionCli(["check-settings", "o/r"], {}, {}, gh)).toContain("PASS");
+  }
+  await orgFail(buffered(403, "Forbidden"), "gh: Forbidden (HTTP 403)");
 });

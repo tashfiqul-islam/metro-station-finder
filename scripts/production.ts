@@ -293,21 +293,47 @@ export type GhRunner = (args: readonly string[]) => string;
 const runGh: GhRunner = (args) =>
   execFileSync("gh", [...args], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
 
-/** Everything a failed `gh api` call says: the error message plus the stderr and stdout `execFileSync` attaches. */
-function streamText(part: unknown): string {
-  return typeof part === "string" ? part : Buffer.isBuffer(part) ? part.toString("utf8") : "";
+function streamText(part: unknown): string | undefined {
+  if (typeof part === "string") return part;
+  return Buffer.isBuffer(part) ? part.toString("utf8") : undefined;
 }
 
-function failureText(error: unknown): string {
-  if (!(error instanceof Error)) return String(error);
-  const parts = [error.message, Reflect.get(error, "stderr"), Reflect.get(error, "stdout")];
-  return parts.map((part) => streamText(part)).join("\n");
+interface GhFailure {
+  /** The text shown in the FAIL line: the gh status line, else the first line of what gh said. */
+  line: string;
+  status?: number;
+  message?: string;
 }
 
-/** HTTP 404, or HTTP 422 whose message is "Validation Failed": the shapes GitHub uses for "no organization". */
-function meansNoOrganization(text: string): boolean {
+/**
+ * Reads a failed `gh api` call. Only the stderr status line `gh: <message> (HTTP <n>)` is trusted (the error
+ * message is used only when the error carries no stderr at all). The JSON body on stdout is never read for a
+ * status, and a status mentioned inside other text does not count: the line must match in full.
+ */
+function ghFailure(error: unknown): GhFailure {
+  const stderr = error instanceof Error ? streamText(Reflect.get(error, "stderr")) : undefined;
+  const fallback = error instanceof Error ? error.message : String(error);
+  const text = stderr ?? fallback;
+  const match = /^gh: (?<message>.*) \(HTTP (?<status>\d{3})\)[ \t\r]*$/mu.exec(text);
+  const groups = match?.groups;
+  if (match === null || groups === undefined)
+    return {
+      line: text.split("\n").find((line) => line.trim() !== "") ?? fallback.split("\n")[0] ?? "",
+    };
+  return {
+    line: match[0].trim(),
+    status: Number(groups["status"]),
+    message: groups["message"] ?? "",
+  };
+}
+
+/**
+ * "The repository has no organization" (a personal account): exactly a 404 status line, or a 422 status line
+ * whose whole message is "Validation Failed". Anything else (401, 403, 500, other 422, no status line) is not.
+ */
+function meansNoOrganization(failure: GhFailure): boolean {
   return (
-    /\bHTTP 404\b/u.test(text) || (/\bHTTP 422\b/u.test(text) && /Validation Failed/u.test(text))
+    failure.status === 404 || (failure.status === 422 && failure.message === "Validation Failed")
   );
 }
 
@@ -325,10 +351,10 @@ export function checkSettings(repo: string, gh: GhRunner): { ok: boolean; lines:
     try {
       return JSON.parse(gh(["api", path]));
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      if (emptyWhenMissing && meansNoOrganization(failureText(error)))
+      const failure = ghFailure(error);
+      if (emptyWhenMissing && meansNoOrganization(failure))
         return { total_count: 0, secrets: [], variables: [] };
-      failures.push(`FAIL read ${path.split("?")[0] ?? path}: ${message.split("\n")[0] ?? ""}`);
+      failures.push(`FAIL read ${path.split("?")[0] ?? path}: ${failure.line}`);
       return null;
     }
   };
