@@ -193,7 +193,7 @@ jobs:
     # Dependabot) runs this job, by actor or by pull request author: an unreviewed bump would execute with the
     # token (METRO-47). This job is deliberately outside the "Quality gates" aggregate so Cloudflare
     # availability cannot block merges.
-    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && !endsWith(github.actor, '[bot]') && !endsWith(github.event.pull_request.user.login, '[bot]') && needs.changes.outputs.docs_only != 'true' }}
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && !endsWith(github.actor, '[bot]') && !endsWith(github.event.pull_request.user.login, '[bot]') && github.event.pull_request.user.type != 'Bot' && github.event.sender.type != 'Bot' && needs.changes.outputs.docs_only != 'true' }}
     needs: [changes, checks, build, security]
     runs-on: ubuntu-24.04
     timeout-minutes: 15

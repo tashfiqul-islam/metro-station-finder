@@ -11,7 +11,7 @@ jobs:
     name: Delete preview Worker
     # Same-repository pull requests only; forks never had a preview. Bots never get a preview either (METRO-47),
     # and a bot-branch merge commit must not run node_modules code with the token.
-    if: ${{ github.event.pull_request.head.repo.full_name == github.repository && !endsWith(github.actor, '[bot]') && !endsWith(github.event.pull_request.user.login, '[bot]') }}
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository && !endsWith(github.actor, '[bot]') && !endsWith(github.event.pull_request.user.login, '[bot]') && github.event.pull_request.user.type != 'Bot' && github.event.sender.type != 'Bot' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     concurrency:
