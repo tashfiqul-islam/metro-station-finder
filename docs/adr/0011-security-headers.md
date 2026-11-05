@@ -42,3 +42,7 @@ The SPA is served by Workers Static Assets and `/api/*` by the Hono Worker (ADR-
 - Narrowing the `_headers` rule to hash-shaped names: rejected, a missing hash-shaped URL would still get the SPA fallback plus `immutable`.
 - `Referrer-Policy: no-referrer` (Hono default): rejected, breaks the referrer-restricted Maps key.
 - HSTS with `preload` now: rejected, hard to undo and the custom domain is not connected.
+
+## Confirmation
+
+- `apps/api/src/security-headers.test.ts`, `apps/api/src/assets-route.test.ts` and `apps/web/src/headers.test.ts`.

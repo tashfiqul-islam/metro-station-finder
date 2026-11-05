@@ -32,3 +32,8 @@ Before this change the web app and the Worker ran as separate servers (Vite on 5
 - Keep two servers and add a dev proxy: no workerd parity in the web server and the unstable API stays.
 - Move the Worker configuration into `apps/web`: couples the Worker package to the SPA package without a benefit now.
 - Run the Worker first for every path: spends Worker invocations on static assets.
+
+## Confirmation
+
+- Layering: `apps-never-import-each-other` in `.dependency-cruiser.mts`, proven red by `scripts/layering.test.ts`, run by `bun run imports:check`.
+- Runtime shape: `apps/api/src/index.test.ts` (route contract), `e2e/` smoke against `vite preview` in workerd, and `bun run bundle:check` (client budget, CI build job; not in `check`). Wrangler, compatibility date and dev-server behaviour have no dedicated test.
