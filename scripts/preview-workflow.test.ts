@@ -91,3 +91,12 @@ test("METRO-13 cleanup treats a missing Worker as success and any other failure 
   expect(cleanup).toContain("10007");
   expect(cleanup).toContain("exit 1");
 });
+
+test("the api dry-run ignores CLOUDFLARE_ENV so a preview build prints no missing-environment warning", () => {
+  // The Vite plugin already flattened the chosen environment into the built wrangler.json, which has no
+  // `env` section; an inherited CLOUDFLARE_ENV=preview made Wrangler warn about a missing "preview" environment.
+  const apiPackage = readFileSync("apps/api/package.json", "utf8");
+  expect(apiPackage).toMatch(
+    /"build": "wrangler deploy --dry-run --env= --config \.\.\/web\/dist\/metro_scaffold\/wrangler\.json/u,
+  );
+});
