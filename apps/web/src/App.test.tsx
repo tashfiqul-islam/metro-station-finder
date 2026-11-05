@@ -1,9 +1,9 @@
-import { GlobalRegistrator } from "@happy-dom/global-registrator";
-
-// The DOM must exist before React and Testing Library are imported.
-GlobalRegistrator.register();
+// The DOM must exist before React and Testing Library are imported (shared, see dom-test-env.ts).
+const { restoreBunGlobals, enableDomGlobals } = await import("./dom-test-env");
+enableDomGlobals();
 const { cleanup, render, screen } = await import("@testing-library/react");
 const { App } = await import("./App");
+restoreBunGlobals(); // non-DOM test files must see Bun's globals again
 
 const realFetch = globalThis.fetch;
 const json = (body: unknown, init: ResponseInit = {}) =>
@@ -18,15 +18,16 @@ const stubFetch = (handler: () => Promise<Response>) => {
 };
 
 beforeAll(() => {
+  enableDomGlobals();
   Reflect.set(globalThis, "IS_REACT_ACT_ENVIRONMENT", true);
 });
 afterEach(() => {
   cleanup();
   globalThis.fetch = realFetch;
 });
-afterAll(async () => {
+afterAll(() => {
+  restoreBunGlobals();
   Reflect.deleteProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT");
-  await GlobalRegistrator.unregister();
 });
 
 test("FND-T2 shows the loading state while the request is pending", () => {

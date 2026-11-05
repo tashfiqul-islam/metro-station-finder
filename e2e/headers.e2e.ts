@@ -94,7 +94,8 @@ test.describe("security headers and caching (METRO-31)", () => {
         styleElements: document.querySelectorAll("style").length,
         styleAttributes: document.querySelectorAll("[style]").length,
       }));
-      expect(styling).toEqual({ stylesheets: 0, styleElements: 0, styleAttributes: 0 });
+      // One same-origin stylesheet (focus.css, METRO-58) is allowed by `style-src 'self'`; nothing inline.
+      expect(styling).toEqual({ stylesheets: 1, styleElements: 0, styleAttributes: 0 });
     });
   });
 });
