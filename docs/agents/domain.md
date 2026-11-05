@@ -21,7 +21,7 @@ If an optional file does not exist, **proceed silently**. Do not flag its absenc
 │       ├── glossary.md
 │       └── feature-parity.md
 ├── apps/                     (web, api)
-└── packages/                 (core)
+└── packages/                 (core, contracts)
 ```
 
 ## Use the glossary's vocabulary
