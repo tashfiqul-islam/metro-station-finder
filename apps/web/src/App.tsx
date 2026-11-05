@@ -1,12 +1,13 @@
 import type { ScaffoldStatusBody } from "@metro/contracts";
 import { useEffect, useState } from "react";
 
+import { errorCopy } from "./error-boundary";
 import { fetchScaffoldStatus } from "./status-client";
 
 type State =
   | { readonly phase: "loading" }
   | { readonly phase: "success"; readonly status: ScaffoldStatusBody }
-  | { readonly phase: "error"; readonly message: string };
+  | { readonly phase: "error" };
 
 export function App() {
   const [state, setState] = useState<State>({ phase: "loading" });
@@ -16,12 +17,9 @@ export function App() {
       try {
         const status = await fetchScaffoldStatus(fetch, controller.signal);
         if (!controller.signal.aborted) setState({ phase: "success", status });
-      } catch (error: unknown) {
-        if (controller.signal.aborted) return;
-        setState({
-          phase: "error",
-          message: error instanceof Error ? error.message : "Unknown error",
-        });
+      } catch {
+        // The error is deliberately dropped: its message can carry a URL or coordinates (docs/agents/ui.md).
+        if (!controller.signal.aborted) setState({ phase: "error" });
       }
     }
     void load();
@@ -36,7 +34,7 @@ export function App() {
       {state.phase === "success" && (
         <output aria-label="Scaffold status">{JSON.stringify(state.status)}</output>
       )}
-      {state.phase === "error" && <p role="alert">Scaffold status unavailable: {state.message}</p>}
+      {state.phase === "error" && <p role="alert">{errorCopy.statusUnavailable}</p>}
     </main>
   );
 }
