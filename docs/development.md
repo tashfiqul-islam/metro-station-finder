@@ -4,7 +4,7 @@
 
 ## Bootstrap and commands
 
-Prerequisites: mise, PowerShell 7 for preparation checks, and an OS supported by the pinned Node/Bun and Wrangler local runtime. Windows execution was checked; other platforms were not exercised. No Cloudflare login, account, database, container or secrets are needed locally.
+Prerequisites: mise, PowerShell 7 for preparation checks, and an OS supported by the pinned Node/Bun and Wrangler local runtime. Windows execution was checked, and a clean run of install, bootstrap, hooks, `check`, `build` and `smoke` passed on Ubuntu 26.04 LTS under WSL2 (see [Ubuntu onboarding evidence](evidence/ubuntu-onboarding-2026-11.md)). That scope is exact: bare-metal Linux, other Ubuntu releases, ARM and macOS were not exercised. CI runs on Linux. No Cloudflare login, account, database, container or secrets are needed locally.
 
 Review `mise.toml`, then trust it through your mise installation if prompted. Use explicit tool versions so unrelated globally configured tools are not installed:
 
@@ -15,6 +15,8 @@ mise exec bun@1.4.4 node@26.13.0 -- bun run check
 mise exec bun@1.4.4 node@26.13.0 -- bun run build
 mise exec bun@1.4.4 node@26.13.0 -- bun run dev
 ```
+
+`check` also needs the other pinned tools (hk, pkl, gitleaks, actionlint, zizmor, renovate), so run a plain `mise install` (or `mise install --locked`) once before it. Install the repository Git hooks once per checkout, including linked worktrees, with `mise exec -- hk install --mise`. This needs Git 2.54 or newer for config-based hooks: with an older Git, `hk install` still succeeds but writes legacy shims, and the real hook-install test is skipped (the suite stays green, so read the `SKIPPED real hk install test` line). Ubuntu 26.04 packages Git 2.53.0, so install a newer Git first (for example from source, or the Git maintainers' PPA, which is not yet verified here) and confirm `git --version`.
 
 `bootstrap` verifies exact runtimes and installs the committed single `bun.lock` with `--frozen-lockfile`; dependency drift fails. `check` runs, in order: runtime pins; Oxfmt format check; type-aware Oxlint (see below); the core import guard; the dependency-cruiser layering gate; Knip; the Markdown link gate; the base-branch consistency gate (`branches:check`: CONTRIBUTING, workflow and plane name the same pull request base); the Worker binding type freshness check; the workflow lint (actionlint and zizmor); the Renovate configuration validator; the Bun test suite with the per-file 90% coverage threshold; the coverage scope gate; and every strict TypeScript project (web, DOM tests, API, contracts, scripts, E2E, test tooling, core). See [METRO-12 evidence](evidence/metro-12.md) for canonical commands and budgets. `build` runs `vite build` (client assets in `apps/web/dist/client`, Worker bundle in `apps/web/dist/metro_scaffold`) and then dry-runs Wrangler against that generated configuration into `apps/api/dist`; it uploads/deploys nothing. `dev` runs Vite with `@cloudflare/vite-plugin`: the SPA and the Worker API share one origin, `http://127.0.0.1:5173`, with the Worker running in workerd and React Fast Refresh. Ctrl+C stops it. The port must be free (`strictPort` makes an occupied port fail visibly). `GET /api/scaffold/status` returns the status; unknown `/api/*` returns 404 with `{ error: { code, message } }`; other unknown paths serve the SPA. See [ADR-0002](adr/0002-runtime-topology.md) and [ADR-0003](adr/0003-contracts.md).
 
@@ -36,6 +38,8 @@ $env:PLAYWRIGHT_BROWSERS_PATH = Join-Path (Get-Location) '.local/browsers'
 ```
 
 `.local`, dependencies, bundle outputs and Wrangler state are ignored. Use the same absolute paths when checking an exported copy, so the copy gets its own dependencies while reusing installed runtimes/browser binaries.
+
+**Devcontainer decision (METRO-55):** none is provided. mise reproduces the pinned toolchain on Windows and Ubuntu, and a container would be a second toolchain definition with no consumer. The revisit triggers (a contributor who cannot use mise, Codespaces, CI parity problems) are in the [Ubuntu onboarding evidence](evidence/ubuntu-onboarding-2026-11.md#devcontainer-decision).
 
 ## Symlinked agent entry point
 
