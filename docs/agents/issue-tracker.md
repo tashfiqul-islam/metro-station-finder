@@ -21,7 +21,7 @@ Action names below follow the connected tools as inspected on 2026-11-03; `worki
 - **List issues**: `workitem.list` with project UUID and `pql` filter; follow cursors.
 - **Comment**: `workitem_comment` create.
 - **Change state**: `state.list` for the UUID, then `workitem.update`.
-- **Labels**: `label` tool; use existing labels only. Do not invent labels.
+- **Labels**: `label` tool; follow the taxonomy and rules in [plane.md](plane.md#labels). Exactly one `area:*` label per new work item; do not invent labels.
 - **Close**: move to Done (needs acceptance evidence per [workflow](workflow.md)) or Cancelled with a reason comment.
 
 ## When a skill says "publish to the issue tracker"
