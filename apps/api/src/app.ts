@@ -92,6 +92,14 @@ export function createApp(
     context.header("Allow", "GET, HEAD");
     return context.json(envelope("method_not_allowed", "Use GET"), 405);
   });
+  // Worker-first for /assets/* (see wrangler.jsonc). With run_worker_first patterns Cloudflare answers a
+  // missing file with the SPA's index.html (200), and _headers would mark that immutable. Only a real
+  // asset may pass; an HTML answer under /assets/ is a miss.
+  app.get("/assets/*", async (context) => {
+    const asset = await context.env.ASSETS.fetch(context.req.raw);
+    if (!(asset.headers.get("content-type") ?? "").startsWith("text/html")) return asset;
+    return context.json(envelope("not_found", "No such asset"), 404);
+  });
   app.all("/api/*", (context) => context.json(envelope("not_found", "No such API route"), 404));
   // The cause is deliberately not echoed to clients or logged beyond its class name.
   app.onError((error, context) => {

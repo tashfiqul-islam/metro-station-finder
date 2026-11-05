@@ -1,3 +1,5 @@
+import type { Page } from "@playwright/test";
+
 import { expect, test } from "./fixtures";
 
 const shared = {
@@ -6,6 +8,14 @@ const shared = {
   "referrer-policy": "strict-origin-when-cross-origin",
   "permissions-policy": "geolocation=(self)",
 };
+
+function collect(page: Page): string[] {
+  const violations: string[] = [];
+  page.on("console", (message) => {
+    if (message.text().includes("Content Security Policy")) violations.push(message.text());
+  });
+  return violations;
+}
 
 test.describe("security headers and caching (METRO-31)", () => {
   for (const path of ["/", "/deep/link", "/api/scaffold/status"]) {
@@ -33,15 +43,42 @@ test.describe("security headers and caching (METRO-31)", () => {
     }
   });
 
-  test("METRO-31 the page logs no CSP report-only violation", async ({ page }) => {
-    // Chromium logs a report-only violation as a console "info" message (not an error), so the shared
-    // fixture would not catch it. Firefox and WebKit word or route it differently; Chromium is the guard.
-    const violations: string[] = [];
-    page.on("console", (message) => {
-      if (message.text().includes("Content Security Policy")) violations.push(message.text());
+  test("METRO-31 a missing /assets/ file is never served as immutable", async ({ request }) => {
+    for (const path of ["/assets/does-not-exist.js", "/assets/nested/missing.css"]) {
+      const response = await request.get(path);
+      expect(response.status(), path).toBe(404);
+      expect(response.headers()["cache-control"] ?? "", path).not.toContain("immutable");
+    }
+  });
+
+  // Chromium logs a report-only violation as a console "info" message (not an error), so the shared
+  // fixture would not catch it. Firefox and WebKit word or route it differently; Chromium is the guard.
+  test.describe("CSP report-only console messages", () => {
+    test.use({ allowedConsoleError: /Failed to load resource/u });
+
+    test("METRO-31 positive control: a disallowed image is reported", async ({
+      page,
+      browserName,
+    }) => {
+      test.skip(browserName !== "chromium", "console wording is verified on Chromium only");
+      const violations = collect(page);
+      await page.goto("/");
+      await expect(page.getByLabel("Scaffold status")).toBeVisible();
+      await page.evaluate(() => {
+        const image = document.createElement("img");
+        image.alt = "";
+        image.src = "http://localhost:4173/csp-control.png";
+        document.body.append(image);
+      });
+      await expect.poll(() => violations.length).toBeGreaterThan(0);
+      expect(violations.join("\n")).toContain("report-only");
     });
-    await page.goto("/");
-    await expect(page.getByLabel("Scaffold status")).toBeVisible();
-    expect(violations).toEqual([]);
+
+    test("METRO-31 the app itself produces no CSP report-only violation", async ({ page }) => {
+      const violations = collect(page);
+      await page.goto("/");
+      await expect(page.getByLabel("Scaffold status")).toBeVisible();
+      expect(violations).toEqual([]);
+    });
   });
 });
