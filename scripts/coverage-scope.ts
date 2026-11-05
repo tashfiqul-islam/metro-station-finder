@@ -12,10 +12,6 @@ import { cleanGitEnv } from "./git-env.ts";
  */
 export const EXEMPT_PRODUCT_SOURCES: readonly (readonly [string, string])[] = [
   [
-    "apps/web/src/main.tsx",
-    "Browser entry point; runs only in a browser and is exercised by `smoke`.",
-  ],
-  [
     "packages/core/src/domain/scaffold-status.ts",
     "Type-only module with no executable code, so there is nothing to measure.",
   ],

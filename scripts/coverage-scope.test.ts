@@ -50,11 +50,13 @@ test("FND-T1 lcov paths with backslashes or absolute prefixes still match", () =
 
 test("FND-T1 documented exemptions are the only files allowed to stay unmeasured", () => {
   expect(new Set(EXEMPT_PRODUCT_SOURCES.map(([file]) => file))).toEqual(
-    new Set(["apps/web/src/main.tsx", "packages/core/src/domain/scaffold-status.ts"]),
+    new Set(["packages/core/src/domain/scaffold-status.ts"]),
   );
   for (const [, reason] of EXEMPT_PRODUCT_SOURCES) expect(reason.length).toBeGreaterThan(10);
   const exempt = EXEMPT_PRODUCT_SOURCES.map(([file]) => file);
-  expect(unmeasuredProductSources(lcov(), ["apps/web/src/main.tsx"], exempt)).toEqual([]);
+  expect(
+    unmeasuredProductSources(lcov(), ["packages/core/src/domain/scaffold-status.ts"], exempt),
+  ).toEqual([]);
 });
 
 test("FND-T1 runCoverageScope fails visibly for a missing lcov file and an unmeasured file", async () => {

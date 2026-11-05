@@ -79,6 +79,14 @@
       }
     },
     {
+      "files": ["apps/web/src/report-error.ts"],
+      "rules": {
+        // The one place the browser app writes to the console (METRO-58): it logs a fixed error class, never
+        // a message, stack or component stack, and replaces React's default output, which prints the raw error.
+        "eslint/no-console": "off"
+      }
+    },
+    {
       "files": ["**/*.test.ts", "**/*.test.tsx"],
       "plugins": [
         "eslint",
