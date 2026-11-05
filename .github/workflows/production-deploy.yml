@@ -5,7 +5,7 @@ name: Production deploy
 # stable `v*` tag; the branch `main` can be dispatched by hand (cutover runbook step 4.1).
 on:
   push:
-    tags: ["v*"]
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"] # a coarse filter; the guard step is the real check
   workflow_dispatch:
 permissions: {}
 concurrency:
@@ -36,6 +36,19 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: 0 # the lineage check below needs the full history of main
+      - name: Require the commit to be merged to main
+        # First, before any tool or repository script runs, and with no secret in its environment: the
+        # workflow and scripts that run after approval come from the tagged commit, so a tag on a commit
+        # that never went through review must stop here (ADR-0012 item 1).
+        env:
+          COMMIT: ${{ github.sha }}
+        run: |
+          git fetch --no-tags origin "+refs/heads/main:refs/remotes/origin/main"
+          if ! git merge-base --is-ancestor "$COMMIT" origin/main; then
+            echo "Commit $COMMIT is not on main. Tag only commits that are already merged to main; nothing was deployed." >&2
+            exit 1
+          fi
       - name: Install pinned tools with mise
         uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
         with:
@@ -48,24 +61,30 @@ jobs:
           PRODUCTION_DEPLOY_ENABLED: ${{ vars.PRODUCTION_DEPLOY_ENABLED }}
           REF_TYPE: ${{ github.ref_type }}
           REF_NAME: ${{ github.ref_name }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
         run: node scripts/production.ts guard
-      - name: Name the version
-        id: label
-        run: node scripts/production.ts label # reads the runner's own GITHUB_SHA and GITHUB_RUN_ID
-      - name: Build the production environment
-        run: bun run build
-      - name: Record the version that serves production now
-        id: previous
+      - name: Require the Cloudflare credentials
+        # An inline test: the token is in the environment of this one trivial step and of the Wrangler steps
+        # only, never of Node, Bun or any repository script.
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          bunx wrangler deployments status --name "$WORKER" --json > "$RUNNER_TEMP/current.json"
-          node scripts/production.ts current "$RUNNER_TEMP/current.json"
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "CLOUDFLARE_API_TOKEN is missing in the GitHub environment production; nothing was deployed." >&2; exit 1; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "CLOUDFLARE_ACCOUNT_ID is missing in the GitHub environment production; nothing was deployed." >&2; exit 1; }
+      - name: Name the version
+        id: label
+        run: node scripts/production.ts label # reads the runner's own GITHUB_SHA, GITHUB_RUN_ID and GITHUB_RUN_ATTEMPT
+      - name: Build with the default configuration (no CLOUDFLARE_ENV)
+        run: bun run build
+      - name: Read the deployment that serves production now
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: bunx wrangler deployments status --name "$WORKER" --json > "$RUNNER_TEMP/current.json"
+      - name: Record the version that serves production now
+        id: previous
+        run: node scripts/production.ts current "$RUNNER_TEMP/current.json"
       - name: Upload the new version without deploying it
-        id: upload
         env:
           LABEL: ${{ steps.label.outputs.label }}
           REF_NAME: ${{ github.ref_name }}
@@ -73,9 +92,10 @@ jobs:
           WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/wrangler-output.ndjson
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-        run: |
-          bunx wrangler versions upload --config apps/web/dist/metro_scaffold/wrangler.json --name "$WORKER" --tag "$LABEL" --message "Production $REF_NAME $COMMIT" --var "PREVIEW_SHA:$COMMIT"
-          node scripts/production.ts version "$WRANGLER_OUTPUT_FILE_PATH"
+        run: bunx wrangler versions upload --config apps/web/dist/metro_scaffold/wrangler.json --name "$WORKER" --tag "$LABEL" --message "Production $REF_NAME $COMMIT" --var "PREVIEW_SHA:$COMMIT"
+      - name: Read the uploaded version id
+        id: upload
+        run: node scripts/production.ts version "$RUNNER_TEMP/wrangler-output.ndjson"
       - name: Stage the new version at 0 percent
         id: stage
         env:
@@ -107,7 +127,7 @@ jobs:
           COMMIT: ${{ github.sha }}
         run: node scripts/production.ts smoke "$PRODUCTION_URL" "$COMMIT"
       - name: Roll back to the previous version
-        if: ${{ failure() && steps.previous.outputs.current != '' && steps.stage.outcome != 'skipped' }}
+        if: ${{ (failure() || cancelled()) && steps.previous.outputs.current != '' && steps.stage.outcome != 'skipped' }}
         id: rollback
         env:
           PREVIOUS: ${{ steps.previous.outputs.current }}
@@ -116,7 +136,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
         run: bunx wrangler rollback "$PREVIOUS" --name "$WORKER" --message "Automatic rollback of $COMMIT after a failed deploy" --yes
       - name: Smoke production after the rollback
-        if: ${{ failure() && steps.rollback.outcome == 'success' }}
+        if: ${{ (failure() || cancelled()) && steps.rollback.outcome == 'success' }}
         run: node scripts/production.ts smoke "$PRODUCTION_URL"
       - name: Record the deploy in the job summary
         if: ${{ always() }}

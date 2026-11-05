@@ -1,7 +1,8 @@
+import { execFileSync } from "node:child_process";
 import { appendFileSync, readFileSync } from "node:fs";
 
 import { isRecord } from "./guards.ts";
-import { REQUIRED_SECRETS, missingSecrets, smokePreview } from "./preview.ts";
+import { smokePreview } from "./preview.ts";
 
 /**
  * Helpers for the production deploy workflow (METRO-57, ADR-0012). Everything that decides pass or
@@ -50,8 +51,9 @@ export interface DeployRequest {
 
 /**
  * Fail-closed gate. The owner switches production deploys on with the repository variable
- * PRODUCTION_DEPLOY_ENABLED=true; only a stable `v*` tag or `main` may deploy; the URL and the
- * environment secrets must exist. The workflow also checks the variable in the job condition, so a
+ * PRODUCTION_DEPLOY_ENABLED=true; only a stable `v*` tag or `main` may deploy; the URL must be valid.
+ * It never reads credentials: the workflow tests them inline, so no secret is ever in the environment of
+ * repository code (ADR-0012). The workflow also checks the variable in the job condition, so a
  * disabled repository never even references the `production` environment.
  */
 export function checkDeployRequest(
@@ -65,12 +67,10 @@ export function checkDeployRequest(
   const name = env["REF_NAME"] ?? "";
   if (type === "tag" && STABLE_TAG.test(name)) {
     productionOrigin(env["PRODUCTION_URL"]);
-    requireSecrets(env);
     return { kind: "tag", ref: name };
   }
   if (type === "branch" && name === "main") {
     productionOrigin(env["PRODUCTION_URL"]);
-    requireSecrets(env);
     return { kind: "branch", ref: name };
   }
   throw new Error(
@@ -78,19 +78,12 @@ export function checkDeployRequest(
   );
 }
 
-function requireSecrets(env: Readonly<Record<string, string | undefined>>): void {
-  const missing = missingSecrets(env);
-  if (missing.length > 0)
-    throw new Error(
-      `Missing ${missing.join(" and ")} in the GitHub environment "production" (${REQUIRED_SECRETS.join(", ")}). Nothing was deployed.`,
-    );
-}
-
-/** Version label: twelve hex digits of the commit and the run id. Digits and hex only. */
-export function releaseLabel(sha: string, runId: string): string {
+/** Version label: twelve hex digits of the commit, the run id and the attempt, so a re-run gets a new label. */
+export function releaseLabel(sha: string, runId: string, attempt = "1"): string {
   if (!/^[0-9a-f]{40}$/u.test(sha)) throw new Error(`Not a full commit SHA: "${sha}"`);
   if (!/^[0-9]{1,20}$/u.test(runId)) throw new Error(`Not a numeric run id: "${runId}"`);
-  return `${sha.slice(0, 12)}-${runId}`;
+  if (!/^[0-9]{1,6}$/u.test(attempt)) throw new Error(`Not a numeric run attempt: "${attempt}"`);
+  return `${sha.slice(0, 12)}-${runId}-${attempt}`;
 }
 
 /** The version id from Wrangler's `WRANGLER_OUTPUT_FILE_PATH` file (one JSON object per line). */
@@ -116,22 +109,18 @@ export function uploadedVersionId(ndjson: string): string {
   return ids[0] ?? "";
 }
 
-function latestDeployment(parsed: unknown): unknown {
-  if (Array.isArray(parsed)) return (parsed as unknown[])[0];
-  if (isRecord(parsed) && isRecord(parsed["result"])) {
-    const list = parsed["result"]["deployments"];
-    return Array.isArray(list) ? (list as unknown[])[0] : undefined;
-  }
-  return parsed;
-}
-
 /**
  * The version serving 100 percent of production traffic, from `wrangler deployments status --json`.
  * Refuses a split deployment: a rollout that is already in progress must be settled by the owner.
- * The exact JSON shape is Unverified against a live account; any other shape fails closed.
+ * `deployments status --json` prints the one latest deployment object (Repo-verified in the installed
+ * wrangler 4.156.0 source); `deployments list --json` is a bare array sorted oldest first, so a first element
+ * would be the wrong deployment and an array is refused. The live response is Unverified until the first run;
+ * any other shape fails closed.
  */
 export function currentVersionId(json: string): string {
-  const deployment = latestDeployment(JSON.parse(json));
+  const deployment: unknown = JSON.parse(json);
+  if (Array.isArray(deployment))
+    throw new Error("Expected the single deployment object of `deployments status --json`");
   const versions = isRecord(deployment) ? deployment["versions"] : undefined;
   if (!Array.isArray(versions) || versions.length === 0)
     throw new Error("The deployment status lists no versions; is the production Worker deployed?");
@@ -150,12 +139,157 @@ export function versionOverrideHeader(versionId: string): Record<string, string>
   return { "Cloudflare-Workers-Version-Overrides": `${PRODUCTION_WORKER}="${versionId}"` };
 }
 
+/** Raw read-only GitHub API answers that describe how the `production` environment is configured. */
+export interface SettingsInput {
+  environment: unknown;
+  policies: unknown;
+  repoSecrets: unknown;
+  repoVariables: unknown;
+  environmentSecrets: unknown;
+  environmentVariables: unknown;
+}
+
+const OWNER = "tashfiqul-islam";
+const CLOUDFLARE_NAMES = ["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID"] as const;
+
+function namesIn(value: unknown, key: "secrets" | "variables"): string[] | null {
+  const list = isRecord(value) ? value[key] : undefined;
+  if (!Array.isArray(list)) return null;
+  return (list as unknown[]).flatMap((item) =>
+    isRecord(item) && typeof item["name"] === "string" ? [item["name"]] : [],
+  );
+}
+
+function leaked(names: string[] | null): string[] {
+  return names === null
+    ? ["unreadable"]
+    : names.filter((n) => (CLOUDFLARE_NAMES as readonly string[]).includes(n));
+}
+
+function reviewers(environment: unknown): string[] {
+  const rules = isRecord(environment) ? environment["protection_rules"] : undefined;
+  if (!Array.isArray(rules)) return [];
+  return (rules as unknown[]).flatMap((rule) => {
+    if (!isRecord(rule) || rule["type"] !== "required_reviewers") return [];
+    const list = rule["reviewers"];
+    if (!Array.isArray(list)) return [];
+    return (list as unknown[]).flatMap((entry) => {
+      const reviewer = isRecord(entry) ? entry["reviewer"] : undefined;
+      const login = isRecord(reviewer) ? reviewer["login"] : undefined;
+      return typeof login === "string" ? [login] : [];
+    });
+  });
+}
+
+/**
+ * Pre-enable check (ADR-0012 item 7): the `production` environment has the owner as the required reviewer
+ * and exactly the tag `v*` and branch `main` policies, and no repository-level secret or variable can
+ * carry the Cloudflare credentials (a repository-level token would let an unprotected, auto-created
+ * environment deploy). Pure: it only reads what `check-settings` fetched.
+ */
+export function evaluateSettings(input: SettingsInput): { ok: boolean; lines: string[] } {
+  const lines: string[] = [];
+  const check = (ok: boolean, name: string, detail: string): void => {
+    lines.push(`${ok ? "PASS" : "FAIL"} ${name}: ${detail}`);
+  };
+  const found = reviewers(input.environment);
+  check(
+    found.length === 1 && found[0] === OWNER,
+    "required reviewer",
+    found.length === 0 ? "none" : found.join(", "),
+  );
+  const policy = isRecord(input.environment) ? input.environment["deployment_branch_policy"] : null;
+  check(
+    isRecord(policy) && policy["custom_branch_policies"] === true,
+    "custom deployment policies",
+    "environment must use custom branch and tag policies",
+  );
+  const listed = isRecord(input.policies) ? input.policies["branch_policies"] : undefined;
+  if (!Array.isArray(listed)) {
+    check(false, "deployment policies", "the policies answer is not a list");
+  } else {
+    const entries = (listed as unknown[]).flatMap((item) =>
+      isRecord(item) ? [`${String(item["type"])}:${String(item["name"])}`] : [],
+    );
+    check(entries.includes("tag:v*"), "tag policy", "v* must be allowed");
+    check(entries.includes("branch:main"), "branch policy", "main must be allowed");
+    const extra = entries.filter((entry) => entry !== "tag:v*" && entry !== "branch:main");
+    check(extra.length === 0, "no unexpected policies", extra.join(", ") || "none");
+  }
+  const repoSecrets = namesIn(input.repoSecrets, "secrets");
+  const repoVariables = namesIn(input.repoVariables, "variables");
+  check(
+    leaked(repoSecrets).length === 0,
+    "no repository secret",
+    `Cloudflare names at repository level: ${leaked(repoSecrets).join(", ") || "none"}`,
+  );
+  check(
+    leaked(repoVariables).length === 0,
+    "no repository variable",
+    `Cloudflare names at repository level: ${leaked(repoVariables).join(", ") || "none"}`,
+  );
+  check(
+    namesIn(input.environmentSecrets, "secrets")?.includes("CLOUDFLARE_API_TOKEN") === true,
+    "environment secret",
+    "CLOUDFLARE_API_TOKEN exists in production",
+  );
+  check(
+    namesIn(input.environmentVariables, "variables")?.includes("CLOUDFLARE_ACCOUNT_ID") === true,
+    "environment variable",
+    "CLOUDFLARE_ACCOUNT_ID exists in production",
+  );
+  return { ok: lines.every((line) => line.startsWith("PASS ")), lines };
+}
+
+/** Runs `gh` with fixed arguments and no shell; the check below only ever passes `api <path>`. */
+export type GhRunner = (args: readonly string[]) => string;
+const runGh: GhRunner = (args) => execFileSync("gh", [...args], { encoding: "utf8" });
+
+function readJson(gh: GhRunner, path: string): unknown {
+  return JSON.parse(gh(["api", path]));
+}
+
+/** Read-only: six `gh api` GET calls. A missing environment is reported as a failure, not thrown. */
+export function checkSettings(repo: string, gh: GhRunner): { ok: boolean; lines: string[] } {
+  if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/u.test(repo))
+    throw new Error(`Expected owner/repo, got ${JSON.stringify(repo)}`);
+  const env = `repos/${repo}/environments/production`;
+  const repoSecrets = readJson(gh, `repos/${repo}/actions/secrets?per_page=100`);
+  const repoVariables = readJson(gh, `repos/${repo}/actions/variables?per_page=100`);
+  let environment: unknown;
+  try {
+    environment = readJson(gh, env);
+  } catch {
+    const result = evaluateSettings({
+      environment: null,
+      policies: null,
+      repoSecrets,
+      repoVariables,
+      environmentSecrets: null,
+      environmentVariables: null,
+    });
+    return {
+      ok: false,
+      lines: [`FAIL environment: ${env} does not exist or is not readable`, ...result.lines],
+    };
+  }
+  return evaluateSettings({
+    environment,
+    policies: readJson(gh, `${env}/deployment-branch-policies`),
+    repoSecrets,
+    repoVariables,
+    environmentSecrets: readJson(gh, `${env}/secrets?per_page=100`),
+    environmentVariables: readJson(gh, `${env}/variables?per_page=100`),
+  });
+}
+
 type SmokeOptions = NonNullable<Parameters<typeof smokePreview>[2]>;
 
 export async function runProductionCli(
   args: readonly string[],
   env: Readonly<Record<string, string | undefined>>,
   smokeOptions: SmokeOptions = {},
+  gh: GhRunner = runGh,
 ): Promise<string> {
   const [command, first, second, third] = args;
   switch (command ?? "") {
@@ -164,7 +298,17 @@ export async function runProductionCli(
       return `Production deploy allowed for ${request.kind} ${request.ref}`;
     }
     case "label":
-      return releaseLabel(env["GITHUB_SHA"] ?? "", env["GITHUB_RUN_ID"] ?? "");
+      return releaseLabel(
+        env["GITHUB_SHA"] ?? "",
+        env["GITHUB_RUN_ID"] ?? "",
+        env["GITHUB_RUN_ATTEMPT"] ?? "1",
+      );
+    case "check-settings": {
+      if (first === undefined) throw new Error("usage: check-settings <owner/repo>");
+      const result = checkSettings(first, gh);
+      if (!result.ok) throw new Error(result.lines.join("\n"));
+      return result.lines.join("\n");
+    }
     case "version": {
       if (first === undefined) throw new Error("usage: version <wrangler-output-file>");
       return uploadedVersionId(readFileSync(first, "utf8"));

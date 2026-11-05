@@ -1,4 +1,5 @@
 import { expect, spyOn, test } from "bun:test";
+import { readFileSync } from "node:fs";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -81,18 +82,21 @@ test("METRO-57 the production URL must be an https origin and the secrets must e
   ];
   for (const url of bad)
     expect(() => checkDeployRequest({ ...ok, PRODUCTION_URL: url })).toThrow("PRODUCTION_URL");
-  expect(() => checkDeployRequest({ ...ok, CLOUDFLARE_API_TOKEN: " " })).toThrow(
-    'environment "production"',
-  );
-  expect(() => checkDeployRequest({ ...ok, CLOUDFLARE_ACCOUNT_ID: undefined })).toThrow(
-    "CLOUDFLARE_ACCOUNT_ID",
-  );
 });
 
-test("METRO-57 the release label is derived from digits and hex only", () => {
-  expect(releaseLabel(SHA, "12345")).toBe("0123456789ab-12345");
+test("METRO-57 the guard never reads credentials, so no secret reaches repository code", () => {
+  const { CLOUDFLARE_API_TOKEN: _token, CLOUDFLARE_ACCOUNT_ID: _account, ...withoutSecrets } = ok;
+  expect(checkDeployRequest(withoutSecrets)).toEqual({ kind: "tag", ref: "v1.0.0" });
+  expect(readFileSync("scripts/production.ts", "utf8")).not.toMatch(/env\["CLOUDFLARE/u);
+});
+
+test("METRO-57 the release label is derived from digits and hex only and differs per attempt", () => {
+  expect(releaseLabel(SHA, "12345", "1")).toBe("0123456789ab-12345-1");
+  expect(releaseLabel(SHA, "12345", "2")).toBe("0123456789ab-12345-2");
+  expect(releaseLabel(SHA, "12345")).toBe("0123456789ab-12345-1");
   expect(() => releaseLabel("zz", "1")).toThrow("commit SHA");
   expect(() => releaseLabel(SHA, "1; rm")).toThrow("run id");
+  expect(() => releaseLabel(SHA, "1", "x")).toThrow("run attempt");
 });
 
 test("METRO-57 the uploaded version id comes from the Wrangler output file for this Worker", () => {
@@ -121,10 +125,12 @@ test("METRO-57 the uploaded version id comes from the Wrangler output file for t
 test("METRO-57 the current version is the single one serving 100 percent", () => {
   const one = [{ version_id: OLD, percentage: 100 }];
   expect(currentVersionId(JSON.stringify(deployment(one)))).toBe(OLD);
-  expect(currentVersionId(JSON.stringify([deployment(one)]))).toBe(OLD);
-  expect(currentVersionId(JSON.stringify({ result: { deployments: [deployment(one)] } }))).toBe(
-    OLD,
-  );
+  // `deployments list --json` is a bare array sorted oldest first (wrangler 4.156.0 source), so its
+  // first element is NOT the current deployment; only the single object of `deployments status` is read.
+  expect(() => currentVersionId(JSON.stringify([deployment(one)]))).toThrow("single deployment");
+  expect(() =>
+    currentVersionId(JSON.stringify({ result: { deployments: [deployment(one)] } })),
+  ).toThrow();
   const split = [
     { version_id: OLD, percentage: 90 },
     { version_id: NEW, percentage: 10 },
@@ -153,7 +159,7 @@ test("METRO-57 the CLI wires guard, label, version, current and smoke", async ()
   try {
     expect(await runProductionCli(["guard"], ok)).toContain("v1.0.0");
     expect(await runProductionCli(["label"], { GITHUB_SHA: SHA, GITHUB_RUN_ID: "9" })).toBe(
-      "0123456789ab-9",
+      "0123456789ab-9-1",
     );
     const upload = join(dir, "upload.ndjson");
     await writeFile(
@@ -198,7 +204,7 @@ test("METRO-57 productionMain prints results, writes step outputs and fails the 
   const before = process.exitCode;
   try {
     await productionMain(["label"], { GITHUB_SHA: SHA, GITHUB_RUN_ID: "9", GITHUB_OUTPUT: out });
-    expect(await readFile(out, "utf8")).toBe("label=0123456789ab-9\n");
+    expect(await readFile(out, "utf8")).toBe("label=0123456789ab-9-1\n");
     expect(process.exitCode).toBe(before);
     await productionMain(["guard"], {});
     expect(process.exitCode).toBe(1);

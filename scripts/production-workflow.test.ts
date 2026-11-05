@@ -30,7 +30,9 @@ test("METRO-57 the workflow runs only on pushed v* tags and manual dispatch", ()
   const { doc } = job("deploy");
   const triggers = record(doc["on"], "on");
   expect(new Set(Object.keys(triggers))).toEqual(new Set(["push", "workflow_dispatch"]));
-  expect(record(triggers["push"], "push")).toEqual({ tags: ["v*"] });
+  expect(record(triggers["push"], "push")).toEqual({
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"],
+  });
   for (const trigger of ["pull_request", "pull_request_target", "workflow_run", "schedule"])
     expect(workflow).not.toContain(trigger);
 });
@@ -46,6 +48,7 @@ test("METRO-57 the deploy job holds the production environment and is off until 
   expect(String(record(guard["env"], "env")["PRODUCTION_DEPLOY_ENABLED"])).toContain(
     "vars.PRODUCTION_DEPLOY_ENABLED",
   );
+  expect(JSON.stringify(guard["env"])).not.toContain("CLOUDFLARE_");
 });
 
 test("METRO-57 permissions are minimal and nothing else gets write access", () => {
@@ -63,7 +66,8 @@ test("METRO-57 only one production deploy runs at a time and it is never cancell
 
 test("METRO-57 the production Worker is the only target and never a metro-scaffold-pr-* Worker", () => {
   expect(workflow).not.toContain("metro-scaffold-pr");
-  expect(workflow).not.toContain("preview");
+  expect(workflow.replaceAll("PREVIEW_SHA", "")).not.toMatch(/preview/iu);
+  expect(workflow).not.toMatch(/CLOUDFLARE_ENVs*:/u);
   const { job: deploy } = job("deploy");
   expect(record(deploy["env"], "env")["WORKER"]).toBe(PRODUCTION_WORKER);
   const config = readFileSync("apps/api/wrangler.jsonc", "utf8");
@@ -122,7 +126,7 @@ test("METRO-57 the rollout uploads a version, stages it, smokes it, then rolls i
 test("METRO-57 a failed step rolls back to the previous version and smokes it", () => {
   const { steps } = job("deploy");
   const rollback = stepNamed(steps, "Roll back");
-  expect(String(rollback["if"])).toContain("failure()");
+  expect(String(rollback["if"])).toContain("(failure() || cancelled())");
   expect(String(rollback["if"])).toContain("steps.stage.outcome != 'skipped'");
   expect(String(rollback["if"])).toContain("steps.previous.outputs.current != ''");
   expect(String(rollback["run"])).toBe(
@@ -132,8 +136,11 @@ test("METRO-57 a failed step rolls back to the previous version and smokes it", 
     steps.indexOf(stepNamed(steps, "Smoke production again")),
   );
   expect(String(stepNamed(steps, "Smoke production after the rollback")["if"])).toContain(
-    "failure()",
+    "(failure() || cancelled())",
   );
+  // A run cancelled or timed out before staging has nothing to undo.
+  expect(String(rollback["if"])).not.toContain("always()");
+  expect(deployTimeout()).toBeGreaterThanOrEqual(15);
 });
 
 test("METRO-57 the Cloudflare token is set only on steps that call Wrangler, in a cache-free job", () => {
@@ -143,12 +150,15 @@ test("METRO-57 the Cloudflare token is set only on steps that call Wrangler, in 
   const holders = steps.filter((s) =>
     JSON.stringify(s["env"] ?? {}).includes("CLOUDFLARE_API_TOKEN"),
   );
+  expect(holders.length).toBeGreaterThanOrEqual(5);
   for (const step of holders) {
     const run = typeof step["run"] === "string" ? step["run"] : "";
-    expect(run).toMatch(/wrangler|production\.ts guard/u);
+    expect(run).toMatch(/^(bunx wrangler|test -n)/u);
+    expect(run).not.toMatch(/\b(node|bun run|bun install|npm)\b/u);
   }
   expect(holders.map((s) => s["name"]).join("\n")).not.toMatch(/Build|Install|Check out/u);
-  const [checkout = {}, tools = {}] = steps;
+  const [checkout = {}] = steps;
+  const tools = stepNamed(steps, "Install pinned tools");
   expect(record(checkout["with"], "checkout.with")["persist-credentials"]).toBe(false);
   expect(record(tools["with"], "tools.with")["cache"]).toBe(false);
   for (const step of steps)
@@ -171,4 +181,59 @@ test("METRO-57 release-sync is dispatched only after a successful tag deploy, wi
   expect(String(steps[0]?.["run"])).toBe(
     'gh workflow run release-sync.yml --ref "$TAG" -f tag="$TAG"',
   );
+});
+
+function deployTimeout(): number {
+  const value = job("deploy").job["timeout-minutes"];
+  if (typeof value !== "number") throw new Error("timeout-minutes is not a number");
+  return value;
+}
+
+test("METRO-57 the tagged commit must be on main before any tool or repository script runs", () => {
+  const { steps } = job("deploy");
+  const [checkout = {}, lineage = {}] = steps;
+  expect(String(checkout["uses"])).toStartWith("actions/checkout@");
+  expect(record(checkout["with"], "checkout.with")["fetch-depth"]).toBe(0);
+  expect(record(checkout["with"], "checkout.with")["persist-credentials"]).toBe(false);
+  expect(String(lineage["name"])).toStartWith("Require the commit to be merged to main");
+  const run = typeof lineage["run"] === "string" ? lineage["run"] : "";
+  expect(run).toContain('git fetch --no-tags origin "+refs/heads/main:refs/remotes/origin/main"');
+  expect(run).toContain('git merge-base --is-ancestor "$COMMIT" origin/main');
+  expect(run).toContain("exit 1");
+  expect(run).not.toMatch(/\b(node|bun|bunx|mise)\b/u);
+  expect(record(lineage["env"], "lineage.env")).toEqual({ COMMIT: "${{ github.sha }}" });
+  expect(JSON.stringify(lineage)).not.toMatch(/secrets\.|CLOUDFLARE_/u);
+  const executors = steps.filter(
+    (step) => typeof step["run"] === "string" && /\b(node|bun|bunx)\b/u.test(step["run"]),
+  );
+  for (const step of executors) expect(steps.indexOf(step)).toBeGreaterThan(1);
+  expect(steps.indexOf(stepNamed(steps, "Install pinned tools"))).toBeGreaterThan(1);
+  expect(JSON.stringify(steps.slice(0, 2))).not.toContain("secrets.");
+});
+
+test("METRO-57 no step that runs Node or Bun ever receives the Cloudflare token", () => {
+  const { steps } = job("deploy");
+  for (const step of steps) {
+    const run = typeof step["run"] === "string" ? step["run"] : "";
+    if (/\b(node|bun)\b/u.test(run))
+      expect(JSON.stringify(step["env"] ?? {})).not.toContain("secrets.");
+  }
+  const credentials = stepNamed(steps, "Require the Cloudflare credentials");
+  expect(String(credentials["run"])).toContain('test -n "$CLOUDFLARE_API_TOKEN"');
+  expect(steps.indexOf(credentials)).toBeGreaterThan(
+    steps.indexOf(stepNamed(steps, "Refuse unless")),
+  );
+  expect(steps.indexOf(credentials)).toBeLessThan(steps.indexOf(stepNamed(steps, "Build")));
+});
+
+test("METRO-57 the Wrangler outputs are parsed by steps that hold no secret", () => {
+  const { steps } = job("deploy");
+  for (const name of [
+    "Record the version that serves production now",
+    "Read the uploaded version id",
+  ]) {
+    const step = stepNamed(steps, name);
+    expect(String(step["run"])).toStartWith("node scripts/production.ts ");
+    expect(step["env"]).toBeUndefined();
+  }
 });
