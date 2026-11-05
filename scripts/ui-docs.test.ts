@@ -1,19 +1,21 @@
 import { expect, test } from "bun:test";
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
 const root = resolve(import.meta.dir, "..");
+const read = (file: string) => readFile(join(root, file), "utf8");
 
-test("METRO-41 ui.md states the WCAG 2.2 AA target and the axe tag list", async () => {
-  const ui = await readFile(join(root, "docs/agents/ui.md"), "utf8");
-  expect(ui).toContain("WCAG 2.2 level AA");
-  for (const tag of ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]) {
+test("METRO-41 ui.md positively states the WCAG 2.2 AA target and the axe tag list", async () => {
+  const ui = await read("docs/agents/ui.md");
+  expect(ui).toMatch(/^The target is WCAG 2\.2 level AA\./mu);
+  expect(ui).not.toMatch(/not (?:the )?target/iu);
+  for (const tag of ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa", "best-practice"]) {
     expect(ui).toContain(`\`${tag}\``);
   }
 });
 
 test("METRO-41 the axe fixture keeps every WCAG 2.2 AA tag", async () => {
-  const fixtures = await readFile(join(root, "e2e/fixtures.ts"), "utf8");
+  const fixtures = await read("e2e/fixtures.ts");
   const list = /AXE_TAGS = \[([^\]]*)\]/u.exec(fixtures)?.[1] ?? "";
   expect(list.match(/"[^"]+"/gu)).toEqual([
     '"wcag2a"',
@@ -23,4 +25,15 @@ test("METRO-41 the axe fixture keeps every WCAG 2.2 AA tag", async () => {
     '"wcag22aa"',
     '"best-practice"',
   ]);
+});
+
+test("METRO-41 every axe scan goes through axeBuilder, which applies AXE_TAGS", async () => {
+  const fixtures = await read("e2e/fixtures.ts");
+  expect(fixtures).toMatch(/new AxeBuilder\(\{ page \}\)\.withTags\(\[\.\.\.AXE_TAGS\]\)/u);
+  expect(fixtures.match(/new AxeBuilder\(/gu)).toHaveLength(1);
+  expect(fixtures).toMatch(/await axeBuilder\(page\)\.analyze\(\)/u);
+  for (const file of await readdir(join(root, "e2e"))) {
+    if (file === "fixtures.ts" || !file.endsWith(".ts")) continue;
+    expect(await read(`e2e/${file}`), file).not.toContain("new AxeBuilder(");
+  }
 });

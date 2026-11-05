@@ -1,5 +1,5 @@
 import { axeBuilder, expect, test } from "./fixtures";
-import { expectTabReachesEveryControl } from "./keyboard";
+import { expectTabReachesEveryControl, linksAreTabbable } from "./keyboard";
 
 /** Two 16 px buttons touching: fails WCAG 2.2 SC 2.5.8 Target Size (Minimum), axe rule `target-size`. */
 const SMALL_TARGETS =
@@ -49,7 +49,7 @@ test.describe("accessibility tree of main (METRO-41)", () => {
         - /children: equal
         - heading "Metro scaffold" [level=1]
         - paragraph: Synthetic workspace check. No station or fare features.
-        - status "Scaffold status": /\\{"kind":"synthetic-scaffold","ready":true\\}/
+        - status "Scaffold status": /^\\{"kind":"synthetic-scaffold","ready":true\\}$/
     `);
   });
 
@@ -72,7 +72,7 @@ test.describe("accessibility tree of main (METRO-41)", () => {
           - /children: equal
           - heading "Metro scaffold" [level=1]
           - paragraph: Synthetic workspace check. No station or fare features.
-          - alert: /Scaffold status unavailable. Status request failed with HTTP 500/
+          - alert: /^Scaffold status unavailable\\x3A Status request failed with HTTP 500$/
       `);
       await expect(page.getByRole("alert")).toHaveCount(1);
     });
@@ -80,27 +80,58 @@ test.describe("accessibility tree of main (METRO-41)", () => {
 });
 
 test.describe("keyboard flow (METRO-41)", () => {
-  test("METRO-41 the scaffold has no interactive control and Tab focuses nothing", async ({
+  test("METRO-41 the scaffold pins zero interactive controls and Tab focuses nothing", async ({
     page,
-    browserName,
   }) => {
     await page.goto("/");
     await expect(page.getByLabel("Scaffold status")).toBeVisible();
-    expect(
-      await expectTabReachesEveryControl(page, { linksTabbable: browserName !== "webkit" }),
-    ).toBe(0);
+    // If this fails because controls appeared: set `expected` to the new count and add ARIA snapshot
+    // and keyboard cases for them. The helper's failure message says the same.
+    await expectTabReachesEveryControl(page, { expected: 0 });
+  });
+
+  test("METRO-41 a changed control count fails with instructions", async ({ page }) => {
+    await page.setContent(CONTROLS_OK);
+    await expect(expectTabReachesEveryControl(page, { expected: 0 })).rejects.toThrow(
+      /controls changed: found 3, pinned 0.*Set expected to 3/su,
+    );
   });
 
   test("METRO-41 Tab reaches every control with a visible focus indicator", async ({ page }) => {
     await page.setContent(CONTROLS_OK);
-    expect(await expectTabReachesEveryControl(page, { linksTabbable: true })).toBe(3);
+    expect(await expectTabReachesEveryControl(page, { expected: 3 })).toBe(3);
+  });
+
+  test("METRO-41 links are checked where this browser Tabs to them", async ({ page }) => {
+    test.skip(!(await linksAreTabbable(page)), "this browser does not Tab to links by default");
+    await page.setContent(CONTROLS_OK.replace("<button>one", "<a href='#x'>link</a> <button>one"));
+    expect(await expectTabReachesEveryControl(page, { expected: 4 })).toBe(4);
+  });
+
+  test("METRO-41 a control taller than the viewport passes on its visible part", async ({
+    page,
+  }) => {
+    await page.setContent(CONTROLS_OK.replace("<button>one", "<button style='height:4000px'>one"));
+    expect(await expectTabReachesEveryControl(page, { expected: 3 })).toBe(3);
   });
 
   test("METRO-41 the check fails when a control's focus is hidden", async ({ page }) => {
     await page.setContent(
       CONTROLS_OK.replace("<main>", "<style>button:focus{outline:none}</style><main>"),
     );
-    await expect(expectTabReachesEveryControl(page, { linksTabbable: true })).rejects.toThrow(
+    await expect(expectTabReachesEveryControl(page, { expected: 3 })).rejects.toThrow(
+      /focus indicator/u,
+    );
+  });
+
+  test("METRO-41 the check fails when focus looks the same as unfocused", async ({ page }) => {
+    await page.setContent(
+      CONTROLS_OK.replace(
+        "<main>",
+        "<style>button{box-shadow:0 0 0 2px red}button:focus{outline:none}</style><main>",
+      ),
+    );
+    await expect(expectTabReachesEveryControl(page, { expected: 3 })).rejects.toThrow(
       /focus indicator/u,
     );
   });
@@ -114,14 +145,33 @@ test.describe("keyboard flow (METRO-41)", () => {
         "</main><div style='position:fixed;inset:0 0 0 0;background:#fff;pointer-events:auto'></div>",
       ),
     );
-    await expect(expectTabReachesEveryControl(page, { linksTabbable: true })).rejects.toThrow(
+    await expect(expectTabReachesEveryControl(page, { expected: 3 })).rejects.toThrow(
       /not covered/u,
     );
   });
 
+  test("METRO-41 the check fails on a keyboard trap", async ({ page }) => {
+    await page.setContent(
+      CONTROLS_OK.replace(
+        "<button>two</button>",
+        "<button id='trap'>two</button><script>document.getElementById('trap').addEventListener('keydown',(e)=>{if(e.key==='Tab'){e.preventDefault();}})</script>",
+      ),
+    );
+    await expect(expectTabReachesEveryControl(page, { expected: 3 })).rejects.toThrow(
+      /keyboard trap/u,
+    );
+  });
+
+  test("METRO-41 the check fails on a focusable element the selector missed", async ({ page }) => {
+    await page.setContent(CONTROLS_OK);
+    await expect(
+      expectTabReachesEveryControl(page, { expected: 0, selector: "button.none" }),
+    ).rejects.toThrow(/Tab focuses nothing/u);
+  });
+
   test("METRO-41 the check rejects a positive tabindex", async ({ page }) => {
     await page.setContent(CONTROLS_OK.replace("<button>", "<button tabindex='2'>"));
-    await expect(expectTabReachesEveryControl(page, { linksTabbable: true })).rejects.toThrow(
+    await expect(expectTabReachesEveryControl(page, { expected: 3 })).rejects.toThrow(
       /positive tabindex/u,
     );
   });

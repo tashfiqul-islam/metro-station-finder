@@ -23,7 +23,7 @@ const WEBKIT_REPORT_ONLY_NOISE = [
  * Target: WCAG 2.2 AA. axe-core 4.14.0 tags WCAG 2.0/2.1/2.2 rules by level, and `wcag22aa` is the
  * only tag that selects `target-size` (SC 2.5.8), which axe leaves disabled by default.
  * `best-practice` keeps every rule axe ran before tags were set: a tag filter replaces the default
- * rule set, and without it 26 default rules (landmark-one-main, region, heading-order, ...) drop out.
+ * rule set, and without it 27 default rules (landmark-one-main, region, heading-order, ...) drop out. Measured in axe-core 4.14.0 by listing the ids from `axe.getRules()` with `enabled !== false` that `axe.getRules(tags)` lacks.
  */
 export const AXE_TAGS = [
   "wcag2a",

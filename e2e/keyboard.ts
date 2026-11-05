@@ -4,34 +4,65 @@ const LINKS = "a[href], area[href]";
 const FOCUSABLE =
   "button, input:not([type=hidden]), select, textarea, summary, iframe, [contenteditable=''], [contenteditable='true'], [tabindex]";
 
+export interface TabOptions {
+  /** Exact number of interactive controls the page must have. A mismatch fails with instructions. */
+  readonly expected: number;
+  /** Replaces the built-in control selector. Only for proving the helper itself. */
+  readonly selector?: string;
+}
+
 /** What the page reports about the element that holds focus. */
 interface FocusReport {
-  readonly tag: string;
   readonly index: number;
   readonly focusVisible: boolean;
-  readonly indicator: boolean;
-  /** Sample points (centre and the four quarter points) that hit the focused element or a descendant. */
+  /** Outline or box-shadow differs from the same control unfocused. */
+  readonly indicatorChanged: boolean;
+  /** Of five sample points inside the visible part, how many hit the focused element or a descendant. */
   readonly unobscuredPoints: number;
-  readonly inViewport: boolean;
+  readonly samplePoints: number;
+  /** Part of the control lies inside the viewport. */
+  readonly partlyVisible: boolean;
+}
+
+const STYLE_KEYS = ["outlineStyle", "outlineWidth", "outlineColor", "boxShadow"] as const;
+
+/**
+ * Whether this browser Tabs onto a link. WebKit on macOS does not by default (Safari's "Press Tab to
+ * highlight each item" is off); other engines do. Measured in a throwaway page, never assumed.
+ */
+export async function linksAreTabbable(page: Page): Promise<boolean> {
+  const probe = await page.context().newPage();
+  try {
+    await probe.setContent("<!doctype html><title>probe</title><a href='#probe'>link</a>");
+    await probe.bringToFront();
+    await probe.keyboard.press("Tab");
+    return await probe.evaluate(() => document.activeElement?.tagName === "A");
+  } finally {
+    await probe.close();
+  }
 }
 
 /**
- * Presses Tab through the page and proves, for every interactive control in DOM order, that Tab
- * reaches it, that it matches `:focus-visible` with a drawn indicator, and that nothing covers it
- * (WCAG 2.4.7 Focus Visible, 2.4.11 Focus Not Obscured (Minimum), 2.1.1 Keyboard). The unobscured
- * check is stricter than 2.4.11: all five sample points must hit the control. A page with no
- * interactive control passes only if Tab focuses nothing in it.
- * Returns the number of controls so callers can pin it. WebKit does not Tab to links by default (Safari's "Press Tab to highlight each item" is off), so
- * callers pass `linksTabbable: false` there; Linux WebKit is Unverified. DOM order stands in for tab order, so a
- * positive `tabindex` is rejected rather than guessed at.
+ * Presses Tab through the page and proves that, for every interactive control in DOM order, Tab
+ * reaches it (2.1.1 Keyboard), that its focus indicator differs from its unfocused look and it
+ * matches `:focus-visible` (2.4.7 Focus Visible), and that nothing covers it (2.4.11 Focus Not
+ * Obscured (Minimum); stricter: five sample points inside its visible part must all hit it). Rules:
+ * the focused control must be at least partly inside the viewport (Tab scrolls it into view; a
+ * control taller than the viewport is judged on its visible part); no keyboard
+ * trap (the page must not cancel Tab, and Shift+Tab from the last control must reach the previous
+ * one); a page with no control must leave `document.activeElement` on the body. A single control
+ * cannot be tested for a trap by Shift+Tab, only for a cancelled Tab.
+ * DOM order stands in for tab order (sanity only, not a 2.4.3 check), so a positive `tabindex`
+ * is rejected. Links are included only where this browser Tabs to them (`linksAreTabbable`).
  */
 export async function expectTabReachesEveryControl(
   page: Page,
-  { linksTabbable }: { readonly linksTabbable: boolean },
+  { expected, selector }: TabOptions,
 ): Promise<number> {
+  const linksTabbable = await linksAreTabbable(page);
   const count = await page.evaluate(
-    (selector) => {
-      const controls = [...document.querySelectorAll<HTMLElement>(selector)].filter((element) => {
+    ({ query, keys }) => {
+      const controls = [...document.querySelectorAll<HTMLElement>(query)].filter((element) => {
         const style = getComputedStyle(element);
         return (
           !element.matches(":disabled") &&
@@ -41,11 +72,22 @@ export async function expectTabReachesEveryControl(
           element.getClientRects().length > 0
         );
       });
-      controls.forEach((element, index) => element.setAttribute("data-tab-index", String(index)));
+      controls.forEach((element, index) => {
+        element.setAttribute("data-tab-index", String(index));
+        const style = getComputedStyle(element);
+        element.setAttribute("data-tab-unfocused", JSON.stringify(keys.map((key) => style[key])));
+      });
       return controls.length;
     },
-    linksTabbable ? `${LINKS}, ${FOCUSABLE}` : FOCUSABLE,
+    {
+      query: selector ?? (linksTabbable ? `${LINKS}, ${FOCUSABLE}` : FOCUSABLE),
+      keys: STYLE_KEYS,
+    },
   );
+  expect(
+    count,
+    `interactive controls changed: found ${count}, pinned ${expected}. Set expected to ${count} and add ARIA snapshot and keyboard cases for the new controls`,
+  ).toBe(expected);
   expect(
     await page.evaluate(
       () => document.querySelectorAll("[tabindex]:not([tabindex='0'], [tabindex^='-'])").length,
@@ -54,15 +96,26 @@ export async function expectTabReachesEveryControl(
   ).toBe(0);
 
   await page.evaluate(() => {
+    window.addEventListener("keydown", (event) => {
+      if (event.key === "Tab" && event.defaultPrevented) {
+        document.documentElement.setAttribute("data-tab-prevented", "");
+      }
+    });
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
   });
-  for (let expected = 0; expected < count; expected += 1) {
+  for (let position = 0; position < count; position += 1) {
     await page.keyboard.press("Tab");
-    const report = await page.evaluate((): FocusReport | null => {
+    const report = await page.evaluate((keys): FocusReport | null => {
       const element = document.activeElement;
-      if (!(element instanceof HTMLElement) || element === document.body) return null;
+      if (!(element instanceof HTMLElement) || !element.hasAttribute("data-tab-index")) {
+        return null;
+      }
       const rect = element.getBoundingClientRect();
-      const style = getComputedStyle(element);
+      const left = Math.max(rect.left, 0);
+      const top = Math.max(rect.top, 0);
+      const right = Math.min(rect.right, innerWidth);
+      const bottom = Math.min(rect.bottom, innerHeight);
+      const partlyVisible = right > left && bottom > top;
       const points: readonly (readonly [number, number])[] = [
         [0.5, 0.5],
         [0.25, 0.5],
@@ -70,46 +123,61 @@ export async function expectTabReachesEveryControl(
         [0.5, 0.25],
         [0.5, 0.75],
       ];
-      const hits = points.filter(([x, y]) => {
-        const hit = document.elementFromPoint(
-          rect.left + rect.width * x,
-          rect.top + rect.height * y,
-        );
-        return hit !== null && element.contains(hit);
-      }).length;
+      const hits = partlyVisible
+        ? points.filter(([x, y]) => {
+            const hit = document.elementFromPoint(
+              left + (right - left) * x,
+              top + (bottom - top) * y,
+            );
+            return hit !== null && element.contains(hit);
+          }).length
+        : 0;
+      const style = getComputedStyle(element);
       return {
-        tag: element.tagName.toLowerCase(),
-        index: Number(element.getAttribute("data-tab-index") ?? -1),
+        index: Number(element.getAttribute("data-tab-index")),
         focusVisible: element.matches(":focus-visible"),
-        indicator:
-          (style.outlineStyle !== "none" && Number.parseFloat(style.outlineWidth) > 0) ||
-          style.boxShadow !== "none",
+        indicatorChanged:
+          JSON.stringify(keys.map((key) => style[key])) !==
+          element.getAttribute("data-tab-unfocused"),
         unobscuredPoints: hits,
-        inViewport:
-          rect.width > 0 &&
-          rect.height > 0 &&
-          rect.top >= 0 &&
-          rect.left >= 0 &&
-          rect.bottom <= innerHeight &&
-          rect.right <= innerWidth,
+        samplePoints: points.length,
+        partlyVisible,
       };
-    });
-    expect(report, `Tab press ${expected + 1} of ${count} focuses a control`).not.toBeNull();
-    expect(report?.index, `Tab press ${expected + 1} reaches control ${expected} in order`).toBe(
-      expected,
+    }, STYLE_KEYS);
+    const label = `Tab press ${position + 1} of ${count}`;
+    expect(report, `${label} focuses a control`).not.toBeNull();
+    expect(report?.index, `${label} reaches control ${position} in order`).toBe(position);
+    expect(report?.focusVisible, `control ${position} matches :focus-visible`).toBe(true);
+    expect(report?.indicatorChanged, `control ${position} draws a focus indicator`).toBe(true);
+    expect(report?.partlyVisible, `control ${position} is scrolled into view`).toBe(true);
+    expect(report?.unobscuredPoints, `control ${position} is not covered`).toBe(
+      report?.samplePoints,
     );
-    expect(report?.focusVisible, `control ${expected} matches :focus-visible`).toBe(true);
-    expect(report?.indicator, `control ${expected} draws a focus indicator`).toBe(true);
-    expect(report?.inViewport, `control ${expected} is inside the viewport`).toBe(true);
-    expect(report?.unobscuredPoints, `control ${expected} is not covered`).toBe(5);
   }
 
   if (count === 0) {
     await page.keyboard.press("Tab");
     expect(
-      await page.evaluate(() => document.activeElement?.hasAttribute("data-tab-index") ?? false),
+      await page.evaluate(() => {
+        const active = document.activeElement;
+        return active === null || active === document.body || active === document.documentElement;
+      }),
       "Tab focuses nothing in a page without controls",
-    ).toBe(false);
+    ).toBe(true);
+  } else if (count > 1) {
+    // Shift+Tab from the last control must reach the one before it, and then Tab must not have
+    // been cancelled anywhere (a trap cancels Tab; Firefox keeps focus on the last control at the
+    // end of the page, so "focus stayed" alone cannot tell a trap from the end of the page).
+    await page.keyboard.press("Shift+Tab");
+    expect(
+      await page.evaluate(() => Number(document.activeElement?.getAttribute("data-tab-index"))),
+      "Shift+Tab from the last control reaches the previous control (keyboard trap)",
+    ).toBe(count - 2);
+    await page.keyboard.press("Tab");
   }
+  expect(
+    await page.evaluate(() => document.documentElement.hasAttribute("data-tab-prevented")),
+    "Tab was cancelled by the page (keyboard trap)",
+  ).toBe(false);
   return count;
 }
