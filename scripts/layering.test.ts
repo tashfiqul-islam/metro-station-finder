@@ -75,6 +75,29 @@ test("FND-R6 core importing contracts is rejected", async () => {
   expect(result.output).toContain("core-imports-only-core");
 });
 
+test("METRO-40 core domain importing core application or data is rejected", async () => {
+  for (const layer of ["application", "data"]) {
+    const result = await cruise({
+      [`packages/core/src/${layer}/x.ts`]: "export const x = 1;\n",
+      "packages/core/src/domain/station.ts": `import { x } from "../${layer}/x.ts";\nexport const s = x;\n`,
+    });
+    expect(result.code).not.toBe(0);
+    expect(result.output).toContain("core-domain-imports-only-domain");
+  }
+});
+
+test("METRO-40 core application and data may import the domain", async () => {
+  const result = await cruise({
+    "packages/core/src/domain/station.ts": "export const s = 1;\n",
+    "packages/core/src/application/find.ts":
+      'import { s } from "../domain/station.ts";\nexport const f = s;\n',
+    "packages/core/src/data/set.ts":
+      'import { s } from "../domain/station.ts";\nexport const d = s;\n',
+  });
+  expect(result.output).not.toContain("error");
+  expect(result.code).toBe(0);
+});
+
 test("FND-R6 core importing a third-party package is rejected", async () => {
   const result = await cruise({
     "packages/core/src/index.ts": 'import "valibot";\nexport const core = 1;\n',
