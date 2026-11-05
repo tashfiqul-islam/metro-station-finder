@@ -12,8 +12,11 @@ env:
   # when mise.lock exists; this keeps it explicit).
   MISE_LOCKED: "1"
 concurrency:
-  group: quality-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # METRO-59: only pull requests share a group per ref and cancel superseded runs. Each push to an integration
+  # branch gets its own group (the commit SHA), so every integration commit keeps a verdict: GitHub also
+  # cancels a pending run in a shared group, so a non-cancelling shared group would still lose commits.
+  group: quality-${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   changes:
     name: Changes
@@ -186,9 +189,11 @@ jobs:
           REQUIRED_JOB_RESULTS: ${{ toJSON(needs) }}
   preview:
     name: Cloudflare preview
-    # Same-repository pull requests only: forks must never receive the Cloudflare secrets. This job is
-    # deliberately outside the "Quality gates" aggregate so Cloudflare availability cannot block merges.
-    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]' && needs.changes.outputs.docs_only != 'true' }}
+    # Same-repository pull requests only: forks must never receive the Cloudflare secrets, and no bot (Renovate,
+    # Dependabot) runs this job, by actor or by pull request author: an unreviewed bump would execute with the
+    # token (METRO-47). This job is deliberately outside the "Quality gates" aggregate so Cloudflare
+    # availability cannot block merges.
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && !endsWith(github.actor, '[bot]') && !endsWith(github.event.pull_request.user.login, '[bot]') && github.event.pull_request.user.type != 'Bot' && github.event.sender.type != 'Bot' && needs.changes.outputs.docs_only != 'true' }}
     needs: [changes, checks, build, security]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -213,12 +218,7 @@ jobs:
         uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
         with:
           version: 2026.10.25
-      - name: Restore the Bun install cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.bun/install/cache
-          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
-          restore-keys: bun-${{ runner.os }}-
+          cache: false # this job holds the Cloudflare token; never restore a cache into it
       - name: Install dependencies
         run: bun run bootstrap
       - name: Require the Cloudflare secrets

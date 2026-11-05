@@ -1,0 +1,642 @@
+[
+  {
+    "run": 42010765013,
+    "event": "pull_request",
+    "createdAt": "2026-11-05T10:26:48Z",
+    "conclusion": "success",
+    "jobs": {
+      "Changes": {
+        "conclusion": "success",
+        "seconds": 15
+      },
+      "Checks": {
+        "conclusion": "success",
+        "seconds": 136
+      },
+      "Security": {
+        "conclusion": "success",
+        "seconds": 21
+      },
+      "Build and smoke": {
+        "conclusion": "success",
+        "seconds": 168
+      },
+      "Quality gates": {
+        "conclusion": "success",
+        "seconds": 7
+      },
+      "Cloudflare preview": {
+        "conclusion": "success",
+        "seconds": 36
+      }
+    }
+  },
+  {
+    "run": 42009477347,
+    "event": "pull_request",
+    "createdAt": "2026-11-05T10:17:28Z",
+    "conclusion": "failure",
+    "jobs": {
+      "Changes": {
+        "conclusion": "success",
+        "seconds": 9
+      },
+      "Checks": {
+        "conclusion": "failure",
+        "seconds": 87
+      },
+      "Security": {
+        "conclusion": "success",
+        "seconds": 28
+      },
+      "Build and smoke": {
+        "conclusion": "success",
+        "seconds": 211
+      },
+      "Quality gates": {
+        "conclusion": "failure",
+        "seconds": 8
+      },
+      "Cloudflare preview": {
+        "conclusion": "skipped",
+        "seconds": 0
+      }
+    }
+  },
+  {
+    "run": 41988900500,
+    "event": "push",
+    "createdAt": "2026-11-05T07:40:36Z",
+    "conclusion": "success",
+    "jobs": {
+      "Security": {
+        "conclusion": "success",
+        "seconds": 29
+      },
+      "Checks": {
+        "conclusion": "success",
+        "seconds": 143
+      },
+      "Changes": {
+        "conclusion": "success",
+        "seconds": 11
+      },
+      "Build and smoke": {
+        "conclusion": "success",
+        "seconds": 182
+      },
+      "Quality gates": {
+        "conclusion": "success",
+        "seconds": 15
+      },
+      "Cloudflare preview": {
+        "conclusion": "skipped",
+        "seconds": -1
+      }
+    }
+  },
+  {
+    "run": 41988456309,
+    "event": "pull_request",
+    "createdAt": "2026-11-05T07:36:44Z",
+    "conclusion": "success",
+    "jobs": {
+      "Checks": {
+        "conclusion": "success",
+        "seconds": 101
+      },
+      "Security": {
+        "conclusion": "success",
+        "seconds": 20
+      },
+      "Changes": {
+        "conclusion": "success",
+        "seconds": 9
+      },
+      "Build and smoke": {
+        "conclusion": "success",
+        "seconds": 170
+      },
+      "Quality gates": {
+        "conclusion": "success",
+        "seconds": 8
+      },
+      "Cloudflare preview": {
+        "conclusion": "success",
+        "seconds": 36
+      }
+    }
+  },
+  {
+    "run": 41987648496,
+    "event": "push",
+    "createdAt": "2026-11-05T07:30:05Z",
+    "conclusion": "success",
+    "jobs": {
+      "Security": {
+        "conclusion": "success",
+        "seconds": 16
+      },
+      "Checks": {
+        "conclusion": "success",
+        "seconds": 141
+      },
+      "Changes": {
+        "conclusion": "success",
+        "seconds": 9
+      },
+      "Build and smoke": {
+        "conclusion": "success",
+        "seconds": 164
+      },
+      "Quality gates": {
+        "conclusion": "success",
+        "seconds": 8
+      },
+      "Cloudflare preview": {
+        "conclusion": "skipped",
+        "seconds": 0
+      }
+    }
+  },
+  {
+    "run": 41986946711,
+    "event": "pull_request",
+    "createdAt": "2026-11-05T07:23:55Z",
+    "conclusion": "success",
+    "jobs": {
+      "Security": {
+        "conclusion": "success",
+        "seconds": 20
+      },
+      "Checks": {
+        "conclusion": "success",
+        "seconds": 94
+      },
+      "Changes": {
+        "conclusion": "success",
+        "seconds": 9
+      },
+      "Build and smoke": {
+        "conclusion": "success",
+        "seconds": 219
+      },
+      "Quality gates": {
+        "conclusion": "success",
+        "seconds": 9
+      },
+      "Cloudflare preview": {
+        "conclusion": "success",
+        "seconds": 33
+      }
+    }
+  },
+  {
+    "run": 41986873608,
+    "event": "pull_request",
+    "createdAt": "2026-11-05T07:23:18Z",
+    "conclusion": "cancelled",
+    "jobs": {
+      "Changes": {
+        "conclusion": "success",
+        "seconds": 10
+      },
+      "Checks": {
+        "conclusion": "cancelled",
+        "seconds": 92
+      },
+      "Security": {
+        "conclusion": "success",
+        "seconds": 24
+      },
+      "Build and smoke": {
+        "conclusion": "cancelled",
+        "seconds": 90
+      },
+      "Quality gates": {
+        "conclusion": "failure",
+        "seconds": 9
+      },
+      "Cloudflare preview": {
+        "conclusion": "cancelled",
+        "seconds": -1
+      }
+    }
+  },
+  {
+    "run": 41986830733,
+    "event": "pull_request",
+    "createdAt": "2026-11-05T07:22:56Z",
+    "conclusion": "failure",
+    "jobs": {
+      "Changes": {
+        "conclusion": "success",
+        "seconds": 11
+      },
+      "Checks": {
+        "conclusion": "failure",
+        "seconds": 88
+      },
+      "Security": {
+        "conclusion": "success",
+        "seconds": 16
+      },
+      "Build and smoke": {
+        "conclusion": "success",
+        "seconds": 176
+      },
+      "Quality gates": {
+        "conclusion": "failure",
+        "seconds": 7
+      },
+      "Cloudflare preview": {
+        "conclusion": "skipped",
+        "seconds": 0
+      }
+    }
+  },
+  {
+    "run": 41986369187,
+    "event": "push",
+    "createdAt": "2026-11-05T07:19:01Z",
+    "conclusion": "success",
+    "jobs": {
+      "Changes": {
+        "conclusion": "success",
+        "seconds": 9
+      },
+      "Security": {
+        "conclusion": "success",
+        "seconds": 21
+      },
+      "Checks": {
+        "conclusion": "success",
+        "seconds": 135
+      },
+      "Build and smoke": {
+        "conclusion": "success",
+        "seconds": 168
+      },
+      "Quality gates": {
+        "conclusion": "success",
+        "seconds": 9
+      },
+      "Cloudflare preview": {
+        "conclusion": "skipped",
+        "seconds": 0
+      }
+    }
+  },
+  {
+    "run": 41985898961,
+    "event": "pull_request",
+    "createdAt": "2026-11-05T07:15:03Z",
+    "conclusion": "success",
+    "jobs": {
+      "Security": {
+        "conclusion": "success",
+        "seconds": 17
+      },
+      "Changes": {
+        "conclusion": "success",
+        "seconds": 13
+      },
+      "Checks": {
+        "conclusion": "success",
+        "seconds": 95
+      },
+      "Build and smoke": {
+        "conclusion": "success",
+        "seconds": 168
+      },
+      "Quality gates": {
+        "conclusion": "success",
+        "seconds": 9
+      },
+      "Cloudflare preview": {
+        "conclusion": "success",
+        "seconds": 39
+      }
+    }
+  },
+  {
+    "run": 41985812675,
+    "event": "pull_request",
+    "createdAt": "2026-11-05T07:14:20Z",
+    "conclusion": "failure",
+    "jobs": {
+      "Security": {
+        "conclusion": "success",
+        "seconds": 17
+      },
+      "Changes": {
+        "conclusion": "success",
+        "seconds": 10
+      },
+      "Checks": {
+        "conclusion": "failure",
+        "seconds": 112
+      },
+      "Build and smoke": {
+        "conclusion": "success",
+        "seconds": 171
+      },
+      "Quality gates": {
+        "conclusion": "failure",
+        "seconds": 9
+      },
+      "Cloudflare preview": {
+        "conclusion": "skipped",
+        "seconds": -1
+      }
+    }
+  },
+  {
+    "run": 41985785316,
+    "event": "push",
+    "createdAt": "2026-11-05T07:14:07Z",
+    "conclusion": "failure",
+    "jobs": {
+      "Security": {
+        "conclusion": "success",
+        "seconds": 17
+      },
+      "Changes": {
+        "conclusion": "success",
+        "seconds": 11
+      },
+      "Checks": {
+        "conclusion": "failure",
+        "seconds": 93
+      },
+      "Build and smoke": {
+        "conclusion": "success",
+        "seconds": 159
+      },
+      "Quality gates": {
+        "conclusion": "failure",
+        "seconds": 8
+      },
+      "Cloudflare preview": {
+        "conclusion": "skipped",
+        "seconds": 0
+      }
+    }
+  },
+  {
+    "run": 41985270791,
+    "event": "pull_request",
+    "createdAt": "2026-11-05T07:09:43Z",
+    "conclusion": "success",
+    "jobs": {
+      "Changes": {
+        "conclusion": "success",
+        "seconds": 9
+      },
+      "Checks": {
+        "conclusion": "success",
+        "seconds": 127
+      },
+      "Security": {
+        "conclusion": "success",
+        "seconds": 16
+      },
+      "Build and smoke": {
+        "conclusion": "success",
+        "seconds": 146
+      },
+      "Quality gates": {
+        "conclusion": "success",
+        "seconds": 7
+      },
+      "Cloudflare preview": {
+        "conclusion": "success",
+        "seconds": 36
+      }
+    }
+  },
+  {
+    "run": 41985216111,
+    "event": "pull_request",
+    "createdAt": "2026-11-05T07:09:14Z",
+    "conclusion": "cancelled",
+    "jobs": {
+      "Checks": {
+        "conclusion": "cancelled",
+        "seconds": 88
+      },
+      "Changes": {
+        "conclusion": "success",
+        "seconds": 10
+      },
+      "Security": {
+        "conclusion": "success",
+        "seconds": 20
+      },
+      "Build and smoke": {
+        "conclusion": "cancelled",
+        "seconds": 80
+      },
+      "Quality gates": {
+        "conclusion": "failure",
+        "seconds": 9
+      },
+      "Cloudflare preview": {
+        "conclusion": "cancelled",
+        "seconds": 0
+      }
+    }
+  },
+  {
+    "run": 41985174520,
+    "event": "pull_request",
+    "createdAt": "2026-11-05T07:08:51Z",
+    "conclusion": "success",
+    "jobs": {
+      "Checks": {
+        "conclusion": "success",
+        "seconds": 110
+      },
+      "Security": {
+        "conclusion": "success",
+        "seconds": 16
+      },
+      "Changes": {
+        "conclusion": "success",
+        "seconds": 16
+      },
+      "Build and smoke": {
+        "conclusion": "success",
+        "seconds": 171
+      },
+      "Quality gates": {
+        "conclusion": "success",
+        "seconds": 9
+      },
+      "Cloudflare preview": {
+        "conclusion": "success",
+        "seconds": 42
+      }
+    }
+  },
+  {
+    "run": 41984993343,
+    "event": "push",
+    "createdAt": "2026-11-05T07:07:17Z",
+    "conclusion": "success",
+    "jobs": {
+      "Changes": {
+        "conclusion": "success",
+        "seconds": 11
+      },
+      "Checks": {
+        "conclusion": "success",
+        "seconds": 130
+      },
+      "Security": {
+        "conclusion": "success",
+        "seconds": 16
+      },
+      "Build and smoke": {
+        "conclusion": "success",
+        "seconds": 172
+      },
+      "Quality gates": {
+        "conclusion": "success",
+        "seconds": 10
+      },
+      "Cloudflare preview": {
+        "conclusion": "skipped",
+        "seconds": 0
+      }
+    }
+  },
+  {
+    "run": 41984966681,
+    "event": "pull_request",
+    "createdAt": "2026-11-05T07:07:04Z",
+    "conclusion": "cancelled",
+    "jobs": {
+      "Security": {
+        "conclusion": "success",
+        "seconds": 20
+      },
+      "Checks": {
+        "conclusion": "cancelled",
+        "seconds": 108
+      },
+      "Changes": {
+        "conclusion": "success",
+        "seconds": 11
+      },
+      "Build and smoke": {
+        "conclusion": "cancelled",
+        "seconds": 141
+      },
+      "Quality gates": {
+        "conclusion": "failure",
+        "seconds": 10
+      },
+      "Cloudflare preview": {
+        "conclusion": "cancelled",
+        "seconds": 0
+      }
+    }
+  },
+  {
+    "run": 41984508034,
+    "event": "pull_request",
+    "createdAt": "2026-11-05T07:03:08Z",
+    "conclusion": "success",
+    "jobs": {
+      "Security": {
+        "conclusion": "success",
+        "seconds": 17
+      },
+      "Changes": {
+        "conclusion": "success",
+        "seconds": 9
+      },
+      "Checks": {
+        "conclusion": "success",
+        "seconds": 149
+      },
+      "Build and smoke": {
+        "conclusion": "success",
+        "seconds": 166
+      },
+      "Quality gates": {
+        "conclusion": "success",
+        "seconds": 10
+      },
+      "Cloudflare preview": {
+        "conclusion": "success",
+        "seconds": 34
+      }
+    }
+  },
+  {
+    "run": 41984330348,
+    "event": "pull_request",
+    "createdAt": "2026-11-05T07:01:34Z",
+    "conclusion": "success",
+    "jobs": {
+      "Checks": {
+        "conclusion": "success",
+        "seconds": 87
+      },
+      "Changes": {
+        "conclusion": "success",
+        "seconds": 11
+      },
+      "Security": {
+        "conclusion": "success",
+        "seconds": 22
+      },
+      "Build and smoke": {
+        "conclusion": "success",
+        "seconds": 169
+      },
+      "Quality gates": {
+        "conclusion": "success",
+        "seconds": 7
+      },
+      "Cloudflare preview": {
+        "conclusion": "success",
+        "seconds": 40
+      }
+    }
+  },
+  {
+    "run": 41983910147,
+    "event": "pull_request",
+    "createdAt": "2026-11-05T06:57:50Z",
+    "conclusion": "failure",
+    "jobs": {
+      "Checks": {
+        "conclusion": "failure",
+        "seconds": 81
+      },
+      "Security": {
+        "conclusion": "success",
+        "seconds": 16
+      },
+      "Changes": {
+        "conclusion": "success",
+        "seconds": 9
+      },
+      "Build and smoke": {
+        "conclusion": "success",
+        "seconds": 166
+      },
+      "Quality gates": {
+        "conclusion": "failure",
+        "seconds": 10
+      },
+      "Cloudflare preview": {
+        "conclusion": "skipped",
+        "seconds": 0
+      }
+    }
+  }
+]
