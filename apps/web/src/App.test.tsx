@@ -3,6 +3,7 @@ const { restoreBunGlobals, enableDomGlobals } = await import("./dom-test-env");
 enableDomGlobals();
 const { cleanup, render, screen } = await import("@testing-library/react");
 const { App } = await import("./App");
+const { errorCopy } = await import("./error-boundary");
 restoreBunGlobals(); // non-DOM test files must see Bun's globals again
 
 const realFetch = globalThis.fetch;
@@ -52,28 +53,49 @@ test("FND-T2 shows an alert for an HTTP error", async () => {
   );
   render(<App />);
   const alert = await screen.findByRole("alert");
-  expect(alert.textContent).toContain("unavailable");
-  expect(alert.textContent).toContain("HTTP 500");
+  expect(alert.textContent).toBe(errorCopy.statusUnavailable);
+  expect(alert.textContent).not.toContain("HTTP 500");
   expect(screen.queryByLabelText("Scaffold status")).toBeNull();
 });
 
 test("FND-T2 shows an alert for a body that breaks the contract", async () => {
   stubFetch(() => Promise.resolve(json({ kind: "synthetic-scaffold", ready: false })));
   render(<App />);
-  expect((await screen.findByRole("alert")).textContent).toContain("unavailable");
+  expect((await screen.findByRole("alert")).textContent).toBe(errorCopy.statusUnavailable);
   expect(screen.queryByLabelText("Scaffold status")).toBeNull();
 });
 
-test("FND-T2 shows an alert for a network failure", async () => {
+test("FND-T2 shows the fixed copy for a network failure", async () => {
   stubFetch(() => Promise.reject(new TypeError("offline")));
   render(<App />);
-  expect((await screen.findByRole("alert")).textContent).toContain("offline");
+  const alert = await screen.findByRole("alert");
+  expect(alert.textContent).toBe(errorCopy.statusUnavailable);
+  expect(alert.textContent).not.toContain("offline");
 });
 
-test("FND-T2 shows a generic message for a non-Error rejection", async () => {
+test("FND-T2 shows the fixed copy for a non-Error rejection", async () => {
   stubFetch(() => Promise.reject("boom"));
   render(<App />);
-  expect((await screen.findByRole("alert")).textContent).toContain("Unknown error");
+  expect((await screen.findByRole("alert")).textContent).toBe(errorCopy.statusUnavailable);
+});
+
+test("METRO-71 never renders or logs a raw error message (URL, coordinates)", async () => {
+  const secret = "https://example.test/route?lat=23.8103&lng=90.4125 failed for 23.8103,90.4125";
+  stubFetch(() => Promise.reject(new TypeError(secret)));
+  const spies = (["error", "warn", "log", "info", "debug"] as const).map((method) =>
+    jest.spyOn(console, method).mockImplementation(() => {}),
+  );
+  render(<App />);
+  const alert = await screen.findByRole("alert");
+  const rendered = document.body.textContent ?? "";
+  for (const fragment of ["example.test", "https://", "23.8103", "90.4125", "lat=", "lng="]) {
+    expect(rendered).not.toContain(fragment);
+  }
+  expect(alert.textContent).toBe(errorCopy.statusUnavailable);
+  for (const spy of spies) {
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+  }
 });
 
 test("FND-T2 unmounting before the response arrives updates nothing and throws nothing", async () => {

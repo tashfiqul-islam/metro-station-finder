@@ -1,10 +1,11 @@
 import { Component, type ReactNode } from "react";
 
-/** All user-visible copy of the fallback lives here (English only for now). */
-const errorCopy = {
+/** All user-visible error copy of the web app lives here (fallback and request error; English only for now). */
+export const errorCopy = {
   heading: "Something went wrong",
   body: "The page hit an unexpected problem. Try again, or reload the page if it keeps happening.",
   retry: "Try again",
+  statusUnavailable: "Scaffold status unavailable. Reload the page to try again.",
 } as const;
 
 interface Props {

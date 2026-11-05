@@ -72,7 +72,7 @@ test.describe("accessibility tree of main (METRO-41)", () => {
           - /children: equal
           - heading "Metro scaffold" [level=1]
           - paragraph: Synthetic workspace check. No station or fare features.
-          - alert: /^Scaffold status unavailable\\x3A Status request failed with HTTP 500$/
+          - alert: /^Scaffold status unavailable\\. Reload the page to try again\\.$/
       `);
       await expect(page.getByRole("alert")).toHaveCount(1);
     });
