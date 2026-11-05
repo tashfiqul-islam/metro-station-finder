@@ -56,6 +56,9 @@ export default {
       exportsFields: ["exports"],
       conditionNames: ["import", "node", "default", "types"],
     },
+    // Without this the cruiser drops imports TypeScript erases (`import type`), so type-only edges
+    // would bypass every rule. It also makes `type-only` a dependency type rules can match.
+    tsPreCompilationDeps: true,
     doNotFollow: { path: "node_modules" },
     // node_modules stays in the graph (not followed) so layering rules can see third-party imports.
     exclude: { path: "(^|/)dist/" },

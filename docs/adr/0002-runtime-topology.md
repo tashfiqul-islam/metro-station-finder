@@ -36,4 +36,4 @@ Before this change the web app and the Worker ran as separate servers (Vite on 5
 ## Confirmation
 
 - Layering: `apps-never-import-each-other` in `.dependency-cruiser.mts`, proven red by `scripts/layering.test.ts`, run by `bun run imports:check`.
-- Runtime shape: `apps/api/src/index.test.ts` (route contract), `e2e/` smoke against `vite preview` in workerd, and `bun run bundle:check` (client budget).
+- Runtime shape: `apps/api/src/index.test.ts` (route contract), `e2e/` smoke against `vite preview` in workerd, and `bun run bundle:check` (client budget, CI build job; not in `check`). Wrangler, compatibility date and dev-server behaviour have no dedicated test.

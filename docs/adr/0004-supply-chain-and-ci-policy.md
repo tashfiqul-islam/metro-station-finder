@@ -38,5 +38,5 @@ Dependencies, tools and Actions were pinned by hand with no update automation, n
 
 ## Confirmation
 
-- `scripts/configuration.ts` (exact pins, matching Bun and Renovate cooldown, empty `trustedDependencies`), `scripts/commit-message.ts` with the `commit-msg` hook in `hk.pkl`, `bun run lint:workflows`, `bun run renovate:check` and `bun run scan:history`, all in `bun run check` or CI.
+- `scripts/configuration.ts` (exact pins, matching Bun and Renovate cooldown, empty `trustedDependencies`), `scripts/commit-message.ts` with the `commit-msg` hook in `hk.pkl`, `bun run lint:workflows` and `bun run renovate:check` (all in `bun run check`), the commit-message range check and `bun run scan:history` (CI `Security` job only, not in `check`).
 - The standing exceptions (tool trust exception, history allowlist) have no automated expiry: `None (policy)`.

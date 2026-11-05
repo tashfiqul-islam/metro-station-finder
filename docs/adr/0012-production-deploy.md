@@ -1,8 +1,8 @@
 # ADR-0012: Production deploy with staged rollout, smoke and automatic rollback
 
-- Status: Accepted (inert until the owner completes the deploy runbook; nothing in this ADR deploys anything)
+- Status: Accepted (2026-11-05). The workflow exists but is inert until the owner completes the [deploy runbook](../agents/deploy-runbook.md); nothing in this ADR deploys anything.
 - Date: 2026-11-05
-- Ticket and specification: METRO-57; the workflow exists but is inert until the [deploy runbook](../agents/deploy-runbook.md) is completed. Decisions were delegated by the owner ("decide and justify"). Related: [ADR-0006](0006-cloudflare-preview.md) (preview), [ADR-0007](0007-release-sync.md) (release sync), [ADR-0008](0008-default-branch-switch.md) and the [cutover runbook](../agents/cutover-runbook.md) step 4.1.
+- Ticket: METRO-57. Decisions were delegated by the owner ("decide and justify"). Related: [ADR-0006](0006-cloudflare-preview.md) (preview), [ADR-0007](0007-release-sync.md) (release sync), [ADR-0008](0008-default-branch-switch.md) and the [cutover runbook](../agents/cutover-runbook.md) step 4.1.
 
 ## Context
 
@@ -43,7 +43,7 @@ Research (Web-verified 2026-11-05 unless stated):
 
 ## Alternatives considered
 
-Not recorded when this ADR was written; not reconstructed here.
+Recorded inline in the Decision, not as a separate list: a 10 and 50 percent traffic split was rejected for now (Decision 3, because without version affinity it breaks pages for that share of visitors); `feature/metro-rebuild` is left out of the deployment policy and `prevent_self_review` stays off (Decision 2). No other alternatives were recorded.
 
 ## Confirmation
 

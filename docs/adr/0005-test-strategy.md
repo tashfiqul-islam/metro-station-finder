@@ -30,4 +30,4 @@ Tests covered scripts and core only: no coverage measurement, no API or componen
 ## Confirmation
 
 - `bunfig.toml` `coverageThreshold` (per file) and `scripts/coverage-scope.ts` (`bun run coverage:scope`), both in `bun run check`.
-- Playwright settings are covered by `bun run smoke`; the `.e2e.ts` suffix rule has no dedicated test.
+- `bun run smoke` (CI job) runs the Playwright suite and fixtures. No test asserts the Playwright configuration itself (`retries: 0`, the browser matrix, the `.e2e.ts` suffix): `None (policy)` for those.
