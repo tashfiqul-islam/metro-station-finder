@@ -10,7 +10,7 @@ Ready requires linked settled spec/decision, bounded independently verifiable sl
 
 Backlog captures scope; Specifying settles it; Ready records bounded readiness; explicit task authorization starts work; In Progress is active implementation; In Review carries PR/evidence; Done requires verified merge to main unless the explicit owner exception below applies. Cancelled explains why and links replacement where relevant. Record blocked label, native dependency and explanation while retaining lifecycle state. One active implementation plus one review per agent is policy guidance, not enforced WIP.
 
-Use isolated checkout/worktree when required. Preserve explicit exclusions. Submit one fresh-session outcome per ticket/PR. Record base, head, commands/results, unrun checks, review disposition and remaining gaps. Do not expand into unrelated cleanup.
+Use isolated checkout/worktree when required. Preserve explicit exclusions. Submit one fresh-session outcome per ticket/PR. Record base, head, commands/results, unrun checks, review disposition and remaining gaps. Do not expand into unrelated cleanup. Attribute agent commits and pull requests as the [attribution policy](attribution.md) says (`Co-Authored-By` trailer, Claude Code footer, never `Signed-off-by`).
 
 ## Independent review
 
