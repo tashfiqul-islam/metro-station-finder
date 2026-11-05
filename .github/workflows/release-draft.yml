@@ -12,6 +12,9 @@ on:
         default: main
         type: string
 permissions: {}
+env:
+  # METRO-45: install tools only from mise.lock URLs and checksums.
+  MISE_LOCKED: "1"
 concurrency:
   group: release-draft-${{ inputs.tag }}
   cancel-in-progress: false

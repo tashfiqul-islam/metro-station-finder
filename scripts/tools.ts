@@ -21,8 +21,6 @@ if (node.exitCode !== 0) throw new Error("Node is required. Run the documented m
 const actualNode = node.stdout.toString().trim().replace(/^v/u, "");
 validateRuntimes({ bun: wantBun, node: wantNode }, { bun: Bun.version, node: actualNode });
 console.log(`Tools: Bun ${Bun.version}; Node ${actualNode}`);
-// Visible, non-blocking: CI checkouts never install hooks, and CI is the backstop for a skipped gate.
-if (process.env["CI"] !== "true") {
-  const warning = hookWarning(root);
-  if (warning !== undefined) console.warn(`WARNING: ${warning}`);
-}
+// Visible, non-blocking (silent under CI=true): the checkout being bootstrapped is the working directory.
+const warning = hookWarning(process.cwd());
+if (warning !== undefined) console.warn(`WARNING: ${warning}`);
