@@ -33,15 +33,19 @@ Use the `gh` login of the repository admin. It is not a CI job and not a require
 Live output on 2026-11-05, before the owner steps (all six `FAIL` lines are expected until the owner acts; the two secret scanning lines are paraphrased because the verbatim `key=value` text trips the Gitleaks generic-api-key rule):
 
 ```text
-FAIL actions sha pinning: sha_pinning_required=false (expected true; ...)
+FAIL actions sha pinning: sha_pinning_required=false (expected true; ...)   [shortened]
 FAIL code scanning default setup: state=not-configured, languages=actions,javascript,javascript-typescript,typescript (expected state configured with javascript-typescript, actions)
-FAIL secret scanning: reported as disabled (expected enabled)
-FAIL secret scanning push protection: reported as disabled (expected enabled)
-FAIL private vulnerability reporting: enabled=false (expected true; ...)
-FAIL immutable releases: enabled=false (expected true; ...)
+FAIL secret scanning: reported as disabled (expected enabled)   [paraphrased]
+FAIL secret scanning push protection: reported as disabled (expected enabled)   [paraphrased]
+FAIL private vulnerability reporting: enabled=false (expected true; ...)   [shortened]
+FAIL immutable releases: enabled=false (expected true; ...)   [shortened]
 INFO dependabot security updates: off, enabled=false, paused=false (reported, not enforced)
 INFO vulnerability alerts: off, gh: Vulnerability alerts are disabled. (HTTP 404) (reported, not enforced)
 ```
+
+Reading the immutable-releases endpoint differs on purpose between the two tools. This check treats a 404 as `FAIL` (unreadable): a 404 can mean "not enabled" or "no admin access", and an enforced item must not pass on a guess (GitHub documents 404 as "not enabled", but today's live answer for the disabled state is `200 {"enabled":false}`, so a 404 is unexpected). `cutover:preflight` treats a 404 as "off" (pass) because it only asks whether a throwaway rehearsal tag can be deleted, and "not enabled" is the safe reading for that question.
+
+The vulnerability alerts "enabled" path (HTTP 204, empty body) was not observed live; the code assumes `gh api` prints nothing for a 204 and exits 0. The item is `INFO` by default, so nothing depends on it. If the owner sets `enforce: true` for it in the manifest, first re-observe the enabled state once with `gh api -i repos/<owner>/<repo>/vulnerability-alerts` and re-check the empty-stdout assumption.
 
 ## Owner steps (repository Settings)
 
@@ -50,7 +54,7 @@ INFO vulnerability alerts: off, gh: Vulnerability alerts are disabled. (HTTP 404
 3. Advanced Security: enable code scanning "default setup" for JavaScript/TypeScript and GitHub Actions (language names in the API: `javascript-typescript`, `actions`).
 4. Advanced Security: enable private vulnerability reporting (see [SECURITY.md](../../SECURITY.md)).
 5. General, Releases: enable immutable releases, after reading the interaction below.
-6. Optional: Dependabot alerts and security updates (the dependency graph must be enabled for [dependency review](quality-gates.md#dependency-review-metro-48); whether it is already on for this public repository is Unverified, and the script does not read it; the script only reports these two).
+6. Optional: Dependabot alerts and security updates (the dependency graph must be enabled for [dependency review](quality-gates.md#dependency-review-metro-48); it is on for this public repository, Repo-verified 2026-11-05 by the independent reviewer: the SBOM endpoint returned 621 packages; the script does not read it, and only reports these two).
 7. Run the check above and confirm no `FAIL`.
 
 ## Immutable releases and the release flow
