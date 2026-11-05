@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
-import { parseScenarios, parseTriggerTable, readSet, sorted } from "./routing.ts";
+import { missingRoutes, parseScenarios, parseTriggerTable, readSet, sorted } from "./routing.ts";
 
 const root = resolve(import.meta.dir, "..");
 const read = (file: string) => readFile(join(root, file), "utf8");
@@ -75,7 +75,53 @@ test("METRO-51 AGENTS.md routes every recorded METRO-8 scenario to its expected 
   }
 });
 
-test("METRO-51 every guide the trigger table links exists and nothing in docs/agents is orphaned from routing", async () => {
+test("METRO-51 parseTriggerTable accepts anchors, digits, uppercase and escaped pipes", () => {
+  const table = parseTriggerTable(
+    [
+      "| Trigger | Additional read set |",
+      "| --- | --- |",
+      String.raw`| A \| B thing | [One](docs/agents/Guide-2.md#part); [Two](docs/agents/two.v1.md) |`,
+    ].join("\n"),
+  );
+  expect(table).toEqual([{ trigger: "A | B thing", guides: ["Guide-2", "two.v1"] }]);
+});
+
+const REQUIRED_GUIDES = [
+  "api",
+  "architecture",
+  "domain",
+  "issue-tracker",
+  "maintenance",
+  "observability",
+  "plane",
+  "quality-gates",
+  "security",
+  "skills",
+  "testing",
+  "ui",
+  "untrusted-input",
+  "workflow",
+];
+
+test("METRO-51 missingRoutes reports a guide whose row was removed or retargeted", async () => {
+  const agents = await read("AGENTS.md");
+  const guides = (table: ReturnType<typeof parseTriggerTable>) =>
+    missingRoutes(table, REQUIRED_GUIDES);
+  const targets = new Set(parseTriggerTable(agents).flatMap((row) => row.guides));
+  // Guides routed only through prose below the table are linked there instead.
+  const routed = REQUIRED_GUIDES.filter((guide) => agents.includes(`docs/agents/${guide}.md`));
+  expect(routed.length).toBeGreaterThan(0);
+  expect(targets.has("observability")).toBe(true);
+  const retargeted = agents.replace("(docs/agents/observability.md)", "(docs/agents/security.md)");
+  expect(guides(parseTriggerTable(retargeted))).toContain("observability");
+  const removed = agents
+    .split("\n")
+    .filter((line) => !line.includes("docs/agents/observability.md"))
+    .join("\n");
+  expect(guides(parseTriggerTable(removed))).toContain("observability");
+});
+
+test("METRO-51 every guide the trigger table links exists and every key guide stays reachable from AGENTS.md", async () => {
   const agents = await read("AGENTS.md");
   const table = parseTriggerTable(agents);
   expect(table.length).toBeGreaterThanOrEqual(11);
@@ -84,18 +130,23 @@ test("METRO-51 every guide the trigger table links exists and nothing in docs/ag
       expect(existsSync(join(root, "docs/agents", `${guide}.md`)), `${row.trigger}: ${guide}`).toBe(
         true,
       );
-  const routed = new Set(table.flatMap((row) => row.guides));
-  for (const guide of [
-    "api",
-    "architecture",
-    "maintenance",
-    "observability",
-    "quality-gates",
-    "security",
-    "testing",
-    "ui",
-    "untrusted-input",
-  ])
-    expect(routed.has(guide), guide).toBe(true);
-  expect(agents).toContain("docs/agents/workflow.md");
+  // Guides the table routes by trigger, plus those AGENTS.md links from its prose or the tracker block.
+  const unreachable = REQUIRED_GUIDES.filter(
+    (guide) =>
+      missingRoutes(table, [guide]).length > 0 && !agents.includes(`docs/agents/${guide}.md`),
+  );
+  expect(unreachable).toEqual([]);
+  expect(
+    missingRoutes(table, [
+      "api",
+      "architecture",
+      "maintenance",
+      "observability",
+      "quality-gates",
+      "security",
+      "testing",
+      "ui",
+      "untrusted-input",
+    ]),
+  ).toEqual([]);
 });

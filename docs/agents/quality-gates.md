@@ -26,13 +26,29 @@ Focused tests cover aggregate result semantics and actual installed hooks in dis
 
 ## Hook bypass policy (METRO-51)
 
-Hooks are local feedback; CI is authoritative. A bypass never replaces a check, it only defers it to CI, so the pull request must still pass `Quality gates` and list the skipped check under "Checks not run".
+Hooks are local feedback; CI is authoritative. No bypass is the default. Agents never bypass hooks or signing: fix the failure instead. Never use `git commit --no-verify` or `git push --no-verify`, and never turn off commit signing.
 
-- Default: no bypass. Fix the failure; do not skip it.
-- Allowed, narrowest first (Context7-verified against the hk 2.x docs, hk.jdx.dev environment variables and configuration): `HK_SKIP_STEPS=<step>` skips named steps (here `fast`, `conventional`, `check`, `build`, `scan`); `HK_SKIP_HOOK=<hook>` skips a whole hook (`pre-commit`, `commit-msg`, `pre-push`). Set them for one command (`HK_SKIP_STEPS=build git push`), never in shell profiles, `git config hk.skip*` or `.hkrc.pkl`, which would persist the bypass.
-- `git commit --no-verify` and `git push --no-verify` are Git's own switches and skip every hook of that command, including `commit-msg` and the pre-push `scan`. Use them only for a broken hook installation or a tool outage, with the owner's agreement, and never to push a suspected secret.
-- Agents do not bypass on their own initiative. A non-conventional or unsigned commit that slips through is still caught: CI validates every commit subject in the range and the rulesets require signed commits.
+The one documented exception is an owner-only emergency skip of a single named step, for example when a pre-push step cannot run locally during a tool outage. It never replaces CI: the pull request must still pass `Quality gates`, and the skipped step is listed under "Checks not run". The step names are in `hk.pkl` (`fast`, `conventional`, `check`, `build`, `scan`). Set the variable for that one command only, never in a profile, `git config` or `.hkrc.pkl`, which would persist it.
+
+```powershell
+$env:HK_SKIP_STEPS = 'build'; git push; Remove-Item Env:HK_SKIP_STEPS
+```
+
+```sh
+HK_SKIP_STEPS=build git push
+```
+
+hk documents `HK_SKIP_STEPS` as a comma-separated list of step names skipped when running the pre-commit and pre-push hooks, also settable through `git config hk.skipSteps` and `.hkrc.pkl`, with all sources unioned (Context7-verified against <https://hk.jdx.dev/environment_variables.html> and <https://hk.jdx.dev/configuration.html>, 2026-11-05). Unverified: how it interacts with `commit-msg` steps, and that a step name is matched across hooks.
 
 ## Verify signatures locally (METRO-51)
 
-The rulesets require signed commits and GitHub's "Verified" badge is authoritative. To check a signature locally with SSH signing, set `git config gpg.format ssh` and `git config gpg.ssh.allowedSignersFile <file>`; each line of the file is `<email> <key type> <public key>` for one trusted signer. Without that file Git cannot decide trust for an SSH signature. Then run `git verify-commit HEAD` or `git log --show-signature -1`; the signing key and its email must appear in the allowed-signers file. A GPG signature (for example GitHub's web-merge commits) needs the signer's public key in the local keyring instead, so "Can't check signature: No public key" is a local keyring gap, not proof of a bad signature. Repo-verified: this machine sets `gpg.format ssh` and an allowed-signers file under `~/.ssh`. Unverified against the official git-config page in this session.
+The rulesets require signed commits, and GitHub's "Verified" badge is authoritative; a local check is a convenience. Inspect your settings with:
+
+```sh
+git config --get gpg.format
+git config --get commit.gpgsign
+git config --get gpg.ssh.allowedSignersFile
+git verify-commit HEAD
+```
+
+With `gpg.format` set to `ssh`, git trusts a signature only when the signer's public key is listed in the file named by `gpg.ssh.allowedSignersFile` (one line per principal and key, as in ssh-keygen "ALLOWED SIGNERS"); otherwise the trust level is undefined and `git verify-commit` fails (Context7-verified against the git-config documentation, <https://git-scm.com/docs/git-config>, 2026-11-05). A GPG signature, such as GitHub's web-merge commits, needs the signer's public key in the local keyring instead, so "Can't check signature: No public key" is a local keyring gap, not proof of a bad signature (Inferred).

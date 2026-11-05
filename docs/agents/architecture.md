@@ -1,8 +1,6 @@
 # Architecture
 
-Historical baseline: legacy implementation references and checks below concern commit `af903d7a2c1bf08165cfcf4a00ca0c0d73eedead`, not files or executable gates in this independent rebuild. See [rebuild boundary](../../README.md).
-
-**Confirmed / Repo-verified:** baseline uses Next pages/components/services/utils, not an implemented layered workspace. Inspect [manifest](https://github.com/tashfiqul-islam/metro-station-finder/blob/af903d7a2c1bf08165cfcf4a00ca0c0d73eedead/package.json), [TypeScript config](https://github.com/tashfiqul-islam/metro-station-finder/blob/af903d7a2c1bf08165cfcf4a00ca0c0d73eedead/tsconfig.json) and relevant imports before changing structure.
+**Confirmed / Repo-verified (legacy baseline `af903d7`, not the rebuild):** the baseline uses Next pages/components/services/utils, not an implemented layered workspace. Inspect [manifest](https://github.com/tashfiqul-islam/metro-station-finder/blob/af903d7a2c1bf08165cfcf4a00ca0c0d73eedead/package.json), [TypeScript config](https://github.com/tashfiqul-islam/metro-station-finder/blob/af903d7a2c1bf08165cfcf4a00ca0c0d73eedead/tsconfig.json) and relevant imports before changing structure.
 
 **Confirmed / Repo-verified:** `packages/core` contains executable domain/application synthetic status code with no dependencies. `apps/web` and `apps/api` compose inward. Its standalone TypeScript check excludes runtime/framework globals; `scripts/boundaries.ts` rejects external and escaping imports plus dependency declarations. The boundary guard is narrow; dependency-cruiser enforces the layers: core imports only core, `packages/contracts` imports only core and Valibot, and `apps/web` and `apps/api` never import each other (see [ADR-0003](../adr/0003-contracts.md) and [ADR-0002](../adr/0002-runtime-topology.md)).
 

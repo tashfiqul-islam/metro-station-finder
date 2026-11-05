@@ -12,7 +12,7 @@ export interface TriggerRow {
   guides: string[];
 }
 
-const AGENT_GUIDE = /\]\(docs\/agents\/([a-z-]+)\.md\)/gu;
+const AGENT_GUIDE = /\]\(docs\/agents\/([\w.-]+?)\.md(?:#[^)\s]*)?\)/gu;
 
 /** Sorts `items` in place and returns them; callers pass a fresh array. */
 export function sorted(items: string[]): string[] {
@@ -23,9 +23,10 @@ export function sorted(items: string[]): string[] {
 function cells(line: string): string[] {
   return line
     .trim()
-    .replaceAll(/^\||\|$/gu, "")
-    .split("|")
-    .map((cell) => cell.trim());
+    .replaceAll(/^\|/gu, "")
+    .replaceAll(/(?<!\\)\|$/gu, "")
+    .split(/(?<!\\)\|/u)
+    .map((cell) => cell.trim().replaceAll(String.raw`\|`, "|"));
 }
 
 /** Rows of the first table in `markdown` whose header starts with `Trigger`, without header/separator. */
@@ -80,4 +81,10 @@ export function parseScenarios(markdown: string): Map<string, string[]> {
     scenarios.set(name, sorted(set.split(",").map((guide) => guide.trim())));
   }
   return scenarios;
+}
+
+/** Guides in `required` that no row of `table` links; an empty list means every required guide is routed. */
+export function missingRoutes(table: readonly TriggerRow[], required: readonly string[]): string[] {
+  const routed = new Set(table.flatMap((row) => row.guides));
+  return required.filter((guide) => !routed.has(guide));
 }

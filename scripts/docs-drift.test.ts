@@ -2,6 +2,13 @@ import { expect, test } from "bun:test";
 import { readFile, readdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
+import {
+  BANNER,
+  OPEN_TICKET_LINKS,
+  bannerProblems,
+  fileStructureBlock,
+  staleProblems,
+} from "./docs-drift.ts";
 import { isRecord } from "./guards.ts";
 
 const root = resolve(import.meta.dir, "..");
@@ -17,75 +24,96 @@ async function markdownFiles(dir: string): Promise<string[]> {
   return found;
 }
 
-const BANNER = "Historical baseline: legacy implementation references";
-
-/**
- * Documents that may still carry the banner because they quote the legacy baseline (METRO-51).
- * A document that describes the rebuild must not: remove it from this list when its banner goes.
- * The base-branch agreement across CONTRIBUTING, workflow and plane is `bun run branches:check`.
- */
-const LEGACY_BANNER_ALLOWED = new Set([
-  "AGENTS.md",
-  "docs/agents/api.md",
-  "docs/agents/architecture.md",
-  "docs/agents/observability.md",
-  "docs/agents/ui.md",
-  "docs/agents/workflow.md",
-  "docs/evidence/audit-2026-11.md",
-  "docs/evidence/metro-8.md",
-  "docs/evidence/metro-9.md",
-  "docs/product/feature-parity.md",
-  "docs/product/glossary.md",
-  "docs/superpowers/plans/2026-11-02-bootstrap-evidence.md",
+/** Documents that may carry the banner, each with the reason it still consists of legacy references. */
+const BANNER_ALLOWED: ReadonlyMap<string, string> = new Map([
+  ["docs/product/feature-parity.md", "records the legacy baseline's behavior, pinned to af903d7"],
+  ["docs/product/glossary.md", "defines baseline terms cited to af903d7 source"],
+  ["docs/evidence/metro-8.md", "dated METRO-8 evidence reviewed at af903d7"],
+  ["docs/evidence/metro-9.md", "dated METRO-9 evidence reproduced at af903d7"],
+  [
+    "docs/superpowers/plans/2026-11-02-bootstrap-evidence.md",
+    "dated plan for the METRO-8 baseline",
+  ],
 ]);
 
-test("METRO-51 only documents on the legacy-quoting list carry the Historical baseline banner", async () => {
-  const carrying: string[] = [];
-  for (const file of [
-    "AGENTS.md",
-    "README.md",
-    "CONTRIBUTING.md",
-    ...(await markdownFiles("docs")),
+test("METRO-51 bannerProblems requires a baseline citation and labels rebuild claims", () => {
+  const banner = `${BANNER} concern commit af903d7.`;
+  expect(bannerProblems(`${banner}\n\nOnly rebuild prose.`)).toHaveLength(1);
+  expect(bannerProblems(`${banner}\n\nSee [src](x/af903d7/y.ts).`)).toEqual([]);
+  const unlabelled = `${banner}\n\nSee af903d7.\n\n**Repo-verified:** \`bun run check\` runs in CI.`;
+  expect(bannerProblems(unlabelled)).toHaveLength(1);
+  const labelled = `${banner}\n\nSee af903d7.\n\n**Repo-verified (legacy baseline):** \`scripts/x.ts\` is absent.`;
+  expect(bannerProblems(labelled)).toEqual([]);
+});
+
+test("METRO-51 a file may carry the banner only with a listed reason, a baseline citation and no unlabelled rebuild claim", async () => {
+  const problems: string[] = [];
+  const files = ["AGENTS.md", "README.md", "CONTRIBUTING.md", ...(await markdownFiles("docs"))];
+  for (const file of files) {
+    const text = await read(file);
+    if (!text.includes(BANNER)) continue;
+    if (!BANNER_ALLOWED.has(file))
+      problems.push(`${file}: carries the banner without a listed reason`);
+    for (const problem of bannerProblems(text)) problems.push(`${file}: ${problem}`);
+  }
+  expect(problems).toEqual([]);
+});
+
+test("METRO-51 every banner exemption names a file that exists and still carries the banner", async () => {
+  for (const [file, reason] of BANNER_ALLOWED) {
+    expect(reason.length, file).toBeGreaterThan(10);
+    expect(await read(file), file).toContain(BANNER);
+  }
+});
+
+test("METRO-51 staleProblems flags each drift class and spares true statements", () => {
+  for (const stale of [
+    "Read it while pending.",
+    "until landed, consult the ticket",
+    "scans are pending METRO-12",
+    "run the proposed checks",
+    "Keep clients on REST/OpenAPI contracts.",
+    "C:/Users/x/.codex/plugins/cache",
+    "see docs/agents/permissions.md",
+    "the authorization hook runs",
+    "[t](https://app.plane.so/metro-station-finder/browse/METRO-9/)",
   ])
-    if ((await read(file)).includes(BANNER)) carrying.push(file);
-  expect(carrying.filter((file) => !LEGACY_BANNER_ALLOWED.has(file))).toEqual([]);
+    expect(staleProblems(stale), stale).toHaveLength(1);
+  for (const fine of [
+    "there is no OpenAPI document",
+    "a REST/OpenAPI layer needs a new ADR",
+    "[t](https://app.plane.so/metro-station-finder/browse/METRO-15/)",
+  ])
+    expect(staleProblems(fine), fine).toEqual([]);
+  expect([...OPEN_TICKET_LINKS.keys()]).toEqual(["METRO-15"]);
 });
 
-test("METRO-51 testing.md and security.md describe the rebuild and carry no legacy banner", async () => {
-  for (const file of ["docs/agents/testing.md", "docs/agents/security.md"])
-    expect(await read(file), file).not.toContain("Historical baseline");
-});
-
-test("METRO-51 agent guidance names no stale statement", async () => {
-  const stale: [RegExp, string][] = [
-    [/while pending/iu, "METRO-9 has landed; link the local parity and glossary documents"],
-    [/REST\/OpenAPI contracts/u, "ADR-0003 chose plain fetch with Valibot schemas"],
-    [
-      /\.codex\/plugins/u,
-      "the active agent is Claude Code; pins describe reviewed bytes, not one machine path",
-    ],
-    [/permissions\.md/u, "docs/agents/permissions.md was removed"],
-    [/authorization hook/iu, "the authorization hook was removed"],
-  ];
+test("METRO-51 agent-facing documents carry no stale statement", async () => {
   const files = [
     "README.md",
+    "CONTRIBUTING.md",
+    "AGENTS.md",
     "docs/development.md",
-    "docs/examples/plane-preparation/README.md",
     ...(await markdownFiles("docs/agents")),
+    ...(await markdownFiles("docs/product")),
+    ...(await markdownFiles("docs/templates")),
+    ...(await markdownFiles("docs/examples")),
   ];
   const hits: string[] = [];
-  for (const file of files) {
-    const body = await read(file);
-    for (const [pattern, why] of stale) if (pattern.test(body)) hits.push(`${file}: ${why}`);
-  }
+  for (const file of files)
+    for (const problem of staleProblems(await read(file))) hits.push(`${file}: ${problem}`);
   expect(hits).toEqual([]);
 });
 
-test("METRO-51 domain.md lists packages/contracts in its layout", async () => {
-  expect(await read("docs/agents/domain.md")).toContain("packages/");
-  expect(await read("docs/agents/domain.md")).toMatch(
-    /packages\/\s+\(core, contracts\)|packages\/contracts/u,
-  );
+test("METRO-51 domain.md layout block lists contracts under packages", async () => {
+  const block = fileStructureBlock(await read("docs/agents/domain.md"));
+  const packages = block.find((line) => line.includes("packages/")) ?? "";
+  expect(packages).toMatch(/\bcore\b/u);
+  expect(packages).toMatch(/\bcontracts\b/u);
+  expect(fileStructureBlock("## File structure\n\n```\n└── packages/  (core)\n```")).toEqual([
+    "└── packages/  (core)",
+    "",
+  ]);
 });
 
 test("METRO-51 the skills lock states what it pins and for which agent", async () => {
@@ -100,17 +128,38 @@ test("METRO-51 the skills lock states what it pins and for which agent", async (
   expect(text).not.toMatch(/[A-Za-z]:[\\/]Users/u);
 });
 
-test("METRO-51 quality-gates documents the hook bypass policy and local signature verification", async () => {
+test("METRO-51 skills.md marks any Codex install route as historical evidence", async () => {
+  const skills = await read("docs/agents/skills.md");
+  for (const line of skills.split(/\r?\n/u))
+    if (/\bCodex\b/u.test(line))
+      expect(line, line.slice(0, 60)).toMatch(/historical|METRO-10|2026-11-03/iu);
+});
+
+test("METRO-51 quality-gates keeps a no-bypass policy with an owner-only emergency step skip", async () => {
   const gates = await read("docs/agents/quality-gates.md");
+  const policy = gates.split("## Hook bypass policy")[1]?.split(/^## /mu)[0] ?? "";
   for (const needle of [
-    "## Hook bypass policy",
+    "No bypass is the default.",
+    "Agents never bypass hooks or signing",
+    "never replaces CI",
     "CI is authoritative",
-    "HK_SKIP_STEPS",
-    "HK_SKIP_HOOK",
-    "--no-verify",
-    "## Verify signatures locally",
-    "gpg.ssh.allowedSignersFile",
-    "git verify-commit",
+    "HK_SKIP_STEPS=build git push",
+    "$env:HK_SKIP_STEPS = 'build'; git push; Remove-Item Env:HK_SKIP_STEPS",
+    "https://hk.jdx.dev/environment_variables.html",
   ])
-    expect(gates, needle).toContain(needle);
+    expect(policy, needle).toContain(needle);
+  expect(policy).not.toContain("HK_SKIP_HOOK");
+  const noVerify = policy.split(/\r?\n/u).filter((line) => line.includes("--no-verify"));
+  for (const line of noVerify) expect(line).toContain("Never use");
+  expect(policy).not.toMatch(/Use them only|Allowed, narrowest/u);
+
+  const signing = gates.split("## Verify signatures locally")[1]?.split(/^## /mu)[0] ?? "";
+  for (const needle of [
+    "git config --get gpg.format",
+    "git config --get commit.gpgsign",
+    "git config --get gpg.ssh.allowedSignersFile",
+    "git verify-commit HEAD",
+  ])
+    expect(signing, needle).toContain(needle);
+  expect(signing).not.toMatch(/this machine/iu);
 });
