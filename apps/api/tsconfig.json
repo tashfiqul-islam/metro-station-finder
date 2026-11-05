@@ -1,6 +1,6 @@
 {
   "extends": "../../tsconfig.base.json",
-  "compilerOptions": { "types": ["@cloudflare/workers-types"] },
+  "compilerOptions": { "target": "ES2025", "lib": ["ES2025"], "types": [] },
   "include": ["src/**/*.ts", "worker-configuration.d.ts"],
   "exclude": ["src/**/*.test.ts"]
 }

@@ -1,6 +1,11 @@
 {
   "extends": "../tsconfig.base.json",
-  "compilerOptions": { "types": ["node"], "skipLibCheck": true },
+  "compilerOptions": {
+    "target": "ES2025",
+    "lib": ["ES2025"],
+    "types": ["node"],
+    "skipLibCheck": true
+  },
   "include": ["./*.ts", "../apps/web/vite.config.ts", "../.dependency-cruiser.mts"],
   "exclude": [
     "./*.test.ts",

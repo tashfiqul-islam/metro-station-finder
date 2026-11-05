@@ -2,3 +2,4 @@
 *.png binary
 *.jpg binary
 *.ico binary
+apps/api/worker-configuration.d.ts linguist-generated=true

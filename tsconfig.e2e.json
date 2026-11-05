@@ -2,7 +2,8 @@
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "types": ["node"],
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "target": "ES2025",
+    "lib": ["ES2025", "DOM", "DOM.Iterable"],
     "skipLibCheck": false
   },
   "include": ["playwright.config.ts", "e2e/**/*.ts"]
