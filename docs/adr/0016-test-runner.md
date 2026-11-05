@@ -1,6 +1,6 @@
 # ADR-0016: Test runner for unit and integration tests
 
-- Status: Proposed (recommendation: go for the API and web projects; scripts and packages decided later by a stated criterion; awaits the owner's acceptance)
+- Status: Accepted (owner accepted on 2026-11-06 the go for the API and web projects; scripts and packages are decided later by the stated criterion)
 - Date: 2026-11-06
 - Ticket and specification: METRO-74; measurements in [the Vitest spike](../evidence/vitest-spike-2026-11.md)
 
@@ -48,7 +48,7 @@ Proposed criterion for stages 3 and 4 (numbers are a proposal for the owner to c
 2. The CI `Checks` job median over at least 5 runs, with both runners present, grows by at most 30 s from the 1 m 50 s baseline in [CI timings](../evidence/ci-timings-2026-11.md).
 3. Running the `scripts` tests under Vitest with the 90 percent branch gate leaves at most 20 source files under the gate (a tractable amount of new tests). If more, the owner chooses between more tests and an explicit, recorded re-baseline.
 
-If any fails, stop after stage 2 and record a no-go note in [testing](../agents/testing.md). This ADR stays Proposed until the owner accepts it; the tickets below are drafts and have not been created.
+If any fails, stop after stage 2 and record a no-go note in [testing](../agents/testing.md). The owner accepted this ADR on 2026-11-06 for the API and web projects. The criterion numbers above are still a proposal for stage 3 and the owner confirms them then. Ticket 1 is created; tickets 2 to 4 below are drafts and have not been created.
 
 ## Consequences
 
@@ -91,7 +91,7 @@ Today: `scripts/adr.test.ts` checks this ADR's shape. Nothing else enforces the 
 
 Common acceptance for every ticket: per-file 90 percent lines and functions kept, a 90 percent branch threshold for the project it moves, randomised order with a printed seed, no weakened assertion or lowered number, exact pins within the cooldown, and lint rules re-pointed. Order is dependency order: 1, then 2, then the go/no-go in 3, then 4. There is no separate lint ticket: lint is part of ticket 1.
 
-1. **Vitest foundation and the workerd API project.** Blocked on the owner accepting this ADR.
+1. **Vitest foundation and the workerd API project.** Created in Plane as the next implementation ticket.
    - Scope:
      - add `vitest`, `@cloudflare/vitest-plugin`, `@vitest/coverage-istanbul` (exact pins, matching versions);
      - root `vitest.config.ts` with projects, and the `apps/api` project with `cloudflareTest`;
