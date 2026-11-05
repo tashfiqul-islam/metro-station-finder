@@ -26,3 +26,8 @@ Tests covered scripts and core only: no coverage measurement, no API or componen
 - Ignore lists for entry scripts: hides unmeasured code behind configuration.
 - Vitest or Jest: a second runner next to Bun's built-in one.
 - Chromium only in CI: loses engine coverage cheaply available.
+
+## Confirmation
+
+- `bunfig.toml` `coverageThreshold` (per file) and `scripts/coverage-scope.ts` (`bun run coverage:scope`), both in `bun run check`.
+- `bun run smoke` (CI job) runs the Playwright suite and fixtures. No test asserts the Playwright configuration itself (`retries: 0`, the browser matrix, the `.e2e.ts` suffix): `None (policy)` for those.

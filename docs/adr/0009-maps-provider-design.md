@@ -99,3 +99,7 @@ Default stays Google. We use an alternative (for example MapLibre with another p
 - `getCurrentPosition` on page load: rejected; prompts without a gesture and fails the denied flow.
 - Request `displayName`: rejected; Pro tier cost with no need.
 - Non-Google stack now: rejected; no cost or policy block shown today.
+
+## Confirmation
+
+- `scripts/maps-design.test.ts` checks this ADR. No map code exists yet; the first map slice must add its own checks.
