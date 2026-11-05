@@ -41,22 +41,13 @@ Labels classify a work item. They never duplicate a Plane state, module, milesto
   - `blocked`: an explicit `blocked_by` relation plus an explanation; keep the workflow state.
 - New labels need owner approval and a one-line description. Do not invent labels.
 
-## GitHub integration (pull request state mapping)
+## GitHub integration (pull request linking)
 
-**Confirmed (owner screenshot, 2026-11-05):** the Plane GitHub integration is installed for the repository only, with this pull request state mapping on project METRO:
+**Confirmed (owner screenshots and two live test PRs, 2026-11-05):** the Plane GitHub integration is installed for this repository only. The `makeplane` bot comments "Linked to Plane Work Item(s)" on a pull request that names a `METRO-NN` identifier (branch, title or body). **It did not move any ticket state**: on PR #69 and PR #70 the ticket stayed in Backlog when the PR opened and when it merged, with the mapping below saved and, for #70, the project bound to the repository.
 
-| GitHub pull request event | Plane state |
-| ------------------------- | ----------- |
-| Draft Open                | In Progress |
-| Open                      | In Review   |
-| Review Requested          | In Review   |
-| Ready for Merge           | In Review   |
-| Merged                    | Done        |
-| Closed (not merged)       | no change   |
+Configured mapping (kept, harmless): Draft Open → In Progress; Open, Review Requested, Ready for Merge → In Review; Merged → Done; Closed → no change; "Prevent issues from moving to an earlier state" on. Project Issue Sync is bound to the repository, direction **Unidirectional** (GitHub to Plane only; Issue Open → Backlog, Issue Closed → Cancelled). Never choose Bidirectional: it would copy Plane tickets into the public repository. The repository has no GitHub issues, so the binding imports nothing.
 
-"Prevent issues from moving to an earlier state due to PR updates" is on. The project is bound to the repository under Project Issue Sync, direction **Unidirectional** (GitHub to Plane only; Issue Open → Backlog, Issue Closed → Cancelled). Never choose Bidirectional: it would copy Plane tickets into the public repository. The repository has no GitHub issues, so the binding imports nothing. Without the binding the bot links a PR to its ticket but the mapping above did not move any state (observed on PR #69, 2026-11-05).
-
-A pull request links to a ticket by its `METRO-NN` identifier in the branch name, title or body. Because Merged maps to Done, merge only when the hosted `Quality gates` check is green and review is resolved (see rule 8 above). A premature Done is reconciled by hand. Observed behavior is recorded on METRO-25.
+**Rule:** do not rely on the integration for state. The agent moves Plane states by hand and posts the closing comment, as before. A premature Done from a future automatic transition is reconciled by hand (rule 8 above). Cause of the missing transitions is Unknown; re-test only if Plane documents a change.
 
 ## Publish and retry without duplicates
 
