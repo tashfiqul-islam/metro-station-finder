@@ -104,7 +104,7 @@ test("METRO-36 an oversized body fails with a clear message before the body is p
 test("METRO-36 the Quality workflow no longer carries the reviewer job or the edited trigger", () => {
   const quality = readFileSync(".github/workflows/quality.yml", "utf8");
   expect(quality).not.toMatch(/reviewer|\breview:|\bedited\b/iu);
-  const needs = quality.match(/needs: \[checks, build, security\]\n {4}runs-on/u);
+  const needs = quality.match(/needs: \[changes, checks, build, security\]\n {4}runs-on/u);
   expect(needs).not.toBeNull();
   expect(readFileSync("scripts/ci-results.ts", "utf8")).not.toContain('"review"');
 });

@@ -28,6 +28,7 @@ test("FND-T1 runCiResults passes only when every required job succeeded", () => 
   const spies = quiet();
   try {
     const ok = JSON.stringify({
+      changes: { result: "success", outputs: { docs_only: "false" } },
       checks: { result: "success" },
       build: { result: "success" },
       security: { result: "success" },

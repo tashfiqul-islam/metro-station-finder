@@ -11,6 +11,36 @@ concurrency:
   group: quality-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  changes:
+    name: Changes
+    # Decides whether build, smoke and the preview may be skipped (METRO-62). A workflow-level paths filter
+    # would leave the required "Quality gates" check pending forever, so the decision lives in a job and
+    # every other job keeps running. Anything but docs_only=true runs everything.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      docs_only: ${{ steps.docs.outputs.docs_only }}
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Install pinned tools with mise
+        uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          version: 2026.10.25
+          install_args: node
+          cache: false
+      - name: Classify the changed files
+        id: docs
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/changed-files.ts
   checks:
     name: Checks
     runs-on: ubuntu-24.04
@@ -51,6 +81,8 @@ jobs:
           if-no-files-found: error
   build:
     name: Build and smoke
+    needs: [changes]
+    if: ${{ needs.changes.outputs.docs_only != 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
@@ -129,7 +161,7 @@ jobs:
   quality:
     name: Quality gates
     if: ${{ always() }}
-    needs: [checks, build, security]
+    needs: [changes, checks, build, security]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -152,8 +184,8 @@ jobs:
     name: Cloudflare preview
     # Same-repository pull requests only: forks must never receive the Cloudflare secrets. This job is
     # deliberately outside the "Quality gates" aggregate so Cloudflare availability cannot block merges.
-    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]' }}
-    needs: [checks, build, security]
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]' && needs.changes.outputs.docs_only != 'true' }}
+    needs: [changes, checks, build, security]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     concurrency:
