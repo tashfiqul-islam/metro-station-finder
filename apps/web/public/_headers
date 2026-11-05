@@ -1,0 +1,13 @@
+# Workers Static Assets applies this file to static asset responses only (HTML, JS, CSS, icons),
+# never to Worker-generated /api/* responses; those get their headers in apps/api/src/app.ts.
+# See docs/adr/0011-security-headers.md. Keep the shared values below identical to app.ts.
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(self)
+  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+
+# Vite names these files by content hash, so they never change under the same URL.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable

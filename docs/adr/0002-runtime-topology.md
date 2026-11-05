@@ -8,6 +8,8 @@
 
 Before this change the web app and the Worker ran as separate servers (Vite on 5173, a Wrangler Node API on 8787 through the unstable `unstable_startWorker`), with no same-origin integration and no React Fast Refresh. See [ADR-0001](0001-foundation-baseline.md) and the [METRO-21 evidence](../evidence/metro-foundation-dev-runtime.md). `@cloudflare/vite-plugin` 1.66.0 and `@vitejs/plugin-react` 6.1.2 both declare Vite 8 support in their peer dependencies (Repo-verified, registry), matching the pinned Vite 8.3.5.
 
+> Amendment 2026-11-05 (METRO-31): `run_worker_first` is now `["/api/*", "/assets/*"]`, so `/assets/*` requests also reach Worker code (a missing asset becomes a 404 instead of the SPA shell). The Decision text below is left as written. See [ADR-0011](0011-security-headers.md).
+
 ## Decision
 
 - We will run web and API together through `@cloudflare/vite-plugin`: `vite dev`, `vite build` and `vite preview` serve the SPA and execute the Worker in workerd from one origin. `unstable_startWorker` and the custom launcher scripts are removed.
