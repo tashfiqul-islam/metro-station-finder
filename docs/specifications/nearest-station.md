@@ -2,7 +2,7 @@
 
 - Identity: METRO-40; revision 1, 2026-11-05.
 - Source: Plane work item fd4e032f-19aa-4e38-89f2-87307ff45fe7 (read as data; Plane was not written).
-- Decision owner and approval: the owner delegated the station ID scheme and alias list to the implementing agent ("decide and justify in the spec"). Display-name choices below are proposals that still need owner review; they are marked HITL.
+- Decision owner and approval: the owner delegated the station ID scheme and alias list to the implementing agent ("decide and justify in the spec"). Display-name choices below were proposals; the owner confirmed them on 2026-11-05 (see H1).
 - Baseline: legacy commit `af903d7a2c1bf08165cfcf4a00ca0c0d73eedead`, read with `git show` only (`src/utils/constants.ts`, `src/services/fareCalculation.ts`, `src/services/metroServices.ts`); no legacy code was run.
 - Research: **Repo-verified** legacy behavior is recorded in [feature parity](../product/feature-parity.md) and the [glossary](../product/glossary.md). Haversine on a 6371 km sphere and WGS84 latitude/longitude ranges are standard definitions needing no library (**Unverified** against a current official source; no dependency was added, so nothing in the lockfile depends on them). Datum, coordinate accuracy, fare publisher and effective date remain **Unknown**.
 - Domain: [glossary](../product/glossary.md) (Station, Station identifier, Nearest, Geographic distance, Walking distance, Fare, Same station); parity requirements R2, R6, R7 and R8.
@@ -44,7 +44,7 @@ Positional correspondence is **Inferred**, not proven, that the five differing l
 
 The other eleven stations have identical labels in both legacy arrays and need no alias.
 
-**Recorded mismatch (not silently changed):** the legacy Home result card would have shown `Agaragaon`, `Farmagate` and `Kawran Bazar` (coordinate labels) while the fare dropdown showed `Agargaon`, `Farmgate` and `Karwan Bazar`. The dataset's single `name` picks the fare-array spelling for those three (the conventional English spellings) and the coordinate-array form for the two Mirpur stations (no hyphen, matching the glossary). Coordinates and fares are copied unchanged. Both legacy labels stay resolvable as aliases, so no legacy lookup string becomes unknown. Which label the product displays is HITL below.
+**Recorded mismatch (not silently changed):** the legacy Home result card would have shown `Agaragaon`, `Farmagate` and `Kawran Bazar` (coordinate labels) while the fare dropdown showed `Agargaon`, `Farmgate` and `Karwan Bazar`. The dataset's single `name` picks the fare-array spelling for those three (the conventional English spellings) and the coordinate-array form for the two Mirpur stations (no hyphen, matching the glossary). Coordinates and fares are copied unchanged. Both legacy labels stay resolvable as aliases, so no legacy lookup string becomes unknown. The owner confirmed the `name` column as the displayed label (H1 below).
 
 ## Types
 
@@ -67,7 +67,7 @@ The other eleven stations have identical labels in both legacy arrays and need n
 - **Invalid input:** an origin that fails `parseCoordinate` returns `{ kind: "no-result", reason: "invalid-coordinate", detail }` and is checked before the dataset, so it is reported even when the dataset is empty.
 - **Empty dataset:** returns `{ kind: "no-result", reason: "empty-dataset" }`. The legacy code threw `No metro stations found`; core returns a value so callers cannot forget to handle it.
 - **Unknown station:** `resolveStation` returns `undefined`; `findFare` returns `unknown-fare` / `unknown-station` for either end. The legacy fare service threw `Station not found`.
-- **Same station:** `findFare(a, a)` is a real zero fare, kept distinct from "no selection" and from unknown (R6). The legacy UI could not reach this pair; the domain still defines it.
+- **Same station:** `findFare(a, a)` is a real zero fare, kept distinct from "no selection" and from unknown (R6). The legacy UI could not reach this pair; the domain still defines it as a defensive default. The UI must not allow it (H3 below).
 - Success: `{ kind: "nearest", station, distance }` with `distance` a `GeographicDistanceKm`.
 
 ### Acceptance
@@ -98,11 +98,15 @@ Latitude exactly ±90 and longitude exactly ±180 are accepted; just beyond is r
 
 ## Open decisions (HITL)
 
-- H1: which spelling the product displays for the five mismatched stations (this spec proposes the `name` column above); also whether Bangla names are wanted. IDs do not change either way.
-- H2: authoritative source, datum and effective date for coordinates and fares (still Unknown).
-- H3: whether the same-station zero fare should be exposed to users or only kept as a domain value.
-- H4: tie-breaking by dataset order is parity; a future ranking by walking distance would need its own specification.
+Owner answers given in chat on 2026-11-05. Numbering is kept for traceability.
+
+- H1: **Resolved 2026-11-05.** Display spelling for the five mismatched stations: Mirpur 11, Mirpur 10, Agargaon, Farmgate, Karwan Bazar. The proposed `name` column above stands. Bangla names: the owner said English only for now (see language below).
+- H2: **Partly resolved 2026-11-05.** Owner-stated: fares come from the Government, effective since the service launched. Publisher name and launch date not recorded. Datum and coordinate source remain Unknown.
+- H3: **Resolved 2026-11-05.** The UI must not allow the same station for both ends. The domain keeps returning the explicit same-station zero fare as a defensive default. UI requirement for the future fare-selection slice: the origin cannot equal the destination (for example the destination choices exclude the chosen origin).
+- H4: not part of the owner answers. Tie-breaking by dataset order is parity; a future ranking by walking distance would need its own specification.
+
+**Language:** English only for now. Switching language (i18n) is a future feature and out of scope; the current goal is parity on the new architecture with better UI/UX.
 
 ## Readiness record
 
-Reviewer: pending independent review. Acceptance is mapped to seams above. No unresolved blocker; H1 to H4 do not block this slice because IDs, aliases and legacy values are stable under any answer.
+Reviewer: pending independent review. Acceptance is mapped to seams above. No unresolved blocker; H1 to H3 were answered by the owner on 2026-11-05 and H4 is parity, so none blocks this slice.
