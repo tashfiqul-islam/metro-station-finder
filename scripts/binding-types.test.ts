@@ -5,15 +5,7 @@ import { join, resolve } from "node:path";
 const wrangler = resolve("node_modules/.bin/wrangler");
 const check = (cwd: string) =>
   Bun.spawnSync(
-    [
-      wrangler,
-      "types",
-      "--check",
-      "--include-runtime=false",
-      "worker-configuration.d.ts",
-      "-c",
-      "wrangler.jsonc",
-    ],
+    [wrangler, "types", "--check", "worker-configuration.d.ts", "-c", "wrangler.jsonc"],
     {
       cwd,
       stdout: "pipe",
