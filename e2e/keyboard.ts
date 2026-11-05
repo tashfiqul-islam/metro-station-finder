@@ -22,6 +22,7 @@ interface FocusReport {
   readonly samplePoints: number;
   /** Part of the control lies inside the viewport. */
   readonly partlyVisible: boolean;
+  readonly geometry: string;
 }
 
 const STYLE_KEYS = ["outlineStyle", "outlineWidth", "outlineColor", "boxShadow"] as const;
@@ -105,51 +106,63 @@ export async function expectTabReachesEveryControl(
   });
   for (let position = 0; position < count; position += 1) {
     await page.keyboard.press("Tab");
-    const report = await page.evaluate((keys): FocusReport | null => {
-      const element = document.activeElement;
-      if (!(element instanceof HTMLElement) || !element.hasAttribute("data-tab-index")) {
-        return null;
-      }
-      const rect = element.getBoundingClientRect();
-      const left = Math.max(rect.left, 0);
-      const top = Math.max(rect.top, 0);
-      const right = Math.min(rect.right, innerWidth);
-      const bottom = Math.min(rect.bottom, innerHeight);
-      const partlyVisible = right > left && bottom > top;
-      const points: readonly (readonly [number, number])[] = [
-        [0.5, 0.5],
-        [0.25, 0.5],
-        [0.75, 0.5],
-        [0.5, 0.25],
-        [0.5, 0.75],
-      ];
-      const hits = partlyVisible
-        ? points.filter(([x, y]) => {
-            const hit = document.elementFromPoint(
-              left + (right - left) * x,
-              top + (bottom - top) * y,
-            );
-            return hit !== null && element.contains(hit);
-          }).length
-        : 0;
-      const style = getComputedStyle(element);
-      return {
-        index: Number(element.getAttribute("data-tab-index")),
-        focusVisible: element.matches(":focus-visible"),
-        indicatorChanged:
-          JSON.stringify(keys.map((key) => style[key])) !==
-          element.getAttribute("data-tab-unfocused"),
-        unobscuredPoints: hits,
-        samplePoints: points.length,
-        partlyVisible,
-      };
-    }, STYLE_KEYS);
+    const measure = () =>
+      page.evaluate((keys): FocusReport | null => {
+        const element = document.activeElement;
+        if (!(element instanceof HTMLElement) || !element.hasAttribute("data-tab-index")) {
+          return null;
+        }
+        const rect = element.getBoundingClientRect();
+        const left = Math.max(rect.left, 0);
+        const top = Math.max(rect.top, 0);
+        const right = Math.min(rect.right, innerWidth);
+        const bottom = Math.min(rect.bottom, innerHeight);
+        const partlyVisible = right > left && bottom > top;
+        const points: readonly (readonly [number, number])[] = [
+          [0.5, 0.5],
+          [0.25, 0.5],
+          [0.75, 0.5],
+          [0.5, 0.25],
+          [0.5, 0.75],
+        ];
+        const hits = partlyVisible
+          ? points.filter(([x, y]) => {
+              const hit = document.elementFromPoint(
+                left + (right - left) * x,
+                top + (bottom - top) * y,
+              );
+              return hit !== null && element.contains(hit);
+            }).length
+          : 0;
+        const style = getComputedStyle(element);
+        return {
+          index: Number(element.getAttribute("data-tab-index")),
+          focusVisible: element.matches(":focus-visible"),
+          indicatorChanged:
+            JSON.stringify(keys.map((key) => style[key])) !==
+            element.getAttribute("data-tab-unfocused"),
+          unobscuredPoints: hits,
+          samplePoints: points.length,
+          partlyVisible,
+          geometry: `top ${Math.round(rect.top)}, height ${Math.round(rect.height)}, viewport ${innerHeight}, scrollY ${Math.round(scrollY)}`,
+        };
+      }, STYLE_KEYS);
+    // Scrolling a focused control into view is asynchronous in some engines (Linux WebKit in CI
+    // was still unscrolled when first measured), so measure again until it is in view or 2 s pass.
+    let report = await measure();
+    for (let attempt = 0; attempt < 40 && report && !report.partlyVisible; attempt += 1) {
+      await page.waitForTimeout(50);
+      report = await measure();
+    }
     const label = `Tab press ${position + 1} of ${count}`;
     expect(report, `${label} focuses a control`).not.toBeNull();
     expect(report?.index, `${label} reaches control ${position} in order`).toBe(position);
     expect(report?.focusVisible, `control ${position} matches :focus-visible`).toBe(true);
     expect(report?.indicatorChanged, `control ${position} draws a focus indicator`).toBe(true);
-    expect(report?.partlyVisible, `control ${position} is scrolled into view`).toBe(true);
+    expect(
+      report?.partlyVisible,
+      `control ${position} is scrolled into view (${report?.geometry ?? "no report"})`,
+    ).toBe(true);
     expect(report?.unobscuredPoints, `control ${position} is not covered`).toBe(
       report?.samplePoints,
     );
