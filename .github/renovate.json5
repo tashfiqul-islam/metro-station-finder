@@ -15,6 +15,8 @@
     { groupName: "react", matchPackageNames: ["react", "react-dom", "@types/react", "@types/react-dom"] },
     { groupName: "cloudflare", matchPackageNames: ["wrangler", "@cloudflare/**"] },
     { groupName: "oxc", matchPackageNames: ["oxfmt", "oxlint", "oxlint-tsgolint"] },
+    // bun-types must equal the version @types/bun depends on (scripts/lint-config.test.ts checks it).
+    { groupName: "bun types", matchPackageNames: ["bun-types", "@types/bun"] },
     { groupName: "typescript", matchPackageNames: ["typescript", "@typescript/**"] },
     { groupName: "playwright", matchPackageNames: ["playwright", "@playwright/**", "@axe-core/playwright"] },
   ],

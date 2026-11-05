@@ -79,7 +79,25 @@ async function scratchCopy(run: (copy: string) => Promise<void>) {
     }
     await run(copy);
   } finally {
-    await rm(copy, { recursive: true, force: true });
+    await removeWithRetry(copy);
+  }
+}
+
+/**
+ * Windows can briefly hold the copy (EBUSY) right after tsc exits, and Bun's `rm` does not retry that code
+ * itself. Only EBUSY is retried, a bounded number of times, and the last error is rethrown, so a copy that
+ * really cannot be removed still fails the test.
+ */
+async function removeWithRetry(path: string): Promise<void> {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      await rm(path, { recursive: true, force: true });
+      return;
+    } catch (error) {
+      const busy = error instanceof Error && "code" in error && error.code === "EBUSY";
+      if (!busy || attempt >= 10) throw error;
+      await Bun.sleep(300);
+    }
   }
 }
 

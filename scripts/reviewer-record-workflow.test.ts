@@ -83,6 +83,7 @@ test("METRO-36 the untrusted body reaches the script only through an environment
     HEAD_SHA: "${{ github.event.pull_request.head.sha }}",
   });
   const runs = steps.flatMap((step) => (typeof step["run"] === "string" ? [step["run"]] : []));
+  expect(runs.length).toBeGreaterThan(0);
   for (const run of runs) expect(run).not.toContain("${{");
   expect(text.match(/pull_request\.body/gu)).toHaveLength(2);
 });

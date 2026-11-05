@@ -60,6 +60,32 @@ const REJECTED: readonly (readonly [rule: string, source: string])[] = [
   ],
   ["no-standalone-expect", `expect(1).toBe(1);\n\ntest("x", () => {\n  expect(1).toBe(1);\n});\n`],
   ["valid-title", `test("", () => {\n  expect(1).toBe(1);\n});\n`],
+  ["valid-title", `test(" padded title", () => {\n  expect(1).toBe(1);\n});\n`],
+  [
+    "no-commented-out-tests",
+    `// test("old", () => {\n//   expect(1).toBe(1);\n// });\n\ntest("kept", () => {\n  expect(1).toBe(1);\n});\n`,
+  ],
+  [
+    "valid-describe-callback",
+    `describe("suite", async () => {\n  test("inner", () => {\n    expect(1).toBe(1);\n  });\n});\n`,
+  ],
+  ["no-export", `export const shared = 1;\n\ntest("x", () => {\n  expect(shared).toBe(1);\n});\n`],
+  [
+    "no-duplicate-hooks",
+    `describe("suite", () => {\n  beforeEach(() => {});\n  beforeEach(() => {});\n\n  test("x", () => {\n    expect(1).toBe(1);\n  });\n});\n`,
+  ],
+  [
+    "no-unneeded-async-expect-function",
+    `test("wrapped", async () => {\n  await expect(async () => {\n    await Promise.reject(new Error("x"));\n  }).rejects.toThrow("x");\n});\n`,
+  ],
+  [
+    "no-alias-methods",
+    `test("alias", () => {\n  expect(() => {\n    throw new Error("x");\n  }).toThrowError("x");\n});\n`,
+  ],
+  [
+    "valid-expect-in-promise",
+    `test("floating", () => {\n  Promise.resolve(1).then((value) => {\n    expect(value).toBe(1);\n  });\n});\n`,
+  ],
   [
     "no-identical-title",
     `test("same", () => {\n  expect(1).toBe(1);\n});\n\ntest("same", () => {\n  expect(2).toBe(2);\n});\n`,

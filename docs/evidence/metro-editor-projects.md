@@ -4,6 +4,8 @@ Ticket METRO-26. Date 2026-11-04. Base `feature/metro-rebuild` at `d360b84`.
 
 ## Cause (Repo-verified by reproduction)
 
+Historical record (METRO-42): written when tests still imported from `bun:test`. Since METRO-50 tests use Bun's injected globals and the import is banned by lint; see [testing](../agents/testing.md).
+
 An editor opens a file in the nearest `tsconfig.json` that includes it, or else in an inferred project. Every test file, `e2e/`, `playwright.config.ts`, `scripts/configuration.ts` and `scripts/tools.ts` are excluded from the production project configs (their types differ), and the root `tsconfig.json` had `files: []` and no references. They therefore opened in inferred projects, where TypeScript 6 defaults `types` to none: `bun:test`, `node:path`, `node:fs/promises`, `node:os`, `process`, `Bun`, `console` and `Response` were missing, and implicit-any followed.
 
 Reproduction used the TypeScript 6 `ProjectService` (the class an editor's language server uses): at baseline 67 tracked TypeScript files, 38 of them with problems, 180 problems in total, every one in an inferred project. The owner saw 118, later 68, depending on the files open.
