@@ -290,7 +290,7 @@ export function evaluateSettings(input: SettingsInput): { ok: boolean; lines: st
 
 /** Runs `gh` with fixed arguments and no shell; the check below only ever passes `api <path>`. */
 export type GhRunner = (args: readonly string[]) => string;
-const runGh: GhRunner = (args) =>
+export const runGh: GhRunner = (args) =>
   execFileSync("gh", [...args], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
 
 function streamText(part: unknown): string | undefined {
@@ -298,7 +298,7 @@ function streamText(part: unknown): string | undefined {
   return Buffer.isBuffer(part) ? part.toString("utf8") : undefined;
 }
 
-interface GhFailure {
+export interface GhFailure {
   /** The text shown in the FAIL line: the gh status line, else the first line of what gh said. */
   line: string;
   status?: number;
@@ -310,7 +310,7 @@ interface GhFailure {
  * message is used only when the error carries no stderr at all). The JSON body on stdout is never read for a
  * status, and a status mentioned inside other text does not count: the line must match in full.
  */
-function ghFailure(error: unknown): GhFailure {
+export function ghFailure(error: unknown): GhFailure {
   const stderr = error instanceof Error ? streamText(Reflect.get(error, "stderr")) : undefined;
   const fallback = error instanceof Error ? error.message : String(error);
   const text = stderr ?? fallback;
