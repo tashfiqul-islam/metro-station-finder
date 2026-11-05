@@ -24,6 +24,7 @@ beforeAll(() => {
 });
 afterEach(() => {
   cleanup();
+  jest.restoreAllMocks(); // a failing assertion must not leave console spies behind
   globalThis.fetch = realFetch;
 });
 afterAll(() => {
