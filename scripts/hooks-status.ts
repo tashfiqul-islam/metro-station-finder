@@ -15,9 +15,14 @@ export type HookStatus =
 type GitResult = { exitCode: number; stdout: string; stderr: string };
 
 /** Runs git without ever throwing: a missing git binary is reported as exit code -1. */
-function git(args: string[], cwd: string, env: Record<string, string>): GitResult {
+function git(
+  args: string[],
+  cwd: string,
+  env: Record<string, string>,
+  gitBinary: string,
+): GitResult {
   try {
-    const result = Bun.spawnSync(["git", ...args], { cwd, env });
+    const result = Bun.spawnSync([gitBinary, ...args], { cwd, env });
     return {
       exitCode: result.exitCode ?? -1,
       stdout: result.stdout.toString(),
@@ -33,14 +38,23 @@ function git(args: string[], cwd: string, env: Record<string, string>): GitResul
  * or a global (`hk install --global`) install both count. Never throws: when Git cannot answer the result
  * is `unknown`, which callers must surface rather than treat as installed.
  */
-export function hookStatus(cwd: string, env: Record<string, string> = cleanGitEnv()): HookStatus {
-  const inside = git(["rev-parse", "--git-dir"], cwd, env);
+export function hookStatus(
+  cwd: string,
+  env: Record<string, string> = cleanGitEnv(),
+  gitBinary = "git",
+): HookStatus {
+  const inside = git(["rev-parse", "--git-dir"], cwd, env, gitBinary);
   if (inside.exitCode === -1) return { state: "unknown", reason: inside.stderr.trim() };
   // 128 is Git's "not a git repository" (a source tarball): nothing to install hooks into.
   if (inside.exitCode === 128) return { state: "no-repository" };
   if (inside.exitCode !== 0) return { state: "unknown", reason: inside.stderr.trim() };
   // Exit 1 means no matching key; anything else is a real failure.
-  const result = git(["config", "--get-regexp", String.raw`^hook\.hk-.*\.event$`], cwd, env);
+  const result = git(
+    ["config", "--get-regexp", String.raw`^hook\.hk-.*\.event$`],
+    cwd,
+    env,
+    gitBinary,
+  );
   if (result.exitCode !== 0 && result.exitCode !== 1)
     return { state: "unknown", reason: result.stderr.trim() };
   const configured = new Set<string>();
@@ -59,9 +73,10 @@ export function hookStatus(cwd: string, env: Record<string, string> = cleanGitEn
 export function hookWarning(
   cwd: string,
   env: Record<string, string> = cleanGitEnv(),
+  gitBinary = "git",
 ): string | undefined {
   if (env["CI"] === "true") return undefined;
-  const status = hookStatus(cwd, env);
+  const status = hookStatus(cwd, env, gitBinary);
   if (status.state === "missing")
     return `Git hooks not installed (missing: ${status.hooks.join(", ")}). Commits and pushes skip the local gates; only CI will catch failures. Run: ${HOOK_INSTALL_COMMAND} (needs Git 2.54+; repeat per clone).`;
   if (status.state === "unknown")

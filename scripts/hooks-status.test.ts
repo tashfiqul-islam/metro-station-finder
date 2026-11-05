@@ -119,9 +119,11 @@ test("METRO-45 stays silent when CI=true and outside a Git checkout", async () =
 
 test("METRO-45 says it could not determine the state when git cannot run", async () => {
   await withRepository(async (root) => {
-    const status = hookStatus(root, env({ PATH: "", Path: "" }));
+    // Bun resolves the binary from its own PATH, not the env option, so name a binary that does not exist.
+    const missingGit = resolve(root, "no-such-git");
+    const status = hookStatus(root, env(), missingGit);
     expect(status.state).toBe("unknown");
-    const warning = hookWarning(root, env({ PATH: "", Path: "" }));
+    const warning = hookWarning(root, env(), missingGit);
     expect(warning).toContain("Could not determine");
     expect(warning).toContain(HOOK_INSTALL_COMMAND);
   });
