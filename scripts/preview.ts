@@ -48,10 +48,15 @@ interface FetchedResponse {
   headers: { get(name: string): string | null };
   json(): Promise<unknown>;
 }
-type Fetch = (input: string) => Promise<FetchedResponse>;
+type Fetch = (
+  input: string,
+  init?: { headers: Record<string, string> },
+) => Promise<FetchedResponse>;
 
 interface SmokeOptions {
   fetch?: Fetch;
+  /** Extra request headers for every smoke request, for example a Worker version override (METRO-57). */
+  headers?: Record<string, string>;
   /** A new workers.dev hostname can take a few seconds to resolve; each attempt still has to pass in full. */
   attempts?: number;
   delayMs?: number;
@@ -84,7 +89,10 @@ export async function smokePreview(
   sha: string | undefined,
   options: SmokeOptions = {},
 ): Promise<void> {
-  const fetchFn = options.fetch ?? ((input) => fetch(input));
+  const raw: Fetch = options.fetch ?? ((input, init) => fetch(input, init));
+  const extra = options.headers;
+  const fetchFn: Fetch =
+    extra === undefined ? raw : (input) => raw(input, { headers: { ...extra } });
   const attempts = options.attempts ?? 6;
   const delayMs = options.delayMs ?? 5000;
   let last: unknown;
