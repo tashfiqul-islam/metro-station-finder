@@ -38,6 +38,7 @@ test.describe("security headers and caching (METRO-31)", () => {
     const response = await request.get(asset ?? "");
     expect(response.status()).toBe(200);
     expect(response.headers()["cache-control"]).toContain("immutable");
+    expect(response.headers()).toMatchObject(shared);
     for (const path of ["/", "/index.html"]) {
       expect((await request.get(path)).headers()["cache-control"] ?? "").not.toContain("immutable");
     }
@@ -47,6 +48,7 @@ test.describe("security headers and caching (METRO-31)", () => {
     for (const path of ["/assets/does-not-exist.js", "/assets/nested/missing.css"]) {
       const response = await request.get(path);
       expect(response.status(), path).toBe(404);
+      expect(response.headers(), path).toMatchObject({ ...shared, "cache-control": "no-store" });
       expect(response.headers()["cache-control"] ?? "", path).not.toContain("immutable");
     }
   });
