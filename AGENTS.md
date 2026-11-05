@@ -1,7 +1,5 @@
 # Metro agent entry point
 
-Historical baseline: legacy implementation references and checks below concern commit `af903d7a2c1bf08165cfcf4a00ca0c0d73eedead`, not files or executable gates in this independent rebuild. See [rebuild boundary](README.md).
-
 Read this file, applicable ancestor/scoped instructions, [workflow](docs/agents/workflow.md), ticket specification and acceptance checks before work. Read only triggered guidance below; combine rows when tasks overlap.
 
 | Trigger                                                                            | Additional read set                                                                                                                                                     |
