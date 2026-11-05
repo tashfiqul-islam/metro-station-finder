@@ -40,3 +40,14 @@ Zero-based positions; exact strings preserved.
 ## Inferred / Unknown
 
 **Inferred:** same positions probably refer to the same physical stations. **Unknown:** official spelling and authoritative identity mapping. Proposed rebuild IDs/aliases must be reviewed, not inferred silently from these strings.
+
+## Rebuild terms (METRO-40)
+
+Defined in [nearest-station specification](../specifications/nearest-station.md); they describe the rebuild, not the baseline.
+
+| Term             | Rebuild meaning                                                                                                                                           |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Station ID       | Branded lowercase kebab-case slug (for example `farmgate`), permanent and never positional. Legacy labels resolve to it as exact, case-sensitive aliases. |
+| Alias            | Another exact label (such as `Farmagate`) that resolves to a Station ID. No case folding or guessing.                                                     |
+| Unknown fare     | Explicit result with no amount (`unknown-station` or `no-fare-entry`); never zero. Distinct from the same-station zero fare.                              |
+| Baseline dataset | Versioned `baseline-v1` module of the 16 stations and 256 fares copied from the legacy snapshot.                                                          |

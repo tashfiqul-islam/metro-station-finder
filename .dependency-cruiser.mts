@@ -10,6 +10,14 @@ export default {
       to: { pathNot: "^packages/core/", dependencyTypesNot: ["core"] },
     },
     {
+      name: "core-domain-imports-only-domain",
+      comment:
+        "Station, Coordinate, Fare and distance types live in core's domain layer, which imports only itself (not core application or data).",
+      severity: "error",
+      from: { path: "^packages/core/src/domain/" },
+      to: { pathNot: "^packages/core/src/domain/", dependencyTypesNot: ["core"] },
+    },
+    {
       name: "contracts-imports-only-core-and-schema-library",
       comment: "Contracts may import core and the Standard Schema library (valibot) only.",
       severity: "error",
