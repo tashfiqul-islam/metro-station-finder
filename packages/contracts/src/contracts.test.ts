@@ -61,3 +61,35 @@ test("FND-R4 error envelope accepts { error: { code, message } } only", () => {
   ] as const)
     expect(() => parseErrorEnvelope(body)).toThrow(reason);
 });
+
+// ADR-0013 (b): response schemas stay strict for now. These tests pin that. A later move to
+// tolerant readers (accepting unknown response fields) must change them on purpose, through a
+// new ADR and an owner decision, not by loosening an assertion here.
+test("METRO-53 ADR-0013 a response with an extra field is rejected by the strict response schema", () => {
+  const withExtra = { kind: "synthetic-scaffold", ready: true, addedLater: "x" };
+  expect(() => parseScaffoldStatus(withExtra)).toThrow('Expected never but received "addedLater"');
+  const errorWithExtra = { error: { code: "not_found", message: "m" }, requestId: "r" };
+  expect(() => parseErrorEnvelope(errorWithExtra)).toThrow(
+    'Expected never but received "requestId"',
+  );
+});
+
+test("METRO-53 ADR-0013 a response field of the wrong type is rejected", () => {
+  expect(() => parseScaffoldStatus({ kind: "synthetic-scaffold", ready: "true" })).toThrow(
+    'Expected true but received "true"',
+  );
+  expect(() => parseScaffoldStatus({ kind: 1, ready: true })).toThrow(
+    'Expected "synthetic-scaffold" but received 1',
+  );
+  expect(() => parseErrorEnvelope({ error: { code: "a", message: 1 } })).toThrow(
+    "Expected string but received 1",
+  );
+});
+
+test("METRO-53 ADR-0013 contract objects are strict_object, the rule request schemas must follow", () => {
+  // No request schema exists yet (the only route is GET). A request schema added later must also
+  // be a v.strictObject; ADR-0013 keeps requests strict.
+  expect(scaffoldStatusSchema.pipe[0].type).toBe("strict_object");
+  expect(errorEnvelopeSchema.pipe[0].type).toBe("strict_object");
+  expect(errorEnvelopeSchema.pipe[0].entries.error.type).toBe("strict_object");
+});
