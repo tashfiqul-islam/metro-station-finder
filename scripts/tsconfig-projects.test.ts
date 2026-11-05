@@ -82,3 +82,31 @@ test("METRO-26 every tracked TypeScript file belongs to a referenced project", a
     .filter((file) => !file.endsWith(".d.ts") && !owned.has(file));
   expect(orphans).toEqual([]);
 }, 120000);
+
+/**
+ * METRO-56 / ADR-0015. The shared compiler policy stays in one root `tsconfig.base.json` that every
+ * project config reaches by a relative `extends`. `references` is never inherited and include globs
+ * belong to each project, so the base carries compiler options only.
+ */
+async function readConfig(file: string): Promise<Record<string, unknown>> {
+  const parsed: unknown = JSON.parse(await readFile(file, "utf8"));
+  if (!isRecord(parsed)) throw new Error(`${file} is not an object`);
+  return parsed;
+}
+
+test("METRO-56 every project config extends the root tsconfig.base.json by a relative path", async () => {
+  const base = join(root, "tsconfig.base.json");
+  const projects = await referencedConfigs();
+  expect(projects.length).toBeGreaterThan(0);
+  for (const project of projects) {
+    const extended = (await readConfig(project))["extends"];
+    if (typeof extended !== "string") throw new Error(`${project} has no extends`);
+    expect(extended.startsWith("./") || extended.startsWith("../")).toBe(true);
+    expect(resolve(project, "..", extended)).toBe(base);
+  }
+});
+
+test("METRO-56 the root tsconfig.base.json holds compiler options only", async () => {
+  const base = await readConfig(join(root, "tsconfig.base.json"));
+  expect(Object.keys(base)).toEqual(["compilerOptions"]);
+});
