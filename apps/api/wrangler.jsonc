@@ -9,9 +9,8 @@
   // or platform defaults (METRO-43, docs/agents/observability.md). The app's own request line is the one log per request.
   "observability": {
     "enabled": true,
-    "head_sampling_rate": 1,
     "redact_query_string": true,
-    "logs": { "invocation_logs": false },
+    "logs": { "enabled": true, "head_sampling_rate": 1, "invocation_logs": false },
     "traces": { "enabled": false },
   },
   // `directory` is supplied by @cloudflare/vite-plugin (the client build output).
@@ -30,9 +29,8 @@
       "preview_urls": false,
       "observability": {
         "enabled": true,
-        "head_sampling_rate": 1,
         "redact_query_string": true,
-        "logs": { "invocation_logs": false },
+        "logs": { "enabled": true, "head_sampling_rate": 1, "invocation_logs": false },
         "traces": { "enabled": false },
       },
     },
