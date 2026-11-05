@@ -1,0 +1,6 @@
+/* Programmatic focus (the error fallback takes focus on mount) must be visible: browsers often hide the
+   default ring for script focus on a non-interactive element. Not tied to :focus-visible on purpose. */
+[tabindex="-1"]:focus {
+  outline: 3px solid CanvasText;
+  outline-offset: 2px;
+}
