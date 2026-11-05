@@ -41,7 +41,7 @@ test("METRO-36 it has its own per-pull-request concurrency group, not the Qualit
   const { doc } = parsed();
   expect(doc["concurrency"]).toEqual({
     group: "reviewer-record-${{ github.event.pull_request.number }}",
-    "cancel-in-progress": true,
+    "cancel-in-progress": "${{ github.event_name == 'pull_request' }}",
   });
 });
 
