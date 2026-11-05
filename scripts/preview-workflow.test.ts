@@ -74,7 +74,8 @@ test("METRO-13 untrusted-code triggers and fork or bot runs are excluded", () =>
     expect(text).not.toContain("pull_request_target");
     expect(text).not.toContain("workflow_run");
   }
-  expect(job(quality, "preview")).toContain("github.actor != 'dependabot[bot]'");
+  expect(job(quality, "preview")).toContain("!endsWith(github.actor, '[bot]')");
+  expect(job(quality, "preview")).not.toContain("dependabot[bot]");
   expect(job(quality, "preview").split("steps:")[0]).toContain("head.repo.full_name");
   expect(job(cleanup, "cleanup").split("steps:")[0]).toContain("head.repo.full_name");
 });

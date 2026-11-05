@@ -174,3 +174,137 @@ test("FND-S5 range mode accepts an empty range (nothing to validate)", async () 
     await rm(root, { recursive: true, force: true });
   }
 }, 60000);
+
+const agentTrailer = "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>";
+
+test("METRO-52 accepts the agent Co-Authored-By trailer and human-only messages", () => {
+  expect(validateMessage(`feat: add x\n\nBody.\n\n${agentTrailer}\n`)).toBeNull();
+  expect(validateMessage("feat: add x\n")).toBeNull();
+  expect(
+    validateMessage("feat: add x\n\nSigned-off-by: Alice Human <alice@example.com>\n"),
+  ).toBeNull();
+  expect(
+    validateMessage("feat: add x\n\nCo-authored-by: Bob Human <bob@example.com>\n"),
+  ).toBeNull();
+});
+
+const signedBy = (value: string) => `feat: add x\n\nSigned-off-by: ${value}\n`;
+
+test("METRO-52 rejects a Signed-off-by with an agent email, whatever the name", () => {
+  for (const value of [
+    "Claude Sonnet 5.5 <noreply@anthropic.com>",
+    "Alice <noreply@anthropic.com>",
+    "Alice <NoReply@Anthropic.com>",
+    "claude[bot] <209825114+claude[bot]@users.noreply.github.com>",
+    "Copilot <198982749+Copilot@users.noreply.github.com>",
+    "copilot-swe-agent[bot] <198982749+copilot-swe-agent[bot]@users.noreply.github.com>",
+  ]) {
+    expect(validateMessage(signedBy(value)), value).toContain("docs/agents/attribution.md");
+  }
+});
+
+test("METRO-52 accepts a Signed-off-by from a person or an ordinary bot", () => {
+  for (const value of [
+    "Claude Monet <claude@example.org>",
+    "Gemini Patel <gemini.patel@example.com>",
+    "Cursor Smith <a@gemini.example.com>",
+    "Aider Jones <aider@example.com>",
+    "Alice <alice@notanthropic.com>",
+    "Alice <noreply@anthropic.com.evil.example>",
+    "Alice <12345+claude@users.noreply.github.com>",
+    "renovate[bot] <29139614+renovate[bot]@users.noreply.github.com>",
+    "dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+    "No email at all",
+  ])
+    expect(validateMessage(signedBy(value)), value).toBeNull();
+});
+
+test("METRO-52 a human Signed-off-by beside an agent Co-Authored-By is allowed", () => {
+  expect(
+    validateMessage(
+      `feat: add x\n\nBody.\n\n${agentTrailer}\nSigned-off-by: Alice Human <alice@example.com>\n`,
+    ),
+  ).toBeNull();
+});
+
+test("METRO-52 finds an agent Signed-off-by in loose, folded and CRLF final paragraphs", () => {
+  const agent = "Signed-off-by: Claude <noreply@anthropic.com>";
+  const cases = {
+    "prose line in the same paragraph": `feat: add x\n\nReviewed locally\n${agent}\n`,
+    "no space after the colon": "feat: add x\n\nSigned-off-by:Claude <noreply@anthropic.com>\n",
+    "mixed-case key": "feat: add x\n\nsIgNeD-oFf-By: Claude <noreply@anthropic.com>\n",
+    "space before the colon": "feat: add x\n\nSigned-off-by : Claude <noreply@anthropic.com>\n",
+    "CRLF message":
+      "feat: add x\r\n\r\nBody.\r\n\r\nSigned-off-by: Claude <noreply@anthropic.com>\r\n",
+    "folded line": "feat: add x\n\nSigned-off-by: Claude\n <noreply@anthropic.com>\n",
+    "after a comment line": `feat: add x\n\n# note\n${agent}\n`,
+  };
+  for (const [name, message] of Object.entries(cases))
+    expect(validateMessage(message), name).toContain("Signed-off-by");
+});
+
+test("METRO-52 ignores trailer-like text outside the final trailer block and comments", () => {
+  expect(
+    validateMessage(
+      "feat: add x\n\nSigned-off-by: Claude <c@example.com> is forbidden.\n\nMore prose.\n",
+    ),
+  ).toBeNull();
+  expect(
+    validateMessage("feat: add x\n\nBody.\n\n# Signed-off-by: Claude <c@example.com>\n"),
+  ).toBeNull();
+  expect(validateMessage("feat: Signed-off-by: Claude <noreply@anthropic.com>")).toBeNull();
+  // Only the last paragraph is scanned.
+  expect(
+    validateMessage(
+      "feat: add x\n\nSigned-off-by: Claude <noreply@anthropic.com>\n\nTrailing prose paragraph.\n",
+    ),
+  ).toBeNull();
+});
+
+test("METRO-52 range mode rejects an agent Signed-off-by in a commit body", async () => {
+  const { root, run, ok } = await repo();
+  try {
+    await writeFile(join(root, "a.txt"), "1\n");
+    ok(["git", "add", "."]);
+    ok(["git", "commit", "-m", "feat: base"]);
+    const base = ok(["git", "rev-parse", "HEAD"]).trim();
+    await writeFile(join(root, "a.txt"), "2\n");
+    ok(["git", "commit", "-am", "fix: good", "-m", agentTrailer]);
+    expect(run(["node", "scripts/commit-message.ts", "--range", `${base}..HEAD`]).exitCode).toBe(0);
+    await writeFile(join(root, "a.txt"), "3\n");
+    ok([
+      "git",
+      "commit",
+      "-am",
+      "fix: bad",
+      "-m",
+      `${agentTrailer}\nSigned-off-by: Claude <noreply@anthropic.com>`,
+    ]);
+    const result = run(["node", "scripts/commit-message.ts", "--range", `${base}..HEAD`]);
+    expect(result.exitCode).not.toBe(0);
+    expect(result.stderr.toString()).toContain("Signed-off-by");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}, 60000);
+
+test("METRO-52 range mode reads CRLF bodies and a multi-line subject like the hook", async () => {
+  const { root, run, ok } = await repo();
+  try {
+    await writeFile(join(root, "a.txt"), "1\n");
+    ok(["git", "add", "."]);
+    ok(["git", "commit", "-m", "feat: base"]);
+    const base = ok(["git", "rev-parse", "HEAD"]).trim();
+    await writeFile(join(root, "a.txt"), "2\n");
+    await writeFile(
+      join(root, "msg.txt"),
+      "fix: crlf\r\n\r\nBody.\r\n\r\nSigned-off-by: Claude <noreply@anthropic.com>\r\n",
+    );
+    ok(["git", "commit", "-a", "--cleanup=verbatim", "-F", "msg.txt"]);
+    const result = run(["node", "scripts/commit-message.ts", "--range", `${base}..HEAD`]);
+    expect(result.exitCode).not.toBe(0);
+    expect(result.stderr.toString()).toContain("Signed-off-by");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}, 60000);
