@@ -77,6 +77,10 @@ The other eleven stations have identical labels in both legacy arrays and need n
 - A3: Tests cover tie order (forward, reversed and duplicate-coordinate), invalid coordinates (NaN, out of range, both axes), empty dataset, unknown station, same-station fare and an unknown fare never being zero, including a malformed matrix cell (`stations.test.ts`).
 - A4: Given a core domain file that imports core application or data code, then dependency-cruiser fails with `core-domain-imports-only-domain` (`scripts/layering.test.ts`); application and data importing the domain passes.
 
+### Hardening
+
+`geographicDistanceKm` clamps the Haversine term to [0, 1] so near-antipodal rounding cannot produce NaN. `findNearestStation` skips any station whose distance is not finite, so a NaN never becomes the result. `validateDataset(dataset)` returns `{ ok: true }` or `{ ok: false, problems }` without throwing: unique station ids, no label shared across names and aliases, fare `order` equal to the station id list, a square matrix, zero diagonal, finite non-negative cells.
+
 ### Failure/boundary checks
 
 Latitude exactly ±90 and longitude exactly ±180 are accepted; just beyond is rejected. An exact-point origin returns that station at distance zero for all 16 stations. A fare cell that is missing, NaN or negative yields `no-fare-entry`, not zero. Differently cased or padded labels do not resolve.

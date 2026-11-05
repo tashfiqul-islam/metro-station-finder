@@ -56,6 +56,28 @@ describe("distances", () => {
     expect(geographicDistanceKm(a, b)).toBe(geographicDistanceKm(b, a));
   });
 
+  test("near-antipodal points give a finite distance of about half the circumference", () => {
+    const pairs: [Coordinate, Coordinate][] = [
+      [
+        { lat: -54.78937689394159, lng: 130.19944470249817 },
+        { lat: 54.78937689394159, lng: -49.80055529750183 },
+      ],
+      [
+        { lat: 2.2212046529304104, lng: 161.04264590176962 },
+        { lat: -2.2212046529304104, lng: -18.957354098230383 },
+      ],
+      [
+        { lat: 0, lng: 0 },
+        { lat: 0, lng: 180 },
+      ],
+    ];
+    for (const [a, b] of pairs) {
+      const km = Number(geographicDistanceKm(a, b));
+      expect(Number.isFinite(km)).toBe(true);
+      expect(km).toBeCloseTo(Math.PI * 6371, 3);
+    }
+  });
+
   test("geographic and walking distance are separate, non-interchangeable types", () => {
     const geographic: GeographicDistanceKm = geographicDistanceKm(origin, { lat: 0, lng: 1 });
     const walking: WalkingDistanceMeters = walkingDistanceMeters(1200);

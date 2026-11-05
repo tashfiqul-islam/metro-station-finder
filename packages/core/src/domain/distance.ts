@@ -19,13 +19,15 @@ export function geographicDistanceKm(from: Coordinate, to: Coordinate): Geograph
   const a =
     Math.sin(dLat / 2) ** 2 +
     Math.cos(toRadians(from.lat)) * Math.cos(toRadians(to.lat)) * Math.sin(dLng / 2) ** 2;
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the only place a brand is attached
-  return (EARTH_RADIUS_KM * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))) as GeographicDistanceKm;
+  // Rounding can push `a` just past 1 for near-antipodal points, which would make sqrt(1 - a) NaN.
+  const h = Math.min(1, Math.max(0, a));
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- brands are attached only in this module's two constructors
+  return (EARTH_RADIUS_KM * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h))) as GeographicDistanceKm;
 }
 
 export function walkingDistanceMeters(meters: number): WalkingDistanceMeters {
   if (!Number.isFinite(meters) || meters < 0)
     throw new RangeError("Walking distance must be a finite, non-negative number of metres");
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the only place a brand is attached
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- brands are attached only in this module's two constructors
   return meters as WalkingDistanceMeters;
 }

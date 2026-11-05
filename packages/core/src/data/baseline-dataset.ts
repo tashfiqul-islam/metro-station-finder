@@ -1,12 +1,6 @@
-import type { FareTable, Station } from "../domain/index.ts";
+import type { Station } from "../domain/index.ts";
 import { stationId } from "../domain/index.ts";
-
-export interface StationDataset {
-  readonly version: string;
-  readonly source: string;
-  readonly stations: readonly Station[];
-  readonly fares: FareTable;
-}
+import type { StationDataset } from "./validate-dataset.ts";
 
 function station(
   id: string,

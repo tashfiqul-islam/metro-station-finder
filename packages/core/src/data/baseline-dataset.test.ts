@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { findFare, findNearestStation, resolveStation } from "../application/stations.ts";
 import { stationId } from "../domain/index.ts";
 import { baselineDataset } from "./baseline-dataset.ts";
+import { validateDataset } from "./validate-dataset.ts";
 
 const { stations, fares } = baselineDataset;
 
@@ -47,6 +48,10 @@ describe("baseline dataset v1 (legacy af903d7)", () => {
   test("is versioned and names its provenance", () => {
     expect(baselineDataset.version).toBe("baseline-v1");
     expect(baselineDataset.source).toContain("af903d7a2c1bf08165cfcf4a00ca0c0d73eedead");
+  });
+
+  test("passes the dataset validator", () => {
+    expect(validateDataset(baselineDataset)).toEqual({ ok: true });
   });
 
   test("has 16 stations with unique ids, and no label shared by two stations", () => {

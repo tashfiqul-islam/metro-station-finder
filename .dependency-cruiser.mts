@@ -12,7 +12,7 @@ export default {
     {
       name: "core-domain-imports-only-domain",
       comment:
-        "Station, Coordinate, Fare and distance types live in core's domain layer, which imports only itself (not core application or data).",
+        "Station, Coordinate, Fare and distance types live in core's domain layer, which imports only itself (not core application or data). Like the core rule, Node built-ins are allowed.",
       severity: "error",
       from: { path: "^packages/core/src/domain/" },
       to: { pathNot: "^packages/core/src/domain/", dependencyTypesNot: ["core"] },

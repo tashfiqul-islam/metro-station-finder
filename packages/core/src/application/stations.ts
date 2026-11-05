@@ -35,6 +35,7 @@ export function findNearestStation(
   let best: { station: Station; distance: GeographicDistanceKm } | undefined;
   for (const station of stations) {
     const distance = geographicDistanceKm(checked.coordinate, station.coordinate);
+    if (!Number.isFinite(distance)) continue;
     if (best === undefined || distance < best.distance) best = { station, distance };
   }
   if (best === undefined) return { kind: "no-result", reason: "empty-dataset" };

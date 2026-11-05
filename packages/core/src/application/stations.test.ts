@@ -63,6 +63,16 @@ describe("findNearestStation", () => {
     });
   });
 
+  test("a station whose distance is not finite is skipped, never selected", () => {
+    const broken = station("broken", Number.NaN, 0);
+    const result = findNearestStation([broken, far], { lat: 0, lng: 0 });
+    expect(result.kind === "nearest" && result.station.id).toBe(far.id);
+    expect(findNearestStation([broken], { lat: 0, lng: 0 })).toEqual({
+      kind: "no-result",
+      reason: "empty-dataset",
+    });
+  });
+
   test("an invalid origin is reported even when the dataset is empty", () => {
     expect(findNearestStation([], { lat: 200, lng: 0 })).toMatchObject({
       reason: "invalid-coordinate",
