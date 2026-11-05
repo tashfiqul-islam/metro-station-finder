@@ -12,6 +12,7 @@ Preparation only. Do not publish or implement without the relevant authorization
 - Module: [native module UUID and URL]
 - Milestone: [native milestone UUID and URL]
 - Release: [native release UUID and URL, or explicit unassigned decision]
+- Labels: [exactly one `area:*`; any `quality:*` and status flags that apply, per the [Plane adapter](../agents/plane.md#labels)]
 - Required tools/data: [availability, fixtures, access]
 
 ## Acceptance criteria
