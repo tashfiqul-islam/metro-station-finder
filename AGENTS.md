@@ -15,6 +15,7 @@ Read this file, applicable ancestor/scoped instructions, [workflow](docs/agents/
 | Tool, dependency, deployment, release or rollback                                  | [Maintenance](docs/agents/maintenance.md)                                                                                                                               |
 | Completion or review                                                               | [Quality gates](docs/agents/quality-gates.md)                                                                                                                           |
 | Existing behavior or domain terms                                                  | [Parity](docs/product/feature-parity.md); [glossary](docs/product/glossary.md)                                                                                          |
+| Adding, moving or classifying a document under docs/                               | [Docs map](docs/README.md)                                                                                                                                              |
 
 Inspect relevant source, manifests, lockfiles and config first. Distinguish Confirmed, Inferred and Unknown; label technical claims Repo-verified, Context7-verified, Web-verified or Unverified. Record exact revision and checks. Verify package/API advice against installed versions and official Context7 docs; use official web sources when insufficient. Never claim unavailable skills, commands or gates ran.
 
