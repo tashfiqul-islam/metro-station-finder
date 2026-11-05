@@ -4,8 +4,8 @@
   "type": "module",
   "scripts": {
     "build": "wrangler deploy --dry-run --env= --config ../web/dist/metro_scaffold/wrangler.json --outdir dist",
-    "types": "wrangler types --include-runtime=false worker-configuration.d.ts -c wrangler.jsonc",
-    "types:check": "wrangler types --check --include-runtime=false worker-configuration.d.ts -c wrangler.jsonc"
+    "types": "wrangler types worker-configuration.d.ts -c wrangler.jsonc",
+    "types:check": "wrangler types --check worker-configuration.d.ts -c wrangler.jsonc"
   },
   "dependencies": {
     "@metro/contracts": "workspace:*",

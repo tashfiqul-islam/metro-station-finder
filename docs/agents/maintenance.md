@@ -63,3 +63,13 @@ Cloudflare has no first-party OIDC for wrangler, so preview (and later productio
 **Environment.** The `preview` environment has no protection rules, by owner decision ([evidence](../evidence/metro-cloudflare-preview.md)), so scheduled and manual runs use it as configured. Warning: if required reviewers are ever added to `preview`, this alarm would wait for approval and stop being an alarm, and so would every preview deploy; keep the alarm and the deploys on an environment without reviewers. The environment's deployment-branch policy has not been verified (the evidence records none set). Any branch allowed to use `preview` can read the token, the same exposure PR previews already have; keep the token scoped to the one account.
 
 Accepted checks for this procedure are in `scripts/cloudflare-token-check.test.ts` and `scripts/cloudflare-token-check-workflow.test.ts`. The live workflow has not been run: it needs the workflow registered on the default branch (or dispatched from a branch the `preview` environment accepts) and the owner's go-ahead to use the real secret. Each verify request times out after 15 seconds.
+
+## Wrangler types check on Windows
+
+Wrangler 4.156.1 fixed `wrangler types --check` failing on CRLF checkouts (audit row RT-17). Installed when METRO-49 was decided: wrangler 4.156.0, which predates the fix; the newest published was 4.157.0. Bumping was out of scope there ([ADR-0014](../adr/0014-language-level-and-worker-types.md)).
+
+Re-test after the next wrangler bump, on Windows, in a checkout with `core.autocrlf=true` (CRLF working files):
+
+1. `mise exec -- bun run bootstrap`, then confirm `bunx wrangler --version` is at least 4.156.1.
+2. `mise exec -- bun run --cwd apps/api types`, then `mise exec -- bun run types:check`. It must report the types as up to date. Re-checking out `apps/api/worker-configuration.d.ts` with CRLF endings (delete it and `git checkout` it) and running `types:check` again must still pass.
+3. Commit the regenerated file if its runtime header changed. Record the result in the bump's ticket and delete this step if it passed.
