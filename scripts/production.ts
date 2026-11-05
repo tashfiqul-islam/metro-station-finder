@@ -293,10 +293,29 @@ export type GhRunner = (args: readonly string[]) => string;
 const runGh: GhRunner = (args) =>
   execFileSync("gh", [...args], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
 
+/** Everything a failed `gh api` call says: the error message plus the stderr and stdout `execFileSync` attaches. */
+function streamText(part: unknown): string {
+  return typeof part === "string" ? part : Buffer.isBuffer(part) ? part.toString("utf8") : "";
+}
+
+function failureText(error: unknown): string {
+  if (!(error instanceof Error)) return String(error);
+  const parts = [error.message, Reflect.get(error, "stderr"), Reflect.get(error, "stdout")];
+  return parts.map((part) => streamText(part)).join("\n");
+}
+
+/** HTTP 404, or HTTP 422 whose message is "Validation Failed": the shapes GitHub uses for "no organization". */
+function meansNoOrganization(text: string): boolean {
+  return (
+    /\bHTTP 404\b/u.test(text) || (/\bHTTP 422\b/u.test(text) && /Validation Failed/u.test(text))
+  );
+}
+
 /**
  * Read-only: nine `gh api` GET calls. A failed read becomes a `FAIL read <path>` line and a null answer
- * (which the evaluation then fails too), never an exception. A 404 on the organization endpoints means
- * the repository has no organization (a personal account) and counts as an empty list.
+ * (which the evaluation then fails too), never an exception. On the organization endpoints only, a 404 or
+ * a 422 "Validation Failed" means the repository has no organization (a personal account) and counts as an
+ * empty list (METRO-66: GitHub answered 422 for tashfiqul-islam/metro-station-finder on 2026-11-05).
  */
 export function checkSettings(repo: string, gh: GhRunner): { ok: boolean; lines: string[] } {
   if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/u.test(repo))
@@ -307,7 +326,7 @@ export function checkSettings(repo: string, gh: GhRunner): { ok: boolean; lines:
       return JSON.parse(gh(["api", path]));
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      if (emptyWhenMissing && message.includes("HTTP 404"))
+      if (emptyWhenMissing && meansNoOrganization(failureText(error)))
         return { total_count: 0, secrets: [], variables: [] };
       failures.push(`FAIL read ${path.split("?")[0] ?? path}: ${message.split("\n")[0] ?? ""}`);
       return null;

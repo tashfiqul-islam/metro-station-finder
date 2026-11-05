@@ -258,3 +258,82 @@ test("METRO-57 check-settings rejects a bad repository argument and a missing on
   );
   await expectRejection(runProductionCli(["check-settings"], {}, {}, gh), "usage");
 });
+
+const ORG_PATHS = [
+  "repos/o/r/actions/organization-secrets?per_page=100",
+  "repos/o/r/actions/organization-variables?per_page=100",
+];
+
+/** What `execFileSync("gh", ...)` throws for a failed call: message, stderr text and the JSON body on stdout. */
+function ghFailure(status: number, message: string): Error {
+  const body = JSON.stringify({
+    message,
+    documentation_url: "https://docs.github.com/rest",
+    status: String(status),
+  });
+  return Object.assign(new Error(`Command failed: gh api x\ngh: ${message} (HTTP ${status})\n`), {
+    stderr: `gh: ${message} (HTTP ${status})\n`,
+    stdout: body,
+  });
+}
+
+test("METRO-66 a 422 Validation Failed on the organization endpoints means no organization", async () => {
+  // Observed live 2026-11-05 on a personal-account repository.
+  for (const path of ORG_PATHS) {
+    const { gh } = fakeGh({ [path]: ghFailure(422, "Validation Failed") });
+    const output = await runProductionCli(["check-settings", "o/r"], {}, {}, gh);
+    expect(output.split("\n").every((line) => line.startsWith("PASS "))).toBe(true);
+    expect(output).toContain("PASS no organization");
+  }
+  const both = fakeGh(
+    Object.fromEntries(ORG_PATHS.map((p) => [p, ghFailure(422, "Validation Failed")])),
+  );
+  const output = await runProductionCli(["check-settings", "o/r"], {}, {}, both.gh);
+  expect(output.split("\n")).toHaveLength(12);
+  // The status line alone (no stdout body) is enough.
+  const bare = fakeGh({ [ORG_PATHS[0] ?? ""]: new Error("gh: Validation Failed (HTTP 422)") });
+  expect(await runProductionCli(["check-settings", "o/r"], {}, {}, bare.gh)).toContain("PASS");
+  // A real 404 still counts as none.
+  const missing = fakeGh({ [ORG_PATHS[1] ?? ""]: ghFailure(404, "Not Found") });
+  expect(await runProductionCli(["check-settings", "o/r"], {}, {}, missing.gh)).toContain("PASS");
+});
+
+test("METRO-66 other errors on the organization endpoints still fail closed", async () => {
+  const errors = [
+    ghFailure(403, "Forbidden"),
+    ghFailure(500, "Server Error"),
+    ghFailure(422, "Unprocessable: something else"),
+    new Error("getaddrinfo ENOTFOUND api.github.com"),
+    new Error("HTTP 4220 Validation Failed"),
+  ];
+  for (const path of ORG_PATHS) {
+    for (const error of errors) {
+      const { gh } = fakeGh({ [path]: error });
+      await expectRejection(
+        runProductionCli(["check-settings", "o/r"], {}, {}, gh),
+        `FAIL read ${path.split("?")[0] ?? path}`,
+      );
+    }
+  }
+});
+
+test("METRO-66 a 422 or 404 on a non-organization endpoint is still a FAIL", async () => {
+  const paths = [
+    "users/tashfiqul-islam",
+    "repos/o/r/environments/production",
+    "repos/o/r/environments/production/deployment-branch-policies?per_page=100",
+    "repos/o/r/actions/secrets?per_page=100",
+    "repos/o/r/actions/variables?per_page=100",
+    "repos/o/r/environments/production/secrets?per_page=100",
+    "repos/o/r/environments/production/variables?per_page=100",
+  ];
+  for (const path of paths) {
+    for (const error of [ghFailure(422, "Validation Failed"), ghFailure(404, "Not Found")]) {
+      const { gh } = fakeGh({ [path]: error });
+      await expectRejection(
+        runProductionCli(["check-settings", "o/r"], {}, {}, gh),
+        `FAIL read ${path.split("?")[0] ?? path}`,
+      );
+    }
+  }
+});
