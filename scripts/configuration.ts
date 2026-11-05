@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { isRecord } from "./guards.ts";
+import { validateMiseLock } from "./mise-lock.ts";
 import { exactToolVersion } from "./tool-pins.ts";
 
 function record(value: unknown, name: string): Record<string, unknown> {
@@ -32,6 +33,7 @@ export async function validateConfiguration(root: string): Promise<void> {
       );
   }
   for (const tool of ["gitleaks", "actionlint", "zizmor"]) exactToolVersion(tools, tool);
+  await validateMiseLock(root, mise, tools);
   for (const [name, task] of Object.entries(record(mise["tasks"], "mise.toml tasks"))) {
     const description = record(task, `mise.toml tasks.${name}`)["description"];
     if (typeof description !== "string" || description.trim() === "")

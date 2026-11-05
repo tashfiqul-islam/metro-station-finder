@@ -2,7 +2,7 @@
 
 Status: Repo-verified configuration. Hosted execution and remote enforcement require controller verification.
 
-Use `mise install`, then `mise exec -- bun run bootstrap` for the exact tool pins and frozen dependencies. Install repository hooks with `mise exec -- hk install --mise` in each checkout, including linked worktrees. This writes local Git hook configuration (Git 2.54+) or legacy shims; it does not enforce remote policy. Keep mise available on PATH. No global hook install required.
+Use `mise install --locked`, then `mise exec -- bun run bootstrap` for the exact tool pins and frozen dependencies. Install repository hooks with `mise exec -- hk install --mise` in each checkout, including linked worktrees. This writes local Git hook configuration (Git 2.54+) or legacy shims; it does not enforce remote policy. Keep mise available on PATH. No global hook install required.
 
 `hk.pkl` pins schema 2.11.0; mise pins hk 2.11.0 / Pkl 0.32.2. Pre-commit stashes unstaged edits, runs canonical `bun run check:fast` against the staged snapshot, then restores edits on success or failure. It never auto-fixes or stages changes. Format and lint also read untracked files, so unrelated untracked scratch files can fail pre-commit; this fails safe. Pre-push runs canonical `check`, `build`, `smoke`, `bundle:check` and `scan`. A `commit-msg` hook runs `scripts/commit-message.ts` and rejects subjects that are not Conventional Commits (`feat|fix|refactor|docs|test|chore|perf|ci|style|build|revert`, optional scope and `!`); Git merge and revert subjects pass. CI validates every commit in the PR range with the same script (`--range base..head`). Hooks are local feedback and can be bypassed; CI is authoritative.
 
