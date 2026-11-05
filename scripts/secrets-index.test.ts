@@ -1,4 +1,3 @@
-import { expect, test } from "bun:test";
 import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
@@ -250,7 +249,7 @@ test(
       expect(() => objectSizes(root, [tree])).toThrow("not a readable blob");
       expect(() => objectSizes(root, ["0".repeat(object.length)])).toThrow("not a readable blob");
       const wrong = new Map([[object, 999]]);
-      expect(() => readChunk(root, [object], wrong)).toThrow();
+      expect(() => readChunk(root, [object], wrong)).toThrow("Index object changed size");
     }),
   30000,
 );

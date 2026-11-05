@@ -1,4 +1,3 @@
-import { expect, test } from "bun:test";
 import { readdir, readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 

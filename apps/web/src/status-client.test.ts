@@ -1,5 +1,3 @@
-import { expect, test } from "bun:test";
-
 import { fetchScaffoldStatus } from "./status-client";
 
 const json = (body: unknown, init: ResponseInit = {}) =>

@@ -1,4 +1,3 @@
-import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -12,7 +11,7 @@ test("METRO-34 the tag rule examples in the policy match the code that enforces 
   for (const tag of ["v1.0.0", "v0.0.2", "v1.0.0-rc.1", "v1.2.0-beta.2", "v10.20.30"])
     expect(validateTag(tag)).toBe(tag);
   for (const tag of ["1.0.0", "v1.0", "v01.0.0", "v1.0.0+build.5", "V1.0.0", "v1.0.0-", "main"])
-    expect(() => validateTag(tag)).toThrow();
+    expect(() => validateTag(tag)).toThrow("Tag must look like");
   expect(policy).toContain("`v<major>.<minor>.<patch>-<prerelease>`");
   expect(policy).toContain("`v1.0.0-rc.1`");
 });

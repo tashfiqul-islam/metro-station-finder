@@ -1,5 +1,3 @@
-import { afterEach, beforeEach, expect, spyOn, test } from "bun:test";
-
 import {
   checkCloudflareToken,
   cloudflareTokenCheckMain,
@@ -282,7 +280,7 @@ test("METRO-33 a network failure is reported without the secret", async () => {
 });
 
 test("METRO-33 the entry point names a missing variable and sets a failing exit code", async () => {
-  const errors = spyOn(console, "error").mockImplementation(() => {});
+  const errors = jest.spyOn(console, "error").mockImplementation(() => {});
   try {
     for (const name of ["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID"]) {
       const env: Record<string, string | undefined> = {
@@ -304,7 +302,7 @@ test("METRO-33 the entry point names a missing variable and sets a failing exit 
 
 test("METRO-33 the entry point defaults to the real fetch and console", async () => {
   const requests: string[] = [];
-  const logs = spyOn(console, "log").mockImplementation(() => {});
+  const logs = jest.spyOn(console, "log").mockImplementation(() => {});
   const fake = Object.assign(
     (input: string | Request | URL) => {
       requests.push(typeof input === "string" ? input : "non-string request");
@@ -312,7 +310,7 @@ test("METRO-33 the entry point defaults to the real fetch and console", async ()
     },
     { preconnect: () => {} },
   );
-  const network = spyOn(globalThis, "fetch").mockImplementation(fake);
+  const network = jest.spyOn(globalThis, "fetch").mockImplementation(fake);
   try {
     await cloudflareTokenCheckMain({
       CLOUDFLARE_API_TOKEN: SECRET,
@@ -328,7 +326,7 @@ test("METRO-33 the entry point defaults to the real fetch and console", async ()
 });
 
 test("METRO-33 the entry point passes on a good token and fails with a clear message on a bad one", async () => {
-  const errors = spyOn(console, "error").mockImplementation(() => {});
+  const errors = jest.spyOn(console, "error").mockImplementation(() => {});
   try {
     const env = { CLOUDFLARE_API_TOKEN: SECRET, CLOUDFLARE_ACCOUNT_ID: ACCOUNT };
     const ok = accountOnly(() => reply(200, verified("active", 90)));

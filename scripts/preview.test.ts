@@ -1,4 +1,3 @@
-import { expect, spyOn, test } from "bun:test";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -83,8 +82,24 @@ test("METRO-13 the URL must belong to the Worker that was deployed", () => {
 });
 
 test("METRO-13 smoke passes for a healthy preview serving the checked commit", async () => {
-  await smokePreview(base, SHA, { ...fast, fetch: serve({}) });
-  await smokePreview(`${base}/`, undefined, { ...fast, fetch: serve({}) });
+  const requested: string[] = [];
+  const recording = (input: string) => {
+    requested.push(input);
+    return serve({})(input);
+  };
+  await smokePreview(base, SHA, { ...fast, fetch: recording });
+  expect(requested).toEqual([
+    `${base}/`,
+    `${base}/api/scaffold/status`,
+    `${base}/api/does-not-exist`,
+  ]);
+  requested.length = 0;
+  await smokePreview(`${base}/`, undefined, { ...fast, fetch: recording });
+  expect(requested).toEqual([
+    `${base}/`,
+    `${base}/api/scaffold/status`,
+    `${base}/api/does-not-exist`,
+  ]);
 });
 
 test("METRO-13 smoke fails visibly for each broken observation", async () => {
@@ -152,22 +167,25 @@ test("METRO-13 smoke gives up after the attempts and keeps the cause", async () 
 });
 
 test("METRO-13 previewMain prints, records step outputs and fails the step on error", async () => {
-  const log = spyOn(console, "log").mockImplementation(() => {});
-  const error = spyOn(console, "error").mockImplementation(() => {});
+  const log = jest.spyOn(console, "log").mockImplementation(() => {});
+  const error = jest.spyOn(console, "error").mockImplementation(() => {});
   const directory = await mkdtemp(join(tmpdir(), "metro-preview-main-"));
+  const previous = process.exitCode;
+  process.exitCode = 0;
   try {
     const output = join(directory, "output");
     await previewMain(["name"], { PR_NUMBER: "9", GITHUB_OUTPUT: output });
     expect(await readFile(output, "utf8")).toBe("name=metro-scaffold-pr-9\n");
     await previewMain(["secrets"], { CLOUDFLARE_API_TOKEN: "a", CLOUDFLARE_ACCOUNT_ID: "b" });
-    expect(process.exitCode ?? 0).toBe(0);
+    expect(process.exitCode).toBe(0);
     await previewMain(["secrets"], {});
     expect(process.exitCode).toBe(1);
     expect(String(error.mock.calls[0]?.[0])).toContain("Missing");
     await previewMain(["bogus"], {});
-    expect(log).toHaveBeenCalled();
+    expect(error).toHaveBeenLastCalledWith('Unknown command "bogus"');
+    expect(log).toHaveBeenCalledWith("metro-scaffold-pr-9");
   } finally {
-    process.exitCode = 0;
+    process.exitCode = previous ?? 0;
     log.mockRestore();
     error.mockRestore();
     await rm(directory, { recursive: true, force: true });
@@ -218,7 +236,7 @@ test("METRO-13 deployments are counted from a JSON array and anything else fails
   expect(countDeployments("[]")).toBe(0);
   expect(countDeployments('[{"id":"a"},{"id":"b"}]')).toBe(2);
   expect(() => countDeployments('{"id":"a"}')).toThrow("JSON array");
-  expect(() => countDeployments("not json")).toThrow();
+  expect(() => countDeployments("not json")).toThrow("JSON");
   await expectRejection(runPreviewCli(["deployments"], {}), "usage");
   const directory = await mkdtemp(join(tmpdir(), "metro-preview-count-"));
   try {

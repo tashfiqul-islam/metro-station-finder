@@ -1,5 +1,3 @@
-import { expect, test } from "bun:test";
-
 import { parseErrorEnvelope } from "@metro/contracts";
 
 import { createApp } from "./app";

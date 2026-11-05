@@ -1,4 +1,3 @@
-import { expect, spyOn, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -121,7 +120,7 @@ test("METRO-62 main prints the value when GITHUB_OUTPUT is unset and never throw
 });
 
 test("METRO-62 the default reader fails safe on commits that do not exist", () => {
-  const spy = spyOn(console, "log").mockImplementation(() => {});
+  const spy = jest.spyOn(console, "log").mockImplementation(() => {});
   try {
     changedFilesMain(prEnv(BASE, HEAD));
     expect(spy).toHaveBeenCalledWith("docs_only=false");

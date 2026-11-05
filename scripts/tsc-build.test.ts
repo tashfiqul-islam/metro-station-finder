@@ -1,4 +1,3 @@
-import { expect, test } from "bun:test";
 import { cp, mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { join, relative, resolve, sep } from "node:path";
 
@@ -101,10 +100,12 @@ test("METRO-42 the base config enables erasableSyntaxOnly and no project turns i
   const baseOptions = base["compilerOptions"];
   if (!isRecord(baseOptions)) throw new Error("tsconfig.base.json has no compilerOptions");
   expect(baseOptions["erasableSyntaxOnly"]).toBe(true);
+  const overrides: string[] = [];
   for (const { config } of PROJECTS) {
     const options = (await readConfig(join(root, config)))["compilerOptions"];
-    if (isRecord(options)) expect(options["erasableSyntaxOnly"]).toBeUndefined();
+    if (isRecord(options) && options["erasableSyntaxOnly"] !== undefined) overrides.push(config);
   }
+  expect(overrides).toEqual([]);
 }, 30000);
 
 for (const [name, source] of [
@@ -167,8 +168,8 @@ for (const { config, fixture } of PROJECTS) {
         const result = typecheck(copy);
         expect(result.exitCode).not.toBe(0);
         expect(result.output).toContain(`${fixture}(1,14): error TS2322`);
-        for (const other of PROJECTS)
-          if (other.fixture !== fixture) expect(result.output).not.toContain(other.fixture);
+        for (const other of PROJECTS.filter((project) => project.fixture !== fixture))
+          expect(result.output).not.toContain(other.fixture);
       }),
     120000,
   );

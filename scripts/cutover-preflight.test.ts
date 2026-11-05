@@ -1,5 +1,3 @@
-import { expect, test } from "bun:test";
-
 import {
   assertReadOnly,
   formatReport,
@@ -149,18 +147,16 @@ test("METRO-34 preflight only issues read-only gh calls", async () => {
   const { gh, calls } = fakeGh();
   await runPreflight(gh, OPTIONS);
   expect(calls.length).toBeGreaterThan(8);
-  for (const args of calls) {
-    // Independent of assertReadOnly: only `gh api repos/...` or `gh pr list`, and no flag except
-    // --repo/--state/--json/--limit on the list.
-    if (args[0] === "api") {
-      expect(args.length).toBe(2);
-      expect(args[1]).toMatch(/^repos\//u);
-    } else {
-      expect(args.slice(0, 2)).toEqual(["pr", "list"]);
-      const flags = args.filter((arg) => arg.startsWith("-"));
-      expect(flags).toEqual(["--repo", "--state", "--json", "--limit"]);
-    }
-  }
+  // Independent of assertReadOnly: only `gh api repos/...` or `gh pr list`, and no flag except
+  // --repo/--state/--json/--limit on the list.
+  const apiCalls = calls.filter((args) => args[0] === "api");
+  const listCalls = calls.filter((args) => args[0] !== "api");
+  expect(apiCalls.map((args) => args.length)).toEqual(apiCalls.map(() => 2));
+  expect(apiCalls.filter((args) => !(args[1] ?? "").startsWith("repos/"))).toEqual([]);
+  expect(listCalls.map((args) => args.slice(0, 2))).toEqual(listCalls.map(() => ["pr", "list"]));
+  expect(listCalls.map((args) => args.filter((arg) => arg.startsWith("-")))).toEqual(
+    listCalls.map(() => ["--repo", "--state", "--json", "--limit"]),
+  );
 });
 
 test("METRO-34 every call the preflight makes is accepted by the read-only guard", async () => {
@@ -204,7 +200,9 @@ test("METRO-34 the read-only guard rejects writes and unknown commands", () => {
     ["repo", "delete", "o/r"],
     [],
   ]) {
-    expect(() => assertReadOnly(args)).toThrow();
+    expect(() => assertReadOnly(args)).toThrow(
+      `cutover-preflight is read-only; refusing gh ${args.join(" ")}`,
+    );
   }
   expect(() => assertReadOnly(["api", "repos/o/r"])).not.toThrow();
   expect(() =>

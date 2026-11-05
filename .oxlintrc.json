@@ -95,10 +95,49 @@
       "rules": {
         "eslint/no-console": "off",
         "eslint/no-await-in-loop": "off",
+        // METRO-50 test hygiene. Oxlint's jest rules recognise only Jest/Vitest imports, so a file that imports
+        // from "bun:test" is invisible to every jest/* rule (Repo-verified: oxlint 1.90.0; upstream oxc#23290).
+        // Tests therefore use Bun's injected globals (typed by bun-types/test-globals) and this ban keeps it so.
+        "eslint/no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "bun:test",
+                "message": "Use the injected test globals: the jest/* rules cannot see imports from bun:test."
+              }
+            ]
+          }
+        ],
+        // Rules that reject a test which runs code without proving anything:
+        // a test must assert (helpers that assert are listed), and never only in a branch or outside a test.
+        "jest/expect-expect": ["error", { "assertFunctionNames": ["expect", "expectRejection"] }],
+        "jest/no-conditional-expect": "error",
+        "jest/no-standalone-expect": "error",
+        // `expect(x, "message")` is Bun's documented custom failure message, so two arguments are valid.
+        "jest/valid-expect": ["error", { "maxArgs": 2 }],
+        // An un-awaited promise assertion never fails the test.
+        "jest/valid-expect-in-promise": "error",
+        // `toThrow()` passes on any error, including an unrelated one; the message pins the intended failure.
+        "jest/require-to-throw-message": "error",
+        // Tests that never run, or run alone and hide the rest of the suite.
         "jest/no-focused-tests": "error",
         "jest/no-disabled-tests": "error",
+        "jest/no-test-prefixes": "error",
+        "jest/no-commented-out-tests": "error",
+        // Titles identify failures and distinguish tests.
+        "jest/valid-title": "error",
         "jest/no-identical-title": "error",
-        "jest/valid-expect": "error"
+        "jest/valid-describe-callback": "error",
+        // A test file is not a module: exporting from it makes other files run its tests on import.
+        "jest/no-export": "error",
+        // Mistakes that make a test pass or hang for the wrong reason.
+        "jest/no-done-callback": "error",
+        "jest/no-duplicate-hooks": "error",
+        "jest/no-unneeded-async-expect-function": "error",
+        "jest/no-alias-methods": "error",
+        // `toHaveBeenCalled()` alone does not show what the spy was called with.
+        "jest/prefer-called-with": "error"
       }
     }
   ],

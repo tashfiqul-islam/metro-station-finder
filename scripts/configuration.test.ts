@@ -1,4 +1,3 @@
-import { expect, test } from "bun:test";
 import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -35,7 +34,7 @@ const spawnRenovate = (config: string) =>
 test("aligned required configuration passes", async () => {
   const root = await fixture();
   try {
-    await validateConfiguration(root);
+    expect(await validateConfiguration(root)).toBeUndefined();
   } finally {
     await rm(root, { recursive: true });
   }
@@ -237,7 +236,7 @@ test("FND-S2 accepts an equivalent Renovate duration in other units", async () =
     await editFile(root, ".github/renovate.json5", (source) =>
       source.replace('minimumReleaseAge: "3 days"', 'minimumReleaseAge: "72 hours"'),
     );
-    await validateConfiguration(root);
+    expect(await validateConfiguration(root)).toBeUndefined();
   } finally {
     await rm(root, { recursive: true });
   }
