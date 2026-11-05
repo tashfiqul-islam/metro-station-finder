@@ -4,6 +4,6 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/application/scaffold-status.ts"
+    ".": "./src/index.ts"
   }
 }

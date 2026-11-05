@@ -1,0 +1,108 @@
+# METRO-40: station domain model and nearest-station specification
+
+- Identity: METRO-40; revision 1, 2026-11-05.
+- Source: Plane work item fd4e032f-19aa-4e38-89f2-87307ff45fe7 (read as data; Plane was not written).
+- Decision owner and approval: the owner delegated the station ID scheme and alias list to the implementing agent ("decide and justify in the spec"). Display-name choices below are proposals that still need owner review; they are marked HITL.
+- Baseline: legacy commit `af903d7a2c1bf08165cfcf4a00ca0c0d73eedead`, read with `git show` only (`src/utils/constants.ts`, `src/services/fareCalculation.ts`, `src/services/metroServices.ts`); no legacy code was run.
+- Research: **Repo-verified** legacy behavior is recorded in [feature parity](../product/feature-parity.md) and the [glossary](../product/glossary.md). Haversine on a 6371 km sphere and WGS84 latitude/longitude ranges are standard definitions needing no library (**Unverified** against a current official source; no dependency was added, so nothing in the lockfile depends on them). Datum, coordinate accuracy, fare publisher and effective date remain **Unknown**.
+- Domain: [glossary](../product/glossary.md) (Station, Station identifier, Nearest, Geographic distance, Walking distance, Fare, Same station); parity requirements R2, R6, R7 and R8.
+- Problem and intended outcome: later slices (search, map, fare page, API) need one stable station identity and value types before feature code exists. The legacy app identifies stations by array position and exact strings, with five label mismatches between its two datasets.
+- Scope: core domain types (`Station`, `StationId`, `Coordinate`, `Fare`, `FareTable`, `UnknownFare`, `GeographicDistanceKm`, `WalkingDistanceMeters`), the pure functions `findNearestStation`, `resolveStation` and `findFare`, and the versioned baseline dataset `baselineDataset` (`baseline-v1`) under `packages/core/src/data`.
+- Exclusions: database, map or UI code, walking-route computation, geocoding or provider calls, API contracts, unit formatting (km versus miles), correcting any legacy value.
+- Constraints and contracts: core stays dependency-free and the domain layer imports only itself (dependency-cruiser rule `core-domain-imports-only-domain`, plus the existing `core-imports-only-core`). Fixtures are synthetic or the legacy baseline; no personal location.
+- Grouping: module 02 foundation; release v1.0.0, nothing published by this ticket.
+- Open decisions: see HITL items at the end.
+
+## Decision: station ID scheme
+
+**Chosen:** `StationId` is a branded string holding a lowercase ASCII kebab-case slug (`^[a-z0-9]+(-[a-z0-9]+)*$`), for example `uttara-north`, `mirpur-11`, `bangladesh-secretariat`.
+
+Why:
+
+- It is independent of array position, which is what the legacy matrix lookup depends on. Reordering or inserting a station cannot silently change fares.
+- It is readable in URLs, fixtures, logs and review diffs, and it needs no allocation service or database, matching the "no database" constraint.
+- The brand makes a plain string, a label or an index a compile error where an ID is required. `stationId()` and `isStationId()` validate at the boundary.
+- Rules: an ID is permanent once published, never reused for another station, and never changed by a spelling correction. A renamed station keeps its ID and gains the old label as an alias. A closed station keeps its ID retired.
+
+Rejected: numeric positional IDs (the legacy defect), UUIDs (opaque, need generation and carry no review value for 16 stations), and slugs of the legacy labels verbatim (they would bake the five mismatched spellings into permanent IDs).
+
+The slug is derived from the proposed canonical name, so for the five mismatched stations it follows the canonical spelling (`agargaon`, `farmgate`, `karwan-bazar`).
+
+## Decision: aliases and canonical names
+
+`Station.name` is the proposed canonical display name. `Station.aliases` holds other exact, case-sensitive labels that resolve to the same ID. `resolveStation` matches name or alias exactly and returns `undefined` for anything else; it never normalizes case or whitespace and never guesses.
+
+Positional correspondence is **Inferred**, not proven, that the five differing labels name the same station (the glossary records this). The mapping below is therefore a reviewed proposal, applied identically to the coordinate array and the fare array:
+
+| Position | ID             | Name (proposed) | Coordinate label (legacy) | Fare label (legacy) | Aliases        |
+| -------- | -------------- | --------------- | ------------------------- | ------------------- | -------------- |
+| 4        | `mirpur-11`    | Mirpur 11       | Mirpur 11                 | Mirpur - 11         | `Mirpur - 11`  |
+| 5        | `mirpur-10`    | Mirpur 10       | Mirpur 10                 | Mirpur - 10         | `Mirpur - 10`  |
+| 8        | `agargaon`     | Agargaon        | Agaragaon                 | Agargaon            | `Agaragaon`    |
+| 10       | `farmgate`     | Farmgate        | Farmagate                 | Farmgate            | `Farmagate`    |
+| 11       | `karwan-bazar` | Karwan Bazar    | Kawran Bazar              | Karwan Bazar        | `Kawran Bazar` |
+
+The other eleven stations have identical labels in both legacy arrays and need no alias.
+
+**Recorded mismatch (not silently changed):** the legacy Home result card would have shown `Agaragaon`, `Farmagate` and `Kawran Bazar` (coordinate labels) while the fare dropdown showed `Agargaon`, `Farmgate` and `Karwan Bazar`. The dataset's single `name` picks the fare-array spelling for those three (the conventional English spellings) and the coordinate-array form for the two Mirpur stations (no hyphen, matching the glossary). Coordinates and fares are copied unchanged. Both legacy labels stay resolvable as aliases, so no legacy lookup string becomes unknown. Which label the product displays is HITL below.
+
+## Types
+
+- `Coordinate { lat, lng }` in degrees. `parseCoordinate(lat, lng)` returns `{ ok: true, coordinate }` or `{ ok: false, reason }` where reason is `not-finite-number`, `latitude-out-of-range` (outside [-90, 90]) or `longitude-out-of-range` (outside [-180, 180]). The legacy service validated nothing (parity: "No coordinate validation"); validation is a deliberate, recorded behavior change that parity requirement R8 asks for.
+- `GeographicDistanceKm` and `WalkingDistanceMeters` are distinct branded numbers. Neither is assignable to the other or to a bare `number`. Only the geographic one is produced here (`geographicDistanceKm`, Haversine, R = 6371 km, the legacy formula). `walkingDistanceMeters` only validates a finite non-negative value; no routing exists in this slice.
+- `Fare { amount, currency: "BDT" }`. Zero is a legitimate fare for the same station (legacy diagonal).
+- `FareResult = { kind: "fare", fare } | UnknownFare`. `UnknownFare { kind: "unknown-fare", reason: "unknown-station" | "no-fare-entry" }` has no amount property, so an unknown fare can never be read, summed or displayed as zero (R6).
+- `FareTable { order, amounts }`: a square matrix addressed through `order`, so lookup is by `StationId`, never by position.
+
+## Slice METRO-40
+
+- Title and outcome: stable station identity, value types and the first nearest-station behavior exist in core before feature code.
+- Blocked by: none.
+- Required tools/data: the legacy snapshot above; Bun test runner; no network.
+
+### Nearest-station behavior
+
+- Ranking is by geographic (Haversine) distance only. It is not walking distance, walking time, accessibility or service availability.
+- **Tie order:** on exactly equal distance the station that appears first in the dataset array wins (strict less-than, identical to legacy). Dataset array order is therefore part of the contract; `baseline-v1` keeps the legacy order.
+- **Invalid input:** an origin that fails `parseCoordinate` returns `{ kind: "no-result", reason: "invalid-coordinate", detail }` and is checked before the dataset, so it is reported even when the dataset is empty.
+- **Empty dataset:** returns `{ kind: "no-result", reason: "empty-dataset" }`. The legacy code threw `No metro stations found`; core returns a value so callers cannot forget to handle it.
+- **Unknown station:** `resolveStation` returns `undefined`; `findFare` returns `unknown-fare` / `unknown-station` for either end. The legacy fare service threw `Station not found`.
+- **Same station:** `findFare(a, a)` is a real zero fare, kept distinct from "no selection" and from unknown (R6). The legacy UI could not reach this pair; the domain still defines it.
+- Success: `{ kind: "nearest", station, distance }` with `distance` a `GeographicDistanceKm`.
+
+### Acceptance
+
+- A1: Given the domain layer, when imported from `packages/core/src/domain`, then `Station`, `Coordinate` and `Fare` types are exported and geographic and walking distance are separate types that do not assign to each other (compile-time `@ts-expect-error` cases in `domain.test.ts`, checked by `tsc -b`).
+- A2: Given `baselineDataset`, then it has 16 stations with unique IDs, no label shared by two stations, a 16x16 symmetric fare table with a zero diagonal and 256 finite cells, legacy order and legacy endpoint values, and every legacy label from both arrays resolves to the station at its position (`baseline-dataset.test.ts`).
+- A3: Tests cover tie order (forward, reversed and duplicate-coordinate), invalid coordinates (NaN, out of range, both axes), empty dataset, unknown station, same-station fare and an unknown fare never being zero, including a malformed matrix cell (`stations.test.ts`).
+- A4: Given a core domain file that imports core application or data code, then dependency-cruiser fails with `core-domain-imports-only-domain` (`scripts/layering.test.ts`); application and data importing the domain passes.
+
+### Hardening
+
+`geographicDistanceKm` clamps the Haversine term to [0, 1] so near-antipodal rounding cannot produce NaN. `findNearestStation` skips any station whose distance is not finite, so a NaN never becomes the result. `validateDataset(dataset)` returns `{ ok: true }` or `{ ok: false, problems }` without throwing: unique station ids, no label shared across names and aliases, fare `order` equal to the station id list, a square matrix, zero diagonal, finite non-negative cells.
+
+### Failure/boundary checks
+
+Latitude exactly ±90 and longitude exactly ±180 are accepted; just beyond is rejected. An exact-point origin returns that station at distance zero for all 16 stations. A fare cell that is missing, NaN or negative yields `no-fare-entry`, not zero. Differently cased or padded labels do not resolve.
+
+### Testing seams
+
+- S1: `packages/core/src/domain` public exports (`domain.test.ts`).
+- S2: `findNearestStation`, `resolveStation`, `findFare` (`stations.test.ts`).
+- S3: `baselineDataset` fixture (`baseline-dataset.test.ts`).
+- S4: dependency-cruiser layering (`scripts/layering.test.ts`).
+
+### Check plan
+
+`mise exec -- bun run check` (format, type-aware lint, boundaries, import graph, Knip, tests with the per-file 90% coverage gate under randomized order, coverage scope, `tsc -b`). Each acceptance fails on the base commit: the domain, application and data modules do not exist there and the layering rule is absent.
+
+## Open decisions (HITL)
+
+- H1: which spelling the product displays for the five mismatched stations (this spec proposes the `name` column above); also whether Bangla names are wanted. IDs do not change either way.
+- H2: authoritative source, datum and effective date for coordinates and fares (still Unknown).
+- H3: whether the same-station zero fare should be exposed to users or only kept as a domain value.
+- H4: tie-breaking by dataset order is parity; a future ranking by walking distance would need its own specification.
+
+## Readiness record
+
+Reviewer: pending independent review. Acceptance is mapped to seams above. No unresolved blocker; H1 to H4 do not block this slice because IDs, aliases and legacy values are stable under any answer.
