@@ -7,6 +7,10 @@ on:
     # Quality gates run for cutover:preflight to read (ADR-0008 item 8). Remove it then, not before.
     branches: [feature/metro-rebuild, main]
 permissions: {}
+env:
+  # METRO-45: install tools only from mise.lock URLs and checksums (jdx/mise-action also adds --locked
+  # when mise.lock exists; this keeps it explicit).
+  MISE_LOCKED: "1"
 concurrency:
   group: quality-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true

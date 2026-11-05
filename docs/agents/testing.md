@@ -1,8 +1,6 @@
 # Testing and bugs
 
-Historical baseline: legacy implementation references and checks below concern commit `af903d7a2c1bf08165cfcf4a00ca0c0d73eedead`, not files or executable gates in this independent rebuild. See [rebuild boundary](../../README.md).
-
-**Confirmed / Repo-verified:** [manifest](https://github.com/tashfiqul-islam/metro-station-finder/blob/af903d7a2c1bf08165cfcf4a00ca0c0d73eedead/package.json) has no test script. The legacy baseline had no test runner.
+**Confirmed / Repo-verified (legacy baseline `af903d7`):** [manifest](https://github.com/tashfiqul-islam/metro-station-finder/blob/af903d7a2c1bf08165cfcf4a00ca0c0d73eedead/package.json) has no test script. The legacy baseline had no test runner.
 
 **Confirmed / Repo-verified:** the independent rebuild runs a layered, coverage-enforced suite: Bun unit, component and in-process API tests through root `check`, standalone typechecks, and Playwright Test E2E through `smoke`; CI runs all of them (see [quality gates](quality-gates.md)). See [commands and limits](../development.md). These checks do not prove product parity or full accessibility conformance.
 
@@ -27,6 +25,6 @@ Historical baseline: legacy implementation references and checks below concern c
 - E2E fixtures (`e2e/fixtures.ts`) apply to every test in every project: any console error or uncaught page error fails the test, and any page left open must have zero axe violations. A test that provokes an error on purpose declares it with the `allowedConsoleError` option.
 - Failures keep evidence: trace and screenshot on failure and an HTML report in `playwright-report/` (CI uploads both as the `playwright-report` artifact; the lcov file is the `coverage-lcov` artifact).
 
-For bugs reproduce observed failure before a fix; record base revision, expected behavior and smallest relevant source path. Read parity evidence for existing behavior and domain glossary for terms via [METRO-9](https://app.plane.so/metro-station-finder/browse/METRO-9/) while pending. Add API/UI/security/observability reads only when those boundaries are touched.
+For bugs reproduce observed failure before a fix; record base revision, expected behavior and smallest relevant source path. Read parity evidence for existing behavior and domain glossary for terms in [feature parity](../product/feature-parity.md) and the [glossary](../product/glossary.md). Add API/UI/security/observability reads only when those boundaries are touched.
 
 Retain settled test seams: deterministic domain/data fixtures, provider/contract boundaries, Workers integration and browser/accessibility journeys when their implementations exist. Cover invalid input, empty data, failed provider and recovery when relevant; use synthetic coordinates, never personal location. A failing regression should prove behavior, not mirror implementation. Do not weaken assertions or skip failures to pass. Record exact checks, fixtures, outcomes and omissions against [quality gates](quality-gates.md). Documentation tasks verify links, routing and scope without claiming app checks ran.

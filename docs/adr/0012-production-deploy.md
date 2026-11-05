@@ -1,6 +1,7 @@
 # ADR-0012: Production deploy with staged rollout, smoke and automatic rollback
 
 - Status: Accepted (2026-11-05). The workflow exists but is inert until the owner completes the [deploy runbook](../agents/deploy-runbook.md); nothing in this ADR deploys anything.
+- Date: 2026-11-05
 - Ticket: METRO-57. Decisions were delegated by the owner ("decide and justify"). Related: [ADR-0006](0006-cloudflare-preview.md) (preview), [ADR-0007](0007-release-sync.md) (release sync), [ADR-0008](0008-default-branch-switch.md) and the [cutover runbook](../agents/cutover-runbook.md) step 4.1.
 
 ## Context
@@ -39,3 +40,11 @@ Research (Web-verified 2026-11-05 unless stated):
 - Live behaviour is Unverified until the owner's first run: the live JSON of `deployments status --json` (the shape above is from the installed source), whether `@0%` is accepted on this Wrangler, whether the override also selects the asset set for `/`, whether duplicate `--tag` values are allowed (the label carries run id and attempt, so a re-run has its own), whether a timeout runs the rollback step, and the token permissions.
 - GitHub keeps at most one running and one pending run per concurrency group; with `cancel-in-progress: false` a newer queued run still replaces an older _pending_ one, so a queued tag deploy can be dropped. The runbook says to check the Actions tab and re-run. Each failure path stops before traffic changes or rolls back.
 - The ticket's live verification with a throwaway tag was excluded by the constraints of this change.
+
+## Alternatives considered
+
+Recorded inline in the Decision, not as a separate list: a 10 and 50 percent traffic split was rejected for now (Decision 3, because without version affinity it breaks pages for that share of visitors); `feature/metro-rebuild` is left out of the deployment policy and `prevent_self_review` stays off (Decision 2). No other alternatives were recorded.
+
+## Confirmation
+
+- `scripts/production-workflow.test.ts`, `scripts/production-settings.test.ts` and `scripts/production.test.ts`. Live behaviour is Unverified until the owner's first run (see Consequences).

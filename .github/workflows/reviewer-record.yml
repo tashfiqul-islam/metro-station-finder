@@ -8,6 +8,9 @@ on:
     branches: [feature/metro-rebuild, main]
     types: [opened, edited, synchronize, reopened]
 permissions: {}
+env:
+  # METRO-45: install tools only from mise.lock URLs and checksums.
+  MISE_LOCKED: "1"
 concurrency:
   group: reviewer-record-${{ github.event.pull_request.number }}
   cancel-in-progress: true

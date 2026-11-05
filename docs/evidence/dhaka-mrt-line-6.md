@@ -248,3 +248,7 @@ Maximum: 143 m against OSM (Bijoy Sharani: the baseline point is 143 m due north
 - Scripts (parsing the dataset array, symmetry check, Haversine) were run from the session scratchpad and are not committed; the arithmetic is reproducible from the matrix and coordinate tables above.
 - The Bangla fare matrix reading: digits ০১২৩৪৫৬৭৮৯ map to 0123456789; ৪ and ৮ look like "8" and "b" in this typeface, the main misread risk, addressed by the baseline cross-check.
 - Not done: no dataset, code, spec or glossary edit; no Plane writes; DTCA home page and Gazette rule text not exhaustively read; DMTCL Facebook, mobile apps and station signage not seen.
+
+## Follow-up note (2026-11-05, METRO-67)
+
+This document is a record as of its date and is not rewritten. Where it says the dataset has `Shahbagh` or `Bijoy Sharani` or the 143 m Bijoy Sarani offset, that described `baseline-v1`. `baseline-v2` applies the owner-delegated corrections: display names `Shahbag` and `Bijoy Sarani` (old spellings and `Bijoy Sarawni` as aliases) and the Bijoy Sarani coordinate set to OSM node 10294553601, 23.7663936, 90.3830971 (OSM API v0.6 node version 8, retrieved 2026-11-05; Wikidata Q115951628 P625 re-read the same day: 23.766614, 90.383084, 25 m from OSM, matching the table above). See the specification's deliberate parity deviations.

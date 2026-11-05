@@ -28,6 +28,7 @@
     "playwright-report/**",
     "test-results/**",
     "apps/api/worker-configuration.d.ts",
-    "bun.lock"
+    "bun.lock",
+    ".mise/locks/**"
   ]
 }
