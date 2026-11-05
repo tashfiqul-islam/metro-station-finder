@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 
-import { expect, test } from "./fixtures";
+import { expect, isWebKitReportOnlyNoise, test } from "./fixtures";
 
 const shared = {
   "x-content-type-options": "nosniff",
@@ -9,10 +9,13 @@ const shared = {
   "permissions-policy": "geolocation=(self)",
 };
 
-function collect(page: Page): string[] {
+function collect(page: Page, browserName: string): string[] {
   const violations: string[] = [];
   page.on("console", (message) => {
-    if (message.text().includes("Content Security Policy")) violations.push(message.text());
+    const text = message.text();
+    if (text.includes("Content Security Policy") && !isWebKitReportOnlyNoise(browserName, text)) {
+      violations.push(text);
+    }
   });
   return violations;
 }
@@ -63,7 +66,7 @@ test.describe("security headers and caching (METRO-31)", () => {
       browserName,
     }) => {
       test.skip(browserName !== "chromium", "console wording is verified on Chromium only");
-      const violations = collect(page);
+      const violations = collect(page, browserName);
       await page.goto("/");
       await expect(page.getByLabel("Scaffold status")).toBeVisible();
       await page.evaluate(() => {
@@ -76,11 +79,22 @@ test.describe("security headers and caching (METRO-31)", () => {
       expect(violations.join("\n")).toContain("report-only");
     });
 
-    test("METRO-31 the app itself produces no CSP report-only violation", async ({ page }) => {
-      const violations = collect(page);
+    test("METRO-31 the app itself produces no CSP report-only violation", async ({
+      page,
+      browserName,
+    }) => {
+      const violations = collect(page, browserName);
       await page.goto("/");
       await expect(page.getByLabel("Scaffold status")).toBeVisible();
       expect(violations).toEqual([]);
+      // WebKit reports a stylesheet violation on any page under this policy (see fixtures.ts), so also
+      // prove directly that the app applies no inline or injected style.
+      const styling = await page.evaluate(() => ({
+        stylesheets: document.styleSheets.length,
+        styleElements: document.querySelectorAll("style").length,
+        styleAttributes: document.querySelectorAll("[style]").length,
+      }));
+      expect(styling).toEqual({ stylesheets: 0, styleElements: 0, styleAttributes: 0 });
     });
   });
 });
