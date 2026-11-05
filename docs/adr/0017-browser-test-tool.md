@@ -10,12 +10,13 @@ Browser tests run on Playwright Test 1.64.1 ([ADR-0005](0005-test-strategy.md), 
 
 A spike ported three tests (ARIA snapshot, axe scan, header and CSP checks) to WebdriverIO 10.1.0 against the same built app. All numbers and sources are in the [spike evidence](../evidence/browser-tool-spike-2026-11.md). Findings that decide this:
 
-- Speed is at parity at this size: 31 Playwright tests in 3.9 to 4.3 s locally; 8 WebdriverIO tests in 3.9 s (Chrome), 6 s (Firefox, warm), 3.7 s (Chrome with Pixel 7 emulation). Measured.
-- WebdriverIO 10.1.0 has no ARIA snapshot matcher, so the METRO-41 check could only be approximated with weaker, hand-written role and name assertions. Measured.
+- Speed shows no gap at this size, like for like: the 7 ported Playwright tests took 2.8 to 3.5 s including server startup; the 8 WebdriverIO tests took 3.9 s on Chrome with the server already started (3.7 s with Pixel 7 emulation; Firefox 6 s warm, not compared with Playwright Firefox). Scaling to the full suite is unmeasured, and the console, page-error and CSP-console guards were not ported. Measured.
+- No ARIA snapshot matcher was found in the two packages checked (`webdriverio` 10.1.0, `expect-webdriverio` 8.0.0; a negative result that does not rule out a plugin or another route), so the METRO-41 check could only be approximated with weaker, hand-written role and name assertions. Measured.
 - The official `@axe-core/webdriverio@4.14.0` fails on WebdriverIO 10.1.0 (`client.executeAsync is not a function`; peer range stops at 9). Our own 11-line adapter works. Measured.
-- WebdriverIO reaches WebKit only through `safaridriver`, which has no headless mode and no BiDi; the WebKit coverage that Linux CI has today would be lost or moved to a macOS runner. Web-verified.
-- The minimal WebdriverIO stack is 312 installed packages and one blocked install script against Playwright's 5 packages and none (Measured), and the WebdriverIO CLI does not run under Bun (Measured; the repo already runs Playwright through Node).
-- WebdriverIO has no seeded shuffle for its mocha framework that I found, and a session per spec file instead of a context per test (Measured, partly Unverified).
+- For Safari, WebdriverIO uses `safaridriver`, which has no headless mode and no BiDi (Web-verified). That it is macOS-only is Unverified, and whether WebdriverIO can drive a Linux WebKit build (WebKitGTK or WPE) was not checked. So the WebKit coverage Linux CI has today might be lost or need a macOS runner; this path is unchecked.
+- The minimal WebdriverIO stack is 312 installed packages and one blocked install script against Playwright's 5 packages and none (Measured; browser binaries and drivers excluded on both sides).
+- A seeded shuffle for WebdriverIO's mocha framework was not found in the sources checked (mocha internals Unverified), and each spec file gets its own session; that tests inside a file share one session is inferred from the mocha default, not tested (Unverified).
+- Not decisive: the WebdriverIO CLI does not run under Bun (Measured), but the repo already runs Playwright through Node.
 - WebdriverIO's real strength is Appium: one API for web, Android and iOS (Web-verified). That matters only once a native app exists. None exists in the repository, and Appium was not tried in the spike.
 
 ## Decision
@@ -28,17 +29,17 @@ A spike ported three tests (ARIA snapshot, axe scan, header and CSP checks) to W
 ## Consequences
 
 - Nothing changes in the repository, CI or dependencies. The toolchain stays at 5 browser-test packages and no install scripts.
-- A future native lane cannot reuse web tests either way, so deferring costs nothing; it will need Appium, a device or emulator provider and, if it uses a cloud device farm, a credentialed job under the no-restored-cache rule in [maintenance](../agents/maintenance.md#credentialed-ci-jobs-metro-47).
-- We stay on one vendor's test runner, whose WebKit build is a Playwright patch of WebKit and not Safari itself. Playwright's WebKit is a proxy for Safari, not Safari; real Safari and real-device checks remain a gap, as they are today.
+- A future native lane means new tests either way, so deferring has no measured cost (shared helpers or CI setup could still have value; not measured). It will need Appium, a device or emulator provider and, if it uses a cloud device farm, a credentialed job under the no-restored-cache rule in [maintenance](../agents/maintenance.md#credentialed-ci-jobs-metro-47).
+- We stay on one vendor's test runner, whose WebKit build is a Playwright patch of WebKit and not Safari itself. Playwright's WebKit is a proxy for Safari, not Safari; real Safari and real-device checks remain a gap, as they are today. Appium can drive real iOS Safari, which is one reason to revisit a device lane (never tried here).
 - Playwright's own Android support is experimental and has no iOS (Web-verified), so it is not a native plan either.
 - The spike measured one machine, 8 tests and no Appium or Safari; if the decision is reopened, those are the first things to measure.
 
 ## Alternatives considered
 
-- Move the suite to WebdriverIO: rejected. It loses the ARIA snapshot check (no equivalent), the official axe adapter does not support the current major, WebKit coverage drops, and the dependency footprint grows about 60-fold in packages, with no speed gain.
+- Move the suite to WebdriverIO: rejected. It loses the ARIA snapshot check (no equivalent), the official axe adapter does not support the current major, Linux WebKit coverage may drop, and the installed package count grows about 60-fold (312 against 5; browser binaries and drivers excluded), with no measured speed gain.
 - Run both against the web app: rejected. Two tools double the maintenance and CI time for the same assertions; no check is only possible in WebdriverIO.
 - WebdriverIO only for a future native device lane: not adopted now, because no native app exists. Left open as the likely candidate for that lane and decided when it is needed.
-- Add WebdriverIO now to prepare for native: rejected. Native tests are new tests regardless, so early adoption buys nothing and costs a larger supply-chain surface.
+- Add WebdriverIO now to prepare for native: rejected. Native tests are new tests regardless, so early adoption has no measured benefit (Appium was never tried) and costs a larger supply-chain surface.
 
 ## Confirmation
 
