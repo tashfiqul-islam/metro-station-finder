@@ -1,6 +1,6 @@
 import { baselineDataset, datasetProvenance, findFare, findNearestStation } from "@metro/core";
 import type { Coordinate, Station } from "@metro/core";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useMaps } from "../../adapters/maps/context";
 import type {
@@ -23,6 +23,9 @@ const SEARCH_BIAS = {
   },
   radiusMeters: 25_000,
 };
+
+/** Attribute on the search wrapper that marks "focus is in the search box". */
+const SEARCH_GROUP = "data-search-group";
 
 type Locating = "idle" | "locating" | "denied" | "unavailable";
 
@@ -92,6 +95,12 @@ function Slice({ maps }: SliceProps) {
   const [destinationId, setDestinationId] = useState("");
   /** Counts user actions; a slower earlier action (a position fix, say) must not overwrite a later one. */
   const latestAction = useRef(0);
+  /** Whether the next result may take focus; false when a late position fix lands while the user is typing. */
+  const focusNext = useRef(true);
+  /** Stable, so focus moves when the heading mounts (a new origin re-keys it) and not on every render. */
+  const focusResult = useCallback((node: HTMLElement | null): void => {
+    if (node !== null && focusNext.current) node.focus();
+  }, []);
 
   const nearest = origin === null ? null : findNearestStation(stations, origin);
   const found = nearest?.kind === "nearest" ? nearest : null;
@@ -105,7 +114,10 @@ function Slice({ maps }: SliceProps) {
       ? findFare(baselineDataset.fares, station.id, destination.id)
       : null;
 
-  function applyLocation(location: Coordinate): void {
+  function applyLocation(location: Coordinate, fromFix: boolean): void {
+    // A position fix can arrive while the user types in the search box; never pull focus out of it.
+    const typing = (document.activeElement?.closest(`[${SEARCH_GROUP}]`) ?? null) !== null;
+    focusNext.current = !(fromFix && typing);
     const next = findNearestStation(stations, location);
     // A different origin station makes the earlier destination meaningless: forget it.
     if ((next.kind === "nearest" ? next.station.id : null) !== (station?.id ?? null)) {
@@ -118,7 +130,7 @@ function Slice({ maps }: SliceProps) {
 
   function choosePlace(location: Coordinate): void {
     latestAction.current += 1;
-    applyLocation(location);
+    applyLocation(location, false);
   }
 
   async function findMe(): Promise<void> {
@@ -127,7 +139,7 @@ function Slice({ maps }: SliceProps) {
     setLocating("locating");
     const outcome = await locate();
     if (mine !== latestAction.current) return;
-    if (outcome.kind === "position") applyLocation(outcome.coordinate);
+    if (outcome.kind === "position") applyLocation(outcome.coordinate, true);
     else setLocating(outcome.kind);
   }
 
@@ -143,14 +155,16 @@ function Slice({ maps }: SliceProps) {
         <h2 id="where-heading">{copy.whereHeading}</h2>
         <p id="place-label">{copy.searchLabel}</p>
         {status === "loading" && <output>{copy.loadingSearch}</output>}
-        {status !== "unavailable" && (
-          <maps.PlaceSearch
-            labelId="place-label"
-            bias={SEARCH_BIAS}
-            onPlace={choosePlace}
-            onFailure={() => setSearchFailed(true)}
-          />
-        )}
+        <div data-search-group="">
+          {status !== "unavailable" && (
+            <maps.PlaceSearch
+              labelId="place-label"
+              bias={SEARCH_BIAS}
+              onPlace={choosePlace}
+              onFailure={() => setSearchFailed(true)}
+            />
+          )}
+        </div>
         {searchAlert !== null && <p role="alert">{searchAlert}</p>}
         <p>
           <button
@@ -178,7 +192,7 @@ function Slice({ maps }: SliceProps) {
             id="result-heading"
             key={`${origin?.lat},${origin?.lng}`}
             tabIndex={-1}
-            ref={focusOnMount}
+            ref={focusResult}
           >
             {copy.resultHeading}
             {station !== null && (

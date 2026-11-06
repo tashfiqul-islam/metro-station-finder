@@ -8,12 +8,16 @@ const PINNED_VERSION_PREFIX = "3.66";
 
 /**
  * Removes any key, any URL query string and any Google-style key token from a console message. Case does
- * not matter (`KEY=`), `apikey=`, `api_key=` and `api-key=` count, and so does the URL-encoded `key%3D`.
+ * not matter (`KEY=`), `apikey=`, any name ending in `_key` or `-key` (`my_key=`, `api-key=`) and the
+ * header form `x-goog-api-key: value` count, and so does the URL-encoded `key%3D`. `monkey=` is left alone.
  */
 export function scrub(text: string): string {
   return text
     .replaceAll(/\?[^\s'")]*/gu, "?[query removed]")
-    .replaceAll(/\b(?:api[_-]?)?key(?:=|%3d)[^\s&'")]*/giu, "[key removed]")
+    .replaceAll(
+      /\b(?:x-goog-api-key|api[_-]?key|[\w-]*[_-]key|key)\s*(?::|=|%3d)\s*[^\s&'")]*/giu,
+      "[key removed]",
+    )
     .replaceAll(/AIza[\w-]{20,}/gu, "[key removed]");
 }
 

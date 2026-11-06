@@ -79,12 +79,17 @@ test("scrub is case-insensitive and covers apikey, api_key, api-key and URL-enco
     "failed api-key=SECRETVALUE end",
     "failed key%3DSECRETVALUE end",
     "failed Key%3dSECRETVALUE end",
+    "failed x-goog-api-key: SECRETVALUE end",
+    "failed X-Goog-Api-Key:SECRETVALUE end",
+    "failed my_key=SECRETVALUE end",
+    "failed google-maps_key=SECRETVALUE end",
   ]) {
     const scrubbed = scrub(sample);
     expect(scrubbed, sample).not.toContain("SECRETVALUE");
     expect(scrubbed, sample).toContain("[key removed]");
   }
   expect(scrub("monkey=banana")).toBe("monkey=banana");
+  expect(scrub("turkey: dinner and hockey=puck")).toBe("turkey: dinner and hockey=puck");
 });
 
 test("the live check refuses to run in CI with a fixed message", () => {

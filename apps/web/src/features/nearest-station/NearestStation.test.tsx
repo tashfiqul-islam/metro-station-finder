@@ -43,7 +43,11 @@ function FakePlaceSearch(props: PlaceSearchProps) {
   useEffect(() => {
     world.searchProps = props;
   });
-  return <fieldset aria-labelledby={props.labelId} data-fake-search />;
+  return (
+    <fieldset aria-labelledby={props.labelId} data-fake-search>
+      <input aria-label="fake search box" />
+    </fieldset>
+  );
 }
 
 /** Publishes the test's chosen Maps state the way the real provider does. */
@@ -422,4 +426,46 @@ test("METRO-88 a place chosen after a position fix wins, and a denial after a pl
   expect(
     screen.getByRole("heading", { level: 2, name: "Nearest station: Uttara North" }),
   ).toBeTruthy();
+});
+
+test("METRO-88 a late position fix does not pull focus out of the search box the user is typing in", async () => {
+  geolocation((success) => {
+    pending.success = success;
+  });
+  render(<NearestStation maps={fakeMaps} />);
+  fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
+  const box = screen.getByRole("textbox", { name: "fake search box" });
+  box.focus();
+  await act(async () => {
+    pending.success?.(fakePosition(NEAR_UTTARA_NORTH.lat, NEAR_UTTARA_NORTH.lng));
+    await Promise.resolve();
+  });
+  expect(
+    screen.getByRole("heading", { level: 2, name: "Nearest station: Uttara North" }),
+  ).toBeTruthy();
+  expect(document.activeElement).toBe(box);
+});
+
+test("METRO-88 a place chosen in the search box still moves focus to the result, and a later fix elsewhere does too", async () => {
+  geolocation((success) => success(fakePosition(NEAR_UTTARA_NORTH.lat, NEAR_UTTARA_NORTH.lng)));
+  render(<NearestStation maps={fakeMaps} />);
+  screen.getByRole("textbox", { name: "fake search box" }).focus();
+  pickPlace(NEAR_MOTIJHEEL);
+  const chosen = screen.getByRole("heading", { level: 2, name: "Nearest station: Motijheel" });
+  expect(document.activeElement).toBe(chosen);
+  fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
+  const fixed = await screen.findByRole("heading", {
+    level: 2,
+    name: "Nearest station: Uttara North",
+  });
+  expect(document.activeElement).toBe(fixed);
+});
+
+test("METRO-88 re-rendering the result does not take focus back", () => {
+  render(<NearestStation maps={fakeMaps} />);
+  pickPlace(NEAR_MOTIJHEEL);
+  const select = screen.getByRole("combobox", { name: copy.destinationLabel });
+  select.focus();
+  fireEvent.change(select, { target: { value: "farmgate" } });
+  expect(document.activeElement).toBe(select);
 });

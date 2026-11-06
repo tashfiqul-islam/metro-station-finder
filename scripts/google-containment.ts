@@ -1,9 +1,11 @@
 /**
  * METRO-88: Google stays inside `apps/web/src/adapters/maps`. The dependency rule catches imports, but
  * tsconfig puts the `google.maps` types in every web file, so a feature could still use the ambient
- * global (or `window.google`) with no import. This text check closes that gap.
+ * global (or `window.google`) with no import. This text check closes that gap. It is a text guard only:
+ * an alias (`const g = window; g.google`) or a computed key is not caught.
  */
-export const GOOGLE_GLOBAL = /\bgoogle\.maps\b|\b(?:window|globalThis)\.google\b/u;
+export const GOOGLE_GLOBAL =
+  /\bgoogle\.maps\b|\b(?:window|globalThis|self)\.google\b|\b(?:window|globalThis|self)\[\s*["'`]google["'`]\s*\]/u;
 
 const ADAPTER = "apps/web/src/adapters/maps/";
 

@@ -2,7 +2,7 @@
 
 - Identity: METRO-88, slice `nearest-station-slice`; revision 1, 2026-11-07.
 - Source: Plane work item METRO-88 (read as data). Foundation blueprint v4, decisions D6, D7, D13 (owner-approved, not committed).
-- Decision owner and approval: the owner delegated the open decisions below to the orchestrator on 2026-11-07 (library, fare shape, CSP switch, free-tier discipline, live check). Each is recorded as a decision here.
+- Decision owner and approval: on 2026-11-07 the owner gave the orchestrator a standing delegation ("take the best decisions possible that makes sense for our project"). Under it the orchestrator decided the open points below (library order, fare shape, location-only fields, CSP switch, free-tier discipline, live check); the implementer chose the focus-on-alert deviation and the orchestrator accepted it. Ticket default (a), a manual live run under the enforced CSP, was confirmed by the owner on 2026-11-07 ("go with your recommendation").
 - Research (labels: Repo-verified, Context7-verified, Web-verified, Unverified; Context7 library `/websites/developers_google_maps_javascript` and `/visgl/react-google-maps`, web pages read 2026-11-07):
   - Context7-verified: `PlaceAutocompleteElement` fires `gmp-select`; `placePrediction.toPlace()` then `fetchFields({ fields })` ends the session and carries the session token automatically; `Route.computeRoutes` needs `fields`, takes `travelMode: 'WALKING'`; `@googlemaps/js-api-loader` v2 exposes `setOptions({ key, v })` once and `importLibrary(name)` (ADR-0009, Context7-verified 2026-11-05).
   - Web-verified ([pricing](https://developers.google.com/maps/billing-and-pricing/pricing), undated page): free caps per month are Autocomplete Requests 10,000, Autocomplete Session Usage unlimited, Place Details Essentials 10,000, Place Details Pro 5,000, Compute Routes Essentials 10,000, Pro 5,000, Enterprise 1,000, Dynamic Maps 10,000. [Routes billing](https://developers.google.com/maps/documentation/routes/usage-and-billing): Essentials is "basic features, up to 10 intermediate waypoints"; Pro needs traffic-aware modifiers. Unverified: the page does not name WALKING, so Essentials is inferred. The SKU of the JavaScript `Route.computeRoutes` call itself is Unverified.
@@ -25,7 +25,7 @@
 
 ### Library decision
 
-Decided by the owner: try `@vis.gl/react-google-maps` first, fall back to `@googlemaps/js-api-loader` if it breaks the bundle budget. Measured on this slice (`bun run build` then `bun run bundle:check`; budget 250,000 raw and 80,000 gzip bytes; Repo-verified):
+On 2026-11-07 the owner asked whether `@vis.gl/react-google-maps` was better and delegated the choice ("see what makes most sense"). The orchestrator chose to try it first and fall back to `@googlemaps/js-api-loader` if it broke the bundle budget; it did. Measured on this slice (`bun run build` then `bun run bundle:check`; budget 250,000 raw and 80,000 gzip bytes; Repo-verified):
 
 | Build                                                                | Raw bytes | Gzip bytes |
 | -------------------------------------------------------------------- | --------- | ---------- |
@@ -103,12 +103,12 @@ Switch `Content-Security-Policy-Report-Only` to enforced `Content-Security-Polic
 - `connect-src 'self' https://maps.googleapis.com https://places.googleapis.com https://routes.googleapis.com`: the API's own calls, Places (New) and Routes (host names Web-verified from the REST references; that the JS library uses exactly these is Unverified).
 - `img-src 'self' data: https://maps.gstatic.com https://maps.googleapis.com`: the "Powered by Google" attribution and icons in the suggestion list (Unverified).
 
-Not added because nothing justifies them yet (all Unverified; the live check settles them): `'unsafe-eval'`, `blob:`, `worker-src`, `style-src` `'unsafe-inline'` and `https://fonts.googleapis.com`, `font-src`, `frame-src`. If the live run prints a violation for one, add only that, with the message as evidence. The merge needs the owner's live run first.
+Not added because nothing justifies them yet (all Unverified; the live check settles them): `'unsafe-eval'`, `blob:`, `worker-src`, `style-src` `'unsafe-inline'` and `https://fonts.googleapis.com`, `font-src`, `frame-src`. If the live run prints a violation for one, add only that, with the message as evidence. Ticket default (a), confirmed by the owner on 2026-11-07 ("go with your recommendation"), needs the owner-run live check before merge.
 
 ### Behaviour notes
 
 - Latest action wins. A position fix that arrives after the user chose a place, or after another press of the button, is ignored. A place chosen later overrides an earlier fix. The place search ignores the earlier of two overlapping selections: its `fetchFields` still runs (one extra Place Details call in that rare case) but its result is dropped.
-- Pressing "Use my location" again returns a slightly different fix. The route cache key rounds both points to 4 decimals (about 11 m), so a repeat within that distance costs no new route request.
+- Pressing "Use my location" again returns a slightly different fix. The route cache key rounds both points to 4 decimals (cells about 11 m north-south and 10 m east-west at Dhaka's latitude, up to about 15 m diagonally), so a repeat that lands in the same cell costs no new route request; two fixes a few metres apart can still straddle a cell edge and cost one.
 - A new result moves focus to its heading ("Nearest station: <name>", `tabIndex=-1`) so a screen reader announces the station; the route and fare `<output>` elements are mounted with the result and updated in place. Announcement and live-region timing still need a manual screen-reader pass.
 - Changing the origin station forgets the chosen destination; `/nearest` and `/nearest/` both route to the slice.
 - The fare shows `Fare.currency` and `Fare.amount` as core defines them; `datasetProvenance` is frozen at every level.
@@ -150,6 +150,6 @@ Routes SKU of the JS call; autocomplete requests per keystroke; whether a Maps-l
 - ADR-0009 asks for `["location", "formattedAddress"]`: this slice requests `location` only because no map is shown.
 - ADR-0009 moves focus to the search input after a geolocation error: the shadow DOM input is not reachable, so focus moves to the alert (`tabIndex=-1`, existing outline), and the alert is not an `aria-describedby` target of the input.
 - The slice is routed at `/nearest` so the scaffold page and its tests at `/` stay until METRO-93 retires them.
-- The element sets its own autocomplete request rate; the minimum-character and debounce control the owner asked for is not available on `PlaceAutocompleteElement` (see Free-tier plan).
+- The element sets its own autocomplete request rate; the minimum-character and debounce control asked for in the orchestrator's brief (the Plane ticket does not mention it) is not available on `PlaceAutocompleteElement` (see Free-tier plan).
 - The harness rebuilds the web app with the fake key inside `bun run smoke` (see Library decision), because the key is compiled in and CI builds without one.
 - Origin of the fare is the nearest station and is not changeable in this slice; the destination is chosen.

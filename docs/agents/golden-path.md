@@ -22,7 +22,7 @@ Read when: starting a new feature, slice, adapter or screen. Copy the reference 
 - `.dependency-cruiser.mts` rule `maps-library-only-in-maps-adapter`, proven red per import form in `scripts/layering.test.ts`: fix the import, not the rule.
 - `apps/web/src/headers.test.ts` and `e2e/headers.e2e.ts`: the enforced header, its exact hosts, and a blocked image that must log a console error and fail the fixture.
 - `e2e/fixtures.ts`: console errors and axe violations fail every journey. `e2e/nearest-station.e2e.ts`: no coordinate in any `/api/*` request, one Essentials fetch, one route.
-- `scripts/google-containment.test.ts`: fails on `google.maps` or `window.google` outside the adapter (the types are ambient, so the import rule alone cannot see it).
+- `scripts/google-containment.test.ts`: fails on `google.maps` or `window.google` outside the adapter (the types are ambient, so the import rule alone cannot see it); it is a text guard, so an alias is not caught.
 - Vitest per-file 90% thresholds and `scripts/agent-docs-size.test.ts` (this file stays within 6,144 bytes).
 
 ## Read more

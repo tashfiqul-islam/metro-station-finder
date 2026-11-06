@@ -40,7 +40,7 @@ test("METRO-88 one request per pair: repeats and StrictMode re-runs share the re
   expect(calls).toHaveBeenCalledTimes(2);
 });
 
-test("METRO-88 a repeated position fix within about 11 m reuses the route; a farther one asks again", async () => {
+test("METRO-88 a repeated position fix in the same rounding cell reuses the route; a farther one asks again", async () => {
   const { api, calls } = fakeApi({ routes: [{ distanceMeters: 10, durationMillis: 1000 }] });
   const service = createRouteService(api);
   await service.walk(origin, destination);
