@@ -1,6 +1,6 @@
-import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 
 import { isRecord } from "./guards";
 
@@ -20,14 +20,18 @@ function withoutSummary(output: string): string {
     .trim();
 }
 
-async function lintFixture(source: string): Promise<{ exitCode: number; output: string }> {
+async function lintFixture(
+  source: string,
+  file = "fixture.test.ts",
+): Promise<{ exitCode: number; output: string }> {
   const root = await mkdtemp(join(tmpdir(), "metro-hygiene-"));
   try {
     const parsed: unknown = Bun.JSON5.parse(await readFile(resolve(".oxlintrc.json"), "utf8"));
     if (!isRecord(parsed)) throw new Error(".oxlintrc.json: expected an object");
     const { $schema: _schema, options: _options, ...config } = parsed;
     await writeFile(join(root, ".oxlintrc.json"), JSON.stringify(config));
-    await writeFile(join(root, "fixture.test.ts"), source);
+    await mkdir(dirname(join(root, file)), { recursive: true });
+    await writeFile(join(root, file), source);
     const result = Bun.spawnSync(
       ["node", OXLINT, "-c", join(root, ".oxlintrc.json"), "--deny-warnings", root],
       { stdout: "pipe", stderr: "pipe" },
@@ -181,5 +185,84 @@ test("METRO-79 every web test file imports its API from vitest, never bun:test o
     const source = await readFile(join(dir, name), "utf8");
     expect(source, name).toMatch(/from "vitest"/u);
     expect(source, name).not.toMatch(/bun:test|jest\./u);
+  }
+});
+
+// METRO-80: scripts/ and packages/ still run on `bun test`, where an import from "vitest" (or "@vitest/*")
+// fails confusingly at load time. The ban is scoped to those directories only: apps/api runs on Vitest and
+// apps/web moves there in METRO-79. Shrink the list in .oxlintrc.json (VITEST_IMPORT_BAN_DIRECTORIES) as
+// later stages move scripts and packages.
+const VITEST_IMPORT = `import { expect, test } from "vitest";
+
+test("imported", () => {
+  expect(1).toBe(1);
+});
+`;
+
+for (const file of ["scripts/fixture.test.ts", "packages/core/src/fixture.test.ts"])
+  test(`METRO-80 an import from vitest is rejected in ${file}`, async () => {
+    const result = await lintFixture(VITEST_IMPORT, file);
+    expect(result.output).toContain("(no-restricted-imports)");
+    expect(result.exitCode).not.toBe(0);
+  }, 30000);
+
+for (const file of ["scripts/fixture.test.ts", "packages/core/src/fixture.test.ts"])
+  test(`METRO-80 a subpath import from vitest/config is rejected in ${file}`, async () => {
+    const result = await lintFixture(
+      `import { defineConfig } from "vitest/config";
+
+test("imported", () => {
+  expect(defineConfig).toBeDefined();
+});
+`,
+      file,
+    );
+    expect(result.output).toContain("(no-restricted-imports)");
+    expect(result.exitCode).not.toBe(0);
+  }, 30000);
+
+test("METRO-80 a non-test file under scripts/ may not import bun:test either (intentional widening)", async () => {
+  const result = await lintFixture(
+    `import { expect } from "bun:test";
+
+export const check = () => expect(1);
+`,
+    "scripts/helper.ts",
+  );
+  expect(result.output).toContain("(no-restricted-imports)");
+  expect(result.exitCode).not.toBe(0);
+});
+
+test("METRO-80 an import from @vitest/* is rejected in scripts/", async () => {
+  const result = await lintFixture(
+    `import { page } from "@vitest/browser";
+
+test("imported", () => {
+  expect(page).toBeDefined();
+});
+`,
+    "scripts/fixture.test.ts",
+  );
+  expect(result.output).toContain("(no-restricted-imports)");
+  expect(result.exitCode).not.toBe(0);
+});
+
+test("METRO-80 a Bun-owned file may name vitest in a string without importing it", async () => {
+  const result = await lintFixture(
+    `test("names it", () => {
+  expect('import { test } from "vitest";').toContain("vitest");
+});
+`,
+    "scripts/fixture.test.ts",
+  );
+  expect(result.output).toBe("");
+  expect(result.exitCode).toBe(0);
+});
+
+test("METRO-80 the Vitest-owned directories may still import vitest", async () => {
+  for (const file of ["apps/api/src/fixture.test.ts", "apps/web/src/fixture.test.ts"]) {
+    const result = await lintFixture(VITEST_IMPORT, file);
+    expect(result.output, file).toBe("");
+    expect(result.exitCode, file).toBe(0);
   }
 });

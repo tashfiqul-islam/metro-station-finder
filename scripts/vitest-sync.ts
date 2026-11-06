@@ -22,6 +22,15 @@ function lockVersion(table: Record<string, unknown>, key: string): string | unde
   return entry[0].slice(entry[0].lastIndexOf("@") + 1);
 }
 
+/** The `vitest` peer range in the plugin's `bun.lock` entry (`[id, registry, { peerDependencies }, integrity]`). */
+function pluginVitestPeer(table: Record<string, unknown>): string | undefined {
+  const entry = table[PLUGIN];
+  const meta: unknown = Array.isArray(entry) ? entry[2] : undefined;
+  const peers = isRecord(meta) ? meta["peerDependencies"] : undefined;
+  const range = isRecord(peers) ? peers["vitest"] : undefined;
+  return typeof range === "string" ? range : undefined;
+}
+
 /** `4.156.2` to `4.156`. */
 function minor(version: string): string {
   return version.split(".").slice(0, 2).join(".");
@@ -57,6 +66,18 @@ export function checkVitestSync(input: VitestSyncInput): string[] {
 
   const table = input.lock["packages"];
   if (!isRecord(table)) return [...problems, "bun.lock has no packages table"];
+  // METRO-80: the pinned vitest must satisfy the peer range the pinned plugin declares in its lock entry, so
+  // first make sure that lock entry is the plugin version the manifest pins.
+  const pluginPin = versions[PLUGIN];
+  const locked = lockVersion(table, PLUGIN);
+  const peer = pluginVitestPeer(table);
+  if (pluginPin !== undefined && locked !== pluginPin)
+    problems.push(
+      `bun.lock resolves ${PLUGIN} ${locked ?? "nothing"} but package.json pins ${pluginPin}`,
+    );
+  else if (peer === undefined) problems.push(`bun.lock lists no vitest peer range for ${PLUGIN}`);
+  else if (vitest !== undefined && !Bun.semver.satisfies(vitest, peer))
+    problems.push(`vitest ${vitest} is outside the peer range "${peer}" that ${PLUGIN} declares`);
   const fromMiniflare = lockVersion(table, `${PLUGIN}/miniflare/workerd`);
   const fromWrangler = lockVersion(table, `${PLUGIN}/wrangler/workerd`);
   if (fromMiniflare === undefined || fromWrangler === undefined)
