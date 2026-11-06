@@ -8,14 +8,15 @@ import { sharedTestOptions } from "./vitest.shared.ts";
 export default defineConfig({
   test: {
     ...sharedTestOptions,
-    projects: ["apps/api"],
+    projects: ["apps/api", "apps/web"],
     coverage: {
-      // Workerd cannot use V8 coverage, so this run is istanbul and separate from Bun's.
+      // Workerd cannot use V8 coverage and Vitest cannot mix providers in one run, so the whole Vitest run
+      // (API in workerd, web in happy-dom) uses istanbul and writes one lcov file, separate from Bun's.
       provider: "istanbul",
       reporter: ["text", "lcov"],
       reportsDirectory: "coverage/vitest",
-      include: ["apps/api/src/**/*.ts"],
-      exclude: ["apps/api/src/**/*.test.ts"],
+      include: ["apps/api/src/**/*.ts", "apps/web/src/**/*.{ts,tsx}"],
+      exclude: ["apps/*/src/**/*.test.{ts,tsx}"],
       thresholds: { perFile: true, lines: 90, functions: 90, branches: 90 },
     },
   },

@@ -1,15 +1,11 @@
-import { restoreBunGlobals, enableDomGlobals } from "./dom-test-env"; // the DOM must exist before React is imported
-
-const { act } = await import("react");
-const { ErrorBoundary } = await import("./error-boundary");
-restoreBunGlobals(); // non-DOM test files must see Bun's globals again
+import { act } from "react";
+import { afterAll, afterEach, beforeAll, expect, test, vi } from "vitest";
 
 const realFetch = globalThis.fetch;
 let mounted: HTMLElement | undefined;
 const signals: (AbortSignal | undefined)[] = [];
 
 beforeAll(() => {
-  enableDomGlobals();
   Reflect.set(globalThis, "IS_REACT_ACT_ENVIRONMENT", true);
 });
 afterEach(() => {
@@ -17,14 +13,15 @@ afterEach(() => {
   globalThis.fetch = realFetch;
 });
 afterAll(() => {
-  restoreBunGlobals();
   Reflect.deleteProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT");
 });
 
 test("METRO-58 main.tsx wraps the app in StrictMode (effects mount, clean up and mount again)", async () => {
+  vi.resetModules(); // main.tsx runs on import: load it, and the boundary it wraps, fresh for this test
+  const { ErrorBoundary } = await import("./error-boundary");
   const root = document.createElement("div");
   mounted = root;
-  const renderSpy = jest.spyOn(ErrorBoundary.prototype, "render");
+  const renderSpy = vi.spyOn(ErrorBoundary.prototype, "render");
   root.id = "root";
   document.body.append(root);
   globalThis.fetch = Object.assign(
@@ -46,4 +43,10 @@ test("METRO-58 main.tsx wraps the app in StrictMode (effects mount, clean up and
   expect(renderSpy).toHaveBeenCalledTimes(2);
   renderSpy.mockRestore();
   expect(root.querySelector("h1")?.textContent).toBe("Metro scaffold");
+});
+
+test("METRO-79 main.tsx fails loudly when the page has no #root element", async () => {
+  vi.resetModules();
+  expect(document.getElementById("root")).toBeNull();
+  await expect(import("./main")).rejects.toThrow("Missing application root");
 });

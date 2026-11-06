@@ -1,11 +1,18 @@
-// The DOM must exist before React is imported (shared registration, see dom-test-env.ts).
-const { restoreBunGlobals, enableDomGlobals } = await import("./dom-test-env");
-enableDomGlobals();
-const { act } = await import("react");
-const { createRoot } = await import("react-dom/client");
-const { ErrorBoundary } = await import("./error-boundary");
-const { rootErrorOptions } = await import("./report-error");
-restoreBunGlobals(); // non-DOM test files must see Bun's globals again
+import { act } from "react";
+import { createRoot } from "react-dom/client";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  expect,
+  test,
+  vi,
+  type MockInstance,
+} from "vitest";
+
+import { ErrorBoundary } from "./error-boundary";
+import { rootErrorOptions } from "./report-error";
 
 const LEAK = "lat=23.81 lng=90.41 https://example.test/stations?lat=23.81&lng=90.41";
 let shouldThrow = true;
@@ -17,7 +24,7 @@ function Bomb() {
 type Root = ReturnType<typeof createRoot>;
 let container: HTMLElement;
 let root: Root;
-let errorSpy: ReturnType<typeof jest.spyOn<Console, "error">>;
+let errorSpy: MockInstance<typeof console.error>;
 
 async function mount() {
   await act(async () => {
@@ -32,13 +39,12 @@ const alert = () => container.querySelector<HTMLElement>('[role="alert"]');
 const retryButton = () => container.querySelector("button");
 
 beforeAll(() => {
-  enableDomGlobals();
   Reflect.set(globalThis, "IS_REACT_ACT_ENVIRONMENT", true);
 });
 beforeEach(() => {
   shouldThrow = true;
   // Keep the (safe) report out of the test output; assertions read the spy.
-  errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+  errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container, rootErrorOptions);
@@ -51,7 +57,6 @@ afterEach(async () => {
   errorSpy.mockRestore();
 });
 afterAll(() => {
-  restoreBunGlobals();
   Reflect.deleteProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT");
 });
 

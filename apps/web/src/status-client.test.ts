@@ -1,3 +1,5 @@
+import { expect, test, vi } from "vitest";
+
 import { fetchScaffoldStatus } from "./status-client";
 
 const json = (body: unknown, init: ResponseInit = {}) =>
@@ -58,4 +60,31 @@ test("FND-R4 a network failure rejects", async () => {
   expect(reason instanceof Error ? reason.message : "did not reject with an Error").toContain(
     "offline",
   );
+});
+
+test("FND-R4 a response without a content-type header rejects as not JSON", async () => {
+  const reason = await fetchScaffoldStatus(stub(new Response(null, { status: 200 }))).then(
+    () => null,
+    (error: unknown) => error,
+  );
+  expect(reason instanceof Error ? reason.message : "did not reject with an Error").toBe(
+    "Status response is not JSON",
+  );
+});
+
+test("FND-R4 the client uses the global fetch when none is passed", async () => {
+  const calls: string[] = [];
+  vi.stubGlobal(
+    "fetch",
+    asFetch((input) => {
+      calls.push(typeof input === "string" ? input : input instanceof URL ? input.href : input.url);
+      return Promise.resolve(json({ kind: "synthetic-scaffold", ready: true }));
+    }),
+  );
+  try {
+    expect(await fetchScaffoldStatus()).toEqual({ kind: "synthetic-scaffold", ready: true });
+  } finally {
+    vi.unstubAllGlobals();
+  }
+  expect(calls).toEqual(["/api/scaffold/status"]);
 });

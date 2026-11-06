@@ -1,4 +1,7 @@
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
+import { expect, test } from "vitest";
 
 type HeaderRules = Record<string, Record<string, string>>;
 
@@ -23,7 +26,7 @@ function parseHeadersFile(text: string): HeaderRules {
 }
 
 function rules(): HeaderRules {
-  return parseHeadersFile(readFileSync(new URL("../public/_headers", import.meta.url), "utf8"));
+  return parseHeadersFile(readFileSync(join(import.meta.dirname, "../public/_headers"), "utf8"));
 }
 
 test("METRO-31 parseHeadersFile reads url blocks with indented headers", () => {

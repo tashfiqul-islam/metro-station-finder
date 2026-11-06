@@ -13,5 +13,5 @@
     "scripts/tools.ts",
     "scripts/vitest-sync.ts"
   ],
-  "exclude": ["apps/api/**"]
+  "exclude": ["apps/api/**", "apps/web/**"]
 }
