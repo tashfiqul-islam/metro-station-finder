@@ -129,6 +129,31 @@ test("METRO-77 rejects a plugin wrangler on a different minor than the repositor
   expect(checkVitestSync(input).join("\n")).toContain("wrangler");
 });
 
+test("METRO-92 rejects a lock that resolves no wrangler for the plugin or for the repository", async () => {
+  for (const key of ["@cloudflare/vitest-plugin/wrangler", "wrangler"]) {
+    const input = await realInput();
+    delete packages(input)[key];
+    expect(checkVitestSync(input)).toContain(
+      "bun.lock must resolve wrangler for the repository and for the plugin",
+    );
+  }
+});
+
+test("METRO-92 a Renovate vitest group whose package names are not a list names no members", async () => {
+  const input = await realInput();
+  const rules = input.renovate["packageRules"];
+  if (!Array.isArray(rules)) throw new Error("no packageRules");
+  for (const rule of rules)
+    if (isRecord(rule) && rule["groupName"] === "vitest") rule["matchPackageNames"] = "vitest";
+  const problems = checkVitestSync(input);
+  expect(problems).toContain(
+    'Renovate group "vitest" must match vitest so the versions move together',
+  );
+  expect(problems).toContain(
+    'Renovate group "vitest" must match @vitest/** so the versions move together',
+  );
+});
+
 test("METRO-77 rejects a Renovate config that does not group vitest with its coverage package", async () => {
   const input = await realInput();
   const rules = input.renovate["packageRules"];
