@@ -2,7 +2,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
-import { lintWorkflows } from "./workflows";
+import { lintWorkflows, workflowsMain } from "./workflows";
 
 const CHECKOUT = "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1";
 
@@ -82,3 +82,19 @@ test("METRO-23 rejects a step without a name", async () => {
   expect(result.ok).toBe(false);
   expect(result.output).toContain("step without a name");
 }, 60000);
+
+test("METRO-92 the command prints the problem and sets a failing exit code for an empty directory", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "metro-workflows-main-"));
+  const error = jest.spyOn(console, "error").mockImplementation(() => {});
+  const previous = process.exitCode;
+  process.exitCode = 0;
+  try {
+    workflowsMain([directory]);
+    expect(process.exitCode).toBe(1);
+    expect(String(error.mock.calls[0]?.[0])).toContain("No workflow files");
+  } finally {
+    error.mockRestore();
+    process.exitCode = previous ?? 0;
+    await rm(directory, { recursive: true, force: true });
+  }
+});

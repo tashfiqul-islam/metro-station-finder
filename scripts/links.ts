@@ -166,5 +166,9 @@ export async function runLinkCheck(root: string): Promise<void> {
   else console.log(`Links ok: ${files.length} Markdown files`);
 }
 
-if (import.meta.main)
-  await runLinkCheck(resolve(process.argv[2] ?? fileURLToPath(new URL("..", import.meta.url))));
+/** Process entry: checks the repository at the first argument, or the one containing this script. */
+export async function linkCheckMain(args: readonly string[]): Promise<void> {
+  await runLinkCheck(resolve(args[0] ?? fileURLToPath(new URL("..", import.meta.url))));
+}
+
+if (import.meta.main) await linkCheckMain(process.argv.slice(2));

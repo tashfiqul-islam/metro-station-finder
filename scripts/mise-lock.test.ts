@@ -239,6 +239,58 @@ test("METRO-45 rejects a tool in mise.toml that mise.lock does not record", asyn
   );
 });
 
+test("METRO-92 rejects a platform URL that cannot be parsed", async () => {
+  await withFixture(
+    {
+      "mise.lock": (s) =>
+        s.replace(
+          "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64",
+          "not a url",
+        ),
+    },
+    async (root) => {
+      await expectRejection(validateConfiguration(root), "gitleaks linux-x64 url: not a URL");
+    },
+  );
+});
+
+test("METRO-92 rejects recorded trust exceptions that are not JSON", async () => {
+  await withFixture(
+    {
+      "mise.lock": (s) =>
+        s.replace(
+          `trust_policy_excludes = '["@yarnpkg/libzip@3.2.2"]'`,
+          "trust_policy_excludes = '[nope'",
+        ),
+    },
+    async (root) => {
+      await expectRejection(validateConfiguration(root), "trust_policy_excludes is not JSON");
+    },
+  );
+});
+
+test("METRO-92 rejects a tool whose backend has not been reviewed", async () => {
+  await withFixture(
+    {
+      "mise.toml": (s) => s.replace('pkl = "0.32.2"', 'pkl = "0.32.2"\nsyft = "1.44.0"'),
+      "mise.lock": (s) =>
+        `${s}\n[[tools.syft]]\nversion = "1.44.0"\nspecifiers = ["1.44.0"]\nbackend = "aqua:anchore/syft"\n`,
+    },
+    async (root) => {
+      await expectRejection(validateConfiguration(root), "syft backend is not reviewed");
+    },
+  );
+});
+
+test("METRO-92 rejects a lock entry for a tool that mise.toml no longer pins", async () => {
+  await withFixture(
+    { "mise.toml": (s) => s.replace(/^pkl = "[^"]+"\r?\n/mu, "") },
+    async (root) => {
+      await expectRejection(validateConfiguration(root), "mise.lock records pkl");
+    },
+  );
+});
+
 test("METRO-45 rejects a mise.lock tool that mise.toml no longer pins", async () => {
   await withFixture(
     { "mise.toml": (s) => s.replace(/^zizmor = "[^"]+"\r?\n/mu, "") },

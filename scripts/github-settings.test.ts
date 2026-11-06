@@ -1,6 +1,7 @@
 import {
   checkGithubSettings,
   EXPECTED_SETTINGS,
+  githubSettingsMain,
   runGithubSettingsCli,
   type SettingsManifest,
 } from "./github-settings";
@@ -302,6 +303,31 @@ test("METRO-48 the CLI prints the lines on success and rejects with all lines on
     ),
     "FAIL immutable releases",
   );
+});
+
+test("METRO-92 the process entry prints the lines on success and reports drift on stderr with a failing exit code", async () => {
+  const log = jest.spyOn(console, "log").mockImplementation(() => {});
+  const error = jest.spyOn(console, "error").mockImplementation(() => {});
+  const previous = process.exitCode;
+  process.exitCode = 0;
+  try {
+    await githubSettingsMain(["check", REPO], fakeGh().gh);
+    expect(process.exitCode).toBe(0);
+    expect(String(log.mock.calls[0]?.[0])).toContain("PASS immutable releases");
+    expect(error).not.toHaveBeenCalled();
+    await githubSettingsMain(
+      ["check", REPO],
+      fakeGh({ [PATHS.immutable]: { enabled: false, enforced_by_owner: false } }).gh,
+    );
+    expect(process.exitCode).toBe(1);
+    expect(String(error.mock.calls[0]?.[0])).toContain("FAIL immutable releases");
+    await githubSettingsMain(["nope"]);
+    expect(String(error.mock.calls[1]?.[0])).toContain('Unknown command "nope"');
+  } finally {
+    log.mockRestore();
+    error.mockRestore();
+    process.exitCode = previous ?? 0;
+  }
 });
 
 test("METRO-48 the CLI rejects bad usage before any gh call", async () => {

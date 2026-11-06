@@ -2,7 +2,7 @@ import { copyFile, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
-import { validateMessage, validateSubject } from "./commit-message";
+import { validateMessage, validateRange, validateSubject } from "./commit-message";
 import { cleanGitEnv } from "./git-env";
 
 const accepted = [
@@ -75,6 +75,26 @@ async function repo() {
     await copyFile(resolve("scripts", file), join(root, "scripts", file));
   return { root, run, ok };
 }
+
+test("METRO-92 validateRange names the 64 MiB read limit and rethrows other git failures", async () => {
+  const { root, ok } = await repo();
+  try {
+    const emptyTree = ok(["git", "write-tree"]).trim();
+    const big = Bun.spawnSync(["git", "commit-tree", emptyTree, "-F", "-"], {
+      cwd: root,
+      env: env(),
+      stdin: Buffer.from(`feat: big\n\n${"a".repeat(4096)}\n`),
+    });
+    expect(big.exitCode).toBe(0);
+    const sha = big.stdout.toString().trim();
+    // A 1 KiB read limit stands in for the real 64 MiB one: the same overflow, without a 65 MiB message.
+    expect(() => validateRange(sha, root, 1024)).toThrow(/exceed the 64 MiB read limit/u);
+    expect(validateRange(sha, root)).toEqual([]);
+    expect(() => validateRange("no-such-ref..HEAD", root, 1024)).toThrow(/no-such-ref/u);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}, 60000);
 
 test("FND-S5 range mode exits nonzero when any commit in the range is invalid", async () => {
   const { root, run, ok } = await repo();

@@ -2,7 +2,8 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
-import { checkLinks, formatProblem, githubSlugs } from "./links";
+import { cleanGitEnv } from "./git-env.ts";
+import { checkLinks, formatProblem, githubSlugs, linkCheckMain } from "./links";
 
 const roots: string[] = [];
 
@@ -25,6 +26,36 @@ async function fixture(files: Record<string, string>): Promise<string> {
 
 afterEach(async () => {
   for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
+});
+
+test("METRO-92 a malformed percent-escape in a link is compared as written", async () => {
+  const root = await fixture({
+    "a.md": "[bad](%E0%A4%A.md) [ok](b.md#top)\n",
+    "b.md": "# Top\n",
+  });
+  const problems = await checkLinks(root, ["a.md"]);
+  expect(problems.map((problem) => problem.message)).toEqual(["missing link target: %E0%A4%A.md"]);
+});
+
+test("METRO-92 the process entry checks the repository given as its first argument", async () => {
+  const root = await fixture({ "a.md": "[gone](missing.md)\n", "removed.md": "[x](missing.md)\n" });
+  const git = (...args: string[]) =>
+    Bun.spawnSync(["git", "-C", root, ...args], { env: cleanGitEnv() }).exitCode;
+  expect(git("init", "-q")).toBe(0);
+  // A file Git tracks but the working tree no longer has is skipped, not reported as unreadable.
+  expect(git("add", "removed.md")).toBe(0);
+  await rm(join(root, "removed.md"));
+  const error = jest.spyOn(console, "error").mockImplementation(() => {});
+  const previous = process.exitCode;
+  process.exitCode = 0;
+  try {
+    await linkCheckMain([root]);
+    expect(process.exitCode).toBe(1);
+    expect(String(error.mock.calls[0]?.[0])).toContain("a.md:1 missing link target: missing.md");
+  } finally {
+    error.mockRestore();
+    process.exitCode = previous ?? 0;
+  }
 });
 
 test("FND-H1 passes when relative links, directories and anchors resolve", async () => {

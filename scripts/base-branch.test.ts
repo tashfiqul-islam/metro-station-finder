@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
-import { checkBaseBranches, runBaseBranchCheck } from "./base-branch.ts";
+import { baseBranchMain, checkBaseBranches, runBaseBranchCheck } from "./base-branch.ts";
 
 const roots: string[] = [];
 
@@ -119,4 +119,21 @@ test("METRO-34 the command keeps a zero exit code and reports success when docum
     process.exitCode = previous ?? 0;
   }
   expect(lines.join("\n")).toContain("Base branch ok");
+});
+
+test("METRO-92 the process entry checks the repository given as its first argument", async () => {
+  const root = await fixture(docs("main", "main", "feature/metro-rebuild"));
+  const errors: string[] = [];
+  const originalError = console.error;
+  const previous = process.exitCode;
+  process.exitCode = 0;
+  console.error = (message: string) => void errors.push(message);
+  try {
+    await baseBranchMain([root]);
+    expect(process.exitCode).toBe(1);
+  } finally {
+    console.error = originalError;
+    process.exitCode = previous ?? 0;
+  }
+  expect(errors.join("\n")).toContain("base branches differ");
 });
