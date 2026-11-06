@@ -92,7 +92,8 @@ async function run(
     const lines: string[] = [];
     for (const line of (result.stdout.toString() + result.stderr.toString()).split("\n")) {
       const text = line.replace("\r", "");
-      if (text === "") continue;
+      // `bun run` appends its own wrapper line when tsc fails (Linux); it is not a diagnostic.
+      if (text === "" || text.startsWith('error: "tsc" exited with code')) continue;
       const last = lines.length - 1;
       if (text.startsWith(" ") && last >= 0) lines[last] += `\n${text}`;
       else lines.push(text);
