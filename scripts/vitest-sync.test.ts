@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import { isRecord } from "./guards";
@@ -117,28 +117,14 @@ test("METRO-77 rejects a plugin that Renovate would move apart from wrangler", a
   expect(checkVitestSync(input).join("\n")).toContain("Renovate");
 });
 
-// The Worker test config must stay in step with the real one, or the tests would exercise a different Worker.
-async function configs() {
-  const real: unknown = Bun.JSONC.parse(await read("apps/api/wrangler.jsonc"));
-  const test: unknown = Bun.JSONC.parse(await read("apps/api/wrangler.vitest.jsonc"));
-  if (!isRecord(real) || !isRecord(test)) throw new Error("expected objects");
-  return { real, test };
-}
-
-test("METRO-77 the Worker test config has the real compatibility_date and the same entry", async () => {
-  const { real, test: tested } = await configs();
-  expect(tested["compatibility_date"]).toBe(real["compatibility_date"]);
-  expect(tested["main"]).toBe(real["main"]);
-});
-
-test("METRO-77 the Worker test config routes assets exactly like the real config, with an explicit directory", async () => {
-  const { real, test: tested } = await configs();
-  const realAssets = real["assets"];
-  const testAssets = tested["assets"];
-  if (!isRecord(realAssets) || !isRecord(testAssets)) throw new Error("no assets");
-  const { directory, ...routing } = testAssets;
-  expect(typeof directory).toBe("string");
-  expect(routing).toEqual(realAssets);
+// The Worker tests must exercise the real Worker config, not a copy of it that drifts: the Vitest project
+// reads apps/api/wrangler.jsonc itself, and only the assets directory (which @cloudflare/vite-plugin fills in
+// the real build) comes from the Vitest config.
+test("METRO-77 the API Vitest project reads the real wrangler.jsonc and no second Worker config exists", async () => {
+  const config = await read("apps/api/vitest.config.ts");
+  expect(config).toContain('configPath: "./wrangler.jsonc"');
+  const entries = await readdir(resolve("apps/api"));
+  expect(entries.filter((name) => /^wrangler\..+\.jsonc?$/u.test(name))).toEqual([]);
 });
 
 // Vitest runs inside `check`, and CI uploads its separate istanbul lcov beside Bun's.

@@ -4,10 +4,10 @@ export default {
     {
       name: "no-unresolved",
       comment:
-        "cloudflare:* specifiers are runtime modules that only workerd provides (types come from the Worker test project).",
+        "cloudflare:workers and cloudflare:test are runtime modules that only workerd provides (types come from the Worker test project).",
       severity: "error",
       from: {},
-      to: { couldNotResolve: true, pathNot: "^cloudflare:" },
+      to: { couldNotResolve: true, pathNot: "^cloudflare:(workers|test)$" },
     },
     {
       name: "core-imports-only-core",

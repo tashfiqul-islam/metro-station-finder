@@ -13,10 +13,6 @@ import { cleanGitEnv } from "./git-env.ts";
  */
 export const EXEMPT_PRODUCT_SOURCES: readonly (readonly [string, string])[] = [
   [
-    "apps/api/src/index.ts",
-    "One line, `export default createApp();`. Vitest's istanbul run reports no row for a file like it (measured: a copy of it with its own test is absent too); index.test.ts proves it through exports.default.fetch in workerd.",
-  ],
-  [
     "packages/core/src/domain/scaffold-status.ts",
     "Type-only module with no executable code, so there is nothing to measure.",
   ],

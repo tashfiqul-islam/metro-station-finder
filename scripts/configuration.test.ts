@@ -15,6 +15,7 @@ async function fixture() {
   await mkdir(join(root, ".github"));
   await mkdir(join(root, "apps/api"), { recursive: true });
   await cp(resolve("vitest.config.ts"), join(root, "vitest.config.ts"));
+  await cp(resolve("vitest.shared.ts"), join(root, "vitest.shared.ts"));
   await cp(resolve("apps/api/vitest.config.ts"), join(root, "apps/api/vitest.config.ts"));
   await cp(resolve(".github/renovate.json5"), join(root, ".github/renovate.json5"));
   return root;
@@ -388,17 +389,21 @@ test("METRO-35 rejects a bunfig without a [test] table", async () => {
 });
 
 // ADR-0016: a Vitest config is held to the same ordering rule as bunfig.toml (shuffle on, no fixed seed).
-test("METRO-77 the real Vitest config shuffles without a fixed seed", async () => {
+// A project does not inherit the root `test.sequence`, so the rule lives in vitest.shared.ts and every
+// Vitest config must spread it (proven in workerd: a root-only `shuffle` left in-file order fixed).
+test("METRO-77 the real Vitest configs shuffle through the shared options without a fixed seed", async () => {
   await validateConfiguration(resolve("."));
-  const source = await readFile(resolve("vitest.config.ts"), "utf8");
-  expect(source).toMatch(/shuffle: true/u);
-  expect(source).not.toMatch(/\bseed\s*:/u);
+  const shared = await readFile(resolve("vitest.shared.ts"), "utf8");
+  expect(shared).toMatch(/shuffle: true/u);
+  expect(shared).not.toMatch(/\bseed\s*:/u);
+  for (const file of ["vitest.config.ts", "apps/api/vitest.config.ts"])
+    expect(await readFile(resolve(file), "utf8")).toContain("sharedTestOptions");
 });
 
-test("METRO-77 rejects a Vitest config without sequence.shuffle naming it", async () => {
+test("METRO-77 rejects shared options without sequence.shuffle naming it", async () => {
   const root = await fixture();
   try {
-    await editFile(root, "vitest.config.ts", (source) =>
+    await editFile(root, "vitest.shared.ts", (source) =>
       source.replace("sequence: { shuffle: true },", ""),
     );
     await expectRejection(validateConfiguration(root), "sequence.shuffle");
@@ -410,7 +415,7 @@ test("METRO-77 rejects a Vitest config without sequence.shuffle naming it", asyn
 test("METRO-77 rejects shuffle switched off", async () => {
   const root = await fixture();
   try {
-    await editFile(root, "vitest.config.ts", (source) =>
+    await editFile(root, "vitest.shared.ts", (source) =>
       source.replace("shuffle: true", "shuffle: false"),
     );
     await expectRejection(validateConfiguration(root), "sequence.shuffle");
@@ -419,10 +424,10 @@ test("METRO-77 rejects shuffle switched off", async () => {
   }
 });
 
-test("METRO-77 rejects a fixed seed in the root Vitest config naming sequence.seed", async () => {
+test("METRO-77 rejects a fixed seed in the shared options naming sequence.seed", async () => {
   const root = await fixture();
   try {
-    await editFile(root, "vitest.config.ts", (source) =>
+    await editFile(root, "vitest.shared.ts", (source) =>
       source.replace("shuffle: true", "shuffle: true, seed: 42"),
     );
     await expectRejection(validateConfiguration(root), "sequence.seed");
@@ -445,12 +450,26 @@ test("METRO-77 rejects a fixed seed or disabled shuffle in a project Vitest conf
   }
 });
 
-test("METRO-77 rejects a missing root Vitest config", async () => {
-  const root = await fixture();
-  try {
-    await rm(join(root, "vitest.config.ts"));
-    await expectRejection(validateConfiguration(root), "vitest.config.ts");
-  } finally {
-    await rm(root, { recursive: true });
+test("METRO-77 rejects a Vitest config that does not spread the shared options", async () => {
+  for (const file of ["vitest.config.ts", "apps/api/vitest.config.ts"]) {
+    const root = await fixture();
+    try {
+      await editFile(root, file, (source) => source.replace("...sharedTestOptions,", ""));
+      await expectRejection(validateConfiguration(root), `${file}: must spread sharedTestOptions`);
+    } finally {
+      await rm(root, { recursive: true });
+    }
+  }
+});
+
+test("METRO-77 rejects a missing shared options file or root Vitest config", async () => {
+  for (const file of ["vitest.shared.ts", "vitest.config.ts"]) {
+    const root = await fixture();
+    try {
+      await rm(join(root, file));
+      await expectRejection(validateConfiguration(root), file);
+    } finally {
+      await rm(root, { recursive: true });
+    }
   }
 });

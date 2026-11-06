@@ -1,18 +1,18 @@
 import { defineConfig } from "vitest/config";
 
+import { sharedTestOptions } from "./vitest.shared.ts";
+
 // ADR-0016 stage 1: Vitest runs beside `bun test`. The files a project lists run only under Vitest and
-// are ignored by bunfig.toml `[test] pathIgnorePatterns`.
+// are ignored by bunfig.toml `[test] pathIgnorePatterns`. Add a project here, give it a config that spreads
+// `sharedTestOptions`, and add its sources to `coverage.include`.
 export default defineConfig({
   test: {
+    ...sharedTestOptions,
     projects: ["apps/api"],
-    // Random order exposes shared-state coupling. Vitest picks a new seed per run and prints it
-    // (`Running tests with seed "N"`); reproduce with `--sequence.seed=N`. Never set `seed` here:
-    // a fixed seed is a fixed order (scripts/configuration.ts enforces both).
-    sequence: { shuffle: true },
     coverage: {
       // Workerd cannot use V8 coverage, so this run is istanbul and separate from Bun's.
       provider: "istanbul",
-      reporter: [["text", { skipFull: false }], "lcov"],
+      reporter: ["text", "lcov"],
       reportsDirectory: "coverage/vitest",
       include: ["apps/api/src/**/*.ts"],
       exclude: ["apps/api/src/**/*.test.ts"],

@@ -30,7 +30,12 @@ Machine: WSL 2 distro "Ubuntu", Ubuntu 26.04 LTS, Linux 6.6.114.1-microsoft-stan
 
 ## What changed
 
-- `vitest.config.ts` (root): `projects: ["apps/api"]`, `sequence.shuffle: true`, istanbul coverage to `coverage/vitest`, per-file thresholds lines, functions and branches 90 (Context7-verified `perFile`). `apps/api/vitest.config.ts` holds the project with `cloudflareTest`, and `apps/api/wrangler.vitest.jsonc` the Worker test config (explicit assets directory, `compatibility_date` 2026-10-30 like the real one).
+- `vitest.config.ts` (root): `projects: ["apps/api"]`, `sequence.shuffle: true`, istanbul coverage to `coverage/vitest`, per-file thresholds lines, functions and branches 90 (Context7-verified `perFile`). `vitest.shared.ts` holds `sharedTestOptions` (`sequence.shuffle: true`), spread by the root and every project config. `apps/api/vitest.config.ts` holds the project with `cloudflareTest`, reading the real `apps/api/wrangler.jsonc` with only `miniflare.assets.directory` overridden (Repo-verified in the plugin source: the override is merged into the config's assets settings), so there is no second Worker config.
+
+### In-file shuffle (Repo-verified defect found in review)
+
+With `sequence.shuffle` only in the root config, the `api` project printed a seed but ran the tests inside each file in source order for seeds 1, 2 and 3 (`abcdefgh` each time). Moving the option into `vitest.shared.ts` and spreading it in every config fixes it, and `scripts/configuration.ts` now fails a config that does not spread it.
+
 - `apps/api/tsconfig.worker-test.json` is the ninth project in `tsc -b` (plugin types, generated Worker types, `ESNext.Disposable` for the plugin's `Symbol.dispose` types). `tsconfig.test.json` now excludes `apps/api/**`; `apps/api/test-env.d.ts` is removed (the Worker tests use the generated `Env`). `scripts/tsc-build.test.ts` lists nine projects and a fixture in the new one.
 - The five `apps/api/src/*.test.ts` files import from `vitest`; no assertion was weakened or dropped. Two port edits: `assets-route.test.ts` builds a full `Fetcher` (the generated `Env` types `ASSETS` as workerd's `Fetcher`, which also needs `connect`), and `error-format.test.ts` reads ADR-0013 with a Vite `?raw` import because workerd has no view of the repository file system (the `existsSync` assertion became "the import resolves and is non-empty"; the text assertions are unchanged). One test is new: the real entry through `exports.default.fetch`, asserting `navigator.userAgent === "Cloudflare-Workers"`.
 - `bunfig.toml` `[test] pathIgnorePatterns = ["apps/api/**"]` keeps Bun off them. `package.json`: `test:vitest` (`vitest run --coverage`), run in `check` after `bun test`.
@@ -39,15 +44,16 @@ Machine: WSL 2 distro "Ubuntu", Ubuntu 26.04 LTS, Linux 6.6.114.1-microsoft-stan
 
 ## Coverage for `apps/api` (Repo-verified, Windows and WSL Ubuntu, istanbul)
 
-| File     | Statements | Branches | Functions | Lines |
-| -------- | ---------- | -------- | --------- | ----- |
-| `app.ts` | 100        | 100      | 100       | 100   |
+| File       | Statements | Branches | Functions | Lines |
+| ---------- | ---------- | -------- | --------- | ----- |
+| `app.ts`   | 100        | 100      | 100       | 100   |
+| `index.ts` | 100        | 100      | 100       | 100   |
 
 (46/46 statements, 23/23 branches, 12/12 functions, 42/42 lines.) The existing 26 tests already meet the gate, so no new coverage tests were needed. The gate fails as intended: running only `security-headers.test.ts` printed `Coverage for lines (78.57%) / functions (83.33%) / branches (39.13%) does not meet global threshold (90%) for apps/api/src/app.ts` and exited 1.
 
-### `index.ts` (Repo-verified observation, cause Unverified)
+### `index.ts` (Repo-verified, cause found)
 
-`apps/api/src/index.ts` is one line, `export default createApp();`, and does **not** appear in the istanbul table or `coverage/vitest/lcov.info`. It is not specific to the Worker entry: a byte-identical copy imported by its own test is absent too, and `--coverage.include=apps/api/src/index.ts` alone yields an empty report. So the per-file gate has no `index.ts` row and **the gate is stated without it**. It is covered functionally by the `exports.default.fetch` test and the `index.test.ts` route tests, not by a coverage number. `scripts/coverage-scope.ts` lists it as a documented exemption with this reason. Which part of Vitest or istanbul drops it was not investigated.
+The first version, `export default createApp();`, never appeared in the istanbul table or `coverage/vitest/lcov.info`: istanbul counts no statement for a bare export-default expression, so the file had nothing to measure (a byte-identical copy with its own test was absent too). Rewriting it as `const app = createApp(); export default app;` gives it a countable statement; it now appears at 100 percent on all four metrics under the per-file gate, and the documented exemption in `scripts/coverage-scope.ts` was removed (RED first: `scripts/coverage-scope.test.ts` expected only `scaffold-status.ts` to stay exempt). The Worker entry shape is unchanged; the `exports.default.fetch` test still runs it in workerd.
 
 ## Order and seed (Repo-verified)
 
@@ -63,4 +69,4 @@ To be filled from the pull request's hosted runs (see the pull request descripti
 
 ## Not verified
 
-The hosted `ubuntu-24.04` result and the `Checks` delta; behaviour with the other Vitest 4.x line; whether `index.ts` can be reported by another coverage setting; Linux runs of the full `check` (only the three spike samples and the Vitest suite ran on WSL).
+The hosted `ubuntu-24.04` result and the `Checks` delta; behaviour with the other Vitest 4.x line; Linux runs of the full `check` (only the three spike samples and the Vitest suite ran on WSL).

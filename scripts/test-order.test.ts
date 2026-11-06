@@ -127,11 +127,11 @@ const VITEST_COUPLED_FIXTURE = COUPLED_FIXTURE.replace(
   'import { expect, test } from "vitest";',
 );
 
-/** The `sequence: { ... }` option of the repository's root Vitest config, as written there. */
+/** The `sequence: { ... }` option of the repository's shared Vitest options, as written there. */
 async function repositorySequenceOption(): Promise<string> {
-  const source = await readFile(resolve("vitest.config.ts"), "utf8");
+  const source = await readFile(resolve("vitest.shared.ts"), "utf8");
   const option = /sequence:\s*\{[^}]*\}/u.exec(source)?.[0];
-  if (option === undefined) throw new Error("vitest.config.ts has no sequence option");
+  if (option === undefined) throw new Error("vitest.shared.ts has no sequence option");
   return option;
 }
 

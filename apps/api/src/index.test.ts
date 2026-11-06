@@ -69,3 +69,9 @@ test("METRO-77 the real Worker entry runs inside workerd and serves the status r
     ready: true,
   });
 });
+
+test("METRO-77 a missing /assets/* file is a 404 error envelope through the real Worker entry (ADR-0011)", async () => {
+  const response = await exports.default.fetch("https://metro.test/assets/missing.js");
+  expect(response.status).toBe(404);
+  expect(parseErrorEnvelope(await response.json()).error.code).toBe("not_found");
+});

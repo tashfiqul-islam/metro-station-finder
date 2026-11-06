@@ -55,6 +55,7 @@ async function scratchCopy(run: (copy: string) => Promise<void>) {
       "tsconfig.e2e.json",
       "playwright.config.ts",
       "vitest.config.ts",
+      "vitest.shared.ts",
       ".dependency-cruiser.mts",
       "apps",
       "packages",
