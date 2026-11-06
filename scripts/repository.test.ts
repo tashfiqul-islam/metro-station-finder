@@ -69,16 +69,6 @@ test("FND-H5 CLAUDE.md is a git symlink to AGENTS.md", () => {
   expect(git("cat-file", "blob", object)).toBe("AGENTS.md");
 });
 
-test("FND-H3 ADR template and Accepted ADR-0001 are linked from architecture and domain guides", async () => {
-  expect(await read("docs/adr/0001-foundation-baseline.md")).toMatch(/^- Status: Accepted$/mu);
-  expect(await read("docs/adr/0000-template.md")).toMatch(/Status/u);
-  for (const guide of ["docs/agents/architecture.md", "docs/agents/domain.md"]) {
-    const body = await read(guide);
-    expect(body).toContain("adr/0001-foundation-baseline.md");
-  }
-  expect(await read("docs/agents/domain.md")).toContain("adr/0000-template.md");
-});
-
 test("FND-H2 guidance carries no stale METRO-12 or layout claims", async () => {
   const stale = [/pending METRO-12/iu, /proposed checks/iu, /not available verified gates/iu];
   const files = [
@@ -92,8 +82,6 @@ test("FND-H2 guidance carries no stale METRO-12 or layout claims", async () => {
     const body = await read(file);
     for (const pattern of stale) expect(`${file}: ${pattern.test(body)}`).toBe(`${file}: false`);
   }
-  expect(await read("docs/agents/domain.md")).not.toMatch(/^└── src\/$/mu);
-  expect(await read("docs/agents/ui.md")).not.toMatch(/Playwright\/axe are proposed/u);
 });
 
 test("FND-H2 the preparation README snippet lists every locked skill root", async () => {

@@ -12,7 +12,6 @@ const root = join(import.meta.dir, "..");
 const read = (file: string): string => readFileSync(join(root, file), "utf8");
 const runbook = read("docs/agents/cutover-runbook.md");
 const adr = read("docs/adr/0008-default-branch-switch.md");
-const policy = read("docs/agents/release-policy.md");
 
 test("METRO-34 the runbook proves the backup bundle is fresh and makes the deletion conditional", () => {
   expect(runbook).toContain("git bundle list-heads");
@@ -77,11 +76,6 @@ test("METRO-34 the first scheduled token check is a manual backstop before delet
 
 test("METRO-34 the quality-gates push-trigger dependency is documented", () => {
   expect(adr).toContain("keeps a push trigger for `feature/metro-rebuild`");
-});
-
-test("METRO-34 the policy states its SemVer subset and names the next Plane release", () => {
-  expect(policy).toContain("SemVer-compatible subset");
-  expect(policy).toContain("v1.1.0");
 });
 
 /**

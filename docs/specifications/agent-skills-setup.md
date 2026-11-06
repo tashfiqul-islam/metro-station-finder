@@ -14,7 +14,7 @@ The installed Pocock engineering skills (`to-issues`, `to-prd`, `triage`, `diagn
 
 ## Scope
 
-An Agent skills section in `AGENTS.md` linking three new documents under `docs/agents`: `issue-tracker.md` (Plane operations and write-authorization rule), `triage-labels.md` (five triage roles mapped to Plane states, no new labels) and `domain.md` (single-context layout; glossary and parity are the vocabulary source). This mirror and METRO-17 evidence.
+An Agent skills section in `AGENTS.md` linking three new documents under `docs/agents`: `issue-tracker.md` (Plane operations and write-authorization rule), `triage-labels.md` (five triage roles mapped to Plane states, no new labels) and `domain.md` (single-context layout; glossary and parity are the vocabulary source). This mirror and METRO-17 evidence. Amended by METRO-86 (2026-11-06): those three documents were merged into `plane.md` (tracker operations and triage roles) and `skills.md` (single-context domain rules); the `AGENTS.md` Agent skills section links them there and the behavior is unchanged.
 
 ## Exclusions
 

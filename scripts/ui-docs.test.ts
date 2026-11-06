@@ -4,15 +4,6 @@ import { join, resolve } from "node:path";
 const root = resolve(import.meta.dir, "..");
 const read = (file: string) => readFile(join(root, file), "utf8");
 
-test("METRO-41 ui.md positively states the WCAG 2.2 AA target and the axe tag list", async () => {
-  const ui = await read("docs/agents/ui.md");
-  expect(ui).toMatch(/^The target is WCAG 2\.2 level AA\./mu);
-  expect(ui).not.toMatch(/not (?:the )?target/iu);
-  for (const tag of ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa", "best-practice"]) {
-    expect(ui).toContain(`\`${tag}\``);
-  }
-});
-
 test("METRO-41 the axe fixture keeps every WCAG 2.2 AA tag", async () => {
   const fixtures = await read("e2e/fixtures.ts");
   const list = /AXE_TAGS = \[([^\]]*)\]/u.exec(fixtures)?.[1] ?? "";

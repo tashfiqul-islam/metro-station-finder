@@ -54,7 +54,7 @@ The vulnerability alerts "enabled" path (HTTP 204, empty body) was not observed 
 3. Advanced Security: enable code scanning "default setup" for JavaScript/TypeScript and GitHub Actions (language names in the API: `javascript-typescript`, `actions`).
 4. Advanced Security: enable private vulnerability reporting (see [SECURITY.md](../../SECURITY.md)).
 5. General, Releases: enable immutable releases, after reading the interaction below.
-6. Optional: Dependabot alerts and security updates (the dependency graph must be enabled for [dependency review](quality-gates.md#dependency-review-metro-48); it is on for this public repository, Repo-verified 2026-11-05 by the independent reviewer: the SBOM endpoint returned 621 packages; the script does not read it, and only reports these two).
+6. Optional: Dependabot alerts and security updates (the dependency graph must be enabled for [dependency review](quality-gates.md); it is on for this public repository, Repo-verified 2026-11-05 by the independent reviewer: the SBOM endpoint returned 621 packages; the script does not read it, and only reports these two).
 7. Run the check above and confirm no `FAIL`.
 
 ## Immutable releases and the release flow
@@ -66,7 +66,7 @@ Finding, by reading [ADR-0007](../adr/0007-release-sync.md), `release-sync.yml`,
 - No conflict with release sync on `edited`: it reacts to notes and title edits, which stay editable. No workflow uploads assets, so the locked-assets rule changes nothing today.
 - No conflict with the draft flow: `release-draft.yml` creates a draft only, the tag is created when the owner publishes, and `production-deploy.yml` runs on the pushed `vX.Y.Z` tag.
 - Conflict 1, rehearsal: the cutover runbook's optional rehearsal with a deletable throwaway tag (`v0.0.0-cutover-test`) is impossible once immutable releases are on. The preflight already reports this (`immutable-releases` is `INFO`, "do not rehearse with a tag"); the rehearsal must be done before enabling the setting or skipped.
-- Conflict 2, retraction: [maintenance](maintenance.md#release-sync-metro-14) says to retract by deleting or unpublishing the GitHub release. With immutability on, a published `vX.Y.Z` cannot be retried under the same name after deletion. A bad release needs a new version (a patch tag). Unverified: whether GitHub allows converting a published immutable release back to a draft; do not rely on "unpublish".
+- Conflict 2, retraction: [maintenance](maintenance.md) says to retract by deleting or unpublishing the GitHub release. With immutability on, a published `vX.Y.Z` cannot be retried under the same name after deletion. A bad release needs a new version (a patch tag). Unverified: whether GitHub allows converting a published immutable release back to a draft; do not rely on "unpublish".
 - A wrong tag or wrong target commit cannot be fixed after publish: check the draft's target before publishing.
 
 The setting is the owner's decision; this document records the effect and does not choose for the owner.
