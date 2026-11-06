@@ -18,6 +18,7 @@
     "./configuration.ts",
     "./hooks-status.ts",
     "./mise-lock.ts",
-    "./tools.ts"
+    "./tools.ts",
+    "./vitest-sync.ts"
   ]
 }

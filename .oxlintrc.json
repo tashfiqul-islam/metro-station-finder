@@ -147,6 +147,36 @@
         // `toHaveBeenCalled()` alone does not show what the spy was called with.
         "jest/prefer-called-with": "error"
       }
+    },
+    {
+      // VITEST_IMPORT_BAN_DIRECTORIES (METRO-80): the directories still run by `bun test`, where an import from
+      // "vitest" fails confusingly at load time. Shrink "files" as ADR-0016 stages move scripts and packages onto
+      // Vitest; apps/api and apps/web are never listed. An override replaces the rule config above for these
+      // files, so the `bun:test` ban from the test override is repeated here and must stay in step with it.
+      "files": ["scripts/**", "packages/**"],
+      "rules": {
+        "eslint/no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "bun:test",
+                "message": "Use the injected test globals: the jest/* rules cannot see imports from bun:test."
+              },
+              {
+                "name": "vitest",
+                "message": "This directory still runs on `bun test`; a Vitest import fails there. Use the injected test globals."
+              }
+            ],
+            "patterns": [
+              {
+                "group": ["@vitest/*"],
+                "message": "This directory still runs on `bun test`; a Vitest import fails there."
+              }
+            ]
+          }
+        ]
+      }
     }
   ],
   "ignorePatterns": [

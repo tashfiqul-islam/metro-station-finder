@@ -64,6 +64,23 @@ test("METRO-77 rejects a range instead of an exact pin", async () => {
   expect(checkVitestSync(input).join("\n")).toContain("exact");
 });
 
+test("METRO-80 rejects a vitest outside the peer range the plugin declares", async () => {
+  const input = await realInput();
+  devDependencies(input)["vitest"] = "6.0.0";
+  devDependencies(input)["@vitest/coverage-istanbul"] = "6.0.0";
+  const message = checkVitestSync(input).join("\n");
+  expect(message).toContain("^4.1.0 || ^5.0.0");
+  expect(message).toContain("vitest 6.0.0");
+});
+
+test("METRO-80 rejects a lock whose plugin entry has lost its vitest peer range", async () => {
+  const input = await realInput();
+  const entry = packages(input)["@cloudflare/vitest-plugin"];
+  if (!Array.isArray(entry) || !isRecord(entry[2])) throw new Error("no plugin entry");
+  delete entry[2]["peerDependencies"];
+  expect(checkVitestSync(input).join("\n")).toContain("peer");
+});
+
 test("METRO-77 rejects a missing Vitest package", async () => {
   const input = await realInput();
   delete devDependencies(input)["@cloudflare/vitest-plugin"];
