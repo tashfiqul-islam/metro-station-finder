@@ -40,6 +40,8 @@ interface Outcome {
   readonly lines: readonly string[];
   readonly unattributed: readonly string[];
   readonly exitCode: number;
+  /** How the tsc process ended, for the failure message of a run that produced no diagnostic. */
+  readonly trace: string;
 }
 
 interface ProjectRun {
@@ -63,7 +65,8 @@ function compileProject(
 }
 
 function tsc(root: string) {
-  return Bun.spawnSync([
+  const started = performance.now();
+  const result = Bun.spawnSync([
     "bun",
     "run",
     "tsc",
@@ -72,6 +75,11 @@ function tsc(root: string) {
     "--pretty",
     "false",
   ]);
+  const trace =
+    `exitCode=${result.exitCode} signalCode=${String(result.signalCode ?? "none")} ` +
+    `stdout=${result.stdout.byteLength}B stderr=${result.stderr.byteLength}B ` +
+    `duration=${Math.round(performance.now() - started)}ms`;
+  return Object.assign(result, { trace });
 }
 
 /** One entry per diagnostic: tsc indents the continuation lines of a message, so they join the head line. */
@@ -140,7 +148,12 @@ async function run(
     const rejected = new Map<string, Outcome>();
     for (const file of files) {
       const own = lines.filter((line) => line.includes(`/${file.name}(`));
-      rejected.set(file.id, { lines: own, unattributed, exitCode: result.exitCode });
+      rejected.set(file.id, {
+        lines: own,
+        unattributed,
+        exitCode: result.exitCode,
+        trace: result.trace,
+      });
     }
     return { safe, rejected };
   } finally {
@@ -173,9 +186,10 @@ async function rejection(project: string, id: string): Promise<Outcome> {
   const found = (await projectRun(project)).rejected.get(id);
   if (found === undefined) throw new Error(`no fixture ${id} for ${project}`);
   // A fixture with no diagnostic of its own, or a run that exits 0, is a failure that names the fixture.
-  expect(found.lines.join("\n"), `${project}: fixture ${id} produced no diagnostic`).toMatch(
-    /error TS\d+/u,
-  );
+  expect(
+    found.lines.join("\n"),
+    `${project}: fixture ${id} produced no diagnostic (tsc ${found.trace})`,
+  ).toMatch(/error TS\d+/u);
   expect(found.exitCode, `${project}: the batch with fixture ${id} exited 0`).not.toBe(0);
   return found;
 }
