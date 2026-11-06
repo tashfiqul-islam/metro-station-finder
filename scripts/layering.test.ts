@@ -374,7 +374,10 @@ const webDeepCore = scenario((at) => ({
 test(
   "METRO-89 web deep import of a core internal path by package name is rejected",
   async () => {
-    // The package exports map hides the path, so it surfaces as no-unresolved (as for contracts).
+    // Why it fails: @metro/core's exports map exposes only "." (src/index.ts), so
+    // @metro/core/src/stations/dataset.ts cannot be resolved and the cruiser reports no-unresolved,
+    // not web-imports-core-public-entry-only. That rule matches resolved paths, so its hint text cannot
+    // reach this form without a new rule. The relative-path form above carries the public-entry hint.
     expect((await verdict(webDeepCore)).errorRules).toContain("no-unresolved");
   },
   LONG,

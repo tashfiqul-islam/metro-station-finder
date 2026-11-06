@@ -47,8 +47,8 @@ differ and cannot be linted, without copying root policy.
 
 | Task                           | Location                                   |
 | ------------------------------ | ------------------------------------------ |
-| Station, fare or distance rule | `packages/core/src/{domain,application}/`  |
-| Station or fare data           | `packages/core/src/data/`                  |
+| Station, fare or distance rule | `packages/core/src/{geo,stations,fares}/`  |
+| Station or fare data           | `packages/core/src/stations/dataset.ts`    |
 | Shape that crosses the network | `packages/contracts/src/` (via `index.ts`) |
 | API route and headers          | `apps/api/src/app.ts`                      |
 | UI                             | `apps/web/src/`                            |
