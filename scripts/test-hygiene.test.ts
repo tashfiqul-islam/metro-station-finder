@@ -195,6 +195,33 @@ for (const file of ["scripts/fixture.test.ts", "packages/core/src/fixture.test.t
     expect(result.exitCode).not.toBe(0);
   }, 30000);
 
+for (const file of ["scripts/fixture.test.ts", "packages/core/src/fixture.test.ts"])
+  test(`METRO-80 a subpath import from vitest/config is rejected in ${file}`, async () => {
+    const result = await lintFixture(
+      `import { defineConfig } from "vitest/config";
+
+test("imported", () => {
+  expect(defineConfig).toBeDefined();
+});
+`,
+      file,
+    );
+    expect(result.output).toContain("(no-restricted-imports)");
+    expect(result.exitCode).not.toBe(0);
+  }, 30000);
+
+test("METRO-80 a non-test file under scripts/ may not import bun:test either (intentional widening)", async () => {
+  const result = await lintFixture(
+    `import { expect } from "bun:test";
+
+export const check = () => expect(1);
+`,
+    "scripts/helper.ts",
+  );
+  expect(result.output).toContain("(no-restricted-imports)");
+  expect(result.exitCode).not.toBe(0);
+});
+
 test("METRO-80 an import from @vitest/* is rejected in scripts/", async () => {
   const result = await lintFixture(
     `import { page } from "@vitest/browser";

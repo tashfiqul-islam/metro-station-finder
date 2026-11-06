@@ -66,9 +66,16 @@ export function checkVitestSync(input: VitestSyncInput): string[] {
 
   const table = input.lock["packages"];
   if (!isRecord(table)) return [...problems, "bun.lock has no packages table"];
-  // METRO-80: the pinned vitest must satisfy the peer range the pinned plugin declares in its lock entry.
+  // METRO-80: the pinned vitest must satisfy the peer range the pinned plugin declares in its lock entry, so
+  // first make sure that lock entry is the plugin version the manifest pins.
+  const pluginPin = versions[PLUGIN];
+  const locked = lockVersion(table, PLUGIN);
   const peer = pluginVitestPeer(table);
-  if (peer === undefined) problems.push(`bun.lock lists no vitest peer range for ${PLUGIN}`);
+  if (pluginPin !== undefined && locked !== pluginPin)
+    problems.push(
+      `bun.lock resolves ${PLUGIN} ${locked ?? "nothing"} but package.json pins ${pluginPin}`,
+    );
+  else if (peer === undefined) problems.push(`bun.lock lists no vitest peer range for ${PLUGIN}`);
   else if (vitest !== undefined && !Bun.semver.satisfies(vitest, peer))
     problems.push(`vitest ${vitest} is outside the peer range "${peer}" that ${PLUGIN} declares`);
   const fromMiniflare = lockVersion(table, `${PLUGIN}/miniflare/workerd`);

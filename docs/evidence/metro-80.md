@@ -17,7 +17,7 @@ Base: `472a3a8` (feature/metro-rebuild). Bun 1.4.4, oxlint 1.90.0, vitest 5.1.0,
 
 ## 3. vite/client instead of raw-modules.d.ts
 
-Tried: `"types": ["@cloudflare/vitest-plugin/types", "vite/client"]` in `apps/api/tsconfig.worker-test.json` and the `.d.ts` removed. `tsc -b` output:
+Tried: `"types": ["@cloudflare/vitest-plugin/types", "vite/client"]` in `apps/api/tsconfig.worker-test.json` and `raw-modules.d.ts` removed from `include` and deleted. `bunx tsc -b` output, copied verbatim from a re-run in the review round (the repository was restored afterwards):
 
 ```
 apps/api/worker-configuration.d.ts(19,17): error TS2300: Duplicate identifier 'src'.
@@ -26,7 +26,16 @@ node_modules/.bun/vite@8.3.5+6e33d93364884e11/node_modules/vite/client.d.ts(232,
 node_modules/.bun/vite@8.3.5+6e33d93364884e11/node_modules/vite/client.d.ts(239,40): error TS2304: Cannot find name 'SharedWorker'.
 ```
 
+What collides: both `vite/client.d.ts` and the generated `apps/api/worker-configuration.d.ts` declare `module "*.txt"` with an `export default` (vite: `const src: string`, Worker types: `const value: string`), and tsc reports the two default exports as a duplicate identifier at both sites. `SharedWorker` is used by vite's `?sharedworker` declarations and is not in the Worker lib. Line 19 of `worker-configuration.d.ts` is the `const value` inside `declare module "*.txt"`, although the message names `src`.
+
 Outcome: reverted; `raw-modules.d.ts` stays with a comment naming the conflict.
+
+## Review round
+
+- Subpath imports: `vitest/*` added to the ban patterns. RED: the `vitest/config` fixtures for `scripts/` and `packages/` failed with `Received: ""`; GREEN after. `apps/api/vitest.config.ts` (imports `vitest/config`) stays clean in the real lint.
+- Lock tied to manifest: RED fixture (lock plugin version `1.4.0`, manifest `1.5.0`) failed; the check now compares them before trusting the lock's peer range.
+- Boundary tests: vitest `5.0.1` and `5.1.0` accepted; `5.1.0-beta.1` and `4.0.9` rejected (these passed on first run, they pin existing behavior). The missing-peer assertion now compares the exact message.
+- A non-test file under `scripts/` importing `bun:test` is rejected by the repeated ban (fixture, passed on first run: intentional widening).
 
 ## Not verified
 

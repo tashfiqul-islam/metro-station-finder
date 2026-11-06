@@ -78,8 +78,32 @@ test("METRO-80 rejects a lock whose plugin entry has lost its vitest peer range"
   const entry = packages(input)["@cloudflare/vitest-plugin"];
   if (!Array.isArray(entry) || !isRecord(entry[2])) throw new Error("no plugin entry");
   delete entry[2]["peerDependencies"];
-  expect(checkVitestSync(input).join("\n")).toContain("peer");
+  expect(checkVitestSync(input)).toContain(
+    "bun.lock lists no vitest peer range for @cloudflare/vitest-plugin",
+  );
 });
+
+test("METRO-80 rejects a lock entry for a different plugin version than the manifest pin", async () => {
+  const input = await realInput();
+  setLockVersion(input, "@cloudflare/vitest-plugin", "1.4.0");
+  expect(checkVitestSync(input)).toContain(
+    "bun.lock resolves @cloudflare/vitest-plugin 1.4.0 but package.json pins 1.5.0",
+  );
+});
+
+for (const [version, accepted] of [
+  ["5.0.1", true],
+  ["5.1.0", true],
+  ["5.1.0-beta.1", false],
+  ["4.0.9", false],
+] as const)
+  test(`METRO-80 peer range boundary: vitest ${version} is ${accepted ? "accepted" : "rejected"}`, async () => {
+    const input = await realInput();
+    devDependencies(input)["vitest"] = version;
+    devDependencies(input)["@vitest/coverage-istanbul"] = version;
+    const peer = checkVitestSync(input).filter((problem) => problem.includes("peer range"));
+    expect(peer.length === 0).toBe(accepted);
+  });
 
 test("METRO-77 rejects a missing Vitest package", async () => {
   const input = await realInput();
