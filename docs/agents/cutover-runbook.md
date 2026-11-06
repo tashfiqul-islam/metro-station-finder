@@ -135,6 +135,8 @@ Keep `master` for at least 24 hours and until the first scheduled `cloudflare-to
 
 ## 6. Delete master and retire the integration branch (separate owner go)
 
+Removing `master` is separately authorized by the owner; nothing before this section authorizes it.
+
 1. Gate. All of these must hold; the first two are the backstop for checklist item 15, because the preflight cannot see Actions history of a future schedule:
 
    ```powershell

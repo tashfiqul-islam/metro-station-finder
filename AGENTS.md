@@ -71,7 +71,7 @@ Follow an existing slice, explain any deviation in the PR, and write an ADR for 
 | Reviewing a diff                          | [Review checklist](docs/agents/review-checklist.md)                            |
 | Plane tickets, labels, states             | [Plane](docs/agents/plane.md)                                                  |
 | Skills, specs, ticket preparation         | [Skills](docs/agents/skills.md)                                                |
-| Imports, packages, providers              | [Architecture](docs/agents/architecture.md)                                    |
+| Imports, packages, providers              | [Architecture](docs/agents/architecture.md); relevant ADRs if present          |
 | API, contract, provider call              | [API](docs/agents/api.md)                                                      |
 | UI, interaction, accessibility            | [UI](docs/agents/ui.md)                                                        |
 | Tests, bugs                               | [Testing](docs/agents/testing.md)                                              |

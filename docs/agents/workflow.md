@@ -7,7 +7,7 @@ Read when: preparing or implementing a ticket, opening or reviewing a PR, commit
 ### Task preparation
 
 - Keep research, settled specification, ticket preparation and implementation separate. Settle domain terms, spec and test seams, then create bounded tickets. Use [skills](skills.md), the [Plane adapter](plane.md), the [specification](../templates/specification.md) and [ticket](../templates/plane-ticket.md) templates.
-- Ready needs a linked settled spec or decision, a bounded independently verifiable slice, failure and boundary acceptance checks that can fail on base, blocker relations, required tools and data, a check plan and no material unknowns. Open blockers keep the ticket in Backlog. Ready is the state; no duplicate label.
+- Ready needs a linked settled spec or decision, a bounded independently verifiable slice, failure and boundary acceptance checks that can fail on base, blocker relations, required tools and data, a check plan and no material unknowns. Open blockers keep it in Backlog. Ready is the state, not a label.
 
 ### Execution
 
@@ -19,7 +19,7 @@ Read when: preparing or implementing a ticket, opening or reviewing a PR, commit
 
 - Every PR whose files are not all markdown under `docs/` or at the root gets an independent review. Docs-only PRs skip it and write `none (docs only)` in `Reviewer`; they still need green `Quality gates`. The owner's merge is the owner review. Typos in code are not exempt.
 - The reviewer has a fresh context in a different session, has read-only tools, sees only the ticket or spec, base and head commits and the committed diff (no implementer reasoning), follows the [review checklist](review-checklist.md), ranks findings Critical, Important or Minor with file and line, and states what it verified and could not verify. Claude Code binds this to `.claude/agents/independent-reviewer.md`.
-- Reports are leads, not authority. Verify each finding, then record one disposition: fixed (commit), disproved (evidence), accepted (reason, who) or deferred (ticket). Fix or disprove Critical findings before merge. Merge only after dispositions are recorded and hosted checks are green.
+- Reports are leads, not authority. Verify each finding, then record one disposition: fixed (commit), disproved (evidence), accepted (reason, who) or deferred (ticket). Fix or disprove Critical findings before merge; fix, disprove, accept or defer Important findings with the reason stated. Merge only after dispositions are recorded and hosted checks are green.
 - The PR body has a `Reviewer` section naming the agent or person, a reference (a URL, a `#<number>`, or a `session:` / `run:` token) and the disposition link. It proves presence, not that a review happened.
 
 ### Attribution
@@ -45,4 +45,4 @@ Read when: preparing or implementing a ticket, opening or reviewing a PR, commit
 ## Read more
 
 - [Review and CI enforcement details](../evidence/metro-86-moved-workflow.md): parsing rules, ruleset IDs, attribution decisions, merge methods.
-- [ADR-0008](../adr/0008-default-branch-switch.md), [ADR-0004](../adr/0004-supply-chain-and-ci-policy.md), [release-sync](../specifications/release-sync.md), [release-draft](../specifications/release-draft.md).
+- [ADR-0008](../adr/0008-default-branch-switch.md), [release-sync](../specifications/release-sync.md), [release-draft](../specifications/release-draft.md).
