@@ -63,10 +63,19 @@ Every run prints `Running tests with seed "N"`; `--sequence.seed=N` reproduces t
 
 `bun run test:vitest`: 1.2 to 1.4 s of Vitest duration (about 4 s wall with `mise exec` and the coverage report). `bun test`: 1007 tests in 78 files, 84 s (the earlier baseline in the spike was 81 to 109 s for 967 tests in 81 files). Full `bun run check`: 1 m 35 s wall on this machine.
 
-## CI `Checks` delta
+## CI `Checks` delta (Repo-verified, one hosted run, not a median)
 
-To be filled from the pull request's hosted runs (see the pull request description and the reviewer record). Baseline: [CI timings](ci-timings-2026-11.md), `Checks` median 1 m 50 s, max 2 m 29 s. Not measured locally as a CI figure: the hosted runner differs from this machine, and a single PR run is not a median (ADR-0016 asks for at least 5 runs).
+Pull request #78, run 42165449422 (`ubuntu-24.04` hosted runner), all required jobs green. `Checks` took 2 m 59 s; `Run all checks` took 2 m 41 s (04:56:55 to 04:59:36 UTC). Baseline: [CI timings](ci-timings-2026-11.md), `Checks` median 1 m 50 s, max 2 m 29 s. Against the median that is **+69 s** and against the baseline maximum +30 s, so this single run is over the ADR-0016 criterion 2 budget (+30 s). One run is not a median (the ADR asks for at least 5), so the criterion is neither passed nor failed here.
+
+What the log shows:
+
+- Vitest itself is cheap: the seed line (`Running tests with seed "1793941166370"`) is at 04:59:26 and the `coverage:scope` line at 04:59:29, so the workerd run plus coverage took about 3 s of the step.
+- The workerd postinstall stayed blocked on the hosted runner ("Blocked 2 postinstalls") and the Vitest suite still passed, so `trustedDependencies` needs no change on Ubuntu (Repo-verified on the hosted runner).
+- `coverage-lcov` uploaded with both files (9826 bytes).
+- Not known: where the other roughly 60 s went. Step durations inside `bun run check` are not logged, the baseline predates this change (the suite grew from 967 to 1007 Bun tests since the spike baseline was taken, and 28 Vitest tests were added), and runner variance in the baseline was up to 39 s. Do not attribute the delta to Vitest without a breakdown.
+
+Follow-up: record the `Checks` duration of the next PRs and compute the median of at least 5 before deciding stages 3 and 4. If it stays above +30 s, split the timing per command inside `check` to see which gate grew.
 
 ## Not verified
 
-The hosted `ubuntu-24.04` result and the `Checks` delta; behaviour with the other Vitest 4.x line; Linux runs of the full `check` (only the three spike samples and the Vitest suite ran on WSL).
+A `Checks` median (only one hosted run so far); behaviour with the other Vitest 4.x line; Linux runs of the full `check` (only the three spike samples and the Vitest suite ran on WSL).
