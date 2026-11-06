@@ -1,9 +1,16 @@
-import { copyFile, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 import { cleanGitEnv } from "./git-env";
-import { HOOK_INSTALL_COMMAND, REQUIRED_HOOKS, hookStatus, hookWarning } from "./hooks-status";
+import {
+  HOOK_INSTALL_COMMAND,
+  REQUIRED_HOOKS,
+  hookStatus,
+  hookWarning,
+  statusFromGit,
+  type GitResult,
+} from "./hooks-status";
 
 // Empty global and system config keep a developer's own `hk install --global` from leaking in; CI is
 // cleared so the suite behaves the same on a developer machine and on the runner.
@@ -132,29 +139,51 @@ test("METRO-45 says it could not determine the state when git cannot run", async
   });
 });
 
-// Real Git exits 128 for every config failure it can reach here (and `rev-parse` fails the same way first), so
-// the "neither 0 nor 1" branch needs a stand-in git. Bun refuses to pass the `^hook...$` pattern to a .cmd file
-// on Windows, so this runs on POSIX only (CI is Ubuntu); a named function keeps the jest rules working.
-async function configFailureIsUnknown(): Promise<void> {
-  await withRepository(async (root) => {
-    // `rev-parse` succeeds, every other command fails with exit code 2 (neither 0 nor 1).
-    const fakeGit = join(root, "fake-git");
-    await writeFile(
-      fakeGit,
-      '#!/bin/sh\nif [ "$1" = "rev-parse" ]; then echo .git; exit 0; fi\necho config exploded >&2\nexit 2\n',
-      { mode: 0o755 },
+const answer = (exitCode: number, stderr = "", stdout = ""): GitResult => ({
+  exitCode,
+  stdout,
+  stderr,
+});
+const insideRepository = answer(0, "", ".git\n");
+const neverRead = (): GitResult => {
+  throw new Error("config must not be read when rev-parse already decided");
+};
+
+test("METRO-92 rev-parse alone decides a missing git, a non-repository and a failure, without reading config", () => {
+  expect(statusFromGit(answer(-1, " spawn failed \n"), neverRead)).toEqual({
+    state: "unknown",
+    reason: "spawn failed",
+  });
+  expect(statusFromGit(answer(128, "fatal: not a git repository"), neverRead)).toEqual({
+    state: "no-repository",
+  });
+  expect(statusFromGit(answer(3, " odd failure \n"), neverRead)).toEqual({
+    state: "unknown",
+    reason: "odd failure",
+  });
+});
+
+// Real Git exits 128 for every config failure it can reach here (and `rev-parse` fails the same way first),
+// so the "neither 0 nor 1" rule is proven over synthetic answers, on every platform.
+for (const exitCode of [2, 5, 128, -1]) {
+  test(`METRO-92 a config read that exits ${String(exitCode)} is unknown with its trimmed stderr`, () => {
+    expect(statusFromGit(insideRepository, () => answer(exitCode, "  config exploded \n"))).toEqual(
+      {
+        state: "unknown",
+        reason: "config exploded",
+      },
     );
-    expect(hookStatus(root, env(), fakeGit)).toEqual({
-      state: "unknown",
-      reason: "config exploded",
-    });
   });
 }
 
-test.skipIf(process.platform === "win32")(
-  "METRO-92 reports unknown with Git's message when reading the hook config exits with a real failure",
-  configFailureIsUnknown,
-);
+test("METRO-92 a config read that exits 0 or 1 is a normal answer", () => {
+  expect(statusFromGit(insideRepository, () => answer(1, "ignored"))).toEqual({
+    state: "missing",
+    hooks: ["pre-commit", "commit-msg", "pre-push"],
+  });
+  const all = REQUIRED_HOOKS.map((hook) => `hook.hk-${hook}.event ${hook}`).join("\n");
+  expect(statusFromGit(insideRepository, () => answer(0, "", all))).toEqual({ state: "ok" });
+});
 
 async function bootstrapOutput(cwd: string, extra: Record<string, string>) {
   const result = Bun.spawnSync([process.execPath, resolve("scripts/tools.ts")], {
