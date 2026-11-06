@@ -4,7 +4,7 @@
 - Source: Plane work item METRO-88 (read as data). Foundation blueprint v4, decisions D6, D7, D13 (owner-approved, not committed).
 - Decision owner and approval: the owner delegated the open decisions below to the orchestrator on 2026-11-07 (library, fare shape, CSP switch, free-tier discipline, live check). Each is recorded as a decision here.
 - Research (labels: Repo-verified, Context7-verified, Web-verified, Unverified; Context7 library `/websites/developers_google_maps_javascript` and `/visgl/react-google-maps`, web pages read 2026-11-07):
-  - Context7-verified: `PlaceAutocompleteElement` fires `gmp-select`; `placePrediction.toPlace()` then `fetchFields({ fields })` ends the session and carries the session token automatically; `Route.computeRoutes` needs `fields`, takes `travelMode: 'WALKING'`; `APIProvider` takes `apiKey` and `version` (first render only) and `useMapsLibrary(name)` is `importLibrary` as a hook.
+  - Context7-verified: `PlaceAutocompleteElement` fires `gmp-select`; `placePrediction.toPlace()` then `fetchFields({ fields })` ends the session and carries the session token automatically; `Route.computeRoutes` needs `fields`, takes `travelMode: 'WALKING'`; `@googlemaps/js-api-loader` v2 exposes `setOptions({ key, v })` once and `importLibrary(name)` (ADR-0009, Context7-verified 2026-11-05).
   - Web-verified ([pricing](https://developers.google.com/maps/billing-and-pricing/pricing), undated page): free caps per month are Autocomplete Requests 10,000, Autocomplete Session Usage unlimited, Place Details Essentials 10,000, Place Details Pro 5,000, Compute Routes Essentials 10,000, Pro 5,000, Enterprise 1,000, Dynamic Maps 10,000. [Routes billing](https://developers.google.com/maps/documentation/routes/usage-and-billing): Essentials is "basic features, up to 10 intermediate waypoints"; Pro needs traffic-aware modifiers. Unverified: the page does not name WALKING, so Essentials is inferred. The SKU of the JavaScript `Route.computeRoutes` call itself is Unverified.
   - Web-verified ([CSP guide](https://developers.google.com/maps/documentation/javascript/content-security-policy)): Google's samples list `script-src` (self, `*.googleapis.com`, `*.gstatic.com`, `'unsafe-eval'`, `blob:`), `img-src`, `connect-src`, `style-src`, `font-src`, `worker-src blob:` and `frame-src`. They are written for a map page. Whether a map-less Places and Routes page needs `'unsafe-eval'`, `blob:`, inline styles, fonts or frames is Unverified until the live check.
   - Repo-verified: `findNearestStation`, `findFare`, `baselineDataset`, `datasetProvenance` live in `packages/core/src`; the web app may import only core's public entry (ADR-0018).
@@ -25,11 +25,22 @@
 
 ### Library decision
 
-`@vis.gl/react-google-maps` 1.10.2 (published 2026-10-30, past the 3-day cooldown; depends on `@googlemaps/js-api-loader` ^2 and `@types/google.maps`). Owner-approved new dependency. Only `apps/web/src/adapters/maps` may import it (dependency-cruiser rule `maps-library-only-in-maps-adapter`, proven red by a fixture). `APIProvider` is mounted only by the nearest-station page, so the Maps script loads on that route only, never at module load and never on `/`. If the library breaks the bundle budget, fall back to `@googlemaps/js-api-loader` directly (numbers in the PR).
+Decided by the owner: try `@vis.gl/react-google-maps` first, fall back to `@googlemaps/js-api-loader` if it breaks the bundle budget. Measured on this slice (`bun run build` then `bun run bundle:check`; budget 250,000 raw and 80,000 gzip bytes; Repo-verified):
+
+| Build                                                                | Raw bytes | Gzip bytes |
+| -------------------------------------------------------------------- | --------- | ---------- |
+| Base (`2f0bd88`, scaffold only)                                      | 225,877   | 70,421     |
+| Slice with `@vis.gl/react-google-maps` 1.10.2                        | 264,660   | 84,184     |
+| Slice code and core data only (vis.gl aliased to a stub, experiment) | 240,226   | 75,942     |
+| Slice with `@googlemaps/js-api-loader` 2.1.3 (shipped)               | 242,663   | 76,956     |
+
+vis.gl alone cost about 24.4 KB raw and 8.2 KB gzip (its Map, marker and 3D code is not tree-shaken out) and broke both limits, so the shipped adapter uses `@googlemaps/js-api-loader` 2.1.3 (published 2026-09-22) directly, as ADR-0009 already said. It also avoids vis.gl always loading the `maps` library. `@types/google.maps` 3.66.9 is a dev-only types package; it needs `skipLibCheck: true` in `apps/web/tsconfig.json` and `tsconfig.dom-test.json` because its own declarations fail `exactOptionalPropertyTypes` (TS2420, lines 13527 and 16448 of its `index.d.ts`); the rest of the repository keeps `skipLibCheck: false`. Only `apps/web/src/adapters/maps` may import the loader (rule `maps-library-only-in-maps-adapter`, proven red per import form). The provider mounts only with the slice, so the script loads on `/nearest` only, once (a module-level promise is shared by StrictMode re-runs and remounts).
+
+The key is read at build time. `bun run build` has none unless the owner's root `.env` supplies it (`envDir` is the repository root; only `VITE_` names reach the bundle). `bun run smoke` rebuilds the web app with `VITE_GOOGLE_MAPS_API_KEY=fake-key-for-tests` (a process variable beats a `.env` file) so the journey runs the Maps path, and Vitest blanks the key.
 
 ### Pinned Maps version
 
-`version="3.66"` (Web-verified 2026-11-07: weekly is 3.66; four numeric versions are supported at any time; mid-November quarterly becomes 3.66; a deleted number silently falls back to the default channel). `@types/google.maps` is 3.66.x. Quarterly bump. The live check prints `google.maps.version` and fails if it does not start with `3.66`, so a silent fallback is detected (Unverified until run that the property exists at runtime).
+`v=3.66` (Web-verified 2026-11-07: weekly is 3.66; four numeric versions are supported at any time; mid-November quarterly becomes 3.66; a deleted number silently falls back to the default channel). `@types/google.maps` is 3.66.x. Quarterly bump. The live check prints `google.maps.version` and fails if it does not start with `3.66`, so a silent fallback is detected (Unverified until run that the property exists at runtime).
 
 ### Acceptance
 
@@ -80,7 +91,7 @@ The owner must pay nothing. Calls made and their SKU (pricing re-read 2026-11-07
 | `Route.computeRoutes`, WALKING, distance and duration only   | Compute Routes Essentials (inferred), budget at Pro                                               | 10,000 Essentials, 5,000 Pro             | Inferred; JS-library SKU Unverified        |
 | Maps JavaScript API load with no map                         | no map load is created (no Dynamic Maps SKU)                                                      | 10,000 Dynamic Maps                      | Unverified                                 |
 
-Frugality built in: one `fetchFields` per selection; one route request per (origin, station) pair with an in-flight and result cache; no request per render or per keystroke of ours; no retries; the API is loaded once (StrictMode-safe, `APIProvider` dedupes); with no key nothing loads. Limit: the element does its own autocomplete requests per keystroke and exposes no documented minimum-character or debounce setting (Unverified; the live check counts Places requests per search). If that is wasteful, the fallback is a custom combobox on `AutocompleteSuggestion.fetchAutocompleteSuggestions` with our own debounce and minimum length (a new decision).
+Frugality built in: one `fetchFields` per selection; one route request per (origin, station) pair with an in-flight and result cache; no request per render or per keystroke of ours; no retries; the API is loaded once (StrictMode-safe: a module-level promise is shared) and only the `places` and `routes` libraries are imported, never `maps`; with no key nothing loads. Limit: the element does its own autocomplete requests per keystroke and exposes no documented minimum-character or debounce setting (Unverified; the live check counts Places requests per search). If that is wasteful, the fallback is a custom combobox on `AutocompleteSuggestion.fetchAutocompleteSuggestions` with our own debounce and minimum length (a new decision).
 
 Owner action, a hard stop: set a daily quota cap per API on the key (a budget alert does not stop spending). Starting values from ADR-0009: Routes 160, Maps JavaScript 300, Place Details 300, Autocomplete requests 330 per day. Also restrict the key to the Maps JavaScript, Places (New) and Routes APIs and to HTTP referrers (localhost, 127.0.0.1 and the production origin). Steps are in [golden path](../agents/golden-path.md).
 
@@ -100,8 +111,8 @@ Missing key; script blocked; `gmp-error`; `fetchFields` rejects or returns no lo
 
 ### Testing seams and fixtures
 
-- S1 `MapsAdapter` (port in `adapters/maps/port.ts`): features receive it as a prop; tests inject a fake; the adapter test fakes `@vis.gl/react-google-maps` and a `PlaceAutocompleteElement` class and asserts `fields` exactly `['location']`, `travelMode` `'WALKING'`, `fields` `['distanceMeters', 'durationMillis']`, one call each, cache hit, failures to fixed errors.
-- S2 `e2e/nearest-station.e2e.ts`: a fake `google.maps` served by `page.route` at `https://maps.googleapis.com/maps/api/js*` (so the enforced `script-src` is exercised), synthetic coordinates, fake key `fake-key-for-tests`, geolocation permission denied or granted through the Playwright context, and an `/api/*` request listener asserting no coordinate.
+- S1 `MapsAdapter` (port types in `adapters/maps/context.ts`): features receive it as a prop; tests inject a fake; the adapter tests fake the loader and a `PlaceAutocompleteElement` element and assert `fields` exactly `['location']`, `travelMode` `'WALKING'`, `fields` `['distanceMeters', 'durationMillis']`, one call each, cache hit, failures to fixed errors.
+- S2 `e2e/nearest-station.e2e.ts`: a fake `google.maps` served by `page.route` at `https://maps.googleapis.com/maps/api/js*` (so the enforced `script-src` is exercised), synthetic coordinates, fake key `fake-key-for-tests`, geolocation denied or granted through a deterministic `navigator.geolocation` init script (the real browser permission flow is not exercised), and an `/api/*` request listener asserting no coordinate.
 - S3 `e2e/headers.e2e.ts` and `apps/web/src/headers.test.ts`: enforced header present, Report-Only absent, blocked-resource control.
 - Check plan: each criterion maps to a test named with `METRO-88` and its criterion id; on base the page, adapter and header do not exist, so the tests fail.
 
@@ -117,4 +128,7 @@ Routes SKU of the JS call; autocomplete requests per keystroke; whether a Maps-l
 
 - ADR-0009 asks for `["location", "formattedAddress"]`: this slice requests `location` only because no map is shown.
 - ADR-0009 moves focus to the search input after a geolocation error: the shadow DOM input is not reachable, so focus moves to the alert (`tabIndex=-1`, existing outline), and the alert is not an `aria-describedby` target of the input.
+- The slice is routed at `/nearest` so the scaffold page and its tests at `/` stay until the retirement ticket.
+- The element sets its own autocomplete request rate; the minimum-character and debounce control the owner asked for is not available on `PlaceAutocompleteElement` (see Free-tier plan).
+- The harness rebuilds the web app with the fake key inside `bun run smoke` (see Library decision), because the key is compiled in and CI builds without one.
 - Origin of the fare is the nearest station and is not changeable in this slice; the destination is chosen.

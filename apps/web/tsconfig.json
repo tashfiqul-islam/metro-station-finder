@@ -4,9 +4,6 @@
     "jsx": "react-jsx",
     "types": ["react", "react-dom", "vite/client", "google.maps"],
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    // @types/google.maps 3.66.9 (the Maps library's own types) fails the base options
-    // (exactOptionalPropertyTypes: TS2420 at lines 13527 and 16448 of its index.d.ts). Type-only, no runtime.
-    // Removing this must make `tsc -b` fail again; see the METRO-88 specification.
     "skipLibCheck": true
   },
   "include": ["src/**/*.tsx", "src/**/*.ts"],

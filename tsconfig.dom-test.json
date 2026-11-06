@@ -4,7 +4,6 @@
     "jsx": "react-jsx",
     "types": ["node", "react", "react-dom", "vite/client", "google.maps"],
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    // Same reason as apps/web/tsconfig.json: the Maps types do not pass the base options.
     "skipLibCheck": true
   },
   "include": ["apps/web/src/**/*.test.ts", "apps/web/src/**/*.test.tsx"]

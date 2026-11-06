@@ -1,7 +1,7 @@
 import { useEffect, useEffectEvent, useRef } from "react";
 
 import { usePlaces } from "./context";
-import type { PlaceSearchProps } from "./port";
+import type { PlaceSearchProps } from "./context";
 
 /** The only field requested for a selected place: Essentials tier, no displayName, no address. */
 export const PLACE_FIELDS = ["location"];

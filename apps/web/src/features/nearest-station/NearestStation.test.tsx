@@ -13,7 +13,7 @@ import type {
   PlaceSearchProps,
   RouteService,
   WalkingRoute,
-} from "../../adapters/maps/port";
+} from "../../adapters/maps/context";
 import { copy } from "./copy";
 import { fakePosition, fakePositionError } from "./geolocation-fakes";
 import { NearestStation } from "./NearestStation";

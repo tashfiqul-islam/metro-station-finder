@@ -3,7 +3,12 @@ import type { Coordinate, Station } from "@metro/core";
 import { useEffect, useState } from "react";
 
 import { useMaps } from "../../adapters/maps/context";
-import type { MapsAdapter, MapsStatus, RouteService, WalkingRoute } from "../../adapters/maps/port";
+import type {
+  MapsAdapter,
+  MapsStatus,
+  RouteService,
+  WalkingRoute,
+} from "../../adapters/maps/context";
 import { copy } from "./copy";
 import { formatIsoDate, formatKm, formatMinutes, formatWalkingDistance } from "./format";
 import { locate } from "./geolocate";

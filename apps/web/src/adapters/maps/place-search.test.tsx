@@ -3,8 +3,8 @@ import { StrictMode } from "react";
 import { afterAll, afterEach, beforeAll, expect, test, vi } from "vitest";
 
 import { PlacesContext } from "./context";
+import type { PlaceSearchProps } from "./context";
 import { PLACE_FIELDS, PlaceSearch } from "./place-search";
-import type { PlaceSearchProps } from "./port";
 
 const library = { ready: false, made: [] as unknown[] };
 

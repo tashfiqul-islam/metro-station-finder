@@ -1,5 +1,5 @@
+import type { MapsAdapter } from "./context";
 import { PlaceSearch } from "./place-search";
-import type { MapsAdapter } from "./port";
 import { MapsProvider } from "./provider";
 
 export { UNAVAILABLE } from "./context";

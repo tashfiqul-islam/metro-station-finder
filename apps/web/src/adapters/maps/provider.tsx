@@ -3,9 +3,8 @@ import type { ReactNode } from "react";
 
 import { readMapsKey } from "./config";
 import { MapsContext, PlacesContext, UNAVAILABLE } from "./context";
-import type { PlacesApi } from "./context";
+import type { MapsState, PlacesApi } from "./context";
 import { loadLibraries } from "./libraries";
-import type { MapsState } from "./port";
 import { createRouteService } from "./routes";
 import type { RouteApi } from "./routes";
 

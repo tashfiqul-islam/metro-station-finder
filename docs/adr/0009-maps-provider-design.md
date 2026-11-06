@@ -23,6 +23,8 @@ Facts used, all read 2026-11-05. Google's pricing page has no date, so every fig
 - Web-verified, [API security best practices](https://developers.google.com/maps/api-security-best-practices): use Websites (HTTP referrer) restrictions plus API restrictions for browser keys; the page does not describe usage caps or budgets (those facts are Unverified).
 - Repo/gcloud-verified read-only by the coordinator, 2026-11-05: the dev key `metro-station-key-dev` is restricted to referrers localhost, 127.0.0.1 and `*.tashfiq61.workers.dev` and to the APIs Maps JavaScript, Places and Routes. It is not the legacy key, which is deleted.
 
+> Amendment 2026-11-07 (METRO-88): the first map slice requests the `location` field only, because it shows no map and the attribution rule forbids showing a Places address without one. After a geolocation error focus moves to the alert, not the search input, because the input lives in Google's shadow root. The loader is `@googlemaps/js-api-loader` 2.1.3 directly: `@vis.gl/react-google-maps` 1.10.2 was tried first and broke the bundle budget (264,660 raw and 84,184 gzip bytes against 250,000 and 80,000), see [the specification](../specifications/nearest-station-slice.md). The pinned `v` is `3.66`. The Decision text below is left as written.
+
 ## Decision
 
 We will use Google Maps Platform, called from the browser, with one referrer-restricted key per environment.

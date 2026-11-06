@@ -1,7 +1,7 @@
 import { walkingDistanceMeters } from "@metro/core";
 import type { Coordinate } from "@metro/core";
 
-import type { RouteService, WalkingRoute } from "./port";
+import type { RouteService, WalkingRoute } from "./context";
 
 /** What we send: WALKING with the cheapest field mask, and nothing else. */
 interface RouteRequest {
