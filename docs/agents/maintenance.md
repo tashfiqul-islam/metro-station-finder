@@ -94,3 +94,27 @@ Re-test after the next wrangler bump, on Windows:
 1. `mise exec -- bun run bootstrap`, then confirm `bunx wrangler --version` is at least 4.156.1.
 2. `mise exec -- bun run --cwd apps/api types`, then `mise exec -- bun run types:check`. It must report the types as up to date. Re-checking out `apps/api/worker-configuration.d.ts` with CRLF endings (delete it and `git checkout` it) and running `types:check` again must still pass.
 3. Commit the regenerated file if its runtime header changed. Record the result in the bump's ticket and delete this step if it passed.
+
+## Local tokens outside the repository (METRO-85)
+
+`CLOUDFLARE_API_TOKEN` and `PLANE_API_KEY` must not live in the repository folder. Scripts read them from the process environment only and fail naming the variable when it is missing; CI supplies them from GitHub environment secrets. Moving the tokens out is the real fix. `.claude/settings.json` is a second layer.
+
+**Deny rules.** `permissions.deny` holds `Read(./.env)`, `Read(./.env.*)`, `Read(/.env)` and `Read(/.env.*)`. Anchoring (official docs, code.claude.com/docs/en/permissions, Read and Edit rule table, checked 2026-11-06): `./path` and `path` are relative to the current directory, so they miss the root `.env` when an agent runs in a subdirectory; `/path` is relative to the settings source, which for project settings is the project root; `//path` is absolute. The `/` pair covers the root file from any directory. The `.env.*` pattern also blocks `.env.example`. These rules cover Claude's file tools only, not a shell `cat .env`.
+
+**Owner steps** (the agent never reads or moves the values):
+
+1. Windows, PowerShell 7.1 or newer (`Read-Host -MaskInput` needs it). Run both:
+   - `[Environment]::SetEnvironmentVariable("CLOUDFLARE_API_TOKEN", (Read-Host -MaskInput "Cloudflare token"), "User")`
+   - `[Environment]::SetEnvironmentVariable("PLANE_API_KEY", (Read-Host -MaskInput "Plane key"), "User")`
+
+   Quit and reopen the editor and terminals completely; a window reload keeps the old environment. Check without printing values: `[bool][Environment]::GetEnvironmentVariable("PLANE_API_KEY","User")` must print `True` (same for `CLOUDFLARE_API_TOKEN`).
+
+2. Ubuntu (a native Ubuntu session; under WSL the Windows User variables do not propagate without `WSLENV`, so set the variables in the WSL shell instead). Create the file private before any secret is written, then enter each value without it reaching shell history:
+   - `install -m 600 /dev/null ~/.metro-tokens` (run once; it truncates the file, so on a re-run edit the file in an editor instead of repeating the steps)
+   - `read -rs -p "Cloudflare token: " V && printf 'export CLOUDFLARE_API_TOKEN=%q\n' "$V" >> ~/.metro-tokens; unset V`
+   - `read -rs -p "Plane key: " V && printf 'export PLANE_API_KEY=%q\n' "$V" >> ~/.metro-tokens; unset V`
+   - `>>` appends, so repeating a command adds a duplicate line; remove the old line first or edit the file.
+   - Add `[ -f ~/.metro-tokens ] && . ~/.metro-tokens` to `~/.profile` (read by login shells). For interactive non-login shells also add it to `~/.bashrc`, above the guard near the top that returns early for non-interactive shells (a line after the guard never runs for them). A GUI-launched editor may not inherit the variables until the desktop session restarts; otherwise start the editor from a terminal that has them.
+   - Check: `test -n "$PLANE_API_KEY" && echo set` (same for `CLOUDFLARE_API_TOKEN`).
+3. Delete both lines from the root `.env`, then check (a missing file counts as absent). Windows: `if (Test-Path .env) { Select-String -Path .env -Pattern '^(CLOUDFLARE_API_TOKEN|PLANE_API_KEY)=' -Quiet } else { $false }` must print `False`. Ubuntu: `[ -f .env ] && grep -qE '^(CLOUDFLARE_API_TOKEN|PLANE_API_KEY)=' .env && echo present || echo absent` must print `absent`. The check covers only the `.env` in the directory where it runs; other `.env` files (for example inside a worktree) are not covered.
+4. MCP servers, observed by key name in the owner's `~/.claude.json` on 2026-11-06 (values not read); not verifiable from the repo. `plane` (stdio) has `PLANE_API_KEY` and `PLANE_WORKSPACE_SLUG` in its own `env` block. If the Plane key later changes, update it both in the user environment and in the `plane` server `env` block in `~/.claude.json` (outside the repository). `cloudflare-api` (HTTP, mcp.cloudflare.com) has no `env` or `headers` keys. Neither reads the repository `.env`. The session also exposes claude.ai-hosted connectors whose authentication lives in the owner's claude.ai account, not in any file read here (Unverified).
