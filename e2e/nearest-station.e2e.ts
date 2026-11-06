@@ -58,6 +58,20 @@ test.describe("nearest station from a searched place (METRO-88)", () => {
     expect(stub.blocked).toEqual([]);
   });
 
+  test("METRO-88 A5 the slice applies no inline style and one same-origin stylesheet", async ({
+    page,
+  }) => {
+    await openSlice(page);
+    await searchFor(page, "motijheel");
+    await expect(page.getByText("1.23 km, 15 min")).toBeVisible();
+    const styling = await page.evaluate(() => ({
+      stylesheets: document.styleSheets.length,
+      styleElements: document.querySelectorAll("style").length,
+      styleAttributes: document.querySelectorAll("[style]").length,
+    }));
+    expect(styling).toEqual({ stylesheets: 1, styleElements: 0, styleAttributes: 0 });
+  });
+
   test("METRO-88 A9 no /api request carries a coordinate", async ({ page }) => {
     const stub = await openSlice(page);
     const apiRequests: { url: string; headers: string; body: string }[] = [];

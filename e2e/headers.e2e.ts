@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 
-import { expect, test } from "./fixtures";
+import { expect, isWebKitStylesheetNotice, test } from "./fixtures";
 
 const shared = {
   "x-content-type-options": "nosniff",
@@ -99,6 +99,31 @@ test.describe("security headers and caching (METRO-31)", () => {
       // One same-origin stylesheet (focus.css, METRO-58) is allowed by `style-src 'self'`; nothing inline.
       expect(styling).toEqual({ stylesheets: 1, styleElements: 0, styleAttributes: 0 });
     });
+  });
+
+  // Keeps the WebKit allowance in fixtures.ts honest: the notice must still be there for a bare <select>
+  // (when WebKit stops logging it this fails and the allowance goes), and nothing else is tolerated.
+  test("METRO-88 WebKit reports its own menu stylesheet for a <select>, and only that", async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(browserName !== "webkit", "WebKit-only behaviour");
+    const errors: string[] = [];
+    page.on("console", (message) => {
+      if (message.type() === "error") errors.push(message.text());
+    });
+    await page.goto("/");
+    await expect(page.getByLabel("Scaffold status")).toBeVisible();
+    await page.evaluate(() => {
+      const select = document.createElement("select");
+      select.setAttribute("aria-label", "probe");
+      document.querySelector("main")?.append(select);
+    });
+    await expect.poll(() => errors.length).toBe(1);
+    expect(errors[0]).toMatch(/^Refused to apply a stylesheet because /u);
+    expect(isWebKitStylesheetNotice("webkit", errors[0] ?? "")).toBe(true);
+    expect(isWebKitStylesheetNotice("chromium", errors[0] ?? "")).toBe(false);
+    expect(isWebKitStylesheetNotice("webkit", "Refused to load the image")).toBe(false);
   });
 
   // Proves the console-error fixture itself: with no `allowedConsoleError`, the same blocked image must
