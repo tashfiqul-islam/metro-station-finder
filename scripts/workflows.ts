@@ -47,8 +47,11 @@ export function lintWorkflows(directory: string): { ok: boolean; output: string 
   return { ok, output: ok ? "" : output };
 }
 
-if (import.meta.main) {
-  const result = lintWorkflows(resolve(process.argv[2] ?? ".github/workflows"));
+/** Process entry: lints the directory in the first argument (default .github/workflows) and sets the exit code. */
+export function workflowsMain(args: readonly string[]): void {
+  const result = lintWorkflows(resolve(args[0] ?? ".github/workflows"));
   if (result.output.trim()) console.error(result.output.trim());
   if (!result.ok) process.exitCode = 1;
 }
+
+if (import.meta.main) workflowsMain(process.argv.slice(2));
