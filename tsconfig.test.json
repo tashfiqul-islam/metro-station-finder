@@ -10,7 +10,8 @@
     "scripts/configuration.ts",
     "scripts/hooks-status.ts",
     "scripts/mise-lock.ts",
-    "scripts/tools.ts"
+    "scripts/tools.ts",
+    "scripts/vitest-sync.ts"
   ],
   "exclude": ["apps/api/**"]
 }
