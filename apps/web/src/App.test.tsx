@@ -1,10 +1,8 @@
-// The DOM must exist before React and Testing Library are imported (shared, see dom-test-env.ts).
-const { restoreBunGlobals, enableDomGlobals } = await import("./dom-test-env");
-enableDomGlobals();
-const { cleanup, render, screen } = await import("@testing-library/react");
-const { App } = await import("./App");
-const { errorCopy } = await import("./error-boundary");
-restoreBunGlobals(); // non-DOM test files must see Bun's globals again
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterAll, afterEach, beforeAll, expect, test, vi } from "vitest";
+
+import { App } from "./App";
+import { errorCopy } from "./error-boundary";
 
 const realFetch = globalThis.fetch;
 const json = (body: unknown, init: ResponseInit = {}) =>
@@ -14,21 +12,20 @@ const json = (body: unknown, init: ResponseInit = {}) =>
     ...init,
   });
 const ignoreResponse = (_response: Response): void => {};
+const ignoreRejection = (_reason: unknown): void => {};
 const stubFetch = (handler: () => Promise<Response>) => {
   globalThis.fetch = Object.assign(handler, { preconnect: () => {} });
 };
 
 beforeAll(() => {
-  enableDomGlobals();
   Reflect.set(globalThis, "IS_REACT_ACT_ENVIRONMENT", true);
 });
 afterEach(() => {
   cleanup();
-  jest.restoreAllMocks(); // a failing assertion must not leave console spies behind
+  vi.restoreAllMocks(); // a failing assertion must not leave console spies behind
   globalThis.fetch = realFetch;
 });
 afterAll(() => {
-  restoreBunGlobals();
   Reflect.deleteProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT");
 });
 
@@ -84,7 +81,7 @@ test("METRO-71 never renders or logs a raw error message (URL, coordinates)", as
   const secret = "https://example.test/route?lat=23.8103&lng=90.4125 failed for 23.8103,90.4125";
   stubFetch(() => Promise.reject(new TypeError(secret)));
   const spies = (["error", "warn", "log", "info", "debug"] as const).map((method) =>
-    jest.spyOn(console, method).mockImplementation(() => {}),
+    vi.spyOn(console, method).mockImplementation(() => {}),
   );
   render(<App />);
   const alert = await screen.findByRole("alert");
@@ -107,12 +104,31 @@ test("FND-T2 unmounting before the response arrives updates nothing and throws n
         deliver = resolve;
       }),
   );
-  const errors = jest.spyOn(console, "error").mockImplementation(() => {});
+  const errors = vi.spyOn(console, "error").mockImplementation(() => {});
   const view = render(<App />);
   view.unmount();
   deliver(json({ kind: "synthetic-scaffold", ready: true }));
   await new Promise((resolve) => setTimeout(resolve, 10));
   expect(document.body.textContent).toBe("");
+  expect(errors).not.toHaveBeenCalled();
+  errors.mockRestore();
+});
+
+test("FND-T2 unmounting before a failure arrives updates nothing and throws nothing", async () => {
+  let fail = ignoreRejection;
+  stubFetch(
+    () =>
+      new Promise<Response>((_resolve, reject) => {
+        fail = reject;
+      }),
+  );
+  const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+  const view = render(<App />);
+  view.unmount();
+  fail(new TypeError("offline"));
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  expect(document.body.textContent).toBe("");
+  expect(screen.queryByRole("alert")).toBeNull();
   expect(errors).not.toHaveBeenCalled();
   errors.mockRestore();
 });

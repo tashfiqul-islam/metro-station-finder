@@ -12,5 +12,5 @@
     "scripts/mise-lock.ts",
     "scripts/tools.ts"
   ],
-  "exclude": ["apps/api/**"]
+  "exclude": ["apps/api/**", "apps/web/**"]
 }

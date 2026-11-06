@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -171,4 +171,15 @@ test("METRO-77 a file importing from bun:test is still rejected next to the Vite
   );
   expect(result.output).toContain("(no-restricted-imports)");
   expect(result.exitCode).not.toBe(0);
+});
+
+test("METRO-79 every web test file imports its API from vitest, never bun:test or the Bun globals", async () => {
+  const dir = resolve("apps/web/src");
+  const names = (await readdir(dir)).filter((name) => /\.test\.tsx?$/u.test(name));
+  expect(names.length).toBeGreaterThan(0);
+  for (const name of names) {
+    const source = await readFile(join(dir, name), "utf8");
+    expect(source, name).toMatch(/from "vitest"/u);
+    expect(source, name).not.toMatch(/bun:test|jest\./u);
+  }
 });

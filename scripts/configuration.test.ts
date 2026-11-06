@@ -14,9 +14,11 @@ async function fixture() {
   await cp(resolve(".mise"), join(root, ".mise"), { recursive: true });
   await mkdir(join(root, ".github"));
   await mkdir(join(root, "apps/api"), { recursive: true });
+  await mkdir(join(root, "apps/web"), { recursive: true });
   await cp(resolve("vitest.config.ts"), join(root, "vitest.config.ts"));
   await cp(resolve("vitest.shared.ts"), join(root, "vitest.shared.ts"));
   await cp(resolve("apps/api/vitest.config.ts"), join(root, "apps/api/vitest.config.ts"));
+  await cp(resolve("apps/web/vitest.config.ts"), join(root, "apps/web/vitest.config.ts"));
   await cp(resolve(".github/renovate.json5"), join(root, ".github/renovate.json5"));
   return root;
 }
@@ -396,7 +398,7 @@ test("METRO-77 the real Vitest configs shuffle through the shared options withou
   const shared = await readFile(resolve("vitest.shared.ts"), "utf8");
   expect(shared).toMatch(/shuffle: true/u);
   expect(shared).not.toMatch(/\bseed\s*:/u);
-  for (const file of ["vitest.config.ts", "apps/api/vitest.config.ts"])
+  for (const file of ["vitest.config.ts", "apps/api/vitest.config.ts", "apps/web/vitest.config.ts"])
     expect(await readFile(resolve(file), "utf8")).toContain("sharedTestOptions");
 });
 
@@ -437,21 +439,24 @@ test("METRO-77 rejects a fixed seed in the shared options naming sequence.seed",
 });
 
 test("METRO-77 rejects a fixed seed or disabled shuffle in a project Vitest config", async () => {
-  for (const sequence of ["sequence: { seed: 7 }", "sequence: { shuffle: false }"]) {
-    const root = await fixture();
-    try {
-      await editFile(root, "apps/api/vitest.config.ts", (source) =>
-        source.replace("test: {", `test: { ${sequence},`),
-      );
-      await expectRejection(validateConfiguration(root), "apps/api/vitest.config.ts");
-    } finally {
-      await rm(root, { recursive: true });
+  for (const file of ["apps/api/vitest.config.ts", "apps/web/vitest.config.ts"])
+    for (const sequence of ["sequence: { seed: 7 }", "sequence: { shuffle: false }"]) {
+      const root = await fixture();
+      try {
+        await editFile(root, file, (source) => source.replace("test: {", `test: { ${sequence},`));
+        await expectRejection(validateConfiguration(root), file);
+      } finally {
+        await rm(root, { recursive: true });
+      }
     }
-  }
 });
 
 test("METRO-77 rejects a Vitest config that does not spread the shared options", async () => {
-  for (const file of ["vitest.config.ts", "apps/api/vitest.config.ts"]) {
+  for (const file of [
+    "vitest.config.ts",
+    "apps/api/vitest.config.ts",
+    "apps/web/vitest.config.ts",
+  ]) {
     const root = await fixture();
     try {
       await editFile(root, file, (source) => source.replace("...sharedTestOptions,", ""));
@@ -472,4 +477,18 @@ test("METRO-77 rejects a missing shared options file or root Vitest config", asy
       await rm(root, { recursive: true });
     }
   }
+});
+
+// ADR-0016: a file must run under exactly one runner. Every project the root Vitest config lists is a
+// directory Bun must ignore, or its tests would run twice (and under Bun they would have no DOM).
+test("METRO-79 Bun ignores every directory the root Vitest config lists as a project", async () => {
+  const config = await readFile(resolve("vitest.config.ts"), "utf8");
+  const projects = /projects:\s*\[([^\]]*)\]/u.exec(config)?.[1];
+  expect(projects).toBeDefined();
+  const directories = [...(projects ?? "").matchAll(/"([^"]+)"/gu)].map((match) => match[1]);
+  expect(directories).toEqual(["apps/api", "apps/web"]);
+  const bunfig: unknown = Bun.TOML.parse(await readFile(resolve("bunfig.toml"), "utf8"));
+  const section = isRecord(bunfig) ? bunfig["test"] : undefined;
+  const ignored = isRecord(section) ? section["pathIgnorePatterns"] : undefined;
+  expect(ignored).toEqual(directories.map((directory) => `${directory}/**`));
 });

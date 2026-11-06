@@ -72,13 +72,22 @@ for (const [project, source] of [
   });
 }
 
-test("FND-T4 DOM-test files compile with DOM and Bun types", async () => {
+test("FND-T4 DOM-test files compile with DOM and Vitest types", async () => {
   const result = await compile(
     "tsconfig.dom-test.json",
-    "export const title: string = document.title; export const runtime: string = Bun.version;",
+    'import { expect } from "vitest"; export const title: string = document.title; export const check = expect;',
   );
   expect(result.stdout.toString() + result.stderr.toString()).toBe("");
   expect(result.exitCode).toBe(0);
+});
+
+test("METRO-79 the DOM-test project has no Bun types", async () => {
+  const result = await compile(
+    "tsconfig.dom-test.json",
+    "export const runtime: string = Bun.version;",
+  );
+  expect(result.exitCode).not.toBe(0);
+  expect(result.stdout.toString()).toMatch(/TS(2304|2868)/u);
 });
 
 test("FND-T4 the DOM-test project still enforces strict compiler flags", async () => {

@@ -1,3 +1,5 @@
+import { expect, test, vi } from "vitest";
+
 import { describeError, reportError } from "./report-error";
 
 test("METRO-58 describeError keeps only a built-in error name", () => {
@@ -17,7 +19,7 @@ test("METRO-58 describeError never echoes a custom name, a message or a non-erro
 });
 
 test("METRO-58 reportError labels a recoverable error as such and still logs only the class", () => {
-  const spy = jest.spyOn(console, "error").mockImplementation(() => {});
+  const spy = vi.spyOn(console, "error").mockImplementation(() => {});
   try {
     reportError(new Error("https://example.test/?lat=23.81"), "Recoverable error");
     expect(spy.mock.calls).toEqual([["Recoverable error: Error"]]);
@@ -27,7 +29,7 @@ test("METRO-58 reportError labels a recoverable error as such and still logs onl
 });
 
 test("METRO-58 reportError logs the safe class and nothing else", () => {
-  const spy = jest.spyOn(console, "error").mockImplementation(() => {});
+  const spy = vi.spyOn(console, "error").mockImplementation(() => {});
   try {
     reportError(new Error("https://example.test/?lat=23.81&lng=90.41"));
     expect(spy).toHaveBeenCalledTimes(1);
