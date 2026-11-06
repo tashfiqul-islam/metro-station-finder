@@ -207,7 +207,7 @@ export const BROWSER_INSTALL_MAX_MINUTES = 10;
 /**
  * Every step that runs `playwright install` must set its own `timeout-minutes` (a positive number, at most
  * BROWSER_INSTALL_MAX_MINUTES). The install fetches system packages from a mirror and stalled for 13 to 20
- * minutes in four hosted runs; without a step limit only the job limit ended it.
+ * minutes in hosted runs (six slow or stalled installs, METRO-90 evidence); without a step limit only the job limit ended it.
  */
 export function browserInstallTimeoutViolations(workflows: ParsedWorkflow[]): string[] {
   const found: string[] = [];

@@ -62,4 +62,4 @@ Re-test after the next wrangler bump, on Windows:
 
 ## Hosted Quality speed (METRO-90)
 
-`Build and smoke` (Chromium) and `smoke` (Firefox, WebKit, mobile viewport) run in parallel with one setup block that `scripts/quality-workflow.test.ts` keeps identical. The Playwright install step has `timeout-minutes: 5` and one bounded retry, and its apt archives are cached, because the Ubuntu mirror download stalled four times. Neither cache may ever enter a credentialed job (the preview job). Measurements and rejected options: [evidence](../evidence/metro-90.md).
+`Build and smoke` (Chromium) and `smoke` (Firefox, WebKit, mobile viewport) run in parallel with one setup block that `scripts/quality-workflow.test.ts` keeps identical. The Playwright install step has `timeout-minutes: 5` and one bounded retry, and its apt archives are cached, because the Ubuntu mirror download stalled or crawled in six hosted installs. Neither cache may ever enter a credentialed job (the preview job). Measurements and rejected options: [evidence](../evidence/metro-90.md).
