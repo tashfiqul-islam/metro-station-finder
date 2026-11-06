@@ -1,3 +1,6 @@
+import { readFile, readdir } from "node:fs/promises";
+import { join } from "node:path";
+
 import { kindOf, parseKindMap } from "./docs-structure.ts";
 
 /**
@@ -35,4 +38,18 @@ export function sizeProblems(rootFile: Sized, guides: readonly Sized[]): string[
         `${guide.path} is ${guide.bytes} bytes, over the ${GUIDE_CAP}-byte cap. Move history, measurements and run IDs to the ADR or evidence file they came from with a link back, merge a narrow guide, or make it a runbook in docs/README.md if it is a procedure.`,
       );
   return problems;
+}
+
+/** Reads AGENTS.md, docs/README.md and docs/agents/ under `repoRoot` and returns the cap problems. */
+export async function checkAgentDocs(repoRoot: string): Promise<string[]> {
+  const sized = async (path: string): Promise<Sized> => ({
+    path,
+    bytes: (await readFile(join(repoRoot, path))).length,
+  });
+  const readme = await readFile(join(repoRoot, "docs/README.md"), "utf8");
+  const names = (await readdir(join(repoRoot, "docs/agents"))).map((name) => `docs/agents/${name}`);
+  return sizeProblems(
+    await sized("AGENTS.md"),
+    await Promise.all(guidePaths(names, readme).map(sized)),
+  );
 }
