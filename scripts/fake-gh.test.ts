@@ -22,26 +22,40 @@ test("METRO-92 a stand-in that did not run the preload is rejected with what it 
   expect(() => assertStandIn("listing probe", "/tmp/gh")).not.toThrow();
 });
 
+test("METRO-92 a probe that could not start is reported as not having run the preload", () => {
+  expect(() => assertStandIn(null, "/tmp/gh")).toThrow('(printed "")');
+  expect(() => assertStandIn(undefined, "/tmp/gh")).toThrow("did not run the preload");
+});
+
+const snapshot = () => ({
+  PATH: process.env["PATH"],
+  NODE_OPTIONS: process.env["NODE_OPTIONS"],
+  FAKE_GH: process.env["FAKE_GH"],
+});
+
 test("METRO-92 the helper's PATH, NODE_OPTIONS and FAKE_GH are visible only inside run", async () => {
-  const before = {
-    PATH: process.env["PATH"],
-    NODE_OPTIONS: process.env["NODE_OPTIONS"],
-    FAKE_GH: process.env["FAKE_GH"],
-  };
-  await withFakeGh(() => {
-    expect(process.env["NODE_OPTIONS"]).toContain("--require");
-    process.env["FAKE_GH"] = "fail";
-  });
-  expect({
-    PATH: process.env["PATH"],
-    NODE_OPTIONS: process.env["NODE_OPTIONS"],
-    FAKE_GH: process.env["FAKE_GH"],
-  }).toEqual(before);
-  await expectRejection(
-    withFakeGh(() => {
-      throw new Error("boom");
-    }),
-    "boom",
-  );
-  expect(process.env["NODE_OPTIONS"]).toBe(before.NODE_OPTIONS);
+  const saved = process.env["FAKE_GH"];
+  try {
+    for (const prior of [undefined, "prior-value"]) {
+      if (prior === undefined) delete process.env["FAKE_GH"];
+      else process.env["FAKE_GH"] = prior;
+      const before = snapshot();
+      await withFakeGh(() => {
+        expect(process.env["NODE_OPTIONS"]).toContain("--require");
+        process.env["FAKE_GH"] = "fail";
+      });
+      expect(snapshot()).toStrictEqual(before);
+      await expectRejection(
+        withFakeGh(() => {
+          process.env["FAKE_GH"] = "silent";
+          throw new Error("boom");
+        }),
+        "boom",
+      );
+      expect(snapshot()).toStrictEqual(before);
+    }
+  } finally {
+    if (saved === undefined) delete process.env["FAKE_GH"];
+    else process.env["FAKE_GH"] = saved;
+  }
 }, 60000);

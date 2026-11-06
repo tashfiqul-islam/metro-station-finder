@@ -19,10 +19,12 @@ export function pickNode(candidates: readonly string[], platform: string): strin
 }
 
 /** Throws unless the stand-in printed what the preload prints, so a broken copy never reaches a test. */
-export function assertStandIn(stdout: string, copy: string): void {
-  if (!stdout.startsWith("listing "))
+export function assertStandIn(stdout: string | null | undefined, copy: string): void {
+  // A probe that could not even start has no stdout at all.
+  const printed = stdout ?? "";
+  if (!printed.startsWith("listing "))
     throw new Error(
-      `The stand-in gh at ${copy} did not run the preload (printed ${JSON.stringify(stdout)})`,
+      `The stand-in gh at ${copy} did not run the preload (printed ${JSON.stringify(printed)})`,
     );
 }
 
@@ -42,7 +44,11 @@ export async function withFakeGh<T>(run: () => Promise<T> | T): Promise<T> {
     process.platform,
   );
   const directory = await mkdtemp(join(tmpdir(), "metro-fake-gh-"));
-  const saved = { PATH: process.env["PATH"], NODE_OPTIONS: process.env["NODE_OPTIONS"] };
+  const saved = {
+    PATH: process.env["PATH"],
+    NODE_OPTIONS: process.env["NODE_OPTIONS"],
+    FAKE_GH: process.env["FAKE_GH"],
+  };
   try {
     const copy = join(directory, process.platform === "win32" ? "gh.exe" : "gh");
     await copyFile(node, copy);
@@ -67,7 +73,6 @@ export async function withFakeGh<T>(run: () => Promise<T> | T): Promise<T> {
     process.env["NODE_OPTIONS"] = options;
     return await run();
   } finally {
-    delete process.env["FAKE_GH"];
     for (const [name, value] of Object.entries(saved))
       if (value === undefined) delete process.env[name];
       else process.env[name] = value;
