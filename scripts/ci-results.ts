@@ -47,5 +47,5 @@ export function runCiResults(env: NodeJS.ProcessEnv): void {
   console.log("All required quality jobs succeeded");
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url))
-  runCiResults(process.env);
+const isEntry = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (isEntry) runCiResults(process.env);

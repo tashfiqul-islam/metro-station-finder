@@ -2,6 +2,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { withFakeGh } from "./fake-gh";
 import { previewWorkerName } from "./preview";
 import {
   PRODUCTION_WORKER,
@@ -9,6 +10,7 @@ import {
   checkDeployRequest,
   currentVersionId,
   releaseLabel,
+  runGh,
   runProductionCli,
   productionMain,
   uploadedVersionId,
@@ -195,6 +197,46 @@ test("METRO-57 the production smoke is the preview smoke with a version override
   expect(seen[0]?.headers).toEqual(versionOverrideHeader(NEW));
   await expectRejection(runProductionCli(["smoke", "http://x.test", SHA], {}), "PRODUCTION_URL");
 });
+
+test("METRO-92 a healthy production passes the smoke with and without a version override", async () => {
+  const seen: (Record<string, string> | undefined)[] = [];
+  const healthy = (url: string, init?: { headers?: Record<string, string> }) => {
+    seen.push(init?.headers);
+    const json = { headers: { "content-type": "application/json", "x-request-id": "r1" } };
+    if (url.endsWith("/api/scaffold/status"))
+      return Promise.resolve(
+        new Response(JSON.stringify({ kind: "synthetic-scaffold", ready: true }), {
+          headers: { ...json.headers, "x-preview-sha": SHA },
+        }),
+      );
+    if (url.endsWith("/api/does-not-exist"))
+      return Promise.resolve(
+        new Response(JSON.stringify({ error: { code: "not_found", message: "x" } }), {
+          status: 404,
+          ...json,
+        }),
+      );
+    return Promise.resolve(
+      new Response("<html></html>", { headers: { "content-type": "text/html" } }),
+    );
+  };
+  const options = { attempts: 1, delayMs: 0, fetch: healthy };
+  expect(await runProductionCli(["smoke", "https://metro.example.com", SHA], {}, options)).toBe(
+    "Smoke passed for https://metro.example.com",
+  );
+  expect(seen).toEqual([undefined, undefined, undefined]);
+  seen.length = 0;
+  await runProductionCli(["smoke", "https://metro.example.com", "", NEW], {}, options);
+  expect(seen).toEqual(Array.from({ length: 3 }, () => versionOverrideHeader(NEW)));
+});
+
+test("METRO-92 the real gh runner returns gh's output and surfaces its failure", async () => {
+  await withFakeGh(() => {
+    expect(runGh(["api", "repos/o/r"])).toMatch(/^listing .*api repos\/o\/r$/u);
+    process.env["FAKE_GH"] = "fail";
+    expect(() => runGh(["api", "repos/o/r"])).toThrow("Command failed");
+  });
+}, 60000);
 
 test("METRO-57 productionMain prints results, writes step outputs and fails the step on error", async () => {
   const dir = await mkdtemp(join(tmpdir(), "metro-production-"));

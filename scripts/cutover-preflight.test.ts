@@ -9,6 +9,7 @@ import {
   type Gh,
   type PreflightOptions,
 } from "./cutover-preflight.ts";
+import { withFakeGh } from "./fake-gh.ts";
 import { expectRejection } from "./test-support.ts";
 
 const REPO = "o/r";
@@ -515,4 +516,75 @@ test("METRO-34 the report lists every finding and manual items are not shown as 
   expect(report).toContain("Result: no failures");
   const failing = formatReport([{ id: "x", status: "fail", title: "t", detail: "d" }]);
   expect(failing).toContain("Result: 1 failure");
+});
+
+test("METRO-92 the real gh runner returns stdout, and a failure carries gh's own output", async () => {
+  await withFakeGh(async () => {
+    // Node resolves the first argument ("api") as a script path, so only the tail is the same.
+    expect(await realGh(["api", "repos/o/r"])).toMatch(/^listing .*api repos\/o\/r$/u);
+    process.env["FAKE_GH"] = "fail";
+    await expectRejection(realGh(["api", "repos/o/r"]), "gh: denied by policy");
+    process.env["FAKE_GH"] = "silent";
+    await expectRejection(realGh(["api", "repos/o/r"]), "Command failed");
+  });
+}, 60000);
+
+test("METRO-92 a ruleset whose required checks are not a list names no contexts", async () => {
+  const noChecks = {
+    ...GOOD_RULESET,
+    rules: GOOD_RULESET.rules.map((rule) =>
+      rule.type === "required_status_checks"
+        ? { type: rule.type, parameters: { required_status_checks: "Quality gates" } }
+        : rule,
+    ),
+  };
+  const { gh } = fakeGh({ [`api repos/${REPO}/rulesets/7`]: noChecks });
+  const finding = find(await runPreflight(gh, OPTIONS), "main-ruleset");
+  expect(finding.status).toBe("fail");
+  expect(finding.detail).toContain("Quality gates");
+});
+
+test("METRO-92 a compare that is not ahead or identical fails and names the status", async () => {
+  for (const [body, named] of [
+    [{ status: "diverged", ahead_by: 0, commits: [] }, "diverged"],
+    [{ ahead_by: 0, commits: [] }, "unknown"],
+  ] as const) {
+    const { gh } = fakeGh({ [COMPARE]: body });
+    const finding = find(await runPreflight(gh, OPTIONS), "main-fast-forward");
+    expect(finding.status).toBe("fail");
+    expect(finding.detail).toContain(`compare status is ${named}`);
+  }
+});
+
+test("METRO-92 commits that cannot all be listed fail instead of passing on a partial list", async () => {
+  const empty = { status: "ahead", ahead_by: 3, commits: [] };
+  const pages: Record<string, unknown> = {
+    [COMPARE]: { status: "ahead", ahead_by: 3, commits: [commit("1111111111aaaa", true)] },
+  };
+  for (let page = 2; page <= 10; page += 1)
+    pages[
+      `api repos/${REPO}/compare/main...feature/metro-rebuild?per_page=100&page=${String(page)}`
+    ] = empty;
+  const { gh } = fakeGh(pages);
+  const finding = find(await runPreflight(gh, OPTIONS), "commits-verified");
+  expect(finding.status).toBe("fail");
+  expect(finding.detail).toBe("only 1 of 3 commits could be listed");
+});
+
+test("METRO-92 immutable releases and Pages report a missing setting but surface any other failure", async () => {
+  const notFound = new Error("gh: Not Found (HTTP 404)");
+  const broken = new Error("gh: Server Error (HTTP 500)");
+  const immutable = `api repos/${REPO}/immutable-releases`;
+  const pages = `api repos/${REPO}/pages`;
+  const missing = await runPreflight(
+    fakeGh({ [immutable]: notFound, [pages]: notFound }).gh,
+    OPTIONS,
+  );
+  expect(find(missing, "immutable-releases").detail).toContain("not enabled (404)");
+  expect(find(missing, "pages")).toMatchObject({ status: "info", detail: "Pages is not enabled" });
+  const failing = await runPreflight(fakeGh({ [immutable]: broken, [pages]: broken }).gh, OPTIONS);
+  for (const id of ["immutable-releases", "pages"]) {
+    expect(find(failing, id).status).toBe("fail");
+    expect(find(failing, id).detail).toContain("HTTP 500");
+  }
 });

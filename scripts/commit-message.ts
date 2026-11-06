@@ -68,14 +68,17 @@ export function validateMessage(message: string): string | null {
   return validateSubject(subject ?? "") ?? validateTrailers(message);
 }
 
+/** The most `git log` output `validateRange` reads; the message below names it, so keep them equal. */
+const MAX_RANGE_BYTES = 64 * 1024 * 1024;
+
 /** Validates every commit message (subject and trailers) in a Git range; `cwd` selects the repository. */
-export function validateRange(range: string, cwd?: string): string[] {
+export function validateRange(range: string, cwd?: string, maxBuffer = MAX_RANGE_BYTES): string[] {
   let output: string;
   try {
     output = execFileSync("git", ["log", "--format=%H%x00%B%x1e", range], {
       encoding: "utf8",
       env: cleanGitEnv(),
-      maxBuffer: 64 * 1024 * 1024,
+      maxBuffer,
       ...(cwd ? { cwd } : {}),
     });
   } catch (error) {

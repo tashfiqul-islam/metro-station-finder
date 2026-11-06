@@ -12,7 +12,7 @@ export type HookStatus =
   | { state: "missing"; hooks: readonly string[] }
   | { state: "unknown"; reason: string };
 
-type GitResult = { exitCode: number; stdout: string; stderr: string };
+export type GitResult = { exitCode: number; stdout: string; stderr: string };
 
 /** Runs git without ever throwing: a missing git binary is reported as exit code -1. */
 function git(
@@ -43,18 +43,22 @@ export function hookStatus(
   env: Record<string, string> = cleanGitEnv(),
   gitBinary = "git",
 ): HookStatus {
-  const inside = git(["rev-parse", "--git-dir"], cwd, env, gitBinary);
+  return statusFromGit(git(["rev-parse", "--git-dir"], cwd, env, gitBinary), () =>
+    git(["config", "--get-regexp", String.raw`^hook\.hk-.*\.event$`], cwd, env, gitBinary),
+  );
+}
+
+/**
+ * The decision over Git's answers. `readConfig` is called only when `rev-parse` found a repository, so the
+ * second Git process is never started for a result that is already decided.
+ */
+export function statusFromGit(inside: GitResult, readConfig: () => GitResult): HookStatus {
   if (inside.exitCode === -1) return { state: "unknown", reason: inside.stderr.trim() };
   // 128 is Git's "not a git repository" (a source tarball): nothing to install hooks into.
   if (inside.exitCode === 128) return { state: "no-repository" };
   if (inside.exitCode !== 0) return { state: "unknown", reason: inside.stderr.trim() };
   // Exit 1 means no matching key; anything else is a real failure.
-  const result = git(
-    ["config", "--get-regexp", String.raw`^hook\.hk-.*\.event$`],
-    cwd,
-    env,
-    gitBinary,
-  );
+  const result = readConfig();
   if (result.exitCode !== 0 && result.exitCode !== 1)
     return { state: "unknown", reason: result.stderr.trim() };
   const configured = new Set<string>();

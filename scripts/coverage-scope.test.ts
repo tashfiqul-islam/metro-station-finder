@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
 import {
+  coverageScopeMain,
   EXEMPT_PRODUCT_SOURCES,
   isProductSource,
   runCoverageScope,
@@ -97,4 +98,25 @@ test("FND-T1 trackedFiles lists the files Git tracks", () => {
   const files = trackedFiles(process.cwd());
   expect(files).toContain("package.json");
   expect(files).toContain("scripts/coverage-scope.ts");
+});
+
+test("METRO-92 coverageScopeMain checks the given root and file list", async () => {
+  const error = jest.spyOn(console, "error").mockImplementation(() => {});
+  const log = jest.spyOn(console, "log").mockImplementation(() => {});
+  const root = await mkdtemp(join(tmpdir(), "metro-scope-main-"));
+  try {
+    await mkdir(join(root, "coverage", "vitest"), { recursive: true });
+    await writeFile(join(root, "coverage", "lcov.info"), lcov("packages/core/src/a.ts"));
+    await writeFile(join(root, "coverage", "vitest", "lcov.info"), lcov());
+    await coverageScopeMain(root, ["packages/core/src/a.ts"]);
+    expect(process.exitCode ?? 0).toBe(0);
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("Coverage scope ok"));
+    await coverageScopeMain(root, ["packages/core/src/a.ts", "packages/core/src/b.ts"]);
+    expect(process.exitCode).toBe(1);
+    expect(String(error.mock.calls[0]?.[0])).toContain("packages/core/src/b.ts");
+  } finally {
+    error.mockRestore();
+    log.mockRestore();
+    await rm(root, { recursive: true, force: true });
+  }
 });

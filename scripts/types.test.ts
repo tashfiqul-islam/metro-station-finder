@@ -23,6 +23,17 @@ const FOREIGN = [
   ["scripts", "export const x = Bun;"],
 ] as const;
 
+/**
+ * METRO-91. Bun fails a test after 5000 ms and kills the child of a running `Bun.spawnSync`. On a hosted runner
+ * the first test of a project pays for its safe and rejected `tsc` runs (5.5 to 6.6 s under `--parallel=4`), the kill
+ * left the rejected batch with empty output, and the cached empty result then failed the other tests of that project
+ * with "produced no diagnostic". `jest.setTimeout` (the injected global form of bun:test setDefaultTimeout) gives every test in this file the limit, so a test added later cannot fall back to 5 s.
+ */
+const TSC_TIMEOUT_MS = 60_000;
+jest.setTimeout(TSC_TIMEOUT_MS);
+/** A hung tsc ends 5 s before the test limit, so it fails with the named "tsc was killed" error. */
+const SPAWN_TIMEOUT_MS = TSC_TIMEOUT_MS - 5000;
+
 const SAFE = "export const ready: boolean = true;";
 const DOM_SAFE =
   'import { expect } from "vitest"; export const title: string = document.title; export const check = expect;';
@@ -40,6 +51,8 @@ interface Outcome {
   readonly lines: readonly string[];
   readonly unattributed: readonly string[];
   readonly exitCode: number;
+  /** How the tsc process ended, for the failure message of a run that produced no diagnostic. */
+  readonly trace: string;
 }
 
 interface ProjectRun {
@@ -63,15 +76,19 @@ function compileProject(
 }
 
 function tsc(root: string) {
-  return Bun.spawnSync([
-    "bun",
-    "run",
-    "tsc",
-    "-p",
-    join(root, "tsconfig.json"),
-    "--pretty",
-    "false",
-  ]);
+  const started = performance.now();
+  const result = Bun.spawnSync(
+    ["bun", "run", "tsc", "-p", join(root, "tsconfig.json"), "--pretty", "false"],
+    { timeout: SPAWN_TIMEOUT_MS, killSignal: "SIGKILL" },
+  );
+  const trace =
+    `exitCode=${result.exitCode} signalCode=${String(result.signalCode ?? "none")} ` +
+    `stdout=${result.stdout.byteLength}B stderr=${result.stderr.byteLength}B ` +
+    `duration=${Math.round(performance.now() - started)}ms`;
+  // A killed process has no exit code; fail with the real cause instead of an empty result that tests misread.
+  if (result.exitCode === null || result.exitedDueToTimeout === true)
+    throw new Error(`tsc was killed in ${root} (${trace})`);
+  return Object.assign(result, { trace });
 }
 
 /** One entry per diagnostic: tsc indents the continuation lines of a message, so they join the head line. */
@@ -140,7 +157,12 @@ async function run(
     const rejected = new Map<string, Outcome>();
     for (const file of files) {
       const own = lines.filter((line) => line.includes(`/${file.name}(`));
-      rejected.set(file.id, { lines: own, unattributed, exitCode: result.exitCode });
+      rejected.set(file.id, {
+        lines: own,
+        unattributed,
+        exitCode: result.exitCode,
+        trace: result.trace,
+      });
     }
     return { safe, rejected };
   } finally {
@@ -173,9 +195,10 @@ async function rejection(project: string, id: string): Promise<Outcome> {
   const found = (await projectRun(project)).rejected.get(id);
   if (found === undefined) throw new Error(`no fixture ${id} for ${project}`);
   // A fixture with no diagnostic of its own, or a run that exits 0, is a failure that names the fixture.
-  expect(found.lines.join("\n"), `${project}: fixture ${id} produced no diagnostic`).toMatch(
-    /error TS\d+/u,
-  );
+  expect(
+    found.lines.join("\n"),
+    `${project}: fixture ${id} produced no diagnostic (tsc ${found.trace})`,
+  ).toMatch(/error TS\d+/u);
   expect(found.exitCode, `${project}: the batch with fixture ${id} exited 0`).not.toBe(0);
   return found;
 }
