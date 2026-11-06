@@ -1,18 +1,23 @@
 # METRO-82: run the Bun test suite in parallel
 
-Evidence for the change of `bun test` to `bun test --parallel=4` in the `check` chain. Labels: **Repo-verified** (run here, output quoted), **Hosted** (read from a GitHub Actions log), **Unverified** (not measured). Base: `origin/feature/metro-rebuild` at `a0e7ab8` (METRO-81 merged), later merged with `553dbff`. Machine: Windows 11, 20 logical cores, Bun 1.4.4. Hosted: `ubuntu-24.04`, Bun 1.4.4. All local times are wall seconds of one `mise exec -- bun test ...` run (a PowerShell stopwatch around the command), tests only, no other check. Raw logs were kept in the session scratchpad and are not committed.
+Evidence for changing `bun test` to `bun test --parallel=4` in the `check` chain. Labels: **Repo-verified** (run in a checkout, output quoted), **Hosted** (read from a GitHub Actions log, run id given), **Unverified** (not measured).
+
+Base: `origin/feature/metro-rebuild` at `a0e7ab8` (METRO-81 merged); the branch was later merged with `553dbff`, `7033449` and the tip that followed. Local machine: Windows 11, 20 logical cores, Bun 1.4.4. Hosted: `ubuntu-24.04`, Bun 1.4.4, `nproc` printed 4.
+
+Source of the local numbers: session measurements, not reproducible from the repository. Each local time is the wall seconds of one `mise exec -- bun test <flags>` run (a PowerShell stopwatch around the command; tests only, no other check). Raw logs were kept in the session scratchpad and are not committed. The lcov comparison (below) was a throwaway script that parsed `SF`, `LF`, `LH`, `FNF`, `FNH` and `DA` records of two `coverage/lcov.info` files; it is not committed either. The coverage-merge claim is also covered by committed tests (see "Coverage gate").
 
 ## What changed
 
-- `package.json`: the word `bun test` in `scripts.check` is now `bun test --parallel=4`. Nothing else in the manifest changed. `scripts/timed-check.ts` accepts it (its word pattern allows `-` and `=`), so the hosted per-command table shows the row `bun test --parallel=4`.
-- Isolation stays on (`--parallel` implies `--isolate`; `--no-isolate` is not used and `scripts/coverage.test.ts` fails if the check script carries it). `bunfig.toml` is unchanged: `randomize = true`, no `seed`, per-file 0.9 line and function thresholds, `coverage/lcov.info`.
+- `package.json`: the word `bun test` in `scripts.check` is now `bun test --parallel=4`. Nothing else in the manifest changed. `scripts/timed-check.ts` accepts it (its word pattern allows `-` and `=`).
+- Isolation stays on (`--parallel` implies `--isolate`). `scripts/coverage.test.ts` fails unless the check script carries exactly one `--parallel=4` and no isolation-dropping flag (`--no-isolate`, `--isolate=false`, ...). `bunfig.toml`: `randomize = true`, no `seed`, per-file 0.9 line and function thresholds; only a comment about reproduction changed.
 - `scripts/coverage.test.ts` reads the flags from `scripts.check` and runs its fixtures with them (see "Coverage gate").
-- Seven subprocess tests that spawn git, oxfmt, dependency-cruiser, wrangler or Renovate and used Bun's 5 s default timeout now carry an explicit 30 s timeout, as their siblings already did (see "Flake log").
-- `scripts/vitest-sync.test.ts` asserted the literal `bun test && bun run test:vitest`; it now matches `bun test(?: --\S+)* && bun run test:vitest` (same intent: Bun's run is followed by Vitest's).
+- Seven test sites that spawn git, oxfmt, dependency-cruiser, wrangler or Renovate and used Bun's 5 s default timeout now carry an explicit 30 s timeout (see "Timeouts").
+- `scripts/vitest-sync.test.ts` asserted the literal `bun test && bun run test:vitest`; it now matches `(?:^| && )bun test(?: --\S+)* && bun run test:vitest(?: && |$)`.
+- The branch history contains a temporary CI probe commit (a workflow step that printed `nproc` and timed `bun test` variants) and the commit that removes it. The net diff of `.github/workflows/quality.yml` against the base is empty.
 
 ## Worker count decision
 
-Local, 20 cores, tests only (Repo-verified, wall seconds):
+Local, 20 cores, tests only (Repo-verified in the session, wall seconds):
 
 | Mode              | Runs (s)               | Mean |
 | ----------------- | ---------------------- | ---- |
@@ -23,84 +28,75 @@ Local, 20 cores, tests only (Repo-verified, wall seconds):
 | `--parallel=8`    | 37.4, 33.0, 36.3, 32.2 | 34.7 |
 | `--parallel` (20) | 31.3, 29.2, 27.8, 27.1 | 28.9 |
 
-(The orchestrator's earlier single runs were 91.7 s serial, 35.8 s at 4 and 31.4 s at 8, consistent with these.)
+The local gain is about 2.5x at 4 workers (95.3 s to 37.4 s) and about 3.3x at 20.
 
-Hosted (Hosted, run 42178087779 on PR #83 at `8c71a17`, one temporary probe step, since removed; `nproc` printed `4`):
+Hosted (run 42178087779, PR #83 at `8c71a17`; one temporary probe step, since removed; `nproc` printed `4`). The probe ran the variants in a fixed order in one job, once each, serial first, so cache effects and order effects are possible and the probe order was not randomized:
 
-| Mode           | Wall s | Result    |
-| -------------- | ------ | --------- |
-| serial         | 80     | 1012 pass |
-| `--parallel=2` | 62     | 1012 pass |
-| `--parallel=4` | 62     | 1012 pass |
-| `--parallel=8` | 61     | 1012 pass |
-| `--parallel`   | 64     | 1012 pass |
-| `--parallel=4` | 63     | 1012 pass |
+| Order | Mode           | Wall s | Result    |
+| ----- | -------------- | ------ | --------- |
+| 1     | serial         | 80     | 1012 pass |
+| 2     | `--parallel=2` | 62     | 1012 pass |
+| 3     | `--parallel=4` | 62     | 1012 pass |
+| 4     | `--parallel=8` | 61     | 1012 pass |
+| 5     | `--parallel`   | 64     | 1012 pass |
+| 6     | `--parallel=4` | 63     | 1012 pass |
 
-The same run's per-command table (METRO-81) shows `bun test --parallel=4` at 1 m 3.8 s (chain 1 m 16.2 s), but that chain ran after the six probe runs, so caches were warm. Other hosted runs, see "Hosted result", are noisier.
+The same run's per-command table (METRO-81) shows `bun test --parallel=4` at 1 m 3.8 s, but that chain ran after the six probe runs, so caches were warm.
 
-Reading: on the 4-vCPU hosted runner the count between 2 and 8 does not matter (61 to 64 s), and the paired gain is about 20 s, much less than the local 2.5x. Locally more workers help (20 workers 28.9 s against 37.4 s at 4). Decision: a fixed `--parallel=4`.
+Reading. Hosted, the four parallel modes came out at 61 to 64 s against 80 s for the serial run that went first. That is a single sample per mode on one job, and the probe step no longer exists to repeat it, so it does not show that the worker count never matters on the hosted runner, only that no difference showed in that sample. Hosted run-to-run noise was not measured by the probe; the identical-commit re-run below varies by about 20 s. Locally more workers help (20 workers 28.9 s against 37.4 s at 4).
 
-- It equals the hosted core count, so the hosted run does the same thing a plain `--parallel` would (the default is the CPU core count, `bun test --help`), and local, pre-push and CI use one identical command and one concurrency level.
+Decision: a fixed `--parallel=4`.
+
+- It equals the hosted core count, so the hosted run does what a plain `--parallel` would (the default is the CPU core count, `bun test --help`), and local, pre-push and CI use one command and one concurrency level.
 - A fixed number does not grow with the machine: a 64-core machine would otherwise start 64 workers, each spawning tsc, oxlint or git subprocesses.
-- Cost: about 8 s per local run against the default on this 20-core machine. Anyone who wants the speed can run `bun test --parallel` by hand; the check chain stays at 4.
-- The stress side was covered separately: 20 workers ran the suite 10 times without a failure after the fixes below (see the flake log), so a higher count is not unsafe, it is only not needed.
+- Cost: about 8 s per local run against the default on this 20-core machine (28.9 s against 37.4 s). Anyone who wants the speed can run `bun test --parallel` by hand; the check chain stays at 4.
+- Stress: 20 workers ran the suite 10 times in a row without a failure after the fixes below, so a higher count was not unsafe in that sample.
 
-Unverified: hosted numbers are one probe run (one sample per mode) and one before/after pair of chain runs, not medians. Hosted run-to-run noise was not measured.
+Unverified: hosted medians; the cause of the small hosted gain (candidates: four vCPUs shared by workers that each spawn subprocesses, and a long tail of subprocess-bound files; neither was isolated).
 
 ## Coverage gate under `--parallel`
 
-Repo-verified (this session):
+- Serial against parallel lcov (session measurement, throwaway script): `coverage/lcov.info` from a serial run and from a 20-worker run both list 41 `SF:` entries, the identical set. For all 41 files `LF`, `LH`, `FNF`, `FNH` and the set of lines with a nonzero `DA` count are equal (0 differences); totals are `LF 3215`, `LH 3154` in both. A line that runs a fixed number of times has the same count in both (for example `scripts/git-env.ts` line 7: 435 hits), so the report adds the workers' counts; loop-driven counts differ by a few hundred between any two runs. After merging METRO-81 a 4-worker run lists 42 files: the 41 plus `scripts/timed-check.ts`. `node scripts/coverage-scope.ts` prints `Coverage scope ok: every product source file is measured or exempt`.
+- Committed tests in `scripts/coverage.test.ts`, run with the flags read from `scripts.check` (`--parallel=4`):
+  - Every file from every worker is in the report (two test files, two sources: `SF:a.ts` and `SF:b.ts` present).
+  - An uncovered function in one worker's file fails: exit code not 0, `b.ts` row at 50.00 functions / 16.67 lines, zero failed tests, record `LF:6`, `LH:1`.
+  - Union across workers: `shared.ts` has `f` and `g`; `x.test.ts` calls only `f`, `y.test.ts` only `g`. Each test file records its pid and waits for the other's marker file, so the test can only finish if the two files run at the same time, and files inside one worker run one after the other; the test also asserts two distinct pids. Expected: exit 0, `FNF:2`, `FNH:2`, and `LF` equals `LH` for `shared.ts` (a last-worker-wins merge would leave one function uncovered).
+  - Negative: neither test calls `g`: exit code not 0, `shared.ts` row at 50.00 / 50.00, zero failed tests, `FNF:2`, `FNH:1`.
+  - Bun 1.4.4 prints no sentence containing "threshold" in these failures (checked: the output is only the coverage table and the summary); the tests therefore assert the exit code, the sub-90 table row and `0 fail`, which together show the exit code comes from the coverage gate and not from a failed test.
+  - The flag test pins `--parallel=4` and rejects an isolation-dropping flag. It was red first: before the `package.json` edit `bun test scripts/coverage.test.ts` gave `5 pass, 1 fail` (`Expected: true, Received: false` at the `--parallel` assertion); after the edit all pass.
+- The pre-existing serial fixtures (`FND-T1`, `METRO-50`) are unchanged and still pass. The first two fixtures above pass on the old serial command too (Bun's gate was already correct); they exist so a later flag change cannot weaken the gate silently.
 
-- File set: `coverage/lcov.info` from a serial run and from a 20-worker run both list 41 `SF:` entries, the identical set. Per file, `LF`, `LH`, `FNF`, `FNH` and the set of lines with a nonzero `DA` hit count are equal for all 41 files (script compared them; 0 differences), and the totals are `LF 3215`, `LH 3154` in both. Raw `DA` hit counts also agree where a file's code runs a fixed number of times (for example `scripts/git-env.ts` line 7, 435 hits in both), so the report sums the workers; it is not "last worker wins". Only loop-driven counts differ by a few hundred (for example 39066 against 39934 on one line), which varies run to run.
-- After merging `553dbff` a 4-worker run lists 42 files: the 41 plus `scripts/timed-check.ts` from METRO-81; the other 41 are identical to the serial report. `node scripts/coverage-scope.ts` prints `Coverage scope ok: every product source file is measured or exempt`.
-- Red fixtures, run with the exact flags read from `scripts.check`:
-  - `METRO-82 under the check flags the lcov report holds every file from every worker` (two test files, two sources): exit 0 and `SF:a.ts`, `SF:b.ts` both present.
-  - `METRO-82 under the check flags an uncovered function in one worker's file still fails the gate`: `b.ts` has an uncalled function; exit code is not 0, the output names `b.ts`, and its record reads `LF:6`, `LH:1`.
-  - `METRO-82 the check script runs bun test in parallel with isolation kept`: this one was red first. Before the `package.json` edit, `bun test scripts/coverage.test.ts` gave `5 pass, 1 fail` with `Expected: true, Received: false` at the `--parallel` assertion; after the edit all pass.
-  - The existing serial fixtures (`FND-T1`, `METRO-50`) are unchanged and still pass.
+## Flake log and timeouts
 
-Note: the first two new fixtures pass on the old serial command too (Bun's gate was already correct); they exist so a future change to the flags, such as adding `--no-isolate` or a runner that does not merge coverage, cannot weaken the gate without failing here.
+Static audit (Repo-verified, `rg` for `.local`, `tmpdir()`, `chdir`, `process.env` assignments, `listen(` and `port:` in `scripts/*.test.ts`): every fixture directory comes from `mkdtemp` (under `os.tmpdir()` or under `.local/` with a random suffix: `gates-`, `format-`, `secrets-index-`, `order-`, `types-`, `tsc-build-`), none uses a fixed scratch path, fixed port, `process.chdir` or process-wide env assignment, and fixture git processes use `cleanGitEnv()`. `scripts/tsc-build.test.ts` removes its copy with a bounded EBUSY-only retry (METRO-42) and uses a unique `mkdtemp` per test; no EBUSY occurred in any run below. Under isolation each file has its own module registry and globals.
 
-## Flake log: ten consecutive runs, and what was fixed
+Local runs (session measurements; wall seconds, exit code, counts):
 
-Each run is a full `bun test` with the stated flags, wall seconds, exit code, pass and fail counts. Sources are static checks plus the runs.
+- First version, 20 workers, 10 runs: every run exit 1, 1011 pass, 1 fail (27.9 to 34.2 s): `METRO-77 check runs Vitest ...` expected the literal `bun test && bun run test:vitest`. Deterministic, not a flake: the `package.json` edit made that assertion stale; fixed in `vitest-sync.test.ts`.
+- After that fix, 20 workers, 10 runs: nine passed (1012 pass, 0 fail; 29.7 to 34.7 s); run 5 failed (1011 pass, 1 fail, 33.6 s): `METRO-62 real git ranges: docs-only, mixed and rename [5069.37ms]`, `killed 1 dangling process`. Alone that test takes 0.42 s. It runs about seven synchronous `git` processes and once stalled past Bun's 5 s default timeout under 20-way load; it uses its own `mkdtemp` and `cleanGitEnv()`, so this was a timeout budget, not shared state.
+- After the timeout changes, 20 workers, 10 consecutive runs, all exit 0, 1012 pass, 0 fail: 27.6, 31.6, 30.9, 28.8, 29.0, 30.9, 28.4, 28.4, 30.6, 30.1 s.
+- Final command `--parallel=4` (1013 tests), 10 consecutive runs, all exit 0, 1013 pass, 0 fail: 31.8, 35.3, 34.9, 33.5, 30.6, 35.4, 35.6, 36.3, 40.1, 36.4 s (mean 35.0).
 
-Static audit of the test files that spawn processes or touch the filesystem (Repo-verified, `rg` for `.local`, `tmpdir()`, `chdir`, `process.env` assignments, `listen(` and `port:` in `scripts/*.test.ts`): every fixture directory comes from `mkdtemp` (under `os.tmpdir()` or under `.local/` with a random suffix, for example `gates-`, `format-`, `secrets-index-`, `order-`, `types-`, `tsc-build-`), none uses a fixed scratch path, fixed port, `process.chdir` or a process-wide env assignment, and fixture git processes use `cleanGitEnv()`. `scripts/tsc-build.test.ts` already removes its copy with a bounded EBUSY-only retry (METRO-42) and uses a unique `mkdtemp` per test, so concurrent copies do not share a path; no EBUSY occurred in any run below. Under isolation each file has its own module registry and globals, so `process.exitCode` or spies in one file cannot leak into another worker.
+Timeouts, stated plainly. One observed flake: `METRO-62 real git ranges` (changed-files, run 5 of 10 at 20 workers). The other six sites are precautionary, not observed failures: a single stress run with `--parallel --timeout=1000` (a 1 s default budget for tests without their own timeout) failed seven test cases, and those were given an explicit 30 s timeout: `METRO-36 a rename from code to docs ...` (reviewer-record), `METRO-62 real git ranges ...` (changed-files, the observed flake), `FND-T1 validateRange and commitMessageMain ...` (cli), `formatter jsonc ...` (format), `FND-R5 the committed Worker binding types are up to date` (binding-types), `FND-R6 contracts importing hono is rejected` (layering) and `FND-S2 the real Renovate configuration passes the pinned strict validator` (configuration). That is seven edit sites; because `format` and `layering` define their tests in loops, the timeout also applies to the loop siblings (`json`, `toml`, `react`), so ten test cases carry it. A `--timeout=2500` probe had shown only the Renovate case above 2.5 s. Tests that the 1 s probe did not flag still run under the 5 s default, so a slow enough stall in one of them could still fail; no such failure was seen in the 20 runs after the timeout changes. No retries were added and no assertion changed. No test needed a serial lane; none is proposed.
 
-Runs on the first version (before the timeouts), 20 workers (`--parallel`):
-
-| Run    | Wall s       | Exit | Result                                                                                                                |
-| ------ | ------------ | ---- | --------------------------------------------------------------------------------------------------------------------- |
-| 1 - 10 | 27.9 to 34.2 | 1    | 1011 pass, 1 fail every time: `METRO-77 check runs Vitest ...` expected the literal `bun test && bun run test:vitest` |
-
-That failure was deterministic, not a flake: my own `package.json` edit made the old assertion stale; fixed in `vitest-sync.test.ts` (see above).
-
-20 workers, after that fix (10 runs): runs 1 to 4 and 6 to 10 passed (1012 pass, 0 fail; 29.7 to 34.7 s); run 5 failed once (1011 pass, 1 fail, 33.6 s): `METRO-62 real git ranges: docs-only, mixed and rename [5069.37ms]` with `killed 1 dangling process`. That test takes 0.42 s alone (junit report of the file). It runs about seven synchronous `git` processes, and under 20-way load one run stalled past Bun's 5 s default test timeout. It is a timeout budget problem, not shared state (it uses its own `mkdtemp` and `cleanGitEnv()`). Root cause fix: an explicit 30 s timeout like the neighbouring subprocess tests (not a retry, no assertion changed).
-
-To find the other tests with the same exposure, one run with `--parallel --timeout=1000` (a default budget of 1 s for tests without their own timeout) failed exactly seven: `METRO-36 a rename from code to docs ...` (reviewer-record), `METRO-62 real git ranges ...` (changed-files), `FND-T1 validateRange and commitMessageMain ...` (cli), `formatter jsonc ...` (format; the `json` and `toml` variants did not trip), `FND-R5 the committed Worker binding types are up to date` (binding-types), `FND-R6 contracts importing hono is rejected` (layering) and `FND-S2 the real Renovate configuration passes the pinned strict validator` (configuration). All seven got the explicit 30 s timeout (the `react` and `json`/`toml` siblings share the same loop body, so the loop tests carry it too). A 2.5 s probe (`--timeout=2500`) had shown only the Renovate test above 2.5 s at 20 workers.
-
-After the fixes, 20 workers (`--parallel`), 10 consecutive runs, all exit 0, 1012 pass, 0 fail: 27.6, 31.6, 30.9, 28.8, 29.0, 30.9, 28.4, 28.4, 30.6, 30.1 s.
-
-Final command (`--parallel=4`, after merging `553dbff`; 1013 tests), 10 consecutive runs, all exit 0, 1013 pass, 0 fail: 31.8, 35.3, 34.9, 33.5, 30.6, 35.4, 35.6, 36.3, 40.1, 36.4 s (mean 35.0).
-
-No test needed a serial lane; none is proposed. Unverified: Linux-specific collisions beyond the one hosted run (1012 pass at 2, 4, 8, 4 and default workers, all green, one sample each).
+Unverified: Linux-specific collisions beyond the hosted runs listed below (all green).
 
 ## Seed reproduction in parallel mode
 
-Experiment (Repo-verified; a throwaway project with eight files of six tests each, `randomize = true`, each test appends `file:test` to a log; seed 12345):
+Experiment (session measurement, throwaway project outside the repository; eight files of six tests each, `randomize = true`, each test appends `file:test` to a log):
 
-- Within a file, the test order depends only on the seed: identical for two serial runs, three `--parallel=4` runs, one `--parallel=2` run and the serial run (all eight files matched). Seed 999 gave a different order.
-- The order in which files start is not the same in serial and parallel mode and changes with the worker count (serial `f4,f8,f3,f7,f6,f1,f2,f5`; four workers `f4,f8,f7,f1,f5,f3,f6,f2` three times in a row; two workers `f4,f8,f3,f7,f2,f5,f1,f6`). The full interleaving of tests across files matched across the three four-worker runs, but that was a small, fast fixture and is not a guarantee.
+- Seed 12345: two serial runs, three `--parallel=4` runs and one `--parallel=2` run all produced the same order of tests inside each of the eight files. A run with seed 999 (`--parallel=4`) produced a different order.
+- The order in which files started differed between serial, two workers and four workers (serial `f4,f8,f3,f7,f6,f1,f2,f5`; four workers `f4,f8,f7,f1,f5,f3,f6,f2` in all three runs; two workers `f4,f8,f3,f7,f2,f5,f1,f6`). The three four-worker runs agreed on the whole interleaving, but that fixture was tiny and fast.
 
-So `bun test --seed N` still reproduces in-file order, and file order is the part that shifts with the worker count. To reproduce a CI failure, use the same command as the check, `bun test --parallel=4 --seed N`, taken from the `--seed=N` line of the log; with isolation each file has its own globals, so what can still differ is cross-file coupling through the filesystem or processes, and a narrowed single-file run is still not guaranteed to reproduce.
+What this supports: the order of tests inside a file is determined by the seed. Cross-file interleaving and which worker takes which file depend on timing and the worker count, and are not guaranteed to reproduce even at the same worker count. To reproduce a CI failure run `bun test --parallel=4 --seed N` with the seed from the log; if it does not reproduce, try a serial `bun test --seed N`, and treat a timing-dependent failure as possible. A narrowed single-file run is still not guaranteed to reproduce.
 
 ## `--timings` and `--update-timings`
 
-Repo-verified: `bun test --parallel=4 --timings <file> --update-timings` wrote a 3 KB JSON of per-file milliseconds (the slowest: `scripts/tsc-build.test.ts` 25526, `scripts/layering.test.ts` 19033, `scripts/gates.test.ts` 9444). Four alternating pairs of runs, `--parallel=4` with that file against `--parallel=4` without: with timings 30.8, 33.7, 37.0, 33.8 s (mean 33.8); without 31.9, 33.4, 37.6, 32.2 s (mean 33.8). No measurable gain, and the file holds machine-specific durations that change with every update, so it would be a file that changes on every run. Not adopted; nothing was committed. Revisit with `--shard` only if the suite is split across jobs.
+Session measurement: `bun test --parallel=4 --timings <file> --update-timings` wrote a 3 KB JSON of per-file milliseconds (slowest: `scripts/tsc-build.test.ts` 25526, `scripts/layering.test.ts` 19033, `scripts/gates.test.ts` 9444). Four alternating pairs, `--parallel=4` with the file against without: with 30.8, 33.7, 37.0, 33.8 s (mean 33.8); without 31.9, 33.4, 37.6, 32.2 s (mean 33.8). No measurable gain, and the file holds machine-specific durations that change on every update. Not adopted; nothing committed. Revisit with `--shard` only if the suite is split across jobs.
 
 ## Hosted result
 
-Hosted (read from the Actions logs and job start/end times), the `bun test` row of the METRO-81 table and the whole `Checks` job:
+Hosted, from the Actions logs (the `bun test` row of the METRO-81 table; `Checks` job time from the job start and end times):
 
 | Run                                                         | `bun test` row | Chain total | `Checks` job                             |
 | ----------------------------------------------------------- | -------------- | ----------- | ---------------------------------------- |
@@ -109,7 +105,8 @@ Hosted (read from the Actions logs and job start/end times), the `bun test` row 
 | 42178087779, PR #83 `8c71a17` `--parallel=4` (after probes) | 1 m 3.8 s      | 1 m 16.2 s  | not comparable (probe step added 6 runs) |
 | 42180849982 attempt 1, PR #83 `e0fdb1f`, `--parallel=4`     | 1 m 38.6 s     | 1 m 58.6 s  | 2 m 20 s                                 |
 | 42180849982 attempt 2 (re-run of the same commit)           | 1 m 18.5 s     | 1 m 35.3 s  | 1 m 56 s                                 |
+| 42181897244, PR #83 `06c0e5f`, `--parallel=4`               | 1 m 32.4 s     | not read    | 2 m 11 s                                 |
 
-Earlier `Checks` jobs from [METRO-81](metro-81.md): 2 m 59 s (PR #78) and 2 m 44 s (PR #80); the ticket quotes 2 m 8 s (source not re-read here).
+Earlier `Checks` jobs from [METRO-81](metro-81.md): 2 m 59 s (PR #78) and 2 m 44 s (PR #80).
 
-Honest reading: on the 4-vCPU hosted runner the parallel `bun test` took 63.8, 98.6 and 78.5 s against 98.7 and 80.0 s serial, so the hosted gain is inside the run-to-run noise (about 20 s between identical runs). The probe step's controlled comparison (80 s serial against 61 to 64 s at every parallel count, same job, same machine) is the only paired measurement and shows about 20 s, 22 percent. The local gain is large (95 s to 37 s on 20 cores). The hosted benefit is therefore small and not proven by these samples; more hosted runs would be needed for a median (Unverified). The cause is not measured. Likely contributors are four vCPUs shared by workers that each spawn their own subprocesses, and a long tail of subprocess-bound files; neither was isolated. METRO-83 (slowest files) is where the remaining hosted time is.
+Reading. The `bun test` row under `--parallel=4` was 63.8, 98.6, 78.5 and 92.4 s against 98.7 and 80.0 s serial, so the hosted gain is inside run-to-run noise (identical commits varied by about 20 s). The probe's paired comparison (80 s serial against 61 to 64 s) is the only controlled-looking sample and is a single sample per mode with the order caveats above. The local gain is large (95 s to 37 s on 20 cores); the hosted benefit is small and not proven by these samples, and a median over more hosted runs would be needed (Unverified). The slowest subprocess-bound files are the remaining time; that is METRO-83.

@@ -175,7 +175,7 @@ test("METRO-77 check runs Vitest with coverage and CI uploads both lcov files", 
   expect(manifest["scripts"]["test:vitest"]).toBe("vitest run --coverage");
   // METRO-82: `bun test` carries flags (`--parallel=N`) but still runs right before Vitest.
   expect(String(manifest["scripts"]["check"])).toMatch(
-    /bun test(?: --\S+)* && bun run test:vitest/u,
+    /(?:^| && )bun test(?: --\S+)* && bun run test:vitest(?: && |$)/u,
   );
   const workflow = await read(".github/workflows/quality.yml");
   expect(workflow).toMatch(
