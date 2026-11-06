@@ -2,7 +2,7 @@ import { copyFile, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
-import { validateMessage, validateSubject } from "./commit-message";
+import { validateMessage, validateRange, validateSubject } from "./commit-message";
 import { cleanGitEnv } from "./git-env";
 
 const accepted = [
@@ -75,6 +75,24 @@ async function repo() {
     await copyFile(resolve("scripts", file), join(root, "scripts", file));
   return { root, run, ok };
 }
+
+test("METRO-92 validateRange names the 64 MiB read limit and rethrows other git failures", async () => {
+  const { root, ok } = await repo();
+  try {
+    const emptyTree = ok(["git", "write-tree"]).trim();
+    const huge = Bun.spawnSync(["git", "commit-tree", emptyTree, "-F", "-"], {
+      cwd: root,
+      env: env(),
+      stdin: Buffer.from(`feat: huge\n\n${"a".repeat(65 * 1024 * 1024)}\n`),
+    });
+    expect(huge.exitCode).toBe(0);
+    const sha = huge.stdout.toString().trim();
+    expect(() => validateRange(sha, root)).toThrow(/exceed the 64 MiB read limit/u);
+    expect(() => validateRange("no-such-ref..HEAD", root)).toThrow(/no-such-ref/u);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}, 60000);
 
 test("FND-S5 range mode exits nonzero when any commit in the range is invalid", async () => {
   const { root, run, ok } = await repo();

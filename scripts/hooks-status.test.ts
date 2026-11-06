@@ -1,4 +1,4 @@
-import { copyFile, mkdtemp, readFile, rm } from "node:fs/promises";
+import { copyFile, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -131,6 +131,30 @@ test("METRO-45 says it could not determine the state when git cannot run", async
     expect(warning).toContain(HOOK_INSTALL_COMMAND);
   });
 });
+
+// Real Git exits 128 for every config failure it can reach here (and `rev-parse` fails the same way first), so
+// the "neither 0 nor 1" branch needs a stand-in git. Bun refuses to pass the `^hook...$` pattern to a .cmd file
+// on Windows, so this runs on POSIX only (CI is Ubuntu); a named function keeps the jest rules working.
+async function configFailureIsUnknown(): Promise<void> {
+  await withRepository(async (root) => {
+    // `rev-parse` succeeds, every other command fails with exit code 2 (neither 0 nor 1).
+    const fakeGit = join(root, "fake-git");
+    await writeFile(
+      fakeGit,
+      '#!/bin/sh\nif [ "$1" = "rev-parse" ]; then echo .git; exit 0; fi\necho config exploded >&2\nexit 2\n',
+      { mode: 0o755 },
+    );
+    expect(hookStatus(root, env(), fakeGit)).toEqual({
+      state: "unknown",
+      reason: "config exploded",
+    });
+  });
+}
+
+test.skipIf(process.platform === "win32")(
+  "METRO-92 reports unknown with Git's message when reading the hook config exits with a real failure",
+  configFailureIsUnknown,
+);
 
 async function bootstrapOutput(cwd: string, extra: Record<string, string>) {
   const result = Bun.spawnSync([process.execPath, resolve("scripts/tools.ts")], {
