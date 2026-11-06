@@ -4,6 +4,8 @@ Historical baseline: legacy implementation references and checks below concern c
 
 Baseline terms for [feature parity](feature-parity.md); verification: [METRO-9](../evidence/metro-9.md).
 
+Domain-docs rules for agents (single context, use these terms, report a missing term, surface ADR conflicts) are in [skills](../agents/skills.md).
+
 ## Confirmed — Repo-verified
 
 | Term                 | Baseline meaning                                                                                                                                                                                    |

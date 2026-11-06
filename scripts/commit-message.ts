@@ -14,7 +14,7 @@ export function validateSubject(subject: string): string | null {
   return `Invalid commit subject: "${subject}". Expected "<type>[(scope)][!]: <description>" with type one of ${TYPES.replaceAll("|", ", ")}, or a Git merge/revert subject.`;
 }
 
-const POLICY = "docs/agents/attribution.md";
+const POLICY = "docs/agents/workflow.md#attribution";
 const SIGNED_OFF = /^signed-off-by[ \t]*:[ \t]*(.*)$/iu;
 // Exact AI-agent email addresses (case-insensitive, whole address). The name is never matched, so a
 // person called Claude or Gemini passes. Ordinary automation bots (Renovate, Dependabot) are not AI
@@ -50,7 +50,7 @@ function isAgentIdentity(value: string): boolean {
 
 /**
  * Rejects a Signed-off-by in the last paragraph whose email is an AI agent identity (see
- * docs/agents/attribution.md). It cannot tell who typed any other Signed-off-by.
+ * docs/agents/workflow.md#attribution). It cannot tell who typed any other Signed-off-by.
  */
 export function validateTrailers(message: string): string | null {
   const agentSigned = lastParagraphLines(message).some((line) => {

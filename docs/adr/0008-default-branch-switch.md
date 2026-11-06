@@ -2,7 +2,7 @@
 
 - Status: Accepted (plan only; the switch itself is not authorized by this ADR)
 - Date: 2026-11-04
-- Ticket and specification: METRO-34; owner decisions of 2026-11-04 recorded below. Operating steps: [cutover runbook](../agents/cutover-runbook.md). Naming rule: [version and tag policy](../agents/release-policy.md).
+- Ticket and specification: METRO-34; owner decisions of 2026-11-04 recorded below. Operating steps: [cutover runbook](../agents/cutover-runbook.md). Naming rule: [version and tag policy](../agents/workflow.md#releases).
 
 ## Context
 
@@ -33,7 +33,7 @@ We will do this:
 6. **Legacy site.** Pages is built from `master`'s workflow. Deleting `master` removes that workflow. What happens to the already-published site if left alone is Unverified. Owner decision (delegated, 2026-11-04): the legacy site is unpublished at cutover, after production is live (runbook 3.5).
 7. **Rulesets.** The `main` ruleset (26467450) already exists and is kept unchanged. The `feature/metro-rebuild` ruleset (26426527) is deleted by the owner when that branch is retired, because its `deletion` rule blocks removing the branch. No ruleset is created or changed by this ADR; the preflight script reads the `main` ruleset and fails if it lacks the rules above.
 8. **Cutover-prep pull request** (the last pull request to `feature/metro-rebuild`, by a separate ticket): `CONTRIBUTING.md`, `docs/agents/workflow.md` and `docs/agents/plane.md` keep naming `feature/metro-rebuild` while it is the real base (this pull request and the freeze-time merges still target it) and point at runbook step 6.4, where all three change to `main` together (the `branches:check` gate fails if only some do; amended by METRO-61, which found that naming `main` earlier would send ticket pull requests to the wrong branch); `.github/renovate.json5` drops `baseBranchPatterns` (default is the default branch), so there is no Renovate edit at the flip; `quality.yml` adds pushes to `main` and keeps a push trigger for `feature/metro-rebuild` until that branch is retired (runbook 6.3), so the head of the integration branch always has a `Quality gates` run for the preflight to read; the `Quality gates` run of the pull request to `main` also attaches to that head commit, and the preflight reads check runs by commit, not by event; `docs/development.md` and `docs/agents/maintenance.md` replace their transition text with a pointer to this ADR; `release-draft` already defaults `target` to `main`.
-9. **Version and tag naming** is one rule in the [policy](../agents/release-policy.md): SemVer, tag `v<major>.<minor>.<patch>[-<prerelease>]`, the owner bumps, notes flow from the Plane release log to the GitHub draft and back.
+9. **Version and tag naming** is one rule in the [policy](../agents/workflow.md#releases): SemVer, tag `v<major>.<minor>.<patch>[-<prerelease>]`, the owner bumps, notes flow from the Plane release log to the GitHub draft and back.
 
 ### Why v1.0.0 and SemVer
 
@@ -83,7 +83,7 @@ What can be undone depends on the stage; the commands are in the [runbook](../ag
 - Scheduled and dispatch workflows work after the switch: the Cloudflare token check runs weekly, `release-draft` registers normally, and a scheduled reconcile from Plane becomes buildable.
 - Renovate starts reading its configuration (if the app is installed), Dependabot alerts and the dependency graph follow `main`, and caches built on `main` serve all branches.
 - The legacy Pages site and the `github-pages` environment need an owner decision.
-- Ticket pull requests target `main` afterwards; `feature/metro-rebuild` is retired. The integration exception in [workflow](../agents/workflow.md#integration-exception) then ends.
+- Ticket pull requests target `main` afterwards; `feature/metro-rebuild` is retired. The integration exception in [workflow](../agents/workflow.md#execution) then ends.
 - `master` history after `v0.0.2` lives only in the owner's offline bundle.
 
 ## Alternatives considered

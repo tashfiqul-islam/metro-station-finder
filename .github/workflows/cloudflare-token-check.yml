@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     # The environment holds the Cloudflare deploy token. A failed run is announced only by GitHub's
-    # normal workflow-failure notifications (docs/agents/maintenance.md, open decision).
+    # normal workflow-failure notifications (docs/agents/maintenance-runbook.md, open decision).
     environment: preview
     permissions:
       contents: read

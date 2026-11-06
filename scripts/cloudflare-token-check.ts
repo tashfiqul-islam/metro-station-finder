@@ -3,7 +3,7 @@ import type { Deps, FetchedResponse } from "./release-sync.ts";
 
 /**
  * Fails when the Cloudflare API token that deploys previews is rejected, not active, or close to
- * expiring. METRO-33, docs/agents/maintenance.md. Cloudflare has no first-party OIDC for wrangler,
+ * expiring. METRO-33, docs/agents/maintenance-runbook.md. Cloudflare has no first-party OIDC for wrangler,
  * so rotation discipline plus this early alarm is the control.
  *
  * Endpoints (developers.cloudflare.com, read 2026-11-04):
@@ -132,7 +132,7 @@ export async function checkCloudflareToken(
   const daysRemaining = Math.floor(remaining / DAY_MS);
   if (remaining <= EXPIRY_WARNING_DAYS * DAY_MS)
     throw new Error(
-      `Cloudflare API token expires in ${daysRemaining} days (${expiresOn.toISOString()}), within ${EXPIRY_WARNING_DAYS} days; rotate it now (docs/agents/maintenance.md).`,
+      `Cloudflare API token expires in ${daysRemaining} days (${expiresOn.toISOString()}), within ${EXPIRY_WARNING_DAYS} days; rotate it now (docs/agents/maintenance-runbook.md).`,
     );
   deps.log(`Token is active and expires in ${daysRemaining} days (${expiresOn.toISOString()}).`);
   return { status: "active", daysRemaining };

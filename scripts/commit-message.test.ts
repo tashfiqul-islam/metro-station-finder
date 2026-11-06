@@ -199,7 +199,9 @@ test("METRO-52 rejects a Signed-off-by with an agent email, whatever the name", 
     "Copilot <198982749+Copilot@users.noreply.github.com>",
     "copilot-swe-agent[bot] <198982749+copilot-swe-agent[bot]@users.noreply.github.com>",
   ]) {
-    expect(validateMessage(signedBy(value)), value).toContain("docs/agents/attribution.md");
+    expect(validateMessage(signedBy(value)), value).toContain(
+      "docs/agents/workflow.md#attribution",
+    );
   }
 });
 

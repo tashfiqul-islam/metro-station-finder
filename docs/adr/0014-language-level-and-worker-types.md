@@ -54,7 +54,7 @@ We will not adopt `nodenext` for scripts now. Trigger to retry: core's imports g
 
 We will write a browser support matrix before raising web, core or contracts. Until then: Vite 8 default targets. Trigger to revisit: the matrix is written, or Vite changes its default targets in a major release.
 
-Windows `wrangler types --check` (RT-17): Wrangler 4.156.1 fixed `--check` on CRLF checkouts. Installed now: wrangler 4.156.0 (Repo-verified), which predates the fix. The newest published is 4.157.0 (Repo-verified: `npm view`, 2026-11-05). Bumping is out of scope for METRO-49. Re-test step after the next wrangler bump, recorded in [maintenance](../agents/maintenance.md#wrangler-types-check-on-windows).
+Windows `wrangler types --check` (RT-17): Wrangler 4.156.1 fixed `--check` on CRLF checkouts. Installed now: wrangler 4.156.0 (Repo-verified), which predates the fix. The newest published is 4.157.0 (Repo-verified: `npm view`, 2026-11-05). Bumping is out of scope for METRO-49. Re-test step after the next wrangler bump, recorded in [maintenance](../agents/maintenance-runbook.md#wrangler-types-check-on-windows).
 
 ## Consequences
 
@@ -74,4 +74,4 @@ Windows `wrangler types --check` (RT-17): Wrangler 4.156.1 fixed `--check` on CR
 
 ## Confirmation
 
-`scripts/language-level.test.ts` resolves every project with `tsc --showConfig` and fails when its `target` or `lib` differs from the table above. It also asserts that the api project includes `worker-configuration.d.ts` with `types: []`, and that no `package.json` depends on `@cloudflare/workers-types`. `scripts/binding-types.test.ts` runs the same `wrangler types --check` command as `types:check`. `bun run types:check` (part of `bun run check`) fails when the generated Workers types are stale, and `tsc -b` fails when the Worker uses an API the generated types lack. The Windows re-test step is a manual procedure (policy) in [maintenance](../agents/maintenance.md#wrangler-types-check-on-windows).
+`scripts/language-level.test.ts` resolves every project with `tsc --showConfig` and fails when its `target` or `lib` differs from the table above. It also asserts that the api project includes `worker-configuration.d.ts` with `types: []`, and that no `package.json` depends on `@cloudflare/workers-types`. `scripts/binding-types.test.ts` runs the same `wrangler types --check` command as `types:check`. `bun run types:check` (part of `bun run check`) fails when the generated Workers types are stale, and `tsc -b` fails when the Worker uses an API the generated types lack. The Windows re-test step is a manual procedure (policy) in [maintenance](../agents/maintenance-runbook.md#wrangler-types-check-on-windows).

@@ -362,10 +362,30 @@ test("METRO-14 an update failure is reported with its status", async () => {
 });
 
 test("METRO-14 invalid tags are rejected before any request", async () => {
-  for (const tag of ["1.2.0", "v1.2", "v01.2.3", "v1.2.3;rm", "main", "v1.2.3-"]) {
+  for (const tag of [
+    "1.2.0",
+    "v1.2",
+    "v01.2.3",
+    "v1.2.3;rm",
+    "main",
+    "v1.2.3-",
+    "v1.0.0+build.5",
+    "V1.0.0",
+    "v01.0.0",
+  ]) {
     expect(() => validateTag(tag)).toThrow("Tag must look like");
   }
-  for (const tag of ["v0.0.0", "v1.2.3", "v10.20.30-rc.1", "v1.0.0-sync-test"])
+  for (const tag of [
+    "v0.0.0",
+    "v1.2.3",
+    "v10.20.30-rc.1",
+    "v1.0.0-sync-test",
+    "v1.0.0",
+    "v0.0.2",
+    "v1.0.0-rc.1",
+    "v1.2.0-beta.2",
+    "v10.20.30",
+  ])
     expect(validateTag(tag)).toBe(tag);
   const w = world();
   const deps = server(w);

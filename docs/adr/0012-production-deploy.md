@@ -6,7 +6,7 @@
 
 ## Context
 
-A stable release counts as shipped only when GitHub has a successful deployment of the tagged commit in the environment `production` ([release policy](../agents/release-policy.md)). `scripts/release-sync.ts` asks `GET /deployments?sha=<tag commit>&environment=production` and accepts any deployment of that SHA that has ever had a status `success` (Repo-verified, `hasProductionDeployment`). No production Worker, environment or workflow existed.
+A stable release counts as shipped only when GitHub has a successful deployment of the tagged commit in the environment `production` ([release policy](../agents/workflow.md#releases)). `scripts/release-sync.ts` asks `GET /deployments?sha=<tag commit>&environment=production` and accepts any deployment of that SHA that has ever had a status `success` (Repo-verified, `hasProductionDeployment`). No production Worker, environment or workflow existed.
 
 Research (Web-verified 2026-11-05 unless stated):
 
