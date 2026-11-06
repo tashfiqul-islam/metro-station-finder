@@ -10,3 +10,8 @@ test("the package entry exposes the scaffold, domain, lookups and the baseline d
   expect(core.createFare(20).currency).toBe("BDT");
   expect(core.isStationId("pallabi")).toBe(true);
 });
+
+test("the package entry exposes the dataset provenance for the fare notice and last-checked dates", () => {
+  expect(core.datasetProvenance.fares.noticeDate).toBe("2022-09-08");
+  expect(core.datasetProvenance.fares.officialTableRetrieved).toBe("2026-11-05");
+});

@@ -1,0 +1,220 @@
+import { baselineDataset, datasetProvenance, findFare, findNearestStation } from "@metro/core";
+import type { Coordinate, Station } from "@metro/core";
+import { useEffect, useState } from "react";
+
+import { useMaps } from "../../adapters/maps/context";
+import type { MapsAdapter, MapsStatus, RouteService, WalkingRoute } from "../../adapters/maps/port";
+import { copy } from "./copy";
+import { formatIsoDate, formatKm, formatMinutes, formatWalkingDistance } from "./format";
+import { locate } from "./geolocate";
+
+const stations = baselineDataset.stations;
+
+/** Suggestions lean toward the network: the mean of the station coordinates, not a hard-coded point. */
+const SEARCH_BIAS = {
+  center: {
+    lat: stations.reduce((sum, s) => sum + s.coordinate.lat, 0) / stations.length,
+    lng: stations.reduce((sum, s) => sum + s.coordinate.lng, 0) / stations.length,
+  },
+  radiusMeters: 25_000,
+};
+
+type Locating = "idle" | "locating" | "denied" | "unavailable";
+
+type RouteView =
+  | { readonly phase: "idle" }
+  | { readonly phase: "loading" }
+  | { readonly phase: "success"; readonly route: WalkingRoute }
+  | { readonly phase: "failure" };
+
+type RouteResult =
+  | { readonly key: string; readonly route: WalkingRoute }
+  | { readonly key: string; readonly route: null };
+
+/** One request per (origin, station) key; the view is derived so a stale answer is never shown. */
+function useWalkingRoute(
+  service: RouteService | null,
+  status: MapsStatus,
+  origin: Coordinate | null,
+  station: Station | null,
+): RouteView {
+  const [result, setResult] = useState<RouteResult | null>(null);
+  const key =
+    origin === null || station === null ? null : `${origin.lat},${origin.lng}>${station.id}`;
+
+  useEffect(() => {
+    if (service === null || key === null || origin === null || station === null) return noop;
+    let current = true;
+    void (async () => {
+      try {
+        const route = await service.walk(origin, station.coordinate);
+        if (current) setResult({ key, route });
+      } catch {
+        // The cause is dropped on purpose: its message can carry coordinates or a URL.
+        if (current) setResult({ key, route: null });
+      }
+    })();
+    return () => {
+      current = false;
+    };
+  }, [service, key, origin, station]);
+
+  if (key === null) return { phase: "idle" };
+  if (result?.key === key) {
+    return result.route === null ? { phase: "failure" } : { phase: "success", route: result.route };
+  }
+  // No service yet: wait while the library loads, fail visibly when it never will.
+  if (service === null && status === "unavailable") return { phase: "failure" };
+  return { phase: "loading" };
+}
+
+function noop(): void {}
+
+/** Programmatic focus for an alert; the outline comes from `focus.css` (`[tabindex="-1"]`). */
+function focusOnMount(node: HTMLElement | null): void {
+  node?.focus();
+}
+
+interface SliceProps {
+  readonly maps: MapsAdapter;
+}
+
+function Slice({ maps }: SliceProps) {
+  const { status, routes: service } = useMaps();
+  const [origin, setOrigin] = useState<Coordinate | null>(null);
+  const [locating, setLocating] = useState<Locating>("idle");
+  const [searchFailed, setSearchFailed] = useState(false);
+  const [destinationId, setDestinationId] = useState("");
+
+  const nearest = origin === null ? null : findNearestStation(stations, origin);
+  const found = nearest?.kind === "nearest" ? nearest : null;
+  const station = found?.station ?? null;
+  const route = useWalkingRoute(service, status, origin, station);
+
+  const destinations = stations.filter((s) => s.id !== station?.id);
+  const destination = destinations.find((s) => s.id === destinationId);
+  const fare =
+    station !== null && destination !== undefined
+      ? findFare(baselineDataset.fares, station.id, destination.id)
+      : null;
+
+  function choosePlace(location: Coordinate): void {
+    setSearchFailed(false);
+    setLocating("idle");
+    setOrigin(location);
+  }
+
+  async function findMe(): Promise<void> {
+    setLocating("locating");
+    const outcome = await locate();
+    if (outcome.kind === "position") choosePlace(outcome.coordinate);
+    else setLocating(outcome.kind);
+  }
+
+  const searchAlert = status === "unavailable" || searchFailed ? copy.searchUnavailable : null;
+  const geoAlert =
+    locating === "denied" ? copy.denied : locating === "unavailable" ? copy.unavailable : null;
+
+  return (
+    <main>
+      <h1>{copy.heading}</h1>
+      <p>{copy.intro}</p>
+      <section aria-labelledby="where-heading">
+        <h2 id="where-heading">{copy.whereHeading}</h2>
+        <p id="place-label">{copy.searchLabel}</p>
+        {status === "loading" && <output>{copy.loadingSearch}</output>}
+        {status !== "unavailable" && (
+          <maps.PlaceSearch
+            labelId="place-label"
+            bias={SEARCH_BIAS}
+            onPlace={choosePlace}
+            onFailure={() => setSearchFailed(true)}
+          />
+        )}
+        {searchAlert !== null && <p role="alert">{searchAlert}</p>}
+        <p>
+          <button
+            type="button"
+            onClick={() => void findMe()}
+            disabled={locating === "locating"}
+            aria-describedby="consent"
+          >
+            {copy.locateButton}
+          </button>
+        </p>
+        <p id="consent">{copy.consent}</p>
+        {locating === "locating" && <output>{copy.locating}</output>}
+        {geoAlert !== null && (
+          <p role="alert" tabIndex={-1} ref={focusOnMount}>
+            {geoAlert}
+          </p>
+        )}
+      </section>
+
+      {nearest !== null && (
+        <section aria-labelledby="result-heading">
+          <h2 id="result-heading">{copy.resultHeading}</h2>
+          {found === null || station === null ? (
+            <output>{copy.empty}</output>
+          ) : (
+            <>
+              <p>
+                <output>{station.name}</output>
+              </p>
+              <dl>
+                <dt>{copy.straightLine}</dt>
+                <dd>{formatKm(found.distance)}</dd>
+                <dt>{copy.walking}</dt>
+                <dd>
+                  {route.phase === "loading" && <output>{copy.routeLoading}</output>}
+                  {route.phase === "success" && (
+                    <output>
+                      {formatWalkingDistance(route.route.distance)},{" "}
+                      {formatMinutes(route.route.durationSeconds)}
+                    </output>
+                  )}
+                  {route.phase === "failure" && <span role="alert">{copy.routeUnavailable}</span>}
+                </dd>
+              </dl>
+              <h2>{copy.fareHeading}</h2>
+              <p>
+                <label htmlFor="destination">{copy.destinationLabel}</label>{" "}
+                <select
+                  id="destination"
+                  value={destination?.id ?? ""}
+                  onChange={(event) => setDestinationId(event.target.value)}
+                >
+                  <option value="">{copy.destinationPlaceholder}</option>
+                  {destinations.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </p>
+              <output>
+                {fare === null && copy.fareChoose}
+                {fare?.kind === "fare" &&
+                  `${station.name} to ${destination?.name}: BDT ${fare.fare.amount}`}
+                {fare?.kind === "unknown-fare" && copy.fareUnknown}
+              </output>
+              <p>
+                Fares as of: DTCA notice dated {formatIsoDate(datasetProvenance.fares.noticeDate)};
+                last checked {formatIsoDate(datasetProvenance.fares.officialTableRetrieved)}.
+              </p>
+            </>
+          )}
+        </section>
+      )}
+    </main>
+  );
+}
+
+/** The nearest-station slice. The adapter is injected, so tests never load Google. */
+export function NearestStation({ maps }: SliceProps) {
+  return (
+    <maps.Provider>
+      <Slice maps={maps} />
+    </maps.Provider>
+  );
+}

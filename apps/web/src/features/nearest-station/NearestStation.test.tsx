@@ -1,0 +1,336 @@
+import { stationId } from "@metro/core";
+import type { Coordinate } from "@metro/core";
+import * as Core from "@metro/core";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { StrictMode, useEffect, useMemo } from "react";
+import type { ReactNode } from "react";
+import { afterAll, afterEach, beforeAll, expect, test, vi } from "vitest";
+
+import { MapsContext } from "../../adapters/maps/context";
+import type {
+  MapsAdapter,
+  MapsStatus,
+  PlaceSearchProps,
+  RouteService,
+  WalkingRoute,
+} from "../../adapters/maps/port";
+import { copy } from "./copy";
+import { fakePosition, fakePositionError } from "./geolocation-fakes";
+import { NearestStation } from "./NearestStation";
+
+const override = vi.hoisted(() => ({ fare: null as unknown }));
+
+vi.mock("@metro/core", async (importOriginal) => {
+  const actual = await importOriginal<typeof Core>();
+  return {
+    ...actual,
+    findFare: (...args: Parameters<typeof actual.findFare>) =>
+      override.fare ?? actual.findFare(...args),
+  };
+});
+
+/** Synthetic points near the first and the last station of the baseline dataset. */
+const NEAR_UTTARA_NORTH: Coordinate = { lat: 23.87, lng: 90.367 };
+const NEAR_MOTIJHEEL: Coordinate = { lat: 23.728, lng: 90.419 };
+
+const world = {
+  status: "ready" as MapsStatus,
+  service: null as RouteService | null,
+  searchProps: null as PlaceSearchProps | null,
+};
+
+function FakePlaceSearch(props: PlaceSearchProps) {
+  useEffect(() => {
+    world.searchProps = props;
+  });
+  return <fieldset aria-labelledby={props.labelId} data-fake-search />;
+}
+
+/** Publishes the test's chosen Maps state the way the real provider does. */
+function FakeProvider({ children }: { readonly children: ReactNode }) {
+  const value = useMemo(() => ({ status: world.status, routes: world.service }), []);
+  return <MapsContext value={value}>{children}</MapsContext>;
+}
+
+const fakeMaps: MapsAdapter = { Provider: FakeProvider, PlaceSearch: FakePlaceSearch };
+
+function routeService(walk: RouteService["walk"]): RouteService {
+  return { walk };
+}
+
+function route(meters: number, durationSeconds: number): WalkingRoute {
+  return { distance: Core.walkingDistanceMeters(meters), durationSeconds };
+}
+
+function geolocation(run: (success: PositionCallback, failure: PositionErrorCallback) => void) {
+  Object.defineProperty(navigator, "geolocation", {
+    configurable: true,
+    value: { getCurrentPosition: run },
+  });
+}
+
+function pickPlace(location: Coordinate): void {
+  act(() => world.searchProps?.onPlace(location));
+}
+
+const denied = fakePositionError(1);
+const timeout = fakePositionError(3);
+
+beforeAll(() => {
+  Reflect.set(globalThis, "IS_REACT_ACT_ENVIRONMENT", true);
+});
+afterEach(() => {
+  cleanup();
+  world.status = "ready";
+  world.service = null;
+  world.searchProps = null;
+  override.fare = null;
+  Reflect.deleteProperty(navigator, "geolocation");
+});
+afterAll(() => {
+  Reflect.deleteProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT");
+});
+
+test("METRO-88 idle: search, the location button and the consent line, and no result", () => {
+  render(<NearestStation maps={fakeMaps} />);
+  expect(screen.getByRole("heading", { level: 1, name: copy.heading })).toBeTruthy();
+  expect(screen.getByRole("group", { name: copy.searchLabel })).toBeTruthy();
+  const button = screen.getByRole("button", { name: copy.locateButton });
+  expect(button.getAttribute("aria-describedby")).toBe("consent");
+  const consent = document.getElementById("consent")?.textContent ?? "";
+  expect(consent).toContain("not sent to our server");
+  expect(consent).toContain("goes to Google");
+  expect(screen.queryByRole("alert")).toBeNull();
+  expect(screen.queryByRole("heading", { name: copy.resultHeading })).toBeNull();
+});
+
+test("METRO-88 the search gets a Dhaka bias derived from the dataset, not a hard-coded point", () => {
+  render(<NearestStation maps={fakeMaps} />);
+  const { center, radiusMeters } = world.searchProps?.bias ?? { center: null, radiusMeters: 0 };
+  expect(radiusMeters).toBe(25_000);
+  expect(center?.lat).toBeGreaterThan(23.7);
+  expect(center?.lat).toBeLessThan(23.9);
+  expect(center?.lng).toBeGreaterThan(90.3);
+  expect(center?.lng).toBeLessThan(90.5);
+});
+
+test("METRO-88 a selected place shows the nearest station, both distances and the walking route", async () => {
+  const walk = vi.fn<RouteService["walk"]>(() => Promise.resolve(route(1234, 900)));
+  world.service = routeService(walk);
+  render(<NearestStation maps={fakeMaps} />);
+  pickPlace(NEAR_UTTARA_NORTH);
+  expect(await screen.findByText("1.23 km, 15 min")).toBeTruthy();
+  expect(screen.getByText("Uttara North").tagName).toBe("OUTPUT");
+  const term = screen.getByText(copy.straightLine);
+  expect(term.nextElementSibling?.textContent).toMatch(/^0\.\d\d km$/u);
+  expect(walk).toHaveBeenCalledTimes(1);
+  const [from, to] = walk.mock.calls[0] ?? [];
+  expect(from).toEqual(NEAR_UTTARA_NORTH);
+  expect(to).toEqual(Core.baselineDataset.stations[0]?.coordinate);
+  expect(screen.queryByRole("alert")).toBeNull();
+});
+
+test("METRO-88 the route shows loading while the routes library is not ready", () => {
+  render(<NearestStation maps={fakeMaps} />);
+  pickPlace(NEAR_UTTARA_NORTH);
+  expect(screen.getByText(copy.routeLoading)).toBeTruthy();
+  expect(screen.getByText("Uttara North")).toBeTruthy();
+});
+
+test("METRO-88 with Maps unavailable there is no search control, only the fixed copy", () => {
+  world.status = "unavailable";
+  render(<NearestStation maps={fakeMaps} />);
+  expect(screen.getByText(copy.searchUnavailable)).toBeTruthy();
+  expect(document.querySelector("[data-fake-search]")).toBeNull();
+});
+
+test("METRO-88 the device position finds the nearest station without Google, then the route fails visibly", async () => {
+  world.status = "unavailable";
+  geolocation((success) => success(fakePosition(23.87, 90.367)));
+  render(<NearestStation maps={fakeMaps} />);
+  fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
+  expect(await screen.findByText("Uttara North")).toBeTruthy();
+  expect(screen.getByText(copy.routeUnavailable)).toBeTruthy();
+  expect(screen.getByRole("combobox", { name: copy.destinationLabel })).toBeTruthy();
+});
+
+test("METRO-88 a failed route request shows fixed copy and keeps the station and fare", async () => {
+  const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+  world.service = routeService(() => Promise.reject(new Error("https://x.test?lat=23.8")));
+  render(<NearestStation maps={fakeMaps} />);
+  pickPlace(NEAR_UTTARA_NORTH);
+  expect(await screen.findByText(copy.routeUnavailable)).toBeTruthy();
+  expect(document.body.textContent).not.toContain("x.test");
+  expect(screen.getByText("Uttara North")).toBeTruthy();
+  fireEvent.change(screen.getByRole("combobox", { name: copy.destinationLabel }), {
+    target: { value: "motijheel" },
+  });
+  expect(screen.getByText("Uttara North to Motijheel: BDT 100")).toBeTruthy();
+  expect(errors).not.toHaveBeenCalled();
+  errors.mockRestore();
+});
+
+test("METRO-88 the destination list excludes the origin and the fare comes from core", () => {
+  render(<NearestStation maps={fakeMaps} />);
+  pickPlace(NEAR_MOTIJHEEL);
+  const select = screen.getByRole("combobox", { name: copy.destinationLabel });
+  const options = within(select)
+    .getAllByRole("option")
+    .map((o) => o.textContent);
+  expect(options).toHaveLength(16);
+  expect(options).toContain("Uttara North");
+  expect(options).not.toContain("Motijheel");
+  expect(screen.getByText(copy.fareChoose)).toBeTruthy();
+  fireEvent.change(select, { target: { value: "uttara-north" } });
+  expect(screen.getByText("Motijheel to Uttara North: BDT 100")).toBeTruthy();
+  fireEvent.change(select, { target: { value: "" } });
+  expect(screen.getByText(copy.fareChoose)).toBeTruthy();
+});
+
+test("METRO-88 a chosen destination is dropped when a new place makes it the origin", () => {
+  render(<NearestStation maps={fakeMaps} />);
+  pickPlace(NEAR_MOTIJHEEL);
+  const select = screen.getByRole("combobox", { name: copy.destinationLabel });
+  fireEvent.change(select, { target: { value: "uttara-north" } });
+  pickPlace(NEAR_UTTARA_NORTH);
+  expect(screen.getByText("Uttara North")).toBeTruthy();
+  expect(
+    screen.getByRole<HTMLSelectElement>("combobox", { name: copy.destinationLabel }).value,
+  ).toBe("");
+  expect(screen.getByText(copy.fareChoose)).toBeTruthy();
+});
+
+test("METRO-88 'Fares as of' shows both the DTCA notice date and the last-checked date", () => {
+  render(<NearestStation maps={fakeMaps} />);
+  pickPlace(NEAR_MOTIJHEEL);
+  expect(
+    screen.getByText(
+      "Fares as of: DTCA notice dated 8 September 2022; last checked 5 November 2026.",
+    ),
+  ).toBeTruthy();
+});
+
+test("METRO-88 an unknown fare shows fixed copy and never zero", () => {
+  render(<NearestStation maps={fakeMaps} />);
+  pickPlace(NEAR_MOTIJHEEL);
+  override.fare = { kind: "unknown-fare", reason: "no-fare-entry" };
+  fireEvent.change(screen.getByRole("combobox", { name: copy.destinationLabel }), {
+    target: { value: stationId("uttara-north") },
+  });
+  expect(screen.getByText(copy.fareUnknown)).toBeTruthy();
+  expect(document.body.textContent).not.toContain("BDT 0");
+});
+
+test("METRO-88 an invalid location is the empty state", () => {
+  render(<NearestStation maps={fakeMaps} />);
+  pickPlace({ lat: 200, lng: 0 });
+  expect(screen.getByText(copy.empty)).toBeTruthy();
+  expect(screen.queryByRole("combobox")).toBeNull();
+});
+
+test("METRO-88 while Maps loads the search shows a loading message", () => {
+  world.status = "loading";
+  render(<NearestStation maps={fakeMaps} />);
+  expect(screen.getByText(copy.loadingSearch)).toBeTruthy();
+  expect(document.querySelector("[data-fake-search]")).not.toBeNull();
+});
+
+test("METRO-88 a search failure shows fixed copy, location still works and a later place clears it", async () => {
+  render(<NearestStation maps={fakeMaps} />);
+  act(() => world.searchProps?.onFailure());
+  expect(screen.getByRole("alert").textContent).toBe(copy.searchUnavailable);
+  pickPlace(NEAR_MOTIJHEEL);
+  expect(screen.queryByText(copy.searchUnavailable)).toBeNull();
+  expect(screen.getByText("Motijheel")).toBeTruthy();
+});
+
+test("METRO-88 denied permission shows focused fixed copy and search still works", async () => {
+  geolocation((_success, failure) => failure(denied));
+  render(<NearestStation maps={fakeMaps} />);
+  fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
+  const alert = await screen.findByRole("alert");
+  expect(alert.textContent).toBe(copy.denied);
+  expect(document.activeElement).toBe(alert);
+  pickPlace(NEAR_MOTIJHEEL);
+  expect(screen.queryByText(copy.denied)).toBeNull();
+  expect(screen.getByText("Motijheel")).toBeTruthy();
+});
+
+test("METRO-88 a timeout and a missing API show the unavailable copy", async () => {
+  geolocation((_success, failure) => failure(timeout));
+  render(<NearestStation maps={fakeMaps} />);
+  fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
+  expect((await screen.findByRole("alert")).textContent).toBe(copy.unavailable);
+});
+
+test("METRO-88 while locating the button is disabled and a status says so", () => {
+  geolocation(() => {});
+  render(<NearestStation maps={fakeMaps} />);
+  const button = screen.getByRole<HTMLButtonElement>("button", { name: copy.locateButton });
+  fireEvent.click(button);
+  expect(button.disabled).toBe(true);
+  expect(screen.getByText(copy.locating)).toBeTruthy();
+});
+
+test("METRO-88 never renders or logs a provider error or a coordinate from a failure", async () => {
+  const spies = (["error", "warn", "log", "info", "debug"] as const).map((method) =>
+    vi.spyOn(console, method).mockImplementation(() => {}),
+  );
+  world.service = routeService(() => Promise.reject(new Error("key=abc lat=23.8 lng=90.4")));
+  render(
+    <StrictMode>
+      <NearestStation maps={fakeMaps} />
+    </StrictMode>,
+  );
+  pickPlace(NEAR_UTTARA_NORTH);
+  await screen.findByText(copy.routeUnavailable);
+  for (const fragment of ["key=abc", "lat=", "lng="]) {
+    expect(document.body.textContent).not.toContain(fragment);
+  }
+  for (const spy of spies) {
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+  }
+});
+
+test("METRO-88 a stale route answer for an earlier place is never shown for a later one", async () => {
+  const resolvers: ((value: WalkingRoute) => void)[] = [];
+  world.service = routeService(
+    () =>
+      new Promise<WalkingRoute>((resolve) => {
+        resolvers.push(resolve);
+      }),
+  );
+  render(<NearestStation maps={fakeMaps} />);
+  pickPlace(NEAR_UTTARA_NORTH);
+  pickPlace(NEAR_MOTIJHEEL);
+  await act(async () => {
+    resolvers[0]?.(route(111, 600));
+    await Promise.resolve();
+  });
+  expect(screen.queryByText(/111 m/u)).toBeNull();
+  expect(screen.getByText(copy.routeLoading)).toBeTruthy();
+  await act(async () => {
+    resolvers[1]?.(route(222, 120));
+    await Promise.resolve();
+  });
+  expect(screen.getByText("222 m, 2 min")).toBeTruthy();
+});
+
+test("METRO-88 a late route failure for an earlier place is ignored", async () => {
+  const rejecters: ((reason: unknown) => void)[] = [];
+  world.service = routeService(
+    () =>
+      new Promise<WalkingRoute>((_resolve, reject) => {
+        rejecters.push(reject);
+      }),
+  );
+  render(<NearestStation maps={fakeMaps} />);
+  pickPlace(NEAR_UTTARA_NORTH);
+  pickPlace(NEAR_MOTIJHEEL);
+  await act(async () => {
+    rejecters[0]?.(new Error("late"));
+    await Promise.resolve();
+  });
+  expect(screen.queryByText(copy.routeUnavailable)).toBeNull();
+});
