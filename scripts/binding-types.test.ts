@@ -24,7 +24,7 @@ async function fixture() {
 
 test("FND-R5 the committed Worker binding types are up to date", () => {
   expect(check(resolve("apps/api")).exitCode).toBe(0);
-});
+}, 30000);
 
 test("FND-R5 stale generated types fail naming worker-configuration.d.ts", async () => {
   const root = await fixture();

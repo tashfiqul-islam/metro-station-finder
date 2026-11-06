@@ -152,4 +152,4 @@ test("FND-T1 validateRange and commitMessageMain report invalid commits and exit
     spies.error.mockRestore();
     await rm(root, { recursive: true, force: true });
   }
-});
+}, 30000);

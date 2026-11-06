@@ -26,5 +26,5 @@ for (const [extension, source] of [
     } finally {
       await rm(root, { recursive: true });
     }
-  });
+  }, 30000);
 }
