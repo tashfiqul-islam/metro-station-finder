@@ -144,10 +144,15 @@ jobs:
               sleep 3
               sudo dpkg --configure -a || true
               # Both stalled logs read in detail ended during the fetch from azure.archive.ubuntu.com; retry from Canonical's archive.
+              switched=no
               if compgen -G "/etc/apt/sources.list.d/*.sources" > /dev/null; then
-                sudo sed -i 's#mirror+file:/etc/apt/apt-mirrors.txt#http://archive.ubuntu.com/ubuntu/#' /etc/apt/sources.list.d/*.sources || true
+                if grep -qs "mirror+file:/etc/apt/apt-mirrors.txt" /etc/apt/sources.list.d/*.sources; then
+                  sudo sed -i 's#mirror+file:/etc/apt/apt-mirrors.txt#http://archive.ubuntu.com/ubuntu/#' /etc/apt/sources.list.d/*.sources || true
+                  # Switched only if the original token was there and is gone now; a file that already named archive.ubuntu.com proves nothing.
+                  if ! grep -qs "mirror+file:/etc/apt/apt-mirrors.txt" /etc/apt/sources.list.d/*.sources; then switched=yes; fi
+                fi
               fi
-              if grep -qs "http://archive.ubuntu.com/ubuntu/" /etc/apt/sources.list.d/*.sources; then
+              if [ "$switched" = yes ]; then
                 echo "::notice::Retrying the Playwright install from archive.ubuntu.com"
               else
                 echo "::warning::Could not switch the apt mirror; retrying with the default"
@@ -159,8 +164,9 @@ jobs:
         run: |
           sudo chown -R "$USER" "$HOME/apt-archives"
           sudo rm -rf "$HOME/apt-archives/partial" "$HOME/apt-archives/lock"
-      # Both caches are saved here, before any repository code (build, smoke) runs with sudo available, so that code
-      # can never write into a cache that later runs restore. Only a restore miss saves.
+      # Both caches are saved here, before the build and smoke steps run (they execute repository code with sudo available),
+      # so that code cannot write into a cache that later runs restore. Bootstrap and the install itself still ran earlier.
+      # Only a restore miss saves.
       - name: Save the system package cache
         if: ${{ steps.apt-cache.outputs.cache-hit != 'true' }}
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -260,10 +266,15 @@ jobs:
               sleep 3
               sudo dpkg --configure -a || true
               # Both stalled logs read in detail ended during the fetch from azure.archive.ubuntu.com; retry from Canonical's archive.
+              switched=no
               if compgen -G "/etc/apt/sources.list.d/*.sources" > /dev/null; then
-                sudo sed -i 's#mirror+file:/etc/apt/apt-mirrors.txt#http://archive.ubuntu.com/ubuntu/#' /etc/apt/sources.list.d/*.sources || true
+                if grep -qs "mirror+file:/etc/apt/apt-mirrors.txt" /etc/apt/sources.list.d/*.sources; then
+                  sudo sed -i 's#mirror+file:/etc/apt/apt-mirrors.txt#http://archive.ubuntu.com/ubuntu/#' /etc/apt/sources.list.d/*.sources || true
+                  # Switched only if the original token was there and is gone now; a file that already named archive.ubuntu.com proves nothing.
+                  if ! grep -qs "mirror+file:/etc/apt/apt-mirrors.txt" /etc/apt/sources.list.d/*.sources; then switched=yes; fi
+                fi
               fi
-              if grep -qs "http://archive.ubuntu.com/ubuntu/" /etc/apt/sources.list.d/*.sources; then
+              if [ "$switched" = yes ]; then
                 echo "::notice::Retrying the Playwright install from archive.ubuntu.com"
               else
                 echo "::warning::Could not switch the apt mirror; retrying with the default"
@@ -275,8 +286,9 @@ jobs:
         run: |
           sudo chown -R "$USER" "$HOME/apt-archives"
           sudo rm -rf "$HOME/apt-archives/partial" "$HOME/apt-archives/lock"
-      # Both caches are saved here, before any repository code (build, smoke) runs with sudo available, so that code
-      # can never write into a cache that later runs restore. Only a restore miss saves.
+      # Both caches are saved here, before the build and smoke steps run (they execute repository code with sudo available),
+      # so that code cannot write into a cache that later runs restore. Bootstrap and the install itself still ran earlier.
+      # Only a restore miss saves.
       - name: Save the system package cache
         if: ${{ steps.apt-cache.outputs.cache-hit != 'true' }}
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0

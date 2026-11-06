@@ -243,7 +243,8 @@ export function installBudgetSeconds(run: string): number | undefined {
 
 /**
  * The install step's retry budget must fit inside its own `timeout-minutes`, or the step limit would cut the
- * retry that the loop promises.
+ * retry that the loop promises. A `run` step without `shell:` uses `bash -e {0}` (no pipefail), so the retry
+ * script must not rely on pipefail; it has no pipes.
  */
 export function installBudgetViolations(workflows: ParsedWorkflow[]): string[] {
   const found: string[] = [];

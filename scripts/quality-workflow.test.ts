@@ -236,14 +236,22 @@ test("METRO-90 every Playwright install step has a step timeout of at most ten m
     // The killed attempt leaves its root apt-get running; the retry would fail on the dpkg lock without this.
     expect(run, id).toContain("sudo pkill -x apt-get");
     expect(run, id).toContain("sudo dpkg --configure -a || true");
-    // The mirror switch runs only between attempts, cannot abort the step, and says whether it worked.
+    // The mirror switch runs only between attempts, cannot abort the step, and says whether it worked. A run step
+    // without `shell:` uses `bash -e {0}` (no pipefail), so the script must not rely on pipefail; it has no pipes.
     expect(run, id).toContain('if [ "$attempt" = 1 ]; then');
     expect(run, id).toContain(
       'if compgen -G "/etc/apt/sources.list.d/*.sources" > /dev/null; then',
     );
     expect(run, id).toContain("http://archive.ubuntu.com/ubuntu/");
     expect(run, id).toContain("|| true\n");
-    expect(run, id).toContain('grep -qs "http://archive.ubuntu.com/ubuntu/"');
+    // The notice needs the original token to be present before the sed and gone after it.
+    expect(run, id).toContain(
+      'if grep -qs "mirror+file:/etc/apt/apt-mirrors.txt" /etc/apt/sources.list.d/*.sources; then',
+    );
+    expect(run, id).toContain(
+      'if ! grep -qs "mirror+file:/etc/apt/apt-mirrors.txt" /etc/apt/sources.list.d/*.sources; then switched=yes; fi',
+    );
+    expect(run, id).not.toMatch(/[^|]\|[^|]/u);
     expect(run, id).toContain("::notice::Retrying the Playwright install from archive.ubuntu.com");
     expect(run, id).toContain("::warning::Could not switch the apt mirror");
   }
@@ -296,7 +304,7 @@ test("METRO-90 the timeout check sees an install command with extra spaces or ta
     ]);
 });
 
-test("METRO-90 the caches are restored before the install and saved right after it, before any repository code", () => {
+test("METRO-90 the caches are restored before the install and saved right after it, before the build and smoke steps", () => {
   for (const id of ["build", "smoke"]) {
     const steps = stepsOf(job(quality, id));
     const names = steps.map((step) => textOf(step["name"]));
@@ -322,7 +330,7 @@ test("METRO-90 the caches are restored before the install and saved right after 
       );
       expect(at(restore), id).toBeLessThan(at("Install Playwright browsers"));
       expect(at(save), id).toBeGreaterThan(at("Install Playwright browsers"));
-      // Nothing from the repository (build, smoke, report upload) runs between the install and the save.
+      // The build, smoke and report upload steps run after the save (bootstrap and the install ran before it).
       expect(at(save), id).toBeLessThan(at("Build the application"));
     }
     const inputs = stepNamed(quality, id, "Restore the system package cache")["with"];
