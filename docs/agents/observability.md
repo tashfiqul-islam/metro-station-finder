@@ -13,7 +13,7 @@ Read when: adding or reading logs, traces or request signals, changing Workers L
   - `logs.invocation_logs: false` (the app already writes one allow-listed line per request; the platform line duplicates it and carries the URL; accepted cost: a failure before the app runs leaves no log line, only a Workers Metrics count; turn it on to diagnose such an outage)
   - `redact_query_string: true` (strips query strings from platform logs and traces)
   - `traces.enabled: false` (tracing is out of scope; stated so a platform default cannot enable it)
-- Workers Logs is a diagnosis aid, not a record of truth: it keeps data 7 days, with no longer-term store. Dashboards, alerts and external export (OTLP, Logpush) are Unknown and out of scope. Re-run `wrangler types --check` (part of `bun run check`) after any key change.
+- Workers Logs is a diagnosis aid, not a record of truth: it keeps data 7 days on Workers Paid and 3 days on Workers Free, changing on 2026-12-01 (shared-allowance logs then default to 7 days), with no longer-term store. Dashboards, alerts and external export (OTLP, Logpush) are Unknown and out of scope. Re-run `wrangler types --check` (part of `bun run check`) after any key change.
 
 ## Enforced by
 
