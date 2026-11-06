@@ -47,7 +47,10 @@ function reject(chain: string, reason: string): never {
 
 /** Splits a chain of plain commands joined by `&&`; throws on anything else. */
 export function splitChain(chain: string): string[] {
-  const words = chain.split(/\s+/u).filter((word) => word !== "");
+  // A shell reads a newline like `;`, so any whitespace but a plain space is refused, not folded into one.
+  if (/[^\S ]/u.test(chain))
+    return reject(chain, "newline, carriage return, tab or other non-space whitespace");
+  const words = chain.split(/ +/u).filter((word) => word !== "");
   if (words.length === 0) return reject(chain, "the chain is empty");
   const commands: string[][] = [[]];
   for (const word of words) {

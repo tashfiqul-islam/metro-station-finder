@@ -1,10 +1,12 @@
 # METRO-81: per-command timing for the Checks job
 
-Labels: **Repo-verified** (run here), **Unverified** (not measured). Base: `origin/feature/metro-rebuild` at `e16b8da`.
+Labels: **Repo-verified** (the hosted table below, with its run id), **Unverified** (everything else, not measured). Base: `origin/feature/metro-rebuild` at `e16b8da`.
 
 ## Why
 
-After METRO-77 the hosted `Checks` job grew (baseline median 1 m 50 s in [CI timings](ci-timings-2026-11.md); hosted runs of 2 m 56 s to 2 m 59 s and 2 m 07 s since), and the step log shows only the whole `bun run check` step, so the growth could not be located.
+After METRO-77 the hosted `Checks` job grew: the baseline median is 1 m 50 s in [CI timings](ci-timings-2026-11.md), PR #78 took 2 m 59 s ([METRO-77](metro-77.md)) and PR #80 took 2 m 44 s ([METRO-79](metro-79.md), one run each, not medians). The step log showed only the whole `bun run check` step, so the growth could not be located.
+
+First hosted data (Repo-verified, run 42172421353 of this pull request, `ubuntu-24.04`): `Checks` took 2 m 8 s and the chain 1 m 51.0 s, of which `bun test` took 1 m 35.3 s and the other twelve commands together about 16 s (`test:vitest` 3.7 s, `typecheck` 4.2 s, `unused` 2.1 s, `check:fast` 1.8 s). One run, not a median.
 
 ## What was built
 

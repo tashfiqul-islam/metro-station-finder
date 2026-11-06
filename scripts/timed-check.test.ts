@@ -64,6 +64,10 @@ test("METRO-81 splitChain rejects syntax it cannot split faithfully, loudly", ()
     "",
     "   ",
     "a\\b",
+    "a\nb",
+    "a\r\nb",
+    "a\tb",
+    "a &&\nb",
     "a # note",
     "(a)",
   ]) {
@@ -192,9 +196,14 @@ test("METRO-81 real processes: fail-fast, exit code and table (no shell, no mock
       JSON.stringify({ scripts: { check: "node ok.js && node fail.js && node never.js" } }),
     );
     const log = jest.spyOn(console, "log").mockImplementation(() => {});
-    const code = timedCheckMain({}, {}, dir);
-    const out = log.mock.calls.map((call) => String(call[0]));
-    log.mockRestore();
+    let code: number;
+    let out: string[];
+    try {
+      code = timedCheckMain({}, {}, dir);
+      out = log.mock.calls.map((call) => String(call[0]));
+    } finally {
+      log.mockRestore();
+    }
     expect(code).toBe(9);
     expect(existsSync(join(dir, "ok.flag"))).toBe(true);
     expect(existsSync(join(dir, "never.flag"))).toBe(false);
@@ -248,4 +257,50 @@ test("METRO-81 the Checks job runs the timed chain and the local check is unchan
   expect(workflow).not.toMatch(/run: bun run check\s*$/mu);
   const hk = readFileSync(resolve("hk.pkl"), "utf8");
   expect(hk).toContain('check = "bun run check"');
+});
+
+// The entrypoint and the `check:timed` wiring: run the real script with node against a temp package.json.
+const CLI = resolve("scripts/timed-check.ts");
+function runCli(check: string, files: Record<string, string> = {}) {
+  const dir = mkdtempSync(join(tmpdir(), "metro-timed-cli-"));
+  try {
+    writeFileSync(join(dir, "package.json"), JSON.stringify({ scripts: { check } }));
+    for (const [name, text] of Object.entries(files)) writeFileSync(join(dir, name), text);
+    const result = Bun.spawnSync(["node", CLI], { cwd: dir });
+    return {
+      code: result.exitCode,
+      out: result.stdout.toString(),
+      err: result.stderr.toString(),
+      never: existsSync(join(dir, "never.flag")),
+    };
+  } finally {
+    rmSync(dir, { recursive: true });
+  }
+}
+
+test("METRO-81 CLI: a passing chain exits 0 and prints the table", () => {
+  const run = runCli("node ok.js", { "ok.js": "" });
+  expect(run.code).toBe(0);
+  expect(run.out).toContain("| 1 | `node ok.js` |");
+});
+
+test("METRO-81 CLI: a failing command's exit code is propagated, later commands do not run", () => {
+  const run = runCli("node fail.js && node never.js", {
+    "fail.js": "process.exit(5);",
+    "never.js": 'require("node:fs").writeFileSync("never.flag", "1");',
+  });
+  expect(run.code).toBe(5);
+  expect(run.never).toBe(false);
+  expect(run.out).toContain("fail (exit 5)");
+  expect(run.out).toContain("| 2 | `node never.js` | - | not run |");
+});
+
+test("METRO-81 CLI: unsupported syntax exits 2 and runs nothing", () => {
+  const run = runCli("node ok.js || node never.js", {
+    "ok.js": "",
+    "never.js": 'require("node:fs").writeFileSync("never.flag", "1");',
+  });
+  expect(run.code).toBe(2);
+  expect(run.never).toBe(false);
+  expect(run.err).toContain("timed-check");
 });
