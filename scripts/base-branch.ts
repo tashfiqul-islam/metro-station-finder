@@ -59,7 +59,9 @@ export async function runBaseBranchCheck(root: string): Promise<void> {
   else console.log("Base branch ok: CONTRIBUTING.md, workflow.md and plane.md agree");
 }
 
-if (import.meta.main)
-  await runBaseBranchCheck(
-    resolve(process.argv[2] ?? fileURLToPath(new URL("..", import.meta.url))),
-  );
+/** Process entry: checks the repository at the first argument, or the one containing this script. */
+export async function baseBranchMain(args: readonly string[]): Promise<void> {
+  await runBaseBranchCheck(resolve(args[0] ?? fileURLToPath(new URL("..", import.meta.url))));
+}
+
+if (import.meta.main) await baseBranchMain(process.argv.slice(2));

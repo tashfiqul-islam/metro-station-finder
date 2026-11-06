@@ -35,6 +35,14 @@ function runGit(root: string, args: readonly string[], input: string, maxBuffer:
   return result.stdout;
 }
 
+/** Runs git on `root` and returns stdout; `readChunk` takes it as a parameter so its framing checks can be proven. */
+export type GitRunner = (
+  root: string,
+  args: readonly string[],
+  input: string,
+  maxBuffer: number,
+) => Buffer;
+
 /** Parses `<oid> SP blob SP <size>` and fails visibly for anything else. */
 function parseHeader(header: string, object: string): number {
   const [oid, type, size] = header.split(" ");
@@ -92,9 +100,10 @@ export function readChunk(
   root: string,
   chunk: readonly string[],
   sizes: ReadonlyMap<string, number>,
+  git: GitRunner = runGit,
 ): Map<string, Buffer> {
   const expected = chunk.reduce((sum, object) => sum + (sizes.get(object) ?? 0), 0);
-  const out = runGit(
+  const out = git(
     root,
     ["cat-file", "--batch"],
     `${chunk.join("\n")}\n`,

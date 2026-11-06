@@ -86,6 +86,29 @@ for (const change of [
     }
   });
 }
+for (const [runtime, value] of [
+  ["bun", "^1.4.4"],
+  ["node", 26],
+] as const) {
+  test(`METRO-92 rejects a non-exact engines.${runtime} (${String(value)})`, async () => {
+    const root = await fixture();
+    try {
+      const path = join(root, "package.json");
+      const manifest: unknown = JSON.parse(await readFile(path, "utf8"));
+      if (!isRecord(manifest)) throw new Error("package.json is not an object");
+      const engines = manifest["engines"];
+      if (!isRecord(engines)) throw new Error("package.json has no engines object");
+      engines[runtime] = value;
+      await writeFile(path, JSON.stringify(manifest));
+      await expectRejection(
+        validateConfiguration(root),
+        `package.json engines.${runtime}: exact stable version required`,
+      );
+    } finally {
+      await rm(root, { recursive: true });
+    }
+  });
+}
 for (const file of ["package.json", "mise.toml", "bunfig.toml"]) {
   test(`missing ${file} fails visibly`, async () => {
     const root = await fixture();

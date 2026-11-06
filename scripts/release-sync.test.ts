@@ -320,6 +320,60 @@ test("METRO-14 a drift in the linked tag or status is repaired even when the con
   expect(w.releases[0]).toMatchObject({ status: "unreleased", tag: "tag-1" });
 });
 
+/** A sync against the normal fake server, except that `answer` may replace the reply to chosen requests. */
+function syncWith(
+  answer: (url: string, init: FetchInit) => FetchedResponse | undefined,
+): Promise<unknown> {
+  const deps = server(world());
+  const fetch = (url: string, init: FetchInit = {}): Promise<FetchedResponse> =>
+    Promise.resolve(answer(url, init)).then((replacement) => replacement ?? deps.fetch(url, init));
+  return syncRelease(config, { ...deps, fetch });
+}
+
+test("METRO-92 a GitHub release without a URL or publication date stops the sync", async () => {
+  for (const missing of ["html_url", "published_at"]) {
+    const body = {
+      html_url: "https://github.com/owner/repo/releases/tag/v1.2.0",
+      published_at: "2026-11-04T10:00:00Z",
+      body: "Notes",
+      [missing]: null,
+    };
+    await expectRejection(
+      syncWith((url) => (url.includes("/releases/tags/") ? reply(200, body) : undefined)),
+      "GitHub release response lacks html_url or published_at",
+    );
+  }
+});
+
+test("METRO-92 a commit answer without a full sha stops the sync", async () => {
+  for (const answer of [{ sha: "0123abc" }, { sha: 7 }, [], {}]) {
+    await expectRejection(
+      syncWith((url) => (url.includes("/commits/") ? reply(200, answer) : undefined)),
+      "Commit response for v1.2.0 has no valid sha",
+    );
+  }
+});
+
+test("METRO-92 a Plane list with an unexpected shape, or one that never ends, stops the sync", async () => {
+  for (const answer of [{ results: "none" }, [], { next_cursor: "c" }]) {
+    await expectRejection(
+      syncWith((url) => (url.includes("/releases/?") ? reply(200, answer) : undefined)),
+      "list had an unexpected shape",
+    );
+  }
+  const endless = { results: [], next_page_results: true, next_cursor: "more" };
+  let requested = 0;
+  await expectRejection(
+    syncWith((url) => {
+      const listing = url.includes("/releases/?");
+      requested += listing ? 1 : 0;
+      return listing ? reply(200, endless) : undefined;
+    }),
+    "list did not end after 20 pages",
+  );
+  expect(requested).toBe(20);
+});
+
 test("METRO-14 lists are read across pages", async () => {
   const filler = Array.from({ length: 130 }, (_, i) => ({
     id: `r${i}`,
@@ -439,6 +493,41 @@ test("METRO-14 deployment lookups reject malformed answers", async () => {
     hasProductionDeployment(config, failing, SHA),
     "Listing deployments failed with HTTP 403",
   );
+});
+
+test("METRO-92 the entry point without injected dependencies uses the global fetch and console.log", async () => {
+  const fake = server(world({ github: null }));
+  const serve = async (input: string | Request | URL, init?: RequestInit): Promise<Response> => {
+    const url = input instanceof Request ? input.url : String(input);
+    const answer = await fake.fetch(url, {
+      ...(typeof init?.method === "string" ? { method: init.method } : {}),
+      ...(typeof init?.body === "string" ? { body: init.body } : {}),
+    });
+    return new Response(JSON.stringify(await answer.json()), { status: answer.status });
+  };
+  // Bun's `typeof fetch` also carries `preconnect`.
+  const fetchSpy = jest
+    .spyOn(globalThis, "fetch")
+    .mockImplementation(Object.assign(serve, { preconnect: () => {} }));
+  const log = jest.spyOn(console, "log").mockImplementation(() => {});
+  try {
+    await releaseSyncMain({
+      GITHUB_REPOSITORY: "owner/repo",
+      PLANE_WORKSPACE: "ws",
+      RELEASE_TAG: "v1.2.0",
+      GITHUB_TOKEN: "t",
+      PLANE_API_KEY: KEY,
+      PLANE_API_BASE: "https://plane.test",
+    });
+    expect(fetchSpy).toHaveBeenCalledWith(
+      expect.stringContaining("/releases/tags/v1.2.0"),
+      expect.anything(),
+    );
+    expect(log).toHaveBeenCalledWith("Release sync finished: skipped");
+  } finally {
+    fetchSpy.mockRestore();
+    log.mockRestore();
+  }
 });
 
 test("METRO-14 the entry point reads the environment, logs the outcome and fails the step on error", async () => {
