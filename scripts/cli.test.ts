@@ -30,6 +30,7 @@ test("FND-T1 runCiResults passes only when every required job succeeded", () => 
       changes: { result: "success", outputs: { docs_only: "false" } },
       checks: { result: "success" },
       build: { result: "success" },
+      smoke: { result: "success" },
       security: { result: "success" },
     });
     runCiResults({ REQUIRED_JOB_RESULTS: ok });
