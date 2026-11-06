@@ -89,6 +89,8 @@ function scanSteps(
     const name = typeof step["name"] === "string" ? step["name"] : uses;
     const here = `${where} step ${name}`;
     if (uses.startsWith("actions/cache")) found.push(`${here}: restores a cache`);
+    if (uses.startsWith("actions/download-artifact"))
+      found.push(`${here}: downloads a shared artifact`);
     if (uses.startsWith("jdx/mise-action")) {
       const inputs = isRecord(step["with"]) ? step["with"] : {};
       if (inputs["cache"] !== false) found.push(`${here}: mise-action without cache: false`);
@@ -106,8 +108,9 @@ function scanSteps(
 }
 
 /**
- * Credentialed jobs must not restore any cache: no `actions/cache` step, and every `jdx/mise-action` step
- * sets `cache: false`, including inside local composite actions. mise-action warns against restoring caches
+ * Credentialed jobs must not restore any cache or shared artifact: no `actions/cache` step (which also covers
+ * `actions/cache/restore`), no `actions/download-artifact` step, and every `jdx/mise-action` step sets
+ * `cache: false`, including inside local composite actions. mise-action warns against restoring caches
  * in jobs that hold credentials, and `bunx wrangler` runs node_modules code with the token in its
  * environment. Other cache mechanisms (for example a setup action's own `cache` input) are not enforced.
  */
@@ -195,5 +198,96 @@ export function concurrencyViolations(workflows: ParsedWorkflow[]): string[] {
     for (const [id, job] of Object.entries(jobs))
       check(`${file} job ${id}`, job["concurrency"], isCredentialed(workflow, job));
   }
+  return found;
+}
+
+/** The longest a browser install step may run (METRO-90): normal installs take under two minutes. */
+export const BROWSER_INSTALL_MAX_MINUTES = 10;
+
+/**
+ * Every step that runs `playwright install` must set its own `timeout-minutes` (a positive number, at most
+ * BROWSER_INSTALL_MAX_MINUTES). The install fetches system packages from a mirror and stalled for 13 to 20
+ * minutes in four hosted runs; without a step limit only the job limit ended it.
+ */
+export function browserInstallTimeoutViolations(workflows: ParsedWorkflow[]): string[] {
+  const found: string[] = [];
+  for (const workflow of workflows) {
+    for (const [id, job] of Object.entries(workflow.jobs)) {
+      for (const step of stepsOf(job)) {
+        const run = step["run"];
+        if (typeof run !== "string" || !/\bplaywright install\b/u.test(run)) continue;
+        const name = typeof step["name"] === "string" ? step["name"] : run;
+        const limit = step["timeout-minutes"];
+        const where = `${workflow.file} job ${id} step ${name}`;
+        if (typeof limit !== "number" || !(limit > 0) || limit > BROWSER_INSTALL_MAX_MINUTES)
+          found.push(
+            `${where}: needs timeout-minutes between 1 and ${BROWSER_INSTALL_MAX_MINUTES}, found ${JSON.stringify(limit)}`,
+          );
+      }
+    }
+  }
+  return found;
+}
+
+/** Playwright project names declared in `playwright.config.ts` (`{ name: "chromium", ... }` entries). */
+export function playwrightProjects(configText: string): string[] {
+  return [...configText.matchAll(/\{\s*name:\s*"([^"]+)"/gu)].map((match) => match[1] ?? "");
+}
+
+function smokedProjects(workflow: ParsedWorkflow): Set<string> {
+  const projects = new Set<string>();
+  for (const step of stepsOf(workflow.jobs["build"] ?? {})) {
+    const run = typeof step["run"] === "string" ? step["run"] : "";
+    for (const match of run.matchAll(/--project=(\S+)/gu)) projects.add(match[1] ?? "");
+  }
+  const strategy = workflow.jobs["smoke"]?.["strategy"];
+  const matrix = isRecord(strategy) ? strategy["matrix"] : undefined;
+  const include = isRecord(matrix) ? matrix["include"] : undefined;
+  if (Array.isArray(include))
+    for (const entry of include as unknown[])
+      if (isRecord(entry) && typeof entry["project"] === "string") projects.add(entry["project"]);
+  return projects;
+}
+
+/**
+ * The parallel smoke (METRO-90) must still run every Playwright project: the `build` job's `--project=` plus
+ * the `smoke` matrix cover exactly the projects in the Playwright config, and the matrix names no unknown one.
+ */
+export function smokeProjectViolations(workflow: ParsedWorkflow, configText: string): string[] {
+  const declared = new Set(playwrightProjects(configText));
+  const smoked = smokedProjects(workflow);
+  const found: string[] = [];
+  for (const project of declared)
+    if (!smoked.has(project)) found.push(`${workflow.file}: project ${project} is not smoked`);
+  for (const project of smoked)
+    if (!declared.has(project)) found.push(`${workflow.file}: unknown project ${project}`);
+  return found;
+}
+
+function stepSignature(step: Record<string, unknown>): string {
+  const name = typeof step["name"] === "string" ? step["name"] : "";
+  const uses = typeof step["uses"] === "string" ? step["uses"] : "run";
+  return `${name} | ${uses}`;
+}
+
+/**
+ * Two jobs that repeat the same setup (METRO-90: `build` and `smoke`) keep the same ordered step names and
+ * pinned `uses` values over their common length (`build` alone ends with the bundle budget check), so a\n * version bump or a new step cannot reach only one of them.
+ */
+export function setupDriftViolations(
+  workflow: ParsedWorkflow,
+  first: string,
+  second: string,
+): string[] {
+  const a = stepsOf(workflow.jobs[first] ?? {}).map(stepSignature);
+  const b = stepsOf(workflow.jobs[second] ?? {}).map(stepSignature);
+  if (a.length === 0 || b.length === 0)
+    return [`${workflow.file}: job ${first} or ${second} has no steps`];
+  const found: string[] = [];
+  for (let index = 0; index < Math.min(a.length, b.length); index += 1)
+    if (a[index] !== b[index])
+      found.push(
+        `${workflow.file}: step ${index + 1} differs: ${first} has "${a[index] ?? "none"}", ${second} has "${b[index] ?? "none"}"`,
+      );
   return found;
 }

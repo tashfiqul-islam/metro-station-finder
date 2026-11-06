@@ -41,8 +41,8 @@ test("METRO-62 build waits for changes and is skipped unless docs_only is exactl
   expect(build["if"]).toBe(SKIP_GUARD);
 });
 
-test("METRO-62 build and preview stay fail-closed: no always() or !cancelled() in their conditions", () => {
-  for (const name of ["build", "preview"]) {
+test("METRO-62 build, smoke and preview stay fail-closed: no always() or !cancelled() in their conditions", () => {
+  for (const name of ["build", "smoke", "preview"]) {
     const condition = String(job(name)["if"]);
     expect(condition).not.toMatch(/always\(\)|cancelled\(\)|failure\(\)|success\(\)/u);
   }
@@ -50,16 +50,16 @@ test("METRO-62 build and preview stay fail-closed: no always() or !cancelled() i
 
 test("METRO-62 the preview waits for changes and is skipped on docs-only changes", () => {
   const preview = job("preview");
-  expect(preview["needs"]).toEqual(["changes", "checks", "build", "security"]);
+  expect(preview["needs"]).toEqual(["changes", "checks", "build", "smoke", "security"]);
   expect(String(preview["if"])).toContain("needs.changes.outputs.docs_only != 'true'");
   expect(String(preview["if"])).toContain("github.event_name == 'pull_request'");
 });
 
-test("METRO-62 Quality gates always runs, needs all four jobs and keeps its name", () => {
+test("METRO-62 Quality gates always runs, needs all five jobs and keeps its name", () => {
   const quality = job("quality");
   expect(quality["name"]).toBe("Quality gates");
   expect(quality["if"]).toBe("${{ always() }}");
-  expect(quality["needs"]).toEqual(["changes", "checks", "build", "security"]);
+  expect(quality["needs"]).toEqual(["changes", "checks", "build", "smoke", "security"]);
   const steps = stepsOf(quality);
   const verify = steps.find((step) => step["run"] === "node scripts/ci-results.ts");
   expect(record(verify?.["env"], "env")["REQUIRED_JOB_RESULTS"]).toBe("${{ toJSON(needs) }}");

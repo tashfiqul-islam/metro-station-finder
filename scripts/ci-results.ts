@@ -3,7 +3,9 @@ import { fileURLToPath } from "node:url";
 
 import { isRecord } from "./guards.ts";
 
-const REQUIRED_JOBS = ["changes", "checks", "build", "security"] as const;
+const REQUIRED_JOBS = ["changes", "checks", "build", "smoke", "security"] as const;
+/** Jobs that may be skipped, but only on a docs-only change (METRO-62, METRO-90). */
+const SKIPPABLE_JOBS = new Set(["build", "smoke"]);
 
 function resultOf(entry: unknown): unknown {
   return isRecord(entry) ? entry["result"] : undefined;
@@ -25,7 +27,7 @@ function docsOnly(changes: unknown): boolean {
  * Checking all entries means a job added to the workflow `needs` list cannot fail silently;
  * the required list is a floor that stops a gate being dropped from `needs`.
  *
- * One exception (METRO-62): `build` may be skipped, but only when `changes` succeeded and reported
+ * One exception (METRO-62, METRO-90): `build` and `smoke` may be skipped, but only when `changes` succeeded and reported
  * `docs_only` as exactly "true". Any other skip is a failure, so a mis-wired condition cannot pass.
  */
 export function requiredJobsSucceeded(needs: unknown): boolean {
@@ -34,7 +36,7 @@ export function requiredJobsSucceeded(needs: unknown): boolean {
   return Object.entries(needs).every(
     ([job, entry]) =>
       succeeded(entry) ||
-      (job === "build" && resultOf(entry) === "skipped" && docsOnly(needs["changes"])),
+      (SKIPPABLE_JOBS.has(job) && resultOf(entry) === "skipped" && docsOnly(needs["changes"])),
   );
 }
 

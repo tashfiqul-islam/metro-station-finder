@@ -64,12 +64,6 @@ jobs:
         uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
         with:
           version: 2026.10.25
-      - name: Restore the Bun install cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.bun/install/cache
-          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
-          restore-keys: bun-${{ runner.os }}-
       - name: Install dependencies
         run: bun run bootstrap
       - name: Validate commit messages in the PR range
@@ -92,10 +86,12 @@ jobs:
           if-no-files-found: error
   build:
     name: Build and smoke
+    # METRO-90: the four Playwright projects run in parallel, one runner each (this job is Chromium; `smoke`
+    # below is Firefox, WebKit and the mobile viewport). Its setup steps must match `smoke`: a test compares them.
     needs: [changes]
     if: ${{ needs.changes.outputs.docs_only != 'true' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
@@ -107,40 +103,142 @@ jobs:
         uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
         with:
           version: 2026.10.25
-      - name: Restore the Bun install cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.bun/install/cache
-          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
-          restore-keys: bun-${{ runner.os }}-
       - name: Install dependencies
         run: bun run bootstrap
-      - name: Resolve Playwright version
+      - name: Resolve Playwright version and runner image
         id: playwright
-        run: echo "version=$(node -p 'require("./package.json").devDependencies["@playwright/test"]')" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "version=$(node -p 'require("./package.json").devDependencies["@playwright/test"]')" >> "$GITHUB_OUTPUT"
+          echo "image=$ImageVersion" >> "$GITHUB_OUTPUT"
+      - name: Keep downloaded system packages in a cacheable directory
+        # Playwright's --with-deps runs apt-get as root; its ~100 MB download from the Ubuntu mirror stalled in
+        # four hosted runs (docs/evidence/metro-90.md). apt re-checks every cached package against the signed index.
+        run: |
+          mkdir -p "$HOME/apt-archives/partial"
+          echo "Dir::Cache::Archives \"$HOME/apt-archives\";" | sudo tee /etc/apt/apt.conf.d/90-ci-archives > /dev/null
+      - name: Restore the system package cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/apt-archives
+          key: apt-${{ steps.playwright.outputs.image }}-${{ steps.playwright.outputs.version }}-chromium
       - name: Restore the Playwright browser cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium-firefox-webkit
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium
       - name: Install Playwright browsers
-        run: bun run playwright install --with-deps chromium firefox webkit
+        # A stalled apt download hung this step for 13 to 20 minutes. Each attempt is cut at 140 s, with one retry
+        # (a retry resumes from the partial downloads), inside a 5 minute step limit.
+        timeout-minutes: 5
+        run: |
+          for attempt in 1 2; do
+            if timeout --kill-after=5s 140s bun run playwright install --with-deps chromium; then exit 0; fi
+            echo "::warning::Playwright browser install attempt $attempt failed or timed out"
+          done
+          exit 1
+      - name: Prepare the system package cache for saving
+        run: |
+          sudo chown -R "$USER" "$HOME/apt-archives"
+          sudo rm -rf "$HOME/apt-archives/partial" "$HOME/apt-archives/lock"
       - name: Build the application
         run: bun run build
       - name: Run browser smoke tests
         # --shuffle picks a seed and prints it ("shuffle seed N"); reproduce with `bun run smoke -- --shuffle N`.
-        run: bun run smoke -- --shuffle
+        run: bun run smoke -- --shuffle --project=chromium
       - name: Upload Playwright report and traces
         if: ${{ failure() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: playwright-report
+          name: playwright-report-chromium
           path: |
             playwright-report/
             test-results/
           if-no-files-found: warn
       - name: Check the bundle budget
         run: bun run bundle:check
+  smoke:
+    name: Smoke ${{ matrix.project }}
+    needs: [changes]
+    if: ${{ needs.changes.outputs.docs_only != 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - project: firefox
+            browsers: firefox
+          - project: webkit
+            browsers: webkit
+          # The Pixel 7 viewport runs in Chromium.
+          - project: mobile-chrome
+            browsers: chromium
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install pinned tools with mise
+        uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          version: 2026.10.25
+      - name: Install dependencies
+        run: bun run bootstrap
+      - name: Resolve Playwright version and runner image
+        id: playwright
+        run: |
+          echo "version=$(node -p 'require("./package.json").devDependencies["@playwright/test"]')" >> "$GITHUB_OUTPUT"
+          echo "image=$ImageVersion" >> "$GITHUB_OUTPUT"
+      - name: Keep downloaded system packages in a cacheable directory
+        # Playwright's --with-deps runs apt-get as root; its ~100 MB download from the Ubuntu mirror stalled in
+        # four hosted runs (docs/evidence/metro-90.md). apt re-checks every cached package against the signed index.
+        run: |
+          mkdir -p "$HOME/apt-archives/partial"
+          echo "Dir::Cache::Archives \"$HOME/apt-archives\";" | sudo tee /etc/apt/apt.conf.d/90-ci-archives > /dev/null
+      - name: Restore the system package cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/apt-archives
+          key: apt-${{ steps.playwright.outputs.image }}-${{ steps.playwright.outputs.version }}-${{ matrix.browsers }}
+      - name: Restore the Playwright browser cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-${{ matrix.browsers }}
+      - name: Install Playwright browsers
+        # A stalled apt download hung this step for 13 to 20 minutes. Each attempt is cut at 140 s, with one retry
+        # (a retry resumes from the partial downloads), inside a 5 minute step limit.
+        timeout-minutes: 5
+        env:
+          BROWSERS: ${{ matrix.browsers }}
+        run: |
+          for attempt in 1 2; do
+            if timeout --kill-after=5s 140s bun run playwright install --with-deps "$BROWSERS"; then exit 0; fi
+            echo "::warning::Playwright browser install attempt $attempt failed or timed out"
+          done
+          exit 1
+      - name: Prepare the system package cache for saving
+        run: |
+          sudo chown -R "$USER" "$HOME/apt-archives"
+          sudo rm -rf "$HOME/apt-archives/partial" "$HOME/apt-archives/lock"
+      - name: Build the application
+        run: bun run build
+      - name: Run browser smoke tests
+        # --shuffle picks a seed and prints it ("shuffle seed N"); reproduce with `bun run smoke -- --shuffle N`.
+        env:
+          PROJECT: ${{ matrix.project }}
+        run: bun run smoke -- --shuffle --project="$PROJECT"
+      - name: Upload Playwright report and traces
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-report-${{ matrix.project }}
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: warn
   security:
     name: Security
     runs-on: ubuntu-24.04
@@ -157,12 +255,6 @@ jobs:
         uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
         with:
           version: 2026.10.25
-      - name: Restore the Bun install cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.bun/install/cache
-          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
-          restore-keys: bun-${{ runner.os }}-
       - name: Install dependencies
         run: bun run bootstrap
       - name: Scan dependencies and the working tree
@@ -172,7 +264,7 @@ jobs:
   quality:
     name: Quality gates
     if: ${{ always() }}
-    needs: [changes, checks, build, security]
+    needs: [changes, checks, build, smoke, security]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -198,7 +290,7 @@ jobs:
     # token (METRO-47). This job is deliberately outside the "Quality gates" aggregate so Cloudflare
     # availability cannot block merges.
     if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && !endsWith(github.actor, '[bot]') && !endsWith(github.event.pull_request.user.login, '[bot]') && github.event.pull_request.user.type != 'Bot' && github.event.sender.type != 'Bot' && needs.changes.outputs.docs_only != 'true' }}
-    needs: [changes, checks, build, security]
+    needs: [changes, checks, build, smoke, security]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     concurrency:
