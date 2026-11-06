@@ -94,3 +94,13 @@ Re-test after the next wrangler bump, on Windows:
 1. `mise exec -- bun run bootstrap`, then confirm `bunx wrangler --version` is at least 4.156.1.
 2. `mise exec -- bun run --cwd apps/api types`, then `mise exec -- bun run types:check`. It must report the types as up to date. Re-checking out `apps/api/worker-configuration.d.ts` with CRLF endings (delete it and `git checkout` it) and running `types:check` again must still pass.
 3. Commit the regenerated file if its runtime header changed. Record the result in the bump's ticket and delete this step if it passed.
+
+## Local tokens outside the repository (METRO-85)
+
+`CLOUDFLARE_API_TOKEN` and `PLANE_API_KEY` must not live in the repository folder. Scripts read them from the process environment only and fail naming the variable when it is missing; CI supplies them from GitHub environment secrets. `.claude/settings.json` denies agent `Read` of `./.env` and `./.env.*`; that is a second layer, because a shell `cat .env` is not blocked by it. Moving the tokens out is the real fix. Owner steps (the agent never reads or moves the values):
+
+1. Windows (PowerShell): `[Environment]::SetEnvironmentVariable("CLOUDFLARE_API_TOKEN", (Read-Host -MaskInput "Cloudflare token"), "User")`, the same for `PLANE_API_KEY`, then restart the terminal and editor so they inherit it.
+2. Ubuntu: add `export CLOUDFLARE_API_TOKEN=...` and `export PLANE_API_KEY=...` to `~/.profile` (or a `chmod 600` file it sources) outside any repository, then log in again.
+3. Delete both lines from the root `.env` and confirm with `Select-String -Path .env -Pattern '^(CLOUDFLARE_API_TOKEN|PLANE_API_KEY)=' -Quiet`, which must print `False`.
+4. The Plane MCP server keeps its own key in the owner's user-level Claude config (`mcpServers.plane.env.PLANE_API_KEY`, outside the repository); the Cloudflare MCP server `cloudflare-api` is a remote HTTP server (`mcp.cloudflare.com`) with no token in its config entry. Neither reads the repository `.env`.
+5. Rotating both tokens is the owner's call and worth doing, because agents could read them and they may sit in old transcripts.
