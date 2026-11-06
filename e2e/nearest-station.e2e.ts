@@ -2,7 +2,12 @@ import type { Page } from "@playwright/test";
 
 import { expect, test } from "./fixtures";
 import { expectTabReachesEveryControl } from "./keyboard";
-import { installMapsStub, stubGeolocation } from "./maps-stub";
+import {
+  expectNoCoordinateInApi,
+  installMapsStub,
+  stubGeolocation,
+  trackApiRequests,
+} from "./maps-stub";
 import type { StubOptions } from "./maps-stub";
 
 /** The slice runs at /nearest against the real build, the real `_headers` and a fake Maps API. */
@@ -74,35 +79,10 @@ test.describe("nearest station from a searched place (METRO-88)", () => {
 
   test("METRO-88 A9 no /api request carries a coordinate", async ({ page }) => {
     const stub = await openSlice(page);
-    const apiRequests: { url: string; headers: string; body: string }[] = [];
-    page.on("request", (request) => {
-      if (new URL(request.url()).pathname.startsWith("/api/")) {
-        apiRequests.push({
-          url: request.url(),
-          headers: JSON.stringify(request.headers()),
-          body: request.postData() ?? "",
-        });
-      }
-    });
+    const apiRequests = trackApiRequests(page);
     await searchFor(page, "uttara");
     await expect(page.getByText("1.23 km, 15 min")).toBeVisible();
-    // Not vacuous: a request to /api is recorded by this listener.
-    await page.evaluate(() => fetch("/api/scaffold/status").then((response) => response.status));
-    expect(apiRequests).toHaveLength(1);
-    const everything = apiRequests.map((r) => `${r.url} ${r.headers} ${r.body}`).join("\n");
-    for (const fragment of [
-      "23.87",
-      "90.367",
-      "23.728",
-      "90.419",
-      "lat=",
-      "lng=",
-      "latitude",
-      '"lat"',
-      '"lng"',
-    ]) {
-      expect(everything).not.toContain(fragment);
-    }
+    await expectNoCoordinateInApi(page, apiRequests);
     expect(stub.blocked).toEqual([]);
   });
 
@@ -120,14 +100,16 @@ test.describe("nearest station from a searched place (METRO-88)", () => {
     await expect(page.getByRole("alert")).toHaveCount(0);
   });
 
-  test("METRO-88 the device position finds the station without a place search", async ({
+  test("METRO-88 A9 the device position finds the station without a place search or an /api coordinate", async ({
     page,
   }) => {
     await stubGeolocation(page, { lat: 23.87, lng: 90.367 });
     const stub = await openSlice(page);
+    const apiRequests = trackApiRequests(page);
     await page.getByRole("button", { name: "Use my location" }).click();
     await expect(page.getByText("Uttara North", { exact: true }).first()).toBeVisible();
     await expect(page.getByText("1.23 km, 15 min")).toBeVisible();
+    await expectNoCoordinateInApi(page, apiRequests);
     expect((await stub.calls()).fetchFields).toEqual([]);
   });
 

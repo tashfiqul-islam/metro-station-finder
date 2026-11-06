@@ -24,3 +24,9 @@ test("METRO-88 ISO dates read as day month year without a time zone shift", () =
   expect(formatIsoDate("2026-11-05")).toBe("5 November 2026");
   expect(formatIsoDate("2026-12-31")).toBe("31 December 2026");
 });
+
+test("METRO-88 a walking distance that rounds to 1000 m reads 1.00 km, never 1000 m", () => {
+  expect(formatWalkingDistance(999.4)).toBe("999 m");
+  expect(formatWalkingDistance(999.5)).toBe("1.00 km");
+  expect(formatWalkingDistance(1000)).toBe("1.00 km");
+});

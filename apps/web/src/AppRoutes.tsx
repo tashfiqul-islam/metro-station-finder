@@ -7,5 +7,9 @@ import { NearestStation } from "./features/nearest-station/NearestStation";
  * retirement ticket removes it. The Maps API loads only when the slice is on screen.
  */
 export function AppRoutes({ pathname }: { readonly pathname: string }) {
-  return pathname === "/nearest" ? <NearestStation maps={mapsAdapter} /> : <App />;
+  return pathname === "/nearest" || pathname === "/nearest/" ? (
+    <NearestStation maps={mapsAdapter} />
+  ) : (
+    <App />
+  );
 }

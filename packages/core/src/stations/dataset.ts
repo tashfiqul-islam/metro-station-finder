@@ -105,8 +105,9 @@ export interface DatasetProvenance {
   };
 }
 
-export const datasetProvenance: DatasetProvenance = {
-  fares: {
+/** Frozen at every level: the app shows these dates, so a caller must not be able to change them. */
+export const datasetProvenance: DatasetProvenance = Object.freeze({
+  fares: Object.freeze({
     // DTCA notice dated 8 September 2022 (evidence S3, Primary); the notice gives no effective date.
     setBy: "DTCA",
     noticeDate: "2022-09-08",
@@ -115,16 +116,16 @@ export const datasetProvenance: DatasetProvenance = {
     cellsMatchingOfficialTable: 256,
     cellsCompared: 256,
     officialTableRetrieved: "2026-11-05",
-  },
-  operator: {
+  }),
+  operator: Object.freeze({
     // Dhaka Mass Transit Company Limited; first section (Uttara North to Agargaon) opened 28 December 2022.
     name: "DMTCL",
     firstServiceDate: "2022-12-28",
-  },
-  coordinates: {
+  }),
+  coordinates: Object.freeze({
     // OpenStreetMap and Wikidata (Secondary); every station within 150 m of both. No official source.
-    sources: ["OpenStreetMap", "Wikidata"],
+    sources: Object.freeze(["OpenStreetMap", "Wikidata"] as const),
     maxDistanceMeters: 150,
     officialSource: null,
-  },
-};
+  }),
+});

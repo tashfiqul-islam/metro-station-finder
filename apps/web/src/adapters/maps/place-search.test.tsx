@@ -122,20 +122,61 @@ test("METRO-88 a selection calls fetchFields once with location only and reports
   expect(onFailure).not.toHaveBeenCalled();
 });
 
-test("METRO-88 a second selection while one is in flight is ignored", async () => {
+function noop(): void {}
+
+function deferred() {
+  const handle: { resolve: () => void; reject: (reason: unknown) => void } = {
+    resolve: noop,
+    reject: noop,
+  };
+  const promise = new Promise<void>((resolve, reject) => {
+    handle.resolve = resolve;
+    handle.reject = reject;
+  });
+  return { promise, ...handle };
+}
+
+test("METRO-88 the latest selection wins, whichever fetch finishes first", async () => {
   enable();
-  const { onPlace } = mount();
-  const fetchFields = vi.fn(pendingFetch);
-  const chosen = makePrediction(fetchFields, { lat: () => 1, lng: () => 2 });
-  made().dispatchEvent(selectEvent(chosen));
-  made().dispatchEvent(selectEvent(chosen));
+  const { onPlace, onFailure } = mount();
+  const first = deferred();
+  const second = deferred();
+  const fetchA = vi.fn(() => first.promise);
+  const fetchB = vi.fn(() => second.promise);
+  made().dispatchEvent(selectEvent(makePrediction(fetchA, { lat: () => 1, lng: () => 1 })));
+  made().dispatchEvent(selectEvent(makePrediction(fetchB, { lat: () => 2, lng: () => 2 })));
   await settleAll();
-  gate.settle();
+  // Both fetches run (one extra Place Details call in this rare case); A finishing first is ignored.
+  expect(fetchA).toHaveBeenCalledTimes(1);
+  expect(fetchB).toHaveBeenCalledTimes(1);
+  first.resolve();
   await settleAll();
-  expect(fetchFields).toHaveBeenCalledTimes(1);
-  expect(onPlace).toHaveBeenCalledTimes(1);
+  expect(onPlace).not.toHaveBeenCalled();
+  second.resolve();
+  await settleAll();
+  expect(onPlace).toHaveBeenCalledExactlyOnceWith({ lat: 2, lng: 2 });
+  expect(onFailure).not.toHaveBeenCalled();
 });
 
+test("METRO-88 an earlier selection that finishes late or fails late changes nothing", async () => {
+  enable();
+  const { onPlace, onFailure } = mount();
+  const first = deferred();
+  const second = deferred();
+  made().dispatchEvent(
+    selectEvent(makePrediction(() => first.promise, { lat: () => 1, lng: () => 1 })),
+  );
+  made().dispatchEvent(
+    selectEvent(makePrediction(() => second.promise, { lat: () => 2, lng: () => 2 })),
+  );
+  await settleAll();
+  second.resolve();
+  await settleAll();
+  first.reject(new Error("late"));
+  await settleAll();
+  expect(onPlace).toHaveBeenCalledExactlyOnceWith({ lat: 2, lng: 2 });
+  expect(onFailure).not.toHaveBeenCalled();
+});
 test("METRO-88 a rejected fetch, a missing location and gmp-error all report a failure without a cause", async () => {
   enable();
   const { onPlace, onFailure } = mount();

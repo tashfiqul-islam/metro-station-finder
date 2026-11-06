@@ -11,8 +11,8 @@ export const MAPS_VERSION = "3.66";
  * secrecy. `null` when absent or blank; the key is never logged or returned in an error.
  */
 export function readMapsKey(
-  env: Readonly<Record<string, unknown>> = import.meta.env,
+  // Read statically, so the bundler inlines this one variable and not the whole environment object.
+  value: unknown = import.meta.env["VITE_GOOGLE_MAPS_API_KEY"],
 ): string | null {
-  const value = env["VITE_GOOGLE_MAPS_API_KEY"];
   return typeof value === "string" && value.trim() !== "" ? value.trim() : null;
 }

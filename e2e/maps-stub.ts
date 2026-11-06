@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 
 import { isRecord } from "../scripts/guards";
+import { GOOGLE_HOSTS, expect } from "./fixtures";
 
 /**
  * A fake of the Maps JavaScript API for the browser journeys (METRO-88). It is served by `page.route` at the
@@ -80,8 +81,6 @@ const STUB_SCRIPT = `
 })();
 `;
 
-const GOOGLE_HOSTS = /^https:\/\/([^/]+\.)?(googleapis|gstatic|google|googleusercontent)\.com\//u;
-
 const keep = (item: unknown): unknown => item;
 
 export interface MapsStub {
@@ -123,6 +122,47 @@ export async function installMapsStub(page: Page, options: StubOptions = {}): Pr
   };
 }
 
+/** The /api requests a page makes, to prove none of them carries a position. */
+export function trackApiRequests(page: Page): { url: string; headers: string; body: string }[] {
+  const requests: { url: string; headers: string; body: string }[] = [];
+  page.on("request", (request) => {
+    if (new URL(request.url()).pathname.startsWith("/api/")) {
+      requests.push({
+        url: request.url(),
+        headers: JSON.stringify(request.headers()),
+        body: request.postData() ?? "",
+      });
+    }
+  });
+  return requests;
+}
+
+/**
+ * Asserts no recorded /api request carries a position. Not vacuous: it first makes one real request to
+ * /api, which the listener must record, and then checks that request and any earlier one.
+ */
+export async function expectNoCoordinateInApi(
+  page: Page,
+  requests: readonly { url: string; headers: string; body: string }[],
+): Promise<void> {
+  const before = requests.length;
+  await page.evaluate(() => fetch("/api/scaffold/status").then((response) => response.status));
+  expect(requests.length, "the /api listener records requests").toBe(before + 1);
+  const everything = requests.map((r) => `${r.url} ${r.headers} ${r.body}`).join("\n");
+  for (const fragment of [
+    "23.87",
+    "90.367",
+    "23.728",
+    "90.419",
+    "lat=",
+    "lng=",
+    "latitude",
+    '"lat"',
+    '"lng"',
+  ]) {
+    expect(everything).not.toContain(fragment);
+  }
+}
 /** Replaces the browser geolocation with a deterministic answer (permission denied, or a fixed fix). */
 export async function stubGeolocation(
   page: Page,

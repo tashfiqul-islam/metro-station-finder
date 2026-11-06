@@ -6,13 +6,22 @@
 
 const PINNED_VERSION_PREFIX = "3.66";
 
-/** Removes any key, any URL query string and any Google-style key token from a console message. */
+/**
+ * Removes any key, any URL query string and any Google-style key token from a console message. Case does
+ * not matter (`KEY=`), `apikey=`, `api_key=` and `api-key=` count, and so does the URL-encoded `key%3D`.
+ */
 export function scrub(text: string): string {
   return text
     .replaceAll(/\?[^\s'")]*/gu, "?[query removed]")
-    .replaceAll(/\bkey=[^\s&'")]*/gu, "key=[removed]")
-    .replaceAll(/AIza[\w-]{20,}/gu, "[key removed]")
-    .replaceAll("key=[removed]", "[key removed]");
+    .replaceAll(/\b(?:api[_-]?)?key(?:=|%3d)[^\s&'")]*/giu, "[key removed]")
+    .replaceAll(/AIza[\w-]{20,}/gu, "[key removed]");
+}
+
+/** A fixed refusal when this runs in CI: the check uses a real key and real Google, so only the owner runs it. */
+export function ciRefusal(env: Readonly<Record<string, string | undefined>>): string | null {
+  return env["CI"] === "true" || env["CI"] === "1"
+    ? "FAIL\nThe live check uses a real Google key and never runs in CI."
+    : null;
 }
 
 export interface LiveRun {

@@ -23,4 +23,8 @@ export const copy = {
   destinationPlaceholder: "Choose a destination",
   fareUnknown: "No fare is available for that trip.",
   fareChoose: "Choose a destination to see the fare.",
+  fareLine: (from: string, to: string, currency: string, amount: number): string =>
+    `${from} to ${to}: ${currency} ${amount}`,
+  faresAsOf: (notice: string, checked: string): string =>
+    `Fares as of: DTCA notice dated ${notice}; last checked ${checked}.`,
 } as const;

@@ -7,7 +7,9 @@ export function formatKm(km: number): string {
 
 /** Whole metres below 1 km, else km with two decimals. */
 export function formatWalkingDistance(meters: number): string {
-  return meters < 1000 ? `${Math.round(meters)} m` : formatKm(meters / 1000);
+  // Round first, so 999.5 m reads "1.00 km" and never "1000 m".
+  const whole = Math.round(meters);
+  return whole < 1000 ? `${whole} m` : formatKm(meters / 1000);
 }
 
 /** Whole minutes, at least 1. */

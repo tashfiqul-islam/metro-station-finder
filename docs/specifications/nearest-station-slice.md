@@ -11,7 +11,7 @@
 - Domain: [glossary](../product/glossary.md) (Location, Nearest, Geographic distance, Walking distance, Origin / destination, Same station, Fare), [nearest-station](nearest-station.md), [ADR-0009](../adr/0009-maps-provider-design.md), [maps design](maps-provider-design.md), [ADR-0011](../adr/0011-security-headers.md), ADR-0018.
 - Problem and intended outcome: one complete, tested feature that later features copy. A user searches a place (or presses "Use my location") and sees the nearest Line 6 station, its straight-line distance, a walking route distance and time, and the fare from that station to a destination they pick, with the fare notice and last-checked dates. The position goes to Google only. The CSP is enforced.
 - Scope: core exports what is missing (`datasetProvenance`); `apps/web/src/adapters/maps` (the only code that imports the Maps library); `apps/web/src/features/nearest-station`; routing the slice at `/nearest`; an e2e journey with axe; enforced CSP with the Google hosts; `golden-path.md`; a manual live check script; a dependency rule keeping the Maps library inside the adapter.
-- Exclusions: a map, markers, `displayName` or `formattedAddress` (no map, so no Places address is shown, ADR-0009 attribution rule), card discounts, concessions, Kamalapur, a CSP report endpoint, a new package, any server feature, any change to `/api/*`. The scaffold page at `/` and the status route stay and get a follow-up retirement ticket.
+- Exclusions: a map, markers, `displayName` or `formattedAddress` (no map, so no Places address is shown, ADR-0009 attribution rule), card discounts, concessions, Kamalapur, a CSP report endpoint, a new package, any server feature, any change to `/api/*`. The scaffold page at `/` and the status route stay and get a follow-up retirement ticket, METRO-93.
 - Constraints and contracts: no Google key in the repository (public build-time name `VITE_GOOGLE_MAPS_API_KEY`, owner supplies it); fixed error copy only; no coordinate in any `/api/*` request; no automated run ever calls a real Google endpoint.
 - Grouping: module 03 feature parity and accessible web UX; release v1.0.0.
 - Open decisions: none that block; see "Unverified" and "Deviations".
@@ -78,7 +78,7 @@ All copy is fixed in `features/nearest-station/copy.ts`; `error.message` and sta
 3. Core, in the browser: `findNearestStation(baselineDataset.stations, coordinate)`. No network.
 4. Route: once per (origin, station) pair, `Route.computeRoutes({ origin, destination, travelMode: 'WALKING', fields: ['distanceMeters', 'durationMillis'] })`, result cached in memory; a failure is not retried and is not cached.
 5. Fare: `findFare(baselineDataset.fares, nearest.id, destination.id)`; an unknown fare shows fixed copy, never zero.
-6. Nothing from Google is stored, logged or put in a URL (ADR-0009). Consent line: "Your position and the place you search for are not sent to our server. The text you type in search goes to Google to suggest places; your position goes to Google only to work out the walking route."
+6. Nothing from Google is stored, logged or put in a URL (ADR-0009). Consent line (the exact text is `copy.consent`): "Your position and the place you choose are not sent to our server. What you type in the search goes to Google to suggest places. Your position goes to Google only to work out the walking route."
 
 ### Free-tier plan
 
@@ -93,7 +93,7 @@ The owner must pay nothing. Calls made and their SKU (pricing re-read 2026-11-07
 
 Frugality built in: one `fetchFields` per selection; one route request per (origin, station) pair with an in-flight and result cache; no request per render or per keystroke of ours; no retries; the API is loaded once (StrictMode-safe: a module-level promise is shared) and only the `places` and `routes` libraries are imported, never `maps`; with no key nothing loads. Limit: the element does its own autocomplete requests per keystroke and exposes no documented minimum-character or debounce setting (Unverified; the live check counts Places requests per search). If that is wasteful, the fallback is a custom combobox on `AutocompleteSuggestion.fetchAutocompleteSuggestions` with our own debounce and minimum length (a new decision).
 
-Owner action, a hard stop: set a daily quota cap per API on the key (a budget alert does not stop spending). Starting values from ADR-0009: Routes 160, Maps JavaScript 300, Place Details 300, Autocomplete requests 330 per day. Also restrict the key to the Maps JavaScript, Places (New) and Routes APIs and to HTTP referrers (localhost, 127.0.0.1 and the production origin). Steps are in [golden path](../agents/golden-path.md).
+Owner action, a hard stop: set a daily quota cap per API (a budget alert does not stop spending; quota caps do). Caps are project quotas, not per key (Unverified here: confirm in the console), so keys in one project share them. Each cap times 31 days stays under the SKU's monthly free cap with a margin: Autocomplete requests 300 per day (9,300 of 10,000), Place Details 300 (9,300 of 10,000 Essentials), Maps JavaScript 300 (9,300 of 10,000), Routes 150 (4,650 of 5,000, sized against Pro until a bill shows Essentials). They supersede the 330 and 160 in ADR-0009, whose Autocomplete figure (330 x 31 = 10,230) exceeded the free cap. Also restrict the key to the Maps JavaScript, Places (New) and Routes APIs and to HTTP referrers (localhost, 127.0.0.1 and the production origin). Steps are in [golden path](../agents/golden-path.md).
 
 ### CSP plan
 
@@ -104,6 +104,14 @@ Switch `Content-Security-Policy-Report-Only` to enforced `Content-Security-Polic
 - `img-src 'self' data: https://maps.gstatic.com https://maps.googleapis.com`: the "Powered by Google" attribution and icons in the suggestion list (Unverified).
 
 Not added because nothing justifies them yet (all Unverified; the live check settles them): `'unsafe-eval'`, `blob:`, `worker-src`, `style-src` `'unsafe-inline'` and `https://fonts.googleapis.com`, `font-src`, `frame-src`. If the live run prints a violation for one, add only that, with the message as evidence. The merge needs the owner's live run first.
+
+### Behaviour notes
+
+- Latest action wins. A position fix that arrives after the user chose a place, or after another press of the button, is ignored. A place chosen later overrides an earlier fix. The place search ignores the earlier of two overlapping selections: its `fetchFields` still runs (one extra Place Details call in that rare case) but its result is dropped.
+- Pressing "Use my location" again returns a slightly different fix. The route cache key rounds both points to 4 decimals (about 11 m), so a repeat within that distance costs no new route request.
+- A new result moves focus to its heading ("Nearest station: <name>", `tabIndex=-1`) so a screen reader announces the station; the route and fare `<output>` elements are mounted with the result and updated in place. Announcement and live-region timing still need a manual screen-reader pass.
+- Changing the origin station forgets the chosen destination; `/nearest` and `/nearest/` both route to the slice.
+- The fare shows `Fare.currency` and `Fare.amount` as core defines them; `datasetProvenance` is frozen at every level.
 
 ### Failure and boundary checks
 
@@ -120,6 +128,19 @@ Missing key; script blocked; `gmp-error`; `fetchFields` rejects or returns no lo
 
 Independent review (code). Owner: the live check before merge.
 
+## Risks
+
+| Risk                                                                     | Handling                                                                                                                      |
+| ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| A billable call per keystroke from the element, outside our control      | Unverified count; the live check prints it; fallback is a custom combobox (new decision). Daily quota caps are the hard stop. |
+| The enforced CSP blocks a Google host or feature the stub cannot show    | Exact hosts only; the owner-run live check must pass before merge; add only what a printed CSP line proves.                   |
+| Real widget accessibility differs from the e2e fake                      | Manual screen-reader pass; the fake is labelled as a fake in `e2e/maps-stub.ts`.                                              |
+| A silently deleted pinned Maps version falls back to the default channel | The live check fails unless `google.maps.version` starts with `3.66`; bump quarterly.                                         |
+| Free-tier numbers change (the pricing page is undated)                   | Re-read the page on each implementation; caps are project quotas set by the owner.                                            |
+| A future test reaches real Google with the fake key                      | The shared e2e fixture aborts and fails any unstubbed Google request.                                                         |
+| Google types leak into features through the ambient global               | `scripts/google-containment.test.ts` fails on `google.maps` or `window.google` outside the adapter.                           |
+| WebKit logs its own select stylesheet under the CSP                      | Tolerated once per test by exact match, WebKit only, kept honest by a test.                                                   |
+
 ## Unverified items
 
 Routes SKU of the JS call; autocomplete requests per keystroke; whether a Maps-library load without a map is free; the CSP extras above; real shadow-DOM labelling of `PlaceAutocompleteElement` for screen readers (the e2e fake cannot show it); `google.maps.version` at runtime; production edge behaviour of `_headers`.
@@ -128,7 +149,7 @@ Routes SKU of the JS call; autocomplete requests per keystroke; whether a Maps-l
 
 - ADR-0009 asks for `["location", "formattedAddress"]`: this slice requests `location` only because no map is shown.
 - ADR-0009 moves focus to the search input after a geolocation error: the shadow DOM input is not reachable, so focus moves to the alert (`tabIndex=-1`, existing outline), and the alert is not an `aria-describedby` target of the input.
-- The slice is routed at `/nearest` so the scaffold page and its tests at `/` stay until the retirement ticket.
+- The slice is routed at `/nearest` so the scaffold page and its tests at `/` stay until METRO-93 retires them.
 - The element sets its own autocomplete request rate; the minimum-character and debounce control the owner asked for is not available on `PlaceAutocompleteElement` (see Free-tier plan).
 - The harness rebuilds the web app with the fake key inside `bun run smoke` (see Library decision), because the key is compiled in and CI builds without one.
 - Origin of the fare is the nearest station and is not changeable in this slice; the destination is chosen.

@@ -32,3 +32,8 @@ test("METRO-88 every other path renders the scaffold page until it is retired", 
     globalThis.fetch = realFetch;
   }
 });
+
+test("METRO-88 /nearest/ with a trailing slash renders the slice too", () => {
+  render(<AppRoutes pathname="/nearest/" />);
+  expect(screen.getByRole("heading", { level: 1, name: "Nearest Metro station" })).toBeTruthy();
+});

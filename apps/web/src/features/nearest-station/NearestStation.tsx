@@ -1,6 +1,6 @@
 import { baselineDataset, datasetProvenance, findFare, findNearestStation } from "@metro/core";
 import type { Coordinate, Station } from "@metro/core";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { useMaps } from "../../adapters/maps/context";
 import type {
@@ -90,6 +90,8 @@ function Slice({ maps }: SliceProps) {
   const [locating, setLocating] = useState<Locating>("idle");
   const [searchFailed, setSearchFailed] = useState(false);
   const [destinationId, setDestinationId] = useState("");
+  /** Counts user actions; a slower earlier action (a position fix, say) must not overwrite a later one. */
+  const latestAction = useRef(0);
 
   const nearest = origin === null ? null : findNearestStation(stations, origin);
   const found = nearest?.kind === "nearest" ? nearest : null;
@@ -103,16 +105,29 @@ function Slice({ maps }: SliceProps) {
       ? findFare(baselineDataset.fares, station.id, destination.id)
       : null;
 
-  function choosePlace(location: Coordinate): void {
+  function applyLocation(location: Coordinate): void {
+    const next = findNearestStation(stations, location);
+    // A different origin station makes the earlier destination meaningless: forget it.
+    if ((next.kind === "nearest" ? next.station.id : null) !== (station?.id ?? null)) {
+      setDestinationId("");
+    }
     setSearchFailed(false);
     setLocating("idle");
     setOrigin(location);
   }
 
+  function choosePlace(location: Coordinate): void {
+    latestAction.current += 1;
+    applyLocation(location);
+  }
+
   async function findMe(): Promise<void> {
+    latestAction.current += 1;
+    const mine = latestAction.current;
     setLocating("locating");
     const outcome = await locate();
-    if (outcome.kind === "position") choosePlace(outcome.coordinate);
+    if (mine !== latestAction.current) return;
+    if (outcome.kind === "position") applyLocation(outcome.coordinate);
     else setLocating(outcome.kind);
   }
 
@@ -158,26 +173,34 @@ function Slice({ maps }: SliceProps) {
 
       {nearest !== null && (
         <section aria-labelledby="result-heading">
-          <h2 id="result-heading">{copy.resultHeading}</h2>
+          {/* A new result takes focus (keyed by the origin), so a screen reader announces the station. */}
+          <h2
+            id="result-heading"
+            key={`${origin?.lat},${origin?.lng}`}
+            tabIndex={-1}
+            ref={focusOnMount}
+          >
+            {copy.resultHeading}
+            {station !== null && (
+              <>
+                : <span>{station.name}</span>
+              </>
+            )}
+          </h2>
           {found === null || station === null ? (
             <output>{copy.empty}</output>
           ) : (
             <>
-              <p>
-                <output>{station.name}</output>
-              </p>
               <dl>
                 <dt>{copy.straightLine}</dt>
                 <dd>{formatKm(found.distance)}</dd>
                 <dt>{copy.walking}</dt>
                 <dd>
-                  {route.phase === "loading" && <output>{copy.routeLoading}</output>}
-                  {route.phase === "success" && (
-                    <output>
-                      {formatWalkingDistance(route.route.distance)},{" "}
-                      {formatMinutes(route.route.durationSeconds)}
-                    </output>
-                  )}
+                  <output>
+                    {route.phase === "loading" && copy.routeLoading}
+                    {route.phase === "success" &&
+                      `${formatWalkingDistance(route.route.distance)}, ${formatMinutes(route.route.durationSeconds)}`}
+                  </output>
                   {route.phase === "failure" && <span role="alert">{copy.routeUnavailable}</span>}
                 </dd>
               </dl>
@@ -200,12 +223,19 @@ function Slice({ maps }: SliceProps) {
               <output>
                 {fare === null && copy.fareChoose}
                 {fare?.kind === "fare" &&
-                  `${station.name} to ${destination?.name}: BDT ${fare.fare.amount}`}
+                  copy.fareLine(
+                    station.name,
+                    destination?.name ?? "",
+                    fare.fare.currency,
+                    fare.fare.amount,
+                  )}
                 {fare?.kind === "unknown-fare" && copy.fareUnknown}
               </output>
               <p>
-                Fares as of: DTCA notice dated {formatIsoDate(datasetProvenance.fares.noticeDate)};
-                last checked {formatIsoDate(datasetProvenance.fares.officialTableRetrieved)}.
+                {copy.faresAsOf(
+                  formatIsoDate(datasetProvenance.fares.noticeDate),
+                  formatIsoDate(datasetProvenance.fares.officialTableRetrieved),
+                )}
               </p>
             </>
           )}

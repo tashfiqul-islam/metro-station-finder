@@ -32,7 +32,7 @@ export default defineConfig({
     env: { VITE_GOOGLE_MAPS_API_KEY: "fake-key-for-tests" },
     url: origin,
     reuseExistingServer: false,
-    timeout: 120_000,
+    timeout: 60_000,
     gracefulShutdown: { signal: "SIGTERM", timeout: 5_000 },
   },
 });

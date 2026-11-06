@@ -27,8 +27,8 @@ function isSelection(event: Event): event is SelectEvent {
 
 /**
  * The Google place search control. `PlaceAutocompleteElement` keeps the autocomplete session itself: one
- * selection ends one session and `fetchFields` carries its token. We call `fetchFields` exactly once per
- * selection and ignore a second selection while one is in flight. The element lives in a shadow root and
+ * selection ends one session and `fetchFields` carries its token. We call `fetchFields` once per
+ * selection; if the user picks again while one is in flight, the earlier result is ignored (latest wins). The element lives in a shadow root and
  * cannot be labelled from outside, so a labelled group wraps it. Nothing from Google leaves this file
  * except a plain coordinate.
  */
@@ -48,22 +48,21 @@ export function PlaceSearch({ labelId, bias, onPlace, onFailure }: PlaceSearchPr
       locationBias: { center: { lat, lng }, radius: radiusMeters },
     });
     let alive = true;
-    let busy = false;
+    // Latest selection wins: a slower fetch for an earlier choice must not replace a later one.
+    let sequence = 0;
     const select = async (event: SelectEvent): Promise<void> => {
-      if (busy) return;
-      busy = true;
+      sequence += 1;
+      const mine = sequence;
       try {
         const selected = event.placePrediction.toPlace();
         await selected.fetchFields({ fields: PLACE_FIELDS });
         const location = selected.location;
-        if (!alive) return;
+        if (!alive || mine !== sequence) return;
         if (location === null || location === undefined) fail();
         else place({ lat: location.lat(), lng: location.lng() });
       } catch {
         // The cause is dropped on purpose: its message can carry the typed text or a URL.
-        if (alive) fail();
-      } finally {
-        busy = false;
+        if (alive && mine === sequence) fail();
       }
     };
     const onSelect = (event: Event): void => {

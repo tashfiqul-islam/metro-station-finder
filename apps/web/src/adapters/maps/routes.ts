@@ -25,6 +25,14 @@ export interface RouteApi {
   computeRoutes(request: RouteRequest): Promise<RouteResponse>;
 }
 
+/**
+ * Cache key for a point, rounded to 4 decimals (about 11 m): pressing "Use my location" again returns a
+ * slightly different fix every time, and each new key would be another billable route request.
+ */
+function near(point: Coordinate): string {
+  return `${point.lat.toFixed(4)},${point.lng.toFixed(4)}`;
+}
+
 /** Results by route pair, shared by every service made from the same library object. */
 const caches = new WeakMap<object, Map<string, Promise<WalkingRoute>>>();
 
@@ -57,7 +65,7 @@ export function createRouteService(api: RouteApi): RouteService {
   caches.set(api, cache);
   return {
     walk(origin, destination) {
-      const key = `${origin.lat},${origin.lng}>${destination.lat},${destination.lng}`;
+      const key = `${near(origin)}>${near(destination)}`;
       const cached = cache.get(key);
       if (cached !== undefined) return cached;
       const pending = compute(api, origin, destination);

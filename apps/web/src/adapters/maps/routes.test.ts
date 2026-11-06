@@ -40,6 +40,19 @@ test("METRO-88 one request per pair: repeats and StrictMode re-runs share the re
   expect(calls).toHaveBeenCalledTimes(2);
 });
 
+test("METRO-88 a repeated position fix within about 11 m reuses the route; a farther one asks again", async () => {
+  const { api, calls } = fakeApi({ routes: [{ distanceMeters: 10, durationMillis: 1000 }] });
+  const service = createRouteService(api);
+  await service.walk(origin, destination);
+  // Each "Use my location" press returns a slightly different fix (here 0.00002 degrees, about 2 m).
+  await service.walk({ lat: origin.lat + 0.00002, lng: origin.lng - 0.00002 }, destination);
+  expect(calls).toHaveBeenCalledTimes(1);
+  await service.walk({ lat: origin.lat + 0.001, lng: origin.lng }, destination);
+  expect(calls).toHaveBeenCalledTimes(2);
+  await service.walk(origin, { lat: destination.lat, lng: destination.lng + 0.001 });
+  expect(calls).toHaveBeenCalledTimes(3);
+});
+
 test("METRO-88 an empty or incomplete result is a failure with no usable message", async () => {
   for (const result of [
     { routes: [] },

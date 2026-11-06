@@ -1,4 +1,4 @@
-import { liveReport, scrub } from "./smoke-live-report.ts";
+import { ciRefusal, liveReport, scrub } from "./smoke-live-report.ts";
 
 /** Built from pieces so no key-shaped literal sits in the repository (the secret scan would flag it). */
 const keyLike = ["AI", "zaSy", "A1234567890abcdefghijklmnopqrstuv"].join("");
@@ -69,4 +69,29 @@ test("more than one autocomplete selection's worth of Places or Routes requests 
   const { lines } = liveReport({ ...base, placesRequests: 40, routesRequests: 2 });
   expect(lines).toContain("Places requests (host places.googleapis.com): 40");
   expect(lines).toContain("Routes requests (host routes.googleapis.com): 2");
+});
+
+test("scrub is case-insensitive and covers apikey, api_key, api-key and URL-encoded key%3D", () => {
+  for (const sample of [
+    "failed KEY=SECRETVALUE end",
+    "failed apikey=SECRETVALUE end",
+    "failed API_KEY=SECRETVALUE end",
+    "failed api-key=SECRETVALUE end",
+    "failed key%3DSECRETVALUE end",
+    "failed Key%3dSECRETVALUE end",
+  ]) {
+    const scrubbed = scrub(sample);
+    expect(scrubbed, sample).not.toContain("SECRETVALUE");
+    expect(scrubbed, sample).toContain("[key removed]");
+  }
+  expect(scrub("monkey=banana")).toBe("monkey=banana");
+});
+
+test("the live check refuses to run in CI with a fixed message", () => {
+  expect(ciRefusal({ CI: "true" })).toBe(
+    "FAIL\nThe live check uses a real Google key and never runs in CI.",
+  );
+  expect(ciRefusal({ CI: "1" })).not.toBeNull();
+  expect(ciRefusal({})).toBeNull();
+  expect(ciRefusal({ CI: "false" })).toBeNull();
 });

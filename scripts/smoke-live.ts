@@ -2,9 +2,9 @@ import { spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 import { chromium } from "@playwright/test";
-import type { ConsoleMessage, Request } from "@playwright/test";
+import type { Browser, ConsoleMessage, Request } from "@playwright/test";
 
-import { liveReport } from "./smoke-live-report.ts";
+import { ciRefusal, liveReport } from "./smoke-live-report.ts";
 import type { LiveRun } from "./smoke-live-report.ts";
 
 /**
@@ -33,6 +33,11 @@ async function waitForServer(): Promise<void> {
 }
 
 async function main(): Promise<boolean> {
+  const refusal = ciRefusal(process.env);
+  if (refusal !== null) {
+    process.stdout.write(`${refusal}\n`);
+    return false;
+  }
   // stdio is ignored: build and server output is of no use here and must never be able to echo a key.
   const build = spawnSync(process.execPath, [vite, "build"], { cwd: web, stdio: "ignore" });
   if (build.status !== 0) throw new Error("the build failed; run `bun run build` to see why");
@@ -46,8 +51,10 @@ async function main(): Promise<boolean> {
     routeShown: false,
     failedStep: null,
   };
-  const browser = await chromium.launch({ headless: process.env["SMOKE_LIVE_HEADLESS"] === "1" });
+  // Everything after the server starts is inside try/finally, so a launch failure cannot orphan it.
+  let browser: Browser | null = null;
   try {
+    browser = await chromium.launch({ headless: process.env["SMOKE_LIVE_HEADLESS"] === "1" });
     await waitForServer();
     const page = await browser.newPage();
     const csp: string[] = [];
@@ -85,7 +92,7 @@ async function main(): Promise<boolean> {
     }
     run.cspMessages = csp;
   } finally {
-    await browser.close();
+    await browser?.close();
     server.kill();
   }
   const { lines, pass } = liveReport(run);

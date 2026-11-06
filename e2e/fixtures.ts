@@ -22,6 +22,42 @@ export function isWebKitStylesheetNotice(browserName: string, text: string): boo
   return browserName === "webkit" && WEBKIT_STYLESHEET_NOTICE.test(text);
 }
 
+export interface ConsoleEntry {
+  readonly type: string;
+  readonly text: string;
+}
+
+/**
+ * The console entries that fail a test: every `error` not allowed by the test, except that the WebKit
+ * stylesheet notice is tolerated once per test (a second one is a real problem). Pure, so the rule that
+ * a CSP violation fails a test is checked directly in `e2e/headers.e2e.ts`.
+ */
+export function consoleProblems(
+  entries: readonly ConsoleEntry[],
+  allowed: RegExp | null,
+  browserName: string,
+): string[] {
+  let noticesTolerated = 0;
+  const problems: string[] = [];
+  for (const { type, text } of entries) {
+    if (type !== "error" || allowed?.test(text) === true) continue;
+    if (noticesTolerated === 0 && isWebKitStylesheetNotice(browserName, text)) {
+      noticesTolerated += 1;
+      continue;
+    }
+    problems.push(`console.error: ${text}`);
+  }
+  return problems;
+}
+
+/**
+ * Every Google host. No test may reach one: the shared fixture aborts and reports any request that no
+ * test stub took, so a test that forgets `installMapsStub` fails closed instead of calling Google with
+ * the fake key.
+ */
+export const GOOGLE_HOSTS =
+  /^https:\/\/([^/]+\.)?(googleapis|gstatic|google|googleusercontent)\.com\//u;
+
 /**
  * Target: WCAG 2.2 AA. axe-core 4.14.0 tags WCAG 2.0/2.1/2.2 rules by level, and `wcag22aa` is the
  * only tag that selects `target-size` (SC 2.5.8), which axe leaves disabled by default.
@@ -50,15 +86,22 @@ export const test = base.extend<{ guards: void } & Options>({
   allowedConsoleError: [null, { option: true }],
   guards: [
     async ({ page, allowedConsoleError, browserName }, use) => {
-      const problems: string[] = [];
-      page.on("pageerror", (error) => problems.push(`pageerror: ${error.message}`));
-      page.on("console", (message) => {
-        if (message.type() !== "error") return;
-        if (allowedConsoleError?.test(message.text())) return;
-        if (isWebKitStylesheetNotice(browserName, message.text())) return;
-        problems.push(`console.error: ${message.text()}`);
+      const pageErrors: string[] = [];
+      const entries: ConsoleEntry[] = [];
+      const unstubbed: string[] = [];
+      page.on("pageerror", (error) => pageErrors.push(`pageerror: ${error.message}`));
+      page.on("console", (message) => entries.push({ type: message.type(), text: message.text() }));
+      // Registered first, so a test's own route (the Maps stub) takes precedence over it.
+      await page.route(GOOGLE_HOSTS, async (route) => {
+        unstubbed.push(`unstubbed Google request to ${new URL(route.request().url()).host}`);
+        await route.abort();
       });
       await use();
+      const problems = [
+        ...pageErrors,
+        ...consoleProblems(entries, allowedConsoleError, browserName),
+        ...unstubbed,
+      ];
       expect(problems, "console and page errors").toEqual([]);
       if (page.url() !== "about:blank") {
         const results = await axeBuilder(page).analyze();

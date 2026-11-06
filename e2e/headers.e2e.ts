@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 
-import { expect, isWebKitStylesheetNotice, test } from "./fixtures";
+import { consoleProblems, expect, isWebKitStylesheetNotice, test } from "./fixtures";
 
 const shared = {
   "x-content-type-options": "nosniff",
@@ -124,6 +124,39 @@ test.describe("security headers and caching (METRO-31)", () => {
     expect(isWebKitStylesheetNotice("webkit", errors[0] ?? "")).toBe(true);
     expect(isWebKitStylesheetNotice("chromium", errors[0] ?? "")).toBe(false);
     expect(isWebKitStylesheetNotice("webkit", "Refused to load the image")).toBe(false);
+  });
+
+  // The rule behind the proof below, checked directly so the reason is explicit: a CSP console error is a
+  // problem, a tolerated entry is not, and the WebKit notice is tolerated once per test only.
+  test("METRO-88 consoleProblems reports a CSP console error and tolerates one WebKit notice", () => {
+    const csp = {
+      type: "error",
+      text: "Refused to load the image 'http://x.test/a.png' because it violates the following Content Security Policy directive: \"img-src 'self'\".",
+    };
+    const notice = {
+      type: "error",
+      text: "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.",
+    };
+    expect(consoleProblems([csp], null, "chromium")).toEqual([`console.error: ${csp.text}`]);
+    expect(consoleProblems([csp], /violates the following/u, "chromium")).toEqual([]);
+    expect(consoleProblems([{ type: "info", text: csp.text }], null, "chromium")).toEqual([]);
+    expect(consoleProblems([notice], null, "webkit")).toEqual([]);
+    expect(consoleProblems([notice, notice], null, "webkit")).toEqual([
+      `console.error: ${notice.text}`,
+    ]);
+    expect(consoleProblems([notice], null, "chromium")).toEqual([`console.error: ${notice.text}`]);
+    expect(consoleProblems([csp, notice], null, "webkit")).toEqual([`console.error: ${csp.text}`]);
+  });
+
+  // Fail closed: a test that forgets the Maps stub must not reach Google. The fixture aborts the request and
+  // reports it, so this test fails by design (`test.fail`).
+  test("METRO-88 the fixture fails a test that reaches a Google host without a stub", async ({
+    page,
+  }) => {
+    test.fail();
+    await page.goto("/");
+    await expect(page.getByLabel("Scaffold status")).toBeVisible();
+    await page.evaluate(() => fetch("https://maps.googleapis.com/maps/api/js").catch(() => null));
   });
 
   // Proves the console-error fixture itself: with no `allowedConsoleError`, the same blocked image must

@@ -120,7 +120,9 @@ test("METRO-88 a selected place shows the nearest station, both distances and th
   render(<NearestStation maps={fakeMaps} />);
   pickPlace(NEAR_UTTARA_NORTH);
   expect(await screen.findByText("1.23 km, 15 min")).toBeTruthy();
-  expect(screen.getByText("Uttara North").tagName).toBe("OUTPUT");
+  const heading = screen.getByRole("heading", { level: 2, name: "Nearest station: Uttara North" });
+  expect(heading.getAttribute("tabindex")).toBe("-1");
+  expect(document.activeElement).toBe(heading);
   const term = screen.getByText(copy.straightLine);
   expect(term.nextElementSibling?.textContent).toMatch(/^0\.\d\d km$/u);
   expect(walk).toHaveBeenCalledTimes(1);
@@ -333,4 +335,91 @@ test("METRO-88 a late route failure for an earlier place is ignored", async () =
     await Promise.resolve();
   });
   expect(screen.queryByText(copy.routeUnavailable)).toBeNull();
+});
+
+test("METRO-88 a new result takes focus on its heading so the station is announced", () => {
+  render(<NearestStation maps={fakeMaps} />);
+  pickPlace(NEAR_MOTIJHEEL);
+  const first = screen.getByRole("heading", { level: 2, name: "Nearest station: Motijheel" });
+  expect(document.activeElement).toBe(first);
+  pickPlace(NEAR_UTTARA_NORTH);
+  const second = screen.getByRole("heading", { level: 2, name: "Nearest station: Uttara North" });
+  expect(document.activeElement).toBe(second);
+});
+
+test("METRO-88 the fare shows the currency from core's Fare, not a literal", () => {
+  render(<NearestStation maps={fakeMaps} />);
+  pickPlace(NEAR_MOTIJHEEL);
+  override.fare = { kind: "fare", fare: { amount: 55, currency: "XYZ" } };
+  fireEvent.change(screen.getByRole("combobox", { name: copy.destinationLabel }), {
+    target: { value: "uttara-north" },
+  });
+  expect(screen.getByText("Motijheel to Uttara North: XYZ 55")).toBeTruthy();
+});
+
+test("METRO-88 the destination is forgotten when the origin station changes, and stays forgotten", () => {
+  render(<NearestStation maps={fakeMaps} />);
+  pickPlace(NEAR_MOTIJHEEL);
+  fireEvent.change(screen.getByRole("combobox", { name: copy.destinationLabel }), {
+    target: { value: "farmgate" },
+  });
+  pickPlace(NEAR_UTTARA_NORTH);
+  pickPlace(NEAR_MOTIJHEEL);
+  expect(
+    screen.getByRole<HTMLSelectElement>("combobox", { name: copy.destinationLabel }).value,
+  ).toBe("");
+  expect(screen.getByText(copy.fareChoose)).toBeTruthy();
+});
+
+test("METRO-88 a new place with the same nearest station keeps the chosen destination", () => {
+  render(<NearestStation maps={fakeMaps} />);
+  pickPlace(NEAR_MOTIJHEEL);
+  fireEvent.change(screen.getByRole("combobox", { name: copy.destinationLabel }), {
+    target: { value: "farmgate" },
+  });
+  pickPlace({ lat: NEAR_MOTIJHEEL.lat + 0.0005, lng: NEAR_MOTIJHEEL.lng });
+  expect(screen.getByText("Motijheel to Farmgate: BDT 30")).toBeTruthy();
+});
+
+/** A geolocation whose answer the test gives later. */
+const pending: { success: PositionCallback | null } = { success: null };
+
+test("METRO-88 a position fix that arrives after a place was chosen does not overwrite it", async () => {
+  geolocation((success) => {
+    pending.success = success;
+  });
+  render(<NearestStation maps={fakeMaps} />);
+  fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
+  pickPlace(NEAR_MOTIJHEEL);
+  await act(async () => {
+    pending.success?.(fakePosition(NEAR_UTTARA_NORTH.lat, NEAR_UTTARA_NORTH.lng));
+    await Promise.resolve();
+  });
+  expect(
+    screen.getByRole("heading", { level: 2, name: "Nearest station: Motijheel" }),
+  ).toBeTruthy();
+  expect(screen.queryByText(copy.locating)).toBeNull();
+});
+
+test("METRO-88 a place chosen after a position fix wins, and a denial after a place changes nothing", async () => {
+  geolocation((success) => success(fakePosition(NEAR_UTTARA_NORTH.lat, NEAR_UTTARA_NORTH.lng)));
+  render(<NearestStation maps={fakeMaps} />);
+  fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
+  expect(
+    await screen.findByRole("heading", { level: 2, name: "Nearest station: Uttara North" }),
+  ).toBeTruthy();
+  pickPlace(NEAR_MOTIJHEEL);
+  expect(
+    screen.getByRole("heading", { level: 2, name: "Nearest station: Motijheel" }),
+  ).toBeTruthy();
+  geolocation((_success, failure) => failure(denied));
+  fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
+  pickPlace(NEAR_UTTARA_NORTH);
+  await act(async () => {
+    await Promise.resolve();
+  });
+  expect(screen.queryByText(copy.denied)).toBeNull();
+  expect(
+    screen.getByRole("heading", { level: 2, name: "Nearest station: Uttara North" }),
+  ).toBeTruthy();
 });
