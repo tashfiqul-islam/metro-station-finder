@@ -24,9 +24,6 @@ const SEARCH_BIAS = {
   radiusMeters: 25_000,
 };
 
-/** Attribute on the search wrapper that marks "focus is in the search box". */
-const SEARCH_GROUP = "data-search-group";
-
 type Locating = "idle" | "locating" | "denied" | "unavailable";
 
 type RouteView =
@@ -97,6 +94,15 @@ function Slice({ maps }: SliceProps) {
   const latestAction = useRef(0);
   /** Whether the next result may take focus; false when a late position fix lands while the user is typing. */
   const focusNext = useRef(true);
+  /**
+   * True once the user touches the search box (focus, key or input) after pressing "Use my location".
+   * Not derived from document.activeElement: Safari and macOS Firefox leave focus where it was on a
+   * button click, which would read as typing.
+   */
+  const engagedWithSearch = useRef(false);
+  const engage = (): void => {
+    engagedWithSearch.current = true;
+  };
   /** Stable, so focus moves when the heading mounts (a new origin re-keys it) and not on every render. */
   const focusResult = useCallback((node: HTMLElement | null): void => {
     if (node !== null && focusNext.current) node.focus();
@@ -116,8 +122,7 @@ function Slice({ maps }: SliceProps) {
 
   function applyLocation(location: Coordinate, fromFix: boolean): void {
     // A position fix can arrive while the user types in the search box; never pull focus out of it.
-    const typing = (document.activeElement?.closest(`[${SEARCH_GROUP}]`) ?? null) !== null;
-    focusNext.current = !(fromFix && typing);
+    focusNext.current = !(fromFix && engagedWithSearch.current);
     const next = findNearestStation(stations, location);
     // A different origin station makes the earlier destination meaningless: forget it.
     if ((next.kind === "nearest" ? next.station.id : null) !== (station?.id ?? null)) {
@@ -136,6 +141,7 @@ function Slice({ maps }: SliceProps) {
   async function findMe(): Promise<void> {
     latestAction.current += 1;
     const mine = latestAction.current;
+    engagedWithSearch.current = false;
     setLocating("locating");
     const outcome = await locate();
     if (mine !== latestAction.current) return;
@@ -155,7 +161,7 @@ function Slice({ maps }: SliceProps) {
         <h2 id="where-heading">{copy.whereHeading}</h2>
         <p id="place-label">{copy.searchLabel}</p>
         {status === "loading" && <output>{copy.loadingSearch}</output>}
-        <div data-search-group="">
+        <div role="presentation" onFocus={engage} onKeyDown={engage} onInput={engage}>
           {status !== "unavailable" && (
             <maps.PlaceSearch
               labelId="place-label"

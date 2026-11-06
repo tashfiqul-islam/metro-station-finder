@@ -26,8 +26,9 @@ export interface RouteApi {
 }
 
 /**
- * Cache key for a point, rounded to 4 decimals (about 11 m north-south, up to about 15 m diagonally at Dhaka's latitude): pressing "Use my location" again returns a
- * slightly different fix every time, and each new key would be another billable route request.
+ * Cache key for a point, rounded to 4 decimals (about 11 m north-south, up to about 15 m diagonally at
+ * Dhaka's latitude). Pressing "Use my location" again returns a slightly different fix every time, and
+ * each new key would be another billable route request.
  */
 function near(point: Coordinate): string {
   return `${point.lat.toFixed(4)},${point.lng.toFixed(4)}`;

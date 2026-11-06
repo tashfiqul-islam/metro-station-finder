@@ -469,3 +469,40 @@ test("METRO-88 re-rendering the result does not take focus back", () => {
   fireEvent.change(select, { target: { value: "farmgate" } });
   expect(document.activeElement).toBe(select);
 });
+
+test("METRO-88 where a button click leaves focus in the search box, the fix still takes focus", async () => {
+  geolocation((success) => {
+    pending.success = success;
+  });
+  render(<NearestStation maps={fakeMaps} />);
+  const box = screen.getByRole("textbox", { name: "fake search box" });
+  box.focus();
+  // Safari and macOS Firefox do not move focus to a clicked button; fireEvent.click does not either.
+  fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
+  expect(document.activeElement).toBe(box);
+  await act(async () => {
+    pending.success?.(fakePosition(NEAR_UTTARA_NORTH.lat, NEAR_UTTARA_NORTH.lng));
+    await Promise.resolve();
+  });
+  const heading = screen.getByRole("heading", { level: 2, name: "Nearest station: Uttara North" });
+  expect(document.activeElement).toBe(heading);
+});
+
+test("METRO-88 typing in the search box after the click still wins over a late fix", async () => {
+  geolocation((success) => {
+    pending.success = success;
+  });
+  render(<NearestStation maps={fakeMaps} />);
+  const box = screen.getByRole("textbox", { name: "fake search box" });
+  box.focus();
+  fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
+  fireEvent.keyDown(box, { key: "m" });
+  await act(async () => {
+    pending.success?.(fakePosition(NEAR_UTTARA_NORTH.lat, NEAR_UTTARA_NORTH.lng));
+    await Promise.resolve();
+  });
+  expect(
+    screen.getByRole("heading", { level: 2, name: "Nearest station: Uttara North" }),
+  ).toBeTruthy();
+  expect(document.activeElement).toBe(box);
+});
