@@ -126,6 +126,7 @@ test("METRO-92 the process entry checks the repository given as its first argume
   const errors: string[] = [];
   const originalError = console.error;
   const previous = process.exitCode;
+  process.exitCode = 0;
   console.error = (message: string) => void errors.push(message);
   try {
     await baseBranchMain([root]);

@@ -80,15 +80,17 @@ test("METRO-92 validateRange names the 64 MiB read limit and rethrows other git 
   const { root, ok } = await repo();
   try {
     const emptyTree = ok(["git", "write-tree"]).trim();
-    const huge = Bun.spawnSync(["git", "commit-tree", emptyTree, "-F", "-"], {
+    const big = Bun.spawnSync(["git", "commit-tree", emptyTree, "-F", "-"], {
       cwd: root,
       env: env(),
-      stdin: Buffer.from(`feat: huge\n\n${"a".repeat(65 * 1024 * 1024)}\n`),
+      stdin: Buffer.from(`feat: big\n\n${"a".repeat(4096)}\n`),
     });
-    expect(huge.exitCode).toBe(0);
-    const sha = huge.stdout.toString().trim();
-    expect(() => validateRange(sha, root)).toThrow(/exceed the 64 MiB read limit/u);
-    expect(() => validateRange("no-such-ref..HEAD", root)).toThrow(/no-such-ref/u);
+    expect(big.exitCode).toBe(0);
+    const sha = big.stdout.toString().trim();
+    // A 1 KiB read limit stands in for the real 64 MiB one: the same overflow, without a 65 MiB message.
+    expect(() => validateRange(sha, root, 1024)).toThrow(/exceed the 64 MiB read limit/u);
+    expect(validateRange(sha, root)).toEqual([]);
+    expect(() => validateRange("no-such-ref..HEAD", root, 1024)).toThrow(/no-such-ref/u);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
