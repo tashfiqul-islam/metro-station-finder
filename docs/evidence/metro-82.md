@@ -36,9 +36,9 @@ Hosted (Hosted, run 42178087779 on PR #83 at `8c71a17`, one temporary probe step
 | `--parallel`   | 64     | 1012 pass |
 | `--parallel=4` | 63     | 1012 pass |
 
-The same run's per-command table (METRO-81) shows `bun test --parallel=4` at 1 m 3.8 s and a chain total of 1 m 16.2 s. The previous push run on the base (run 42174535176, `a0e7ab8`) shows `bun test` at 1 m 38.7 s and a chain total of 1 m 55.4 s.
+The same run's per-command table (METRO-81) shows `bun test --parallel=4` at 1 m 3.8 s (chain 1 m 16.2 s), but that chain ran after the six probe runs, so caches were warm. Other hosted runs, see "Hosted result", are noisier.
 
-Reading: on the 4-vCPU hosted runner the count between 2 and 8 does not matter (61 to 64 s), so the hosted gain is about 20 s against the probe's serial run and about 35 s against the serial run inside the chain, much less than the local 2.5x. Locally more workers help (20 workers 28.9 s against 37.4 s at 4). Decision: a fixed `--parallel=4`.
+Reading: on the 4-vCPU hosted runner the count between 2 and 8 does not matter (61 to 64 s), and the paired gain is about 20 s, much less than the local 2.5x. Locally more workers help (20 workers 28.9 s against 37.4 s at 4). Decision: a fixed `--parallel=4`.
 
 - It equals the hosted core count, so the hosted run does the same thing a plain `--parallel` would (the default is the CPU core count, `bun test --help`), and local, pre-push and CI use one identical command and one concurrency level.
 - A fixed number does not grow with the machine: a 64-core machine would otherwise start 64 workers, each spawning tsc, oxlint or git subprocesses.
@@ -100,4 +100,16 @@ Repo-verified: `bun test --parallel=4 --timings <file> --update-timings` wrote a
 
 ## Hosted result
 
-Recorded in the pull request after the final push (see the PR description); not repeated here so this file holds only numbers that are already read. Earlier hosted `Checks` jobs for comparison: 2 m 59 s (PR #78, METRO-77) and 2 m 44 s (PR #80), both from [METRO-81](metro-81.md), and 2 m 8 s as given in the ticket (source not re-read here); the push run 42174535176 on the base took 2 m 13 s (06:27:26 to 06:29:39 UTC, from the job start and end times), with `bun test` at 1 m 38.7 s of its 1 m 55.4 s chain.
+Hosted (read from the Actions logs and job start/end times), the `bun test` row of the METRO-81 table and the whole `Checks` job:
+
+| Run                                                         | `bun test` row | Chain total | `Checks` job                             |
+| ----------------------------------------------------------- | -------------- | ----------- | ---------------------------------------- |
+| 42174535176, base `a0e7ab8`, serial                         | 1 m 38.7 s     | 1 m 55.4 s  | 2 m 13 s                                 |
+| 42178780615, base `553dbff`, serial                         | 1 m 20.0 s     | 1 m 33.1 s  | 1 m 49 s                                 |
+| 42178087779, PR #83 `8c71a17` `--parallel=4` (after probes) | 1 m 3.8 s      | 1 m 16.2 s  | not comparable (probe step added 6 runs) |
+| 42180849982 attempt 1, PR #83 `e0fdb1f`, `--parallel=4`     | 1 m 38.6 s     | 1 m 58.6 s  | 2 m 20 s                                 |
+| 42180849982 attempt 2 (re-run of the same commit)           | 1 m 18.5 s     | 1 m 35.3 s  | 1 m 56 s                                 |
+
+Earlier `Checks` jobs from [METRO-81](metro-81.md): 2 m 59 s (PR #78) and 2 m 44 s (PR #80); the ticket quotes 2 m 8 s (source not re-read here).
+
+Honest reading: on the 4-vCPU hosted runner the parallel `bun test` took 63.8, 98.6 and 78.5 s against 98.7 and 80.0 s serial, so the hosted gain is inside the run-to-run noise (about 20 s between identical runs). The probe step's controlled comparison (80 s serial against 61 to 64 s at every parallel count, same job, same machine) is the only paired measurement and shows about 20 s, 22 percent. The local gain is large (95 s to 37 s on 20 cores). The hosted benefit is therefore small and not proven by these samples; more hosted runs would be needed for a median (Unverified). The cause is not measured. Likely contributors are four vCPUs shared by workers that each spawn their own subprocesses, and a long tail of subprocess-bound files; neither was isolated. METRO-83 (slowest files) is where the remaining hosted time is.
