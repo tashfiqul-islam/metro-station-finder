@@ -23,6 +23,14 @@ const FOREIGN = [
   ["scripts", "export const x = Bun;"],
 ] as const;
 
+/**
+ * METRO-91. Bun fails a test after 5000 ms and kills the child of a running `Bun.spawnSync`. On a hosted runner
+ * the first test of a project pays for its safe and rejected `tsc` runs (5.5 to 6.6 s under `--parallel=4`), the kill
+ * left the rejected batch with empty output, and the cached empty result then failed the other tests of that project
+ * with "produced no diagnostic". Every test that waits for a project run gets this limit instead.
+ */
+const TSC_TIMEOUT_MS = 60_000;
+
 const SAFE = "export const ready: boolean = true;";
 const DOM_SAFE =
   'import { expect } from "vitest"; export const title: string = document.title; export const check = expect;';
@@ -79,6 +87,8 @@ function tsc(root: string) {
     `exitCode=${result.exitCode} signalCode=${String(result.signalCode ?? "none")} ` +
     `stdout=${result.stdout.byteLength}B stderr=${result.stderr.byteLength}B ` +
     `duration=${Math.round(performance.now() - started)}ms`;
+  // A killed process has no exit code; fail with the real cause instead of an empty result that tests misread.
+  if (result.exitCode === null) throw new Error(`tsc was killed in ${root} (${trace})`);
   return Object.assign(result, { trace });
 }
 
@@ -195,40 +205,64 @@ async function rejection(project: string, id: string): Promise<Outcome> {
 }
 
 for (const project of projects) {
-  test(`${project}: safe program passes`, async () => {
-    const { safe, rejected } = await projectRun(project);
-    expect(safe.output).toBe("");
-    expect(safe.exitCode).toBe(0);
-    // No diagnostic in the rejected batch may belong to no fixture (a broken project setup would show here).
-    for (const outcome of rejected.values()) expect(outcome.unattributed.join("\n")).toBe("");
-  });
+  test(
+    `${project}: safe program passes`,
+    async () => {
+      const { safe, rejected } = await projectRun(project);
+      expect(safe.output).toBe("");
+      expect(safe.exitCode).toBe(0);
+      // No diagnostic in the rejected batch may belong to no fixture (a broken project setup would show here).
+      for (const outcome of rejected.values()) expect(outcome.unattributed.join("\n")).toBe("");
+    },
+    TSC_TIMEOUT_MS,
+  );
   for (const [name, , diagnostic] of REJECTS) {
-    test(`${project}: rejects ${name}`, async () => {
-      const result = await rejection(project, name);
-      expect(result.lines.join("\n")).toContain(`error TS${diagnostic}`);
-    });
+    test(
+      `${project}: rejects ${name}`,
+      async () => {
+        const result = await rejection(project, name);
+        expect(result.lines.join("\n")).toContain(`error TS${diagnostic}`);
+      },
+      TSC_TIMEOUT_MS,
+    );
   }
 }
 for (const [project, source] of FOREIGN) {
-  test(`${project}: rejects foreign ambient ${source}`, async () => {
-    const result = await rejection(project, `foreign ${source}`);
-    expect(result.lines.join("\n")).toMatch(/error TS(2580|2584|2304|2591|2868)/u);
-  });
+  test(
+    `${project}: rejects foreign ambient ${source}`,
+    async () => {
+      const result = await rejection(project, `foreign ${source}`);
+      expect(result.lines.join("\n")).toMatch(/error TS(2580|2584|2304|2591|2868)/u);
+    },
+    TSC_TIMEOUT_MS,
+  );
 }
 
-test("FND-T4 DOM-test files compile with DOM and Vitest types", async () => {
-  const { safe, rejected } = await projectRun(DOM_TEST);
-  expect(safe.output).toBe("");
-  expect(safe.exitCode).toBe(0);
-  for (const outcome of rejected.values()) expect(outcome.unattributed.join("\n")).toBe("");
-});
+test(
+  "FND-T4 DOM-test files compile with DOM and Vitest types",
+  async () => {
+    const { safe, rejected } = await projectRun(DOM_TEST);
+    expect(safe.output).toBe("");
+    expect(safe.exitCode).toBe(0);
+    for (const outcome of rejected.values()) expect(outcome.unattributed.join("\n")).toBe("");
+  },
+  TSC_TIMEOUT_MS,
+);
 
-test("METRO-79 the DOM-test project has no Bun types", async () => {
-  const result = await rejection(DOM_TEST, "no-bun");
-  expect(result.lines.join("\n")).toMatch(/error TS(2304|2868)/u);
-});
+test(
+  "METRO-79 the DOM-test project has no Bun types",
+  async () => {
+    const result = await rejection(DOM_TEST, "no-bun");
+    expect(result.lines.join("\n")).toMatch(/error TS(2304|2868)/u);
+  },
+  TSC_TIMEOUT_MS,
+);
 
-test("FND-T4 the DOM-test project still enforces strict compiler flags", async () => {
-  const result = await rejection(DOM_TEST, "strict");
-  expect(result.lines.join("\n")).toContain("error TS2322");
-});
+test(
+  "FND-T4 the DOM-test project still enforces strict compiler flags",
+  async () => {
+    const result = await rejection(DOM_TEST, "strict");
+    expect(result.lines.join("\n")).toContain("error TS2322");
+  },
+  TSC_TIMEOUT_MS,
+);
