@@ -1,6 +1,6 @@
 # METRO-90 evidence: hosted Quality speed and the Playwright install stall
 
-Frozen record (do not edit; add a new file for new measurements). Measured 2026-11-06 and 2026-11-07 (UTC dates in the logs). Base revision `2f0bd88` (`feature/metro-rebuild`); change under test: branch `ticket/metro-90-ci-speed`, pull request #92, final workflow commit `3c7a016`.
+Frozen record (do not edit; add a new file for new measurements). Measured 2026-11-06 and 2026-11-07 (UTC dates in the logs). The branch was cut from `2f0bd88` (the tip of `feature/metro-rebuild` then); the before-numbers and the first runs of the change were taken on that base. The branch was later merged with `feature/metro-rebuild` (tip `73eb3b6`, merge commit `e182b23`, which brought in METRO-91 and METRO-92), and the final after-numbers were taken on that merged base. Change under test: branch `ticket/metro-90-ci-speed`, pull request #92.
 
 All durations are **hosted** (GitHub-hosted `ubuntu-24.04`, public repository, 4 vCPU) unless a row says local. Nothing here was timed on the local Windows machine. Job time is `completed_at - started_at` from `gh api repos/tashfiqul-islam/metro-station-finder/actions/runs/<id>/jobs` (queue time excluded). "Gate path" is the time from the first job start to the end of `Quality gates`; "wall" is first job start to last job end, including the `Cloudflare preview` job, which is outside the gate.
 
@@ -27,7 +27,7 @@ Docs-only changes: the 10 most recent docs-only runs (42178259675, 42176820210, 
 
 ## The stall
 
-Four hosted installs stalled or crawled before this work, two more were hit while building it (six in total, all `playwright install --with-deps`):
+Seven hosted installs stalled or crawled, all `playwright install --with-deps`: three were reported before this work (PR #86, PR #88, METRO-83) and four were hit while building it. The logs of six were read; the METRO-83 log was not collected (the ticket states it only):
 
 | Where                                    | Run / job                  | Result                                                 |
 | ---------------------------------------- | -------------------------- | ------------------------------------------------------ |
@@ -37,6 +37,7 @@ Four hosted installs stalled or crawled before this work, two more were hit whil
 | throwaway experiment, firefox only       | 42277020062 / 128095839146 | 1195 s in the install step, ended by the 20 min limit  |
 | throwaway mirror comparison, azure leg 4 | 42285234972                | ended by an 8 min step limit                           |
 | PR #92 first run, webkit                 | 42282857929                | attempt 1 reached the 140 s limit at package 20 of 182 |
+| throwaway retry demonstration, attempt 2 | 42283626854                | reached its 200 s limit at package 3 (fonts) of 182    |
 
 Best-supported cause (Hosted-measured): the system packages download of `apt-get install` from `azure.archive.ubuntu.com`, not the browser download. The two stalled logs (jobs 128051677655 and 128073296288) show the browser cache restored, then `Installing dependencies...`, `Need to get 114 MB of archives`, a `Get:N` line for each package, and nothing after `Get:20 ... libcodec2-1.2 [8998 kB]` (first job, last line 17:53:29, then silence until the cancel at 17:56:20) and `Get:31 ... libsvtav1enc1d1` (second job, last line 18:40:28, silence until 18:41:22; gaps of 56 s and 27 s precede it). The same packages (the ffmpeg libraries pulled in for WebKit) sat at the stall point in the PR #92 webkit attempt. Normal runs fetch the same 114 MB in 11 to 63 s. The apt call is made by Playwright as root, and `timeout` stops bun and `sudo` but not that root `apt-get` (reproduced: the next attempt fails with `E: Could not get lock /var/lib/dpkg/lock-frontend. It is held by process ... (apt-get)` in PR #92 run 42282857929 and in throwaway run 42283626854).
 
@@ -47,7 +48,7 @@ Controlled comparison (throwaway branch, run 42285234972, `bun run playwright in
 | azure.archive.ubuntu.com (default) | 44, 107, 38, no result (8 min limit hit) |
 | archive.ubuntu.com                 | 43, 68, 52, 34                           |
 
-Four jobs per mirror is a small sample, not a proof; it is consistent with every stall seen being on the Azure mirror and none on Canonical's. Why the Azure mirror slows to a crawl is Unknown. The default `/etc/apt/apt-mirrors.txt` lists Azure at priority 1 and `archive.ubuntu.com` at priority 2; apt falls back only when a mirror fails, not when it is slow.
+Four jobs per mirror is a small sample, not a proof; it is consistent with the stalls being on the Azure mirror. Every log read in detail (the two cancelled jobs, the throwaway firefox job, the PR #92 webkit attempt and the retry demonstration) stopped during the apt fetch from `azure.archive.ubuntu.com`; where the mirror comparison azure leg 4 stopped was not read. No stall was seen on `archive.ubuntu.com`, but only a handful of installs used it. Why the Azure mirror slows to a crawl is Unknown. The default `/etc/apt/apt-mirrors.txt` lists Azure at priority 1 and `archive.ubuntu.com` at priority 2; apt falls back only when a mirror fails, not when it is slow.
 
 ## Experiments behind the design (hosted, throwaway runs 42276010001, 42277020062, 42280163493)
 
@@ -70,8 +71,8 @@ Run on throwaway branches, deleted after use; the workflow files are not kept.
 Chosen (each choice cites a measurement above):
 
 1. **Parallel smoke (option e)**: `Build and smoke` keeps its name and runs the Chromium project; a new `smoke` matrix job runs Firefox, WebKit and the mobile viewport (`mobile-chrome`, Chromium) on their own runners. All four Playwright projects still run, with `--shuffle`. Basis: serial smoke is 126 s of the 190 s job; one project per runner took 66 to 81 s. `Quality gates` and the preview now need `smoke`; `scripts/ci-results.ts` requires it and allows its skip only on a docs-only change, exactly like `build`. Required checks in the repository ruleset are `Quality gates` and `Reviewer record` (Repo-verified with `gh api repos/.../rulesets/26426527`); no check name changed, and `smoke` is new.
-2. **Bounded install**: step `timeout-minutes: 5`, two attempts of at most 140 s each. Evidence for a retry: the only two stalls that were rerun (PR #86 and #88) passed on the rerun, so the stall is transient, and a retry needs the orphaned root `apt-get` stopped and a different mirror: attempt 2 stops apt, runs `dpkg --configure -a` and switches to `http://archive.ubuntu.com/ubuntu/`. Packages stay verified by apt's signed indexes whichever mirror serves them.
-3. **System package cache**: `actions/cache` of the apt archives (`Dir::Cache::Archives` moved to `~/apt-archives`), keyed by runner image version, Playwright version and browser set. It removes the mirror download from cache-hit runs (the place every stall happened); it does not shorten a good run (measured above). apt re-checks cached packages against the signed index (Unverified here; this is apt's documented behaviour, not tested). The Playwright browser cache key changed from `...-chromium-firefox-webkit` to one key per browser set because each runner installs its own browsers; the pinned Playwright version is unchanged.
+2. **Bounded install**: step `timeout-minutes: 6` (the ticket said about 5; two attempts of 140 s plus 5 s to stop each, plus the cleanup between them, come to about 300 s and do not fit in 300 s; the 6 minute limit is checked by `installBudgetViolations`), two attempts of at most 140 s each, justified by the observed installs (normal 37 to 99 s, slow ones 107 to 148 s, so 140 s cuts a slow attempt only at its extreme and the retry resumes from the partial downloads). Evidence for a retry: two stalls were rerun (PR #86 and #88) and both passed on the rerun (a very small sample), and a retry needs the orphaned root `apt-get` stopped and a different mirror: attempt 2 stops apt, runs `dpkg --configure -a` and switches to `http://archive.ubuntu.com/ubuntu/`. Packages stay verified by apt's signed indexes whichever mirror serves them.
+3. **System package cache**: `actions/cache/restore` and `actions/cache/save` of the apt archives (`Dir::Cache::Archives` moved to `~/apt-archives`), keyed by runner image version, Playwright version and browser set. The save step runs right after the install and before any repository code (build, smoke), and only when the restore missed, so code that runs with passwordless `sudo` cannot write into a cache that later runs restore; the Playwright browser cache is saved the same way. It removes the mirror download from cache-hit runs (where the stalls read in detail happened); it does not shorten a good run (measured above). apt re-checks cached packages against the signed index (Unverified here; this is apt's documented behaviour, not tested). The Playwright browser cache key changed from `...-chromium-firefox-webkit` to one key per browser set because each runner installs its own browsers; the pinned Playwright version is unchanged.
 4. **Dropped the Bun install cache** from `Checks`, `Build and smoke` and `Security`: a cold bootstrap took 2 s against 3 to 6 s to restore the cache. One cold sample; later runs without the cache show `Install dependencies` under 1 s to 2 s.
 
 Rejected:
@@ -85,29 +86,40 @@ Rejected:
 
 The credentialed `preview` job is unchanged: no `actions/cache`, no artifact download, `jdx/mise-action` with `cache: false`. `credentialedCacheViolations` now also flags `actions/download-artifact` in a credentialed job, and `scripts/quality-workflow.test.ts` proves with fixtures that injecting a cache, `actions/cache/restore`, an artifact download, a mise cache or a caching local composite into the real `preview` job fails the check.
 
-## After (hosted, final workflow commit 3c7a016)
+## After (hosted)
 
-Run 42287088060, six attempts (the original run and five reruns of the same commit, so the caches were warm and the commit identical; this measures runner and mirror variation, not code variation). Attempt jobs: `gh api .../runs/42287088060/attempts/<n>/jobs`.
+Two samples, both reruns of one commit each (the original run and five reruns), so the caches were warm and the commit identical: they measure runner and mirror variation, not code variation. Attempt jobs: `gh api .../runs/<id>/attempts/<n>/jobs`.
 
-| Job                        | Median | Worst | Before median / worst           |
-| -------------------------- | ------ | ----- | ------------------------------- |
-| Changes                    | 11 s   | 13 s  | 10 / 15 s                       |
-| Checks                     | 70 s   | 76 s  | 64 / 86 s                       |
-| Build and smoke (Chromium) | 50 s   | 55 s  | 190 / 273 s (all four projects) |
-| Smoke firefox              | 59 s   | 66 s  | n/a                             |
-| Smoke mobile-chrome        | 51 s   | 57 s  | n/a                             |
-| Smoke webkit               | 74 s   | 86 s  | n/a                             |
-| Security                   | 15 s   | 18 s  | 17 / 23 s                       |
-| Cloudflare preview         | 33 s   | 37 s  | 34 / 48 s                       |
-| Quality gates              | 10 s   | 12 s  | 10 / 12 s                       |
-| Gate path                  | 101 s  | 112 s | 218 / 299 s                     |
-| Wall                       | 128 s  | 136 s | 239 / 326 s                     |
+- **Final head `17be4f5`** (workflow with the 6 minute install step, mirror switch only between attempts, caches saved right after the install; merged base `73eb3b6`): run 42292154327, 6 attempts. This is the headline sample.
+- **Earlier workflow `3c7a016`** (before the review fixes; merged base `2f0bd88`): run 42287088060, 6 attempts. Shown for comparison; the workflow file differs from the final head in the install step and the cache steps, so it is not the final workflow.
 
-Per attempt, gate path / wall in seconds: 91 / 114, 100 / 123, 95 / 116, 109 / 136, 112 / 134, 101 / 130. Longest job on the gate path now: `Smoke webkit` (74 s median) beside `Checks` (70 s), against `Build and smoke` (190 s) before. Install Playwright browsers per leg (median): chromium 13 s, mobile-chrome 14 s, firefox 17 s, webkit 23 s (worst 41 s), against 37 s median and 99 s worst for all three browsers before; Run browser smoke tests per leg: 11, 11, 21, 24 s. No leg was cancelled or retried in these six attempts.
+| Job                        | Final head median | Final head worst | `3c7a016` median / worst | Before median / worst           |
+| -------------------------- | ----------------- | ---------------- | ------------------------ | ------------------------------- |
+| Changes                    | 10 s              | 11 s             | 11 / 13 s                | 10 / 15 s                       |
+| Checks                     | 70 s              | 77 s             | 70 / 76 s                | 64 / 86 s                       |
+| Build and smoke (Chromium) | 49 s              | 59 s             | 50 / 55 s                | 190 / 273 s (all four projects) |
+| Smoke firefox              | 64 s              | 76 s             | 59 / 66 s                | n/a                             |
+| Smoke mobile-chrome        | 48 s              | 58 s             | 51 / 57 s                | n/a                             |
+| Smoke webkit               | 67 s              | 80 s             | 74 / 86 s                | n/a                             |
+| Security                   | 15 s              | 18 s             | 15 / 18 s                | 17 / 23 s                       |
+| Cloudflare preview         | 33 s              | 37 s             | 33 / 37 s                | 34 / 48 s                       |
+| Quality gates              | 8 s               | 9 s              | 10 / 12 s                | 10 / 12 s                       |
+| Gate path                  | 95 s              | 104 s            | 100.5 / 112 s            | 218 / 299 s                     |
+| Wall                       | 122 s             | 136 s            | 126.5 / 136 s            | 239 / 326 s                     |
 
-Other runs of the pull request, in order (not part of the median): 42282857929 (first commit 9594b28, apt cache cold): failed; the WebKit attempt 1 hit the 140 s limit and attempt 2 died on the dpkg lock (fixed in 4d1627b); gate path 181 s. 42283742465 (4d1627b, cold again for the new key): success, gate path 103 s, wall 125 s. Counting honestly: the reduction in gate path is from a 218 s median to a 101 s median (about 54 percent), and the worst case from 299 s to 112 s; the wall from 239 s to 128 s. Both are far outside the run-to-run spread seen in either sample, so these gains are not noise. After the merge of eature/metro-rebuild (merge commit e182b23, includes METRO-91 and METRO-92), run 42290133688 on the merged base: success, gate path 92 s, wall 117 s (Changes 11 s, Checks 82 s, Build and smoke 46 s, Smoke firefox 56 s, Smoke mobile-chrome 49 s, Smoke webkit 63 s, Security 15 s, Quality gates 7 s, Cloudflare preview 32 s). One run, not a median; it is in line with the six attempts above. `Checks` was 82 s here probably because the merged base added tests (Unverified).
+(Medians of an even number of runs are the mean of the two middle values; job medians are rounded to whole seconds in the table.)
 
-Not measured: a docs-only run of the new workflow (see above); the cold-cache first run per runner image (run 42283742465 gate path 103 s is the one sample); how often the Canonical retry fires (it did not fire in these runs, and it was demonstrated only by a forced early kill, run 42286982173). `Checks` rose from a 64 s to a 70 s median with unchanged work; that is within the spread of both samples (55 to 86 s) and has no cause here.
+Per attempt on the final head, gate path / wall in seconds: 87 / 115, 102 / 126, 80 / 103, 104 / 136, 90 / 120, 100 / 124. Per attempt on `3c7a016`: 91 / 114, 100 / 123, 95 / 116, 109 / 136, 112 / 134, 101 / 130. Step medians on the final head: Install Playwright browsers chromium 12 s, mobile-chrome 12 s, firefox 15.5 s, webkit 22.5 s (worst 29 s), against 37 s median and 99 s worst for all three browsers before; Run browser smoke tests per leg 11.5, 12.5, 23 and 23 s; Restore the system package cache 1 to 2 s; the two cache save steps were skipped in all six attempts (restore hit). No leg was cancelled or retried in these twelve attempts. The headline: gate path median from 218 s to 95 s (about 56 percent less) and wall median from 239 s to 122 s (about 49 percent less); worst case gate path 299 s to 104 s. These gains are far outside the run-to-run spread seen in either sample.
+
+Other hosted runs of the pull request (single runs, not part of any median): 42282857929 (first commit `9594b28`, apt cache cold): failed; the WebKit attempt 1 hit the 140 s limit and attempt 2 died on the dpkg lock (fixed in `4d1627b`), gate path 181 s. 42283742465 (`4d1627b`, cold again for the new key): success, gate path 103 s, wall 125 s. 42290133688 (merge commit `e182b23` on base `73eb3b6`): success, gate path 92 s, wall 117 s (Changes 11, Checks 82, Build and smoke 46, Smoke firefox 56, Smoke mobile-chrome 49, Smoke webkit 63, Security 15, Quality gates 7, Cloudflare preview 32 seconds).
+
+Not measured:
+
+- **Docs-only runs of the new workflow.** Acceptance criterion (a) asks for before and after numbers for docs-only and code pull requests. It is met for code pull requests only: this pull request changes the workflow, so it can never be docs-only, and the older docs-only sample used a different `Checks`. **Open item for the METRO-90 closeout:** measure the next docs-only pull request after merge (Changes, Checks, Security and Quality gates; run `gh api .../runs/<id>/jobs` as above) and append the result to a new evidence file. Expected, not measured: the docs-only gate path is `Checks` plus a few seconds, about 70 s, since none of those jobs changed in kind.
+- How often the Canonical retry fires in real runs: it did not fire in the twelve after-attempts and was demonstrated only by forced kills (runs 42283626854 and 42286982173, made on the earlier retry loop; the final loop with the mirror-switch guards and the 6 minute limit was not exercised by a forced kill, only by the policy tests and a normal install).
+- The cold-cache first run per runner image beyond the single sample above.
+
+`Checks` rose from a 64 s to a 70 s median with unchanged work; that is within the spread of both samples (51 to 86 s) and has no cause here.
 
 ## Throwaway demonstrations
 
