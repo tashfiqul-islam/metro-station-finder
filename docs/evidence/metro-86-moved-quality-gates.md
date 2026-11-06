@@ -1,6 +1,6 @@
 # METRO-86 moved text: quality gates
 
-Moved from docs/agents/quality-gates.md at revision db8d5e5 on 2026-11-06 (METRO-86). Repo-verified: the text below is copied unchanged from that revision; nothing was reworded, so its original dates, labels (Confirmed, Repo-verified, Web-verified, Unverified) and ticket references keep their original meaning. The rules in force live in [quality-gates.md](../agents/quality-gates.md). Frozen after this ticket.
+Moved from docs/agents/quality-gates.md at revision db8d5e5 on 2026-11-06 (METRO-86). Repo-verified: the text below is copied from that revision with three mechanical changes only: relative links were retargeted so they resolve from docs/evidence/, headings were demoted two levels under each source heading, and a few in-page anchors or section references to moved text were repointed. No sentence was reworded, so its original dates, labels (Confirmed, Repo-verified, Web-verified, Unverified) and ticket references keep their original meaning. The rules in force live in [quality-gates.md](../agents/quality-gates.md). Frozen after this ticket.
 
 ## From quality-gates.md, lines 3-3
 

@@ -1,6 +1,6 @@
 # METRO-86 moved text: Plane adapter, issue tracker and triage labels
 
-Moved from docs/agents/plane.md, issue-tracker.md and triage-labels.md at revision db8d5e5 on 2026-11-06 (METRO-86). Repo-verified: the text below is copied unchanged from that revision; nothing was reworded, so its original dates, labels (Confirmed, Repo-verified, Web-verified, Unverified) and ticket references keep their original meaning. The rules in force live in [plane.md](../agents/plane.md). Frozen after this ticket.
+Moved from docs/agents/plane.md, issue-tracker.md and triage-labels.md at revision db8d5e5 on 2026-11-06 (METRO-86). Repo-verified: the text below is copied from that revision with three mechanical changes only: relative links were retargeted so they resolve from docs/evidence/, headings were demoted two levels under each source heading, and a few in-page anchors or section references to moved text were repointed. No sentence was reworded, so its original dates, labels (Confirmed, Repo-verified, Web-verified, Unverified) and ticket references keep their original meaning. The rules in force live in [plane.md](../agents/plane.md). Frozen after this ticket.
 
 ## From plane.md, lines 3-3
 
