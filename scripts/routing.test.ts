@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
-import { missingRoutes, parseScenarios, parseTriggerTable, readSet } from "./routing.ts";
+import { missingRoutes, parseScenarios, parseTriggerTable, readSet, sorted } from "./routing.ts";
 
 const root = resolve(import.meta.dir, "..");
 const read = (file: string) => readFile(join(root, file), "utf8");
@@ -114,4 +114,38 @@ test("METRO-51 every guide the trigger table links exists and every key guide st
       "untrusted-input",
     ]),
   ).toEqual([]);
+});
+
+/**
+ * METRO-51, restored by METRO-86: the five METRO-8 scenarios must still resolve to their recorded read
+ * sets through the current trigger table. The needles name the current row triggers. Every guide the
+ * scenarios record still exists under the same name, so no old-to-merged name mapping is needed.
+ */
+const SCENARIOS: Record<string, string[]> = {
+  "Add geocoding request validation/provider error contract": [
+    "Imports, packages",
+    "API, contract",
+    "Secrets, location",
+    "Tests, bugs",
+  ],
+  "Fix keyboard focus/error rendering without provider changes": ["UI, interaction", "Tests, bugs"],
+  "Fix nearest-station calculation without UI/provider/log changes": ["Tests, bugs"],
+  "Update map-provider dependency": [
+    "Dependencies, tools",
+    "Imports, packages",
+    "API, contract",
+    "Secrets, location",
+    "Tests, bugs",
+    "UI, interaction",
+  ],
+  "Release checked revision without product changes": ["Dependencies, tools"],
+};
+
+test("METRO-51 AGENTS.md routes every recorded METRO-8 scenario to its expected read set", async () => {
+  const table = parseTriggerTable(await read("AGENTS.md"));
+  const expected = parseScenarios(await read("docs/evidence/metro-8.md"));
+  expect(sorted([...expected.keys()])).toEqual(sorted(Object.keys(SCENARIOS)));
+  for (const [name, needles] of Object.entries(SCENARIOS)) {
+    expect({ name, set: readSet(table, needles) }).toEqual({ name, set: expected.get(name) ?? [] });
+  }
 });
