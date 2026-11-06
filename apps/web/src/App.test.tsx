@@ -1,4 +1,5 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
+import { StrictMode } from "react";
 import { afterAll, afterEach, beforeAll, expect, test, vi } from "vitest";
 
 import { App } from "./App";
@@ -114,6 +115,9 @@ test("FND-T2 unmounting before the response arrives updates nothing and throws n
   errors.mockRestore();
 });
 
+// Coverage-only (METRO-79 review): React 19 ignores a state update on an unmounted component and logs nothing,
+// so this test cannot tell the `aborted` guard in the catch from its absence. The StrictMode test below is the
+// one that fails without the guard.
 test("FND-T2 unmounting before a failure arrives updates nothing and throws nothing", async () => {
   let fail = ignoreRejection;
   stubFetch(
@@ -131,4 +135,27 @@ test("FND-T2 unmounting before a failure arrives updates nothing and throws noth
   expect(screen.queryByRole("alert")).toBeNull();
   expect(errors).not.toHaveBeenCalled();
   errors.mockRestore();
+});
+
+test("METRO-79 a failure from an aborted request cannot replace the state of the current one", async () => {
+  // StrictMode runs the effect, aborts it, and runs it again: two requests, the first one aborted.
+  const rejections: ((reason: unknown) => void)[] = [];
+  stubFetch(
+    () =>
+      new Promise<Response>((_resolve, reject) => {
+        rejections.push(reject);
+      }),
+  );
+  render(
+    <StrictMode>
+      <App />
+    </StrictMode>,
+  );
+  expect(rejections).toHaveLength(2);
+  await act(async () => {
+    rejections[0]?.(new TypeError("offline"));
+    await Promise.resolve();
+  });
+  expect(screen.queryByRole("alert")).toBeNull();
+  expect(screen.getByRole("status").textContent).toContain("Loading");
 });

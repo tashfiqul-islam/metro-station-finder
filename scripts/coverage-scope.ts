@@ -8,7 +8,7 @@ import { cleanGitEnv } from "./git-env.ts";
 /**
  * Bun's per-file coverage gate only measures files that some test loads. This check closes that gap
  * for product source: every tracked non-test file under `apps/*\/src` and `packages/*\/src` must
- * appear in `coverage/lcov.info` (Bun) or `coverage/vitest/lcov.info` (Vitest in workerd, ADR-0016), except
+ * appear in `coverage/lcov.info` (Bun) or `coverage/vitest/lcov.info` (one Vitest istanbul run: `apps/api` in workerd and `apps/web` in happy-dom, ADR-0016), except
  * the documented exemptions below.
  */
 export const EXEMPT_PRODUCT_SOURCES: readonly (readonly [string, string])[] = [

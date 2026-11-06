@@ -48,7 +48,7 @@ Proposed criterion for stages 3 and 4 (numbers are a proposal for the owner to c
 2. The CI `Checks` job median over at least 5 runs, with both runners present, grows by at most 30 s from the 1 m 50 s baseline in [CI timings](../evidence/ci-timings-2026-11.md).
 3. Running the `scripts` tests under Vitest with the 90 percent branch gate leaves at most 20 source files under the gate (a tractable amount of new tests). If more, the owner chooses between more tests and an explicit, recorded re-baseline.
 
-If any fails, stop after stage 2 and record a no-go note in [testing](../agents/testing.md). The owner accepted this ADR on 2026-11-06 for the API and web projects. The criterion numbers above are still a proposal for stage 3 and the owner confirms them then. Ticket 1 is created; tickets 2 to 4 below are drafts and have not been created.
+If any fails, stop after stage 2 and record a no-go note in [testing](../agents/testing.md). The owner accepted this ADR on 2026-11-06 for the API and web projects. The criterion numbers above are still a proposal for stage 3 and the owner confirms them then. Ticket 1 landed as METRO-77 and ticket 2 as METRO-79 (both in Plane); tickets 3 and 4 below are drafts and have not been created.
 
 ## Consequences
 
@@ -59,7 +59,7 @@ The branch gate is the dominant cost. Adding a 90 percent per-file branch gate (
 Other costs:
 
 - About 63 more installed packages (four direct), and a second set of wrangler, miniflare and workerd copies (three, two and three versions in the spike).
-- Two coverage runs (v8 and istanbul) whose lcov must be merged or uploaded beside each other.
+- Bun's lcov and the Vitest lcov are uploaded beside each other. One istanbul run covers `apps/api` and `apps/web` (decided in METRO-79, see [the evidence](../evidence/metro-79.md)), so there is no separate v8 run.
 - One more TypeScript project for the workerd tests.
 - Small test files start slower.
 - A migration that touches 81 test files (`scripts` 62; 62 `Bun.spawnSync` calls and 14 `import.meta.dir` uses across the suite).
@@ -87,7 +87,7 @@ Today: `scripts/adr.test.ts` checks this ADR's shape. Nothing else enforces the 
 - `eslint/no-restricted-imports` keeps rejecting `bun:test`;
 - the tripwire in `scripts/coverage.test.ts` is removed only in the final stage, if there is one.
 
-## Follow-up ticket drafts (not created in Plane)
+## Follow-up ticket drafts (tickets 1 and 2 created in Plane; 3 and 4 are not)
 
 Common acceptance for every ticket: per-file 90 percent lines and functions kept, a 90 percent branch threshold for the project it moves, randomised order with a printed seed, no weakened assertion or lowered number, exact pins within the cooldown, and lint rules re-pointed. Order is dependency order: 1, then 2, then the go/no-go in 3, then 4. There is no separate lint ticket: lint is part of ticket 1.
 
@@ -112,7 +112,7 @@ Common acceptance for every ticket: per-file 90 percent lines and functions kept
      - lcov uploaded as a CI artifact;
      - the old API `bun test` files removed in the same pull request;
      - the CI `Checks` delta measured and recorded.
-2. **Web component tests on Vitest.**
+2. **Web component tests on Vitest.** Created in Plane and implemented as METRO-79 ([evidence](../evidence/metro-79.md)).
    - Scope: `apps/web` project with `environment: "happy-dom"`; port the 7 `apps/web/src/*.test.*` files; delete `dom-test-env.ts` and `dom-test-env.test.ts`; update `tsconfig.dom-test.json` (Vitest and DOM types, no Bun types); keep `main.test.tsx` as the one entry-file exception.
    - Acceptance: no global swap anywhere; per-file thresholds including branches for every web source file; run on 12 seeds as before; the "Component test DOM" paragraph in [testing](../agents/testing.md) replaced.
 3. **Go or no-go on `scripts` and `packages`, then the scripts tests.** First step is only measurement: run the `scripts` and `packages` tests under Vitest (try Node and `bun --bun` for the pool runtime), measure full-suite wall time and the files under the branch gate, and compare with the criterion in the Decision.

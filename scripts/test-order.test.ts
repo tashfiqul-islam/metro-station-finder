@@ -214,3 +214,30 @@ test("ADR-0016 the repository's sequence option picks a new seed per run", async
     expect(seeds.size).toBeGreaterThan(1);
   });
 }, 120000);
+
+// METRO-79: a Vitest project does not inherit the root `test.sequence` (measured in workerd in METRO-77 and
+// again for the web project in METRO-79). This runs the REAL apps/web/vitest.config.ts options (merged with
+// a fixture root and include only) against the order-coupled fixture, so dropping `sharedTestOptions` from
+// the web config, or any option that stops the in-file shuffle, makes the fixture run in source order.
+test("METRO-79 the real web project config shuffles tests inside a file and reproduces by seed", async () => {
+  await mkdir(".local", { recursive: true });
+  const root = await mkdtemp(resolve(".local/vitest-web-order-"));
+  try {
+    await writeFile(join(root, "coupled.test.ts"), VITEST_COUPLED_FIXTURE);
+    const webConfig = resolve("apps/web/vitest.config.ts").replaceAll("\\", "/");
+    const fixtureRoot = root.replaceAll("\\", "/");
+    await writeFile(
+      join(root, "vitest.config.ts"),
+      `import { mergeConfig } from "vitest/config";\n\nimport web from "${webConfig}";\n\nexport default mergeConfig(web, { test: { root: "${fixtureRoot}", include: ["coupled.test.ts"] } });\n`,
+    );
+    const seed = await findExposingVitestSeed(root);
+    const first = await vitestRun(root, `--sequence.seed=${seed}`);
+    const second = await vitestRun(root, `--sequence.seed=${seed}`);
+    expect(first.exitCode).not.toBe(0);
+    expect(first.seed).toBe(String(seed));
+    expect(first.order).not.toBe("0,1,2,3,4");
+    expect(second.order).toBe(first.order);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}, 180000);

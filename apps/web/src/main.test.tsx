@@ -45,7 +45,7 @@ test("METRO-58 main.tsx wraps the app in StrictMode (effects mount, clean up and
   expect(root.querySelector("h1")?.textContent).toBe("Metro scaffold");
 });
 
-test("METRO-71 main.tsx fails loudly when the page has no #root element", async () => {
+test("METRO-79 main.tsx fails loudly when the page has no #root element", async () => {
   vi.resetModules();
   expect(document.getElementById("root")).toBeNull();
   await expect(import("./main")).rejects.toThrow("Missing application root");

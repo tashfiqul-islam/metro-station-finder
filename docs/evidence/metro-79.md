@@ -64,14 +64,43 @@ Totals: 89/89 statements, 51/51 branches, 25/25 functions, 78/78 lines. `index.t
 
 ### Branch gaps found by the gate and the tests written
 
-On the straight port the gate failed: `main.tsx` 50 percent branches, `status-client.ts` 77.77, `App.tsx` 90 (exactly at the line but with an uncovered branch). Bun could not see any of this (no branch records). New tests (each targets one reported branch; mutation of the source was not run, Unverified):
+On the straight port the gate failed: `main.tsx` 50 percent branches, `status-client.ts` 77.77, `App.tsx` 90 (exactly at the line but with an uncovered branch). Bun could not see any of this (no branch records). New tests (each targets one reported branch; mutation results are in the next section):
 
 1. `main.tsx` fails loudly when the page has no `#root` element (the `throw new Error("Missing application root")` branch).
 2. `status-client`: a response without a `content-type` header rejects as "Status response is not JSON" (the `?? ""` branch).
 3. `status-client`: the client uses the global `fetch` when none is passed (the default-parameter branch).
 4. `App`: unmounting before a failure arrives updates nothing and throws nothing (the `aborted` guard in the `catch`).
 
-Test counts: the web project runs 37 tests (33 ported plus the 4 new ones); on Bun it had 35 (33 plus the 2 deleted `dom-test-env` tests). The API project is unchanged at 28, so Vitest runs 65 tests in 11 files.
+Test counts: the web project runs 38 tests (33 ported plus 5 new ones: the four above and the StrictMode test below); on Bun it had 35 (33 plus the 2 deleted `dom-test-env` tests). The API project is unchanged at 28, so Vitest runs 66 tests in 11 files.
+
+### Mutation checks (Repo-verified, review follow-up)
+
+Each source line was altered in turn, `vitest run --project web` run, and the source restored (the three source files show no diff afterwards). Output, trimmed:
+
+```
+=== M1 main.tsx: remove the missing-root throw
+x METRO-79 main.tsx fails loudly when the page has no #root element
+Tests  1 failed | 37 passed (38)
+=== M2 status-client.ts: content-type fallback "" -> "application/json"
+x FND-R4 a response without a content-type header rejects as not JSON
+Tests  1 failed | 37 passed (38)
+=== M3 status-client.ts: drop the default fetcher (default replaced by a rejecting stub)
+x FND-R4 the client uses the global fetch when none is passed
+Tests  1 failed | 37 passed (38)
+=== M4 App.tsx: drop the aborted guard in the catch
+x METRO-79 a failure from an aborted request cannot replace the state of the current one
+Tests  1 failed | 37 passed (38)
+```
+
+M4 is the review finding. The first test written for the `aborted` guard ("unmounting before a failure arrives updates nothing") passed with the guard removed, because React 19 ignores a state update on an unmounted component and logs nothing: it is coverage-only, and its comment now says so (it is kept, not weakened). The guard itself is not dead code: under `StrictMode` the effect runs, is cleaned up (aborted) and runs again, so an aborted first request can settle while the second is pending and, without the guard, overwrite the state of the mounted component. The new test renders `App` in `StrictMode`, rejects the first (aborted) request's promise and asserts there is still no alert and the loading status shows; it is the only test that fails under M4. The success-side guard (`aborted` before the success `setState`) was not mutated here, so whether it is observable the same way is Unverified.
+
+### Twelve seeds (Repo-verified, the ADR-0016 acceptance line)
+
+`vitest run --project web --sequence.seed=N`, 38 tests each: seeds 11, 22, 33, 44, 55, 66, 77, 88, 99, 101, 202 and 303 all passed (`38 passed (38)` every time).
+
+### Committed guard for in-file shuffle
+
+`scripts/test-order.test.ts`, "METRO-79 the real web project config shuffles tests inside a file and reproduces by seed", merges the real `apps/web/vitest.config.ts` (through `mergeConfig`, overriding only `root` and `include`) with a throwaway order-coupled fixture under `.local/`, finds a seed that exposes the coupling, and checks the printed seed, a non-source order and reproduction by seed. RED check (Repo-verified): with `...sharedTestOptions` removed from the web config the test failed with "No seed in 1..50 exposed the coupling" (about 28 s, the full seed search); with it the test passes in a few seconds. The config was restored.
 
 ## Timings of `bun run check`, command by command (Repo-verified, Windows, one run, wall seconds)
 
@@ -96,8 +125,12 @@ Method: each command of the `check` chain run on its own with `mise exec -- bun 
 | `typecheck` (`tsc -b`)  | 1.5     |
 | Sum                     | 97.8    |
 
-`bun test` is 90 percent of the chain (975 tests in 71 files, 86.65 s by its own clock; a first run of the same command on the earlier tree took 86.7 s). Its slowest files by JUnit time are all subprocess-bound script tests: `tsc-build.test.ts` 20.1 s, `layering.test.ts` 15.0 s, `gates.test.ts` 8.1 s, `git-isolation.test.ts` 7.8 s, `types.test.ts` 7.4 s, `hooks.test.ts` 6.7 s, `secrets-index.test.ts` 6.2 s, `commit-message.test.ts` 5.2 s. Vitest, both projects with istanbul, costs 2.1 s of the chain, and adding web to the API run adds about 0.1 s (2.0 s API only against 2.1 s for both, table above). So locally the Vitest stages do not explain the +66 to +69 s seen in `Checks` in [METRO-77](metro-77.md); the Bun script tests dominate, and a hosted Ubuntu runner is where `tsc-build`, `layering` and the other subprocess tests would grow. Unverified: the per-command breakdown on the hosted runner (the CI step log shows only the whole `bun run check`).
+`bun test` is 90 percent of the chain (975 tests in 71 files, 86.65 s by its own clock; a first run of the same command on the earlier tree took 86.7 s). Its slowest files by JUnit time are all subprocess-bound script tests: `tsc-build.test.ts` 20.1 s, `layering.test.ts` 15.0 s, `gates.test.ts` 8.1 s, `git-isolation.test.ts` 7.8 s, `types.test.ts` 7.4 s, `hooks.test.ts` 6.7 s, `secrets-index.test.ts` 6.2 s, `commit-message.test.ts` 5.2 s. Vitest, both projects with istanbul, costs 2.1 s of the chain, and adding web to the API run adds about 0.1 s (2.0 s API only against 2.1 s for both, table above). So locally the Vitest stages are about 2 s of a 98 s check. The hosted `Checks` growth seen in [METRO-77](metro-77.md) (+66 to +69 s) is **not explained**: `bun test` lost the web files in that change and `Checks` still grew, so attributing it to the Bun script tests would be a guess. Unverified. What would verify it: per-step timing printed by CI around each command of `check`, compared over at least five runs. The workflow is not changed in this ticket. The hosted `Checks` run of PR #80 took 2 m 44 s, one run, not a median.
+
+## Superseded text elsewhere
+
+[ADR-0005](../adr/0005-test-strategy.md) (accepted, not edited) still says components are tested under Bun with `@happy-dom/global-registrator`; that sentence is superseded by ADR-0016 stage 2 and this ticket. Its "DOM and Bun types" wording for `tsconfig.dom-test.json` is likewise superseded: the project now has DOM, Node and React types and no Bun types.
 
 ## Not verified
 
-Ubuntu (WSL or hosted) for the web project; a `Checks` median (one hosted run per PR); the cause of V8 returning no files inside a `.claude` path; behaviour with the other Vitest 4.x line.
+Ubuntu (WSL) for the web project (the hosted Ubuntu `Checks` job passed); a `Checks` median (one hosted run per PR); the cause of V8 returning no files inside a `.claude` path; behaviour with the other Vitest 4.x line.
