@@ -13,6 +13,9 @@ async function fixture() {
     await cp(resolve(file), join(root, file));
   await cp(resolve(".mise"), join(root, ".mise"), { recursive: true });
   await mkdir(join(root, ".github"));
+  await mkdir(join(root, "apps/api"), { recursive: true });
+  await cp(resolve("vitest.config.ts"), join(root, "vitest.config.ts"));
+  await cp(resolve("apps/api/vitest.config.ts"), join(root, "apps/api/vitest.config.ts"));
   await cp(resolve(".github/renovate.json5"), join(root, ".github/renovate.json5"));
   return root;
 }
@@ -379,6 +382,74 @@ test("METRO-35 rejects a bunfig without a [test] table", async () => {
   try {
     await editFile(root, "bunfig.toml", (source) => source.slice(0, source.indexOf("[test]")));
     await expectRejection(validateConfiguration(root), "bunfig.toml test");
+  } finally {
+    await rm(root, { recursive: true });
+  }
+});
+
+// ADR-0016: a Vitest config is held to the same ordering rule as bunfig.toml (shuffle on, no fixed seed).
+test("METRO-77 the real Vitest config shuffles without a fixed seed", async () => {
+  await validateConfiguration(resolve("."));
+  const source = await readFile(resolve("vitest.config.ts"), "utf8");
+  expect(source).toMatch(/shuffle: true/u);
+  expect(source).not.toMatch(/\bseed\s*:/u);
+});
+
+test("METRO-77 rejects a Vitest config without sequence.shuffle naming it", async () => {
+  const root = await fixture();
+  try {
+    await editFile(root, "vitest.config.ts", (source) =>
+      source.replace("sequence: { shuffle: true },", ""),
+    );
+    await expectRejection(validateConfiguration(root), "sequence.shuffle");
+  } finally {
+    await rm(root, { recursive: true });
+  }
+});
+
+test("METRO-77 rejects shuffle switched off", async () => {
+  const root = await fixture();
+  try {
+    await editFile(root, "vitest.config.ts", (source) =>
+      source.replace("shuffle: true", "shuffle: false"),
+    );
+    await expectRejection(validateConfiguration(root), "sequence.shuffle");
+  } finally {
+    await rm(root, { recursive: true });
+  }
+});
+
+test("METRO-77 rejects a fixed seed in the root Vitest config naming sequence.seed", async () => {
+  const root = await fixture();
+  try {
+    await editFile(root, "vitest.config.ts", (source) =>
+      source.replace("shuffle: true", "shuffle: true, seed: 42"),
+    );
+    await expectRejection(validateConfiguration(root), "sequence.seed");
+  } finally {
+    await rm(root, { recursive: true });
+  }
+});
+
+test("METRO-77 rejects a fixed seed or disabled shuffle in a project Vitest config", async () => {
+  for (const sequence of ["sequence: { seed: 7 }", "sequence: { shuffle: false }"]) {
+    const root = await fixture();
+    try {
+      await editFile(root, "apps/api/vitest.config.ts", (source) =>
+        source.replace("test: {", `test: { ${sequence},`),
+      );
+      await expectRejection(validateConfiguration(root), "apps/api/vitest.config.ts");
+    } finally {
+      await rm(root, { recursive: true });
+    }
+  }
+});
+
+test("METRO-77 rejects a missing root Vitest config", async () => {
+  const root = await fixture();
+  try {
+    await rm(join(root, "vitest.config.ts"));
+    await expectRejection(validateConfiguration(root), "vitest.config.ts");
   } finally {
     await rm(root, { recursive: true });
   }

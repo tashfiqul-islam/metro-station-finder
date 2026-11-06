@@ -10,6 +10,7 @@
       "project": ["src/**/*.{ts,tsx}"]
     },
     "apps/api": {
+      "ignoreDependencies": ["cloudflare"],
       "project": ["src/**/*.ts"]
     },
     "packages/contracts": {

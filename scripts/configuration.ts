@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { isRecord } from "./guards.ts";
@@ -69,6 +69,7 @@ export async function validateConfiguration(root: string): Promise<void> {
   if (testTable["randomize"] !== true) throw new Error("bunfig.toml test.randomize must be true");
   if (testTable["seed"] !== undefined)
     throw new Error("bunfig.toml test.seed must not be set (a fixed seed defeats randomization)");
+  await validateVitestConfigs(root);
   const renovate = await readRenovate(root);
   const renovateAge = renovate["minimumReleaseAge"];
   if (typeof renovateAge !== "string")
@@ -77,6 +78,59 @@ export async function validateConfiguration(root: string): Promise<void> {
     throw new Error(
       `${RENOVATE_FILE}: minimumReleaseAge "${renovateAge}" must equal bunfig.toml install.minimumReleaseAge (${RELEASE_COOLDOWN_SECONDS} seconds)`,
     );
+}
+
+const VITEST_ROOT_CONFIG = "vitest.config.ts";
+
+function stripComments(source: string): string {
+  return source.replaceAll(/\/\*[\s\S]*?\*\//gu, "").replaceAll(/^\s*\/\/.*$/gmu, "");
+}
+
+/** Vitest config files under apps/* and packages/*, as repository-relative POSIX paths. */
+async function projectVitestConfigs(root: string): Promise<string[]> {
+  const found: string[] = [];
+  for (const group of ["apps", "packages"]) {
+    const entries = await readdir(join(root, group), { withFileTypes: true }).catch(() => []);
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      for (const name of ["vitest.config.ts", "vitest.config.mts", "vitest.config.js"]) {
+        const path = `${group}/${entry.name}/${name}`;
+        if (
+          await readFile(join(root, path), "utf8").then(
+            () => true,
+            () => false,
+          )
+        )
+          found.push(path);
+      }
+    }
+  }
+  return found;
+}
+
+/**
+ * ADR-0016: Vitest runs beside Bun, so its order is held to the same rule as bunfig.toml (METRO-35). The
+ * root config must turn `sequence.shuffle` on, and no Vitest config may set a fixed `seed` or switch
+ * shuffle off. The configs are TypeScript, so this reads the text with comments removed.
+ */
+async function validateVitestConfigs(root: string): Promise<void> {
+  const rootSource = stripComments(
+    await readFile(join(root, VITEST_ROOT_CONFIG), "utf8").catch((error: unknown) => {
+      throw new Error(`${VITEST_ROOT_CONFIG}: ${String(error)}`, { cause: error });
+    }),
+  );
+  if (!/\bshuffle\s*:\s*true\b/u.test(rootSource))
+    throw new Error(`${VITEST_ROOT_CONFIG}: test.sequence.shuffle must be true`);
+  const files = [VITEST_ROOT_CONFIG, ...(await projectVitestConfigs(root))];
+  for (const file of files) {
+    const source = stripComments(await readFile(join(root, file), "utf8"));
+    if (/\bseed\s*:/u.test(source))
+      throw new Error(
+        `${file}: test.sequence.seed must not be set (a fixed seed defeats randomization)`,
+      );
+    if (/\bshuffle\s*:\s*false\b/u.test(source))
+      throw new Error(`${file}: test.sequence.shuffle must not be false`);
+  }
 }
 
 const RELEASE_COOLDOWN_SECONDS = 259200;

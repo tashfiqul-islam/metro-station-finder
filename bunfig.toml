@@ -11,6 +11,8 @@ minimumReleaseAge = 259200
 # Random order exposes shared-state coupling. Bun picks a new seed per run and prints ` --seed=N` in the
 # summary; reproduce with `bun test --seed N`. Never set `seed` here: a fixed seed is a fixed order.
 randomize = true
+# Files Vitest owns (ADR-0016 stage 1): the API tests run in workerd under vitest, never under Bun.
+pathIgnorePatterns = ["apps/api/**"]
 # Per-file gate (Bun enforces coverageThreshold file by file). No coveragePathIgnorePatterns on purpose.
 coverage = true
 coverageReporter = ["text", "lcov"]

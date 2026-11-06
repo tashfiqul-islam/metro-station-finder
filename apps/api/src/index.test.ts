@@ -1,4 +1,6 @@
 import { parseErrorEnvelope, parseScaffoldStatus } from "@metro/contracts";
+import { exports } from "cloudflare:workers";
+import { expect, test } from "vitest";
 
 import { createApp } from "./app";
 import app from "./index";
@@ -55,4 +57,15 @@ test("FND-R3 HEAD on the status route is served and OPTIONS is a 405 envelope", 
   expect(await head.text()).toBe("");
   const options = await app.request("/api/scaffold/status", { method: "OPTIONS" });
   expect(options.status).toBe(405);
+});
+
+test("METRO-77 the real Worker entry runs inside workerd and serves the status route", async () => {
+  // Proves the runtime: Bun and Node report other user agents.
+  expect(navigator.userAgent).toBe("Cloudflare-Workers");
+  const response = await exports.default.fetch("https://metro.test/api/scaffold/status");
+  expect(response.status).toBe(200);
+  expect(parseScaffoldStatus(await response.json())).toEqual({
+    kind: "synthetic-scaffold",
+    ready: true,
+  });
 });

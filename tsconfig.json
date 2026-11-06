@@ -4,6 +4,7 @@
     { "path": "./apps/web" },
     { "path": "./tsconfig.dom-test.json" },
     { "path": "./apps/api" },
+    { "path": "./apps/api/tsconfig.worker-test.json" },
     { "path": "./packages/contracts" },
     { "path": "./packages/core" },
     { "path": "./scripts" },
