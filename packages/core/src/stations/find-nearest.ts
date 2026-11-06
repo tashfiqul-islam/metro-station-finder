@@ -1,15 +1,8 @@
-import {
-  createFare,
-  geographicDistanceKm,
-  parseCoordinate,
-  type Coordinate,
-  type CoordinateRejection,
-  type FareResult,
-  type FareTable,
-  type GeographicDistanceKm,
-  type Station,
-  type StationId,
-} from "../domain/index.ts";
+import { parseCoordinate } from "../geo/coordinate.ts";
+import type { Coordinate, CoordinateRejection } from "../geo/coordinate.ts";
+import { geographicDistanceKm } from "../geo/distance.ts";
+import type { GeographicDistanceKm } from "../geo/distance.ts";
+import type { Station } from "./station.ts";
 
 export type NearestStationResult =
   | { readonly kind: "nearest"; readonly station: Station; readonly distance: GeographicDistanceKm }
@@ -45,15 +38,4 @@ export function findNearestStation(
 /** Exact, case-sensitive match on a station name or alias; undefined when nothing matches. */
 export function resolveStation(stations: readonly Station[], label: string): Station | undefined {
   return stations.find((s) => s.name === label || s.aliases.includes(label));
-}
-
-/** Fare between two stations; any gap or malformed cell is `unknown-fare`, never zero. */
-export function findFare(table: FareTable, from: StationId, to: StationId): FareResult {
-  const row = table.order.indexOf(from);
-  const column = table.order.indexOf(to);
-  if (row < 0 || column < 0) return { kind: "unknown-fare", reason: "unknown-station" };
-  const amount = table.amounts[row]?.[column];
-  if (typeof amount !== "number" || !Number.isFinite(amount) || amount < 0)
-    return { kind: "unknown-fare", reason: "no-fare-entry" };
-  return { kind: "fare", fare: createFare(amount) };
 }

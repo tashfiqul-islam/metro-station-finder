@@ -7,7 +7,7 @@
 - Research: **Repo-verified** legacy behavior is recorded in [feature parity](../product/feature-parity.md) and the [glossary](../product/glossary.md). Haversine on a 6371 km sphere and WGS84 latitude/longitude ranges are standard definitions needing no library (**Unverified** against a current official source; no dependency was added, so nothing in the lockfile depends on them). Datum, coordinate accuracy, fare publisher and effective date remain **Unknown**.
 - Domain: [glossary](../product/glossary.md) (Station, Station identifier, Nearest, Geographic distance, Walking distance, Fare, Same station); parity requirements R2, R6, R7 and R8.
 - Problem and intended outcome: later slices (search, map, fare page, API) need one stable station identity and value types before feature code exists. The legacy app identifies stations by array position and exact strings, with five label mismatches between its two datasets.
-- Scope: core domain types (`Station`, `StationId`, `Coordinate`, `Fare`, `FareTable`, `UnknownFare`, `GeographicDistanceKm`, `WalkingDistanceMeters`), the pure functions `findNearestStation`, `resolveStation` and `findFare`, and the versioned baseline dataset `baselineDataset` (`baseline-v2`) under `packages/core/src/data`.
+- Scope: core domain types (`Station`, `StationId`, `Coordinate`, `Fare`, `FareTable`, `UnknownFare`, `GeographicDistanceKm`, `WalkingDistanceMeters`), the pure functions `findNearestStation`, `resolveStation` and `findFare`, and the versioned baseline dataset `baselineDataset` (`baseline-v2`) under `packages/core/src/stations`.
 - Exclusions: database, map or UI code, walking-route computation, geocoding or provider calls, API contracts, unit formatting (km versus miles), correcting any legacy value except the three documented deviations (METRO-67).
 - Constraints and contracts: core stays dependency-free and the domain layer imports only itself (dependency-cruiser rule `core-domain-imports-only-domain`, plus the existing `core-imports-only-core`). Fixtures are synthetic or the legacy baseline; no personal location.
 - Grouping: module 02 foundation; release v1.0.0, nothing published by this ticket.
@@ -91,9 +91,9 @@ Owner-delegated decisions of 2026-11-05, based on [Dhaka MRT Line-6 research](..
 
 ### Acceptance
 
-- A1: Given the domain layer, when imported from `packages/core/src/domain`, then `Station`, `Coordinate` and `Fare` types are exported and geographic and walking distance are separate types that do not assign to each other (compile-time `@ts-expect-error` cases in `domain.test.ts`, checked by `tsc -b`).
-- A2: Given `baselineDataset`, then it has 16 stations with unique IDs, no label shared by two stations, a 16x16 symmetric fare table with a zero diagonal and 256 finite cells, legacy order, and every legacy label from both arrays (including the old spellings `Shahbagh` and `Bijoy Sharani`) resolves to the station at its position. The dataset equals the legacy names and coordinates except the three documented deviations (A2a), and its aliases are exactly the reviewed set (`baseline-dataset.test.ts`).
-- A2a: Given the legacy snapshot embedded in `baseline-dataset.test.ts`, then the only differences from `baselineDataset` are the name of `shahbagh`, the name of `bijoy-sharani` and the coordinate of `bijoy-sharani`; any other drift fails. All 256 fare cells are also compared with the legacy matrix embedded in the test (generated from `fareMatrix` in `af903d7:src/services/fareCalculation.ts`); no fare deviates.
+- A1: Given the core public entry `packages/core/src/index.ts`, then `Station`, `Coordinate` and `Fare` types are exported and geographic and walking distance are separate types that do not assign to each other (compile-time `@ts-expect-error` cases in `geo/distance.test.ts` and `stations/station.test.ts`, checked by `tsc -b`).
+- A2: Given `baselineDataset`, then it has 16 stations with unique IDs, no label shared by two stations, a 16x16 symmetric fare table with a zero diagonal and 256 finite cells, legacy order, and every legacy label from both arrays (including the old spellings `Shahbagh` and `Bijoy Sharani`) resolves to the station at its position. The dataset equals the legacy names and coordinates except the three documented deviations (A2a), and its aliases are exactly the reviewed set (`stations/dataset.test.ts`).
+- A2a: Given the legacy snapshot embedded in `stations/dataset.test.ts`, then the only differences from `baselineDataset` are the name of `shahbagh`, the name of `bijoy-sharani` and the coordinate of `bijoy-sharani`; any other drift fails. All 256 fare cells are also compared with the legacy matrix embedded in the test (generated from `fareMatrix` in `af903d7:src/services/fareCalculation.ts`); no fare deviates.
 - A3: Tests cover tie order (forward, reversed and duplicate-coordinate), invalid coordinates (NaN, out of range, both axes), empty dataset, unknown station, same-station fare and an unknown fare never being zero, including a malformed matrix cell (`stations.test.ts`).
 - A4: Given a core domain file that imports core application or data code, then dependency-cruiser fails with `core-domain-imports-only-domain` (`scripts/layering.test.ts`); application and data importing the domain passes.
 
@@ -107,9 +107,9 @@ Latitude exactly ±90 and longitude exactly ±180 are accepted; just beyond is r
 
 ### Testing seams
 
-- S1: `packages/core/src/domain` public exports (`domain.test.ts`).
+- S1: `packages/core/src/index.ts` public exports (`index.test.ts`).
 - S2: `findNearestStation`, `resolveStation`, `findFare` (`stations.test.ts`).
-- S3: `baselineDataset` fixture (`baseline-dataset.test.ts`).
+- S3: `baselineDataset` fixture (`stations/dataset.test.ts`).
 - S4: dependency-cruiser layering (`scripts/layering.test.ts`).
 
 ### Check plan
