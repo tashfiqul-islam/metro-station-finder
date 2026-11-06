@@ -97,10 +97,23 @@ Re-test after the next wrangler bump, on Windows:
 
 ## Local tokens outside the repository (METRO-85)
 
-`CLOUDFLARE_API_TOKEN` and `PLANE_API_KEY` must not live in the repository folder. Scripts read them from the process environment only and fail naming the variable when it is missing; CI supplies them from GitHub environment secrets. `.claude/settings.json` denies agent `Read` of `./.env` and `./.env.*`; that is a second layer, because a shell `cat .env` is not blocked by it. Moving the tokens out is the real fix. Owner steps (the agent never reads or moves the values):
+`CLOUDFLARE_API_TOKEN` and `PLANE_API_KEY` must not live in the repository folder. Scripts read them from the process environment only and fail naming the variable when it is missing; CI supplies them from GitHub environment secrets. Moving the tokens out is the real fix. `.claude/settings.json` is a second layer.
 
-1. Windows (PowerShell): `[Environment]::SetEnvironmentVariable("CLOUDFLARE_API_TOKEN", (Read-Host -MaskInput "Cloudflare token"), "User")`, the same for `PLANE_API_KEY`, then restart the terminal and editor so they inherit it.
-2. Ubuntu: add `export CLOUDFLARE_API_TOKEN=...` and `export PLANE_API_KEY=...` to `~/.profile` (or a `chmod 600` file it sources) outside any repository, then log in again.
-3. Delete both lines from the root `.env` and confirm with `Select-String -Path .env -Pattern '^(CLOUDFLARE_API_TOKEN|PLANE_API_KEY)=' -Quiet`, which must print `False`.
-4. The Plane MCP server keeps its own key in the owner's user-level Claude config (`mcpServers.plane.env.PLANE_API_KEY`, outside the repository); the Cloudflare MCP server `cloudflare-api` is a remote HTTP server (`mcp.cloudflare.com`) with no token in its config entry. Neither reads the repository `.env`.
+**Deny rules.** `permissions.deny` holds `Read(./.env)`, `Read(./.env.*)`, `Read(/.env)` and `Read(/.env.*)`. Anchoring (official docs, code.claude.com/docs/en/permissions, Read and Edit rule table, checked 2026-11-06): `./path` and `path` are relative to the current directory, so they miss the root `.env` when an agent runs in a subdirectory; `/path` is relative to the settings source, which for project settings is the project root; `//path` is absolute. The `/` pair covers the root file from any directory. The `.env.*` pattern also blocks `.env.example`. These rules cover Claude's file tools only, not a shell `cat .env`.
+
+**Owner steps** (the agent never reads or moves the values):
+
+1. Windows, PowerShell 7.1 or newer (`Read-Host -MaskInput` needs it). Run both:
+   - `[Environment]::SetEnvironmentVariable("CLOUDFLARE_API_TOKEN", (Read-Host -MaskInput "Cloudflare token"), "User")`
+   - `[Environment]::SetEnvironmentVariable("PLANE_API_KEY", (Read-Host -MaskInput "Plane key"), "User")`
+
+   Quit and reopen the editor and terminals completely; a window reload keeps the old environment. Check without printing values: `[bool][Environment]::GetEnvironmentVariable("PLANE_API_KEY","User")` must print `True` (same for `CLOUDFLARE_API_TOKEN`).
+
+2. Ubuntu. Enter each value without it reaching shell history, into a file outside any repository:
+   - `read -rs -p "Cloudflare token: " V && printf 'export CLOUDFLARE_API_TOKEN=%q\n' "$V" >> ~/.metro-tokens; unset V`
+   - `read -rs -p "Plane key: " V && printf 'export PLANE_API_KEY=%q\n' "$V" >> ~/.metro-tokens; unset V`
+   - `chmod 600 ~/.metro-tokens`, then add `. ~/.metro-tokens` to both `~/.profile` and `~/.bashrc`. `~/.profile` is read by login shells only, so start the editor from a session that has loaded it (log in again).
+   - Check: `test -n "$PLANE_API_KEY" && echo set` (same for `CLOUDFLARE_API_TOKEN`).
+3. Delete both lines from the root `.env`, then check. Windows: `Select-String -Path .env -Pattern '^(CLOUDFLARE_API_TOKEN|PLANE_API_KEY)=' -Quiet` must print `False`. Ubuntu: `grep -qE '^(CLOUDFLARE_API_TOKEN|PLANE_API_KEY)=' .env && echo present || echo absent` must print `absent`.
+4. MCP servers, observed by key name in the owner's `~/.claude.json` on 2026-11-06 (values not read); not verifiable from the repo. `plane` (stdio) has `PLANE_API_KEY` and `PLANE_WORKSPACE_SLUG` in its own `env` block, so that key also needs moving or rotating there. `cloudflare-api` (HTTP, mcp.cloudflare.com) has no `env` or `headers` keys. Neither reads the repository `.env`. The session also exposes claude.ai-hosted connectors whose authentication lives in the owner's claude.ai account, not in any file read here (Unverified).
 5. Rotating both tokens is the owner's call and worth doing, because agents could read them and they may sit in old transcripts.
