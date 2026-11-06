@@ -1,5 +1,5 @@
-import type { Station } from "../domain/index.ts";
-import { stationId } from "../domain/index.ts";
+import { stationId } from "./station.ts";
+import type { Station } from "./station.ts";
 import type { StationDataset } from "./validate-dataset.ts";
 
 function station(

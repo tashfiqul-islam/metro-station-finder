@@ -13,7 +13,7 @@ import { cleanGitEnv } from "./git-env.ts";
  */
 export const EXEMPT_PRODUCT_SOURCES: readonly (readonly [string, string])[] = [
   [
-    "packages/core/src/domain/scaffold-status.ts",
+    "packages/core/src/fares/fare-matrix.ts",
     "Type-only module with no executable code, so there is nothing to measure.",
   ],
 ];

@@ -1,6 +1,7 @@
-import { findFare, findNearestStation, resolveStation } from "../application/stations.ts";
-import { stationId } from "../domain/index.ts";
-import { baselineDataset } from "./baseline-dataset.ts";
+import { findFare } from "../fares/quote-fare.ts";
+import { baselineDataset } from "./dataset.ts";
+import { findNearestStation, resolveStation } from "./find-nearest.ts";
+import { stationId } from "./station.ts";
 import { validateDataset } from "./validate-dataset.ts";
 
 const { stations, fares } = baselineDataset;
