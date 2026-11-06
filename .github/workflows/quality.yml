@@ -78,23 +78,6 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: node scripts/commit-message.ts --range "$BASE_SHA..$HEAD_SHA"
-      - name: Probe CPU count and Bun test worker counts (temporary, METRO-82)
-        run: |
-          nproc
-          timeit() {
-            label="$1"; shift
-            start=$(date +%s)
-            "$@" > probe.log 2>&1 || echo "exit code $?"
-            end=$(date +%s)
-            echo "PROBE $label: $((end - start)) s"
-            grep -E '^ +[0-9]+ (pass|fail)$' probe.log || true
-          }
-          timeit serial bun test
-          timeit parallel-2 bun test --parallel=2
-          timeit parallel-4 bun test --parallel=4
-          timeit parallel-8 bun test --parallel=8
-          timeit parallel-default bun test --parallel
-          timeit parallel-4-again bun test --parallel=4
       - name: Run all checks with per-command timing
         run: bun run check:timed
       - name: Upload lcov coverage
