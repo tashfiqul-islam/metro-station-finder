@@ -1,6 +1,6 @@
 # Default-branch cutover runbook (master to main, v1.0.0)
 
-Status: plan. Nothing here has been run. The decision, preconditions and sources are in [ADR-0008](../adr/0008-default-branch-switch.md); naming and notes rules are in the [version and tag policy](release-policy.md). Every command below is text for the repository owner to run after saying go; an agent runs only the read-only preflight. Commands are PowerShell or Git Bash; `$R` is the repository.
+Status: plan. Nothing here has been run. The decision, preconditions and sources are in [ADR-0008](../adr/0008-default-branch-switch.md); naming and notes rules are in the [version and tag policy](workflow.md#releases). Every command below is text for the repository owner to run after saying go; an agent runs only the read-only preflight. Commands are PowerShell or Git Bash; `$R` is the repository.
 
 ```powershell
 $R = "tashfiqul-islam/metro-station-finder"
@@ -39,6 +39,7 @@ Stop at the first unexpected output. Never force-push, never move a tag, never s
 5. No dress rehearsal before the switch. `release-draft` is `workflow_dispatch` only, and a dispatch needs the workflow file on the default branch (the manual-run page says "your workflow must be in the default branch", Web-verified); the live-test trick that registered it with a throwaway tag is not repeated. The rehearsal is step 3.6, after the switch, and never uses a `v1.0.0-rc.N` tag.
 6. Cutover-prep pull request to `feature/metro-rebuild` (its own ticket; ADR-0008 item 8). It must pass `bun run check` (including `branches:check`) and have a recorded independent review. It keeps a push trigger for `feature/metro-rebuild` in `quality.yml` until step 6.3 (a comment in the file and `scripts/cutover-plan.test.ts` say so). Step 6.3 retires the branch; the step 6.4 pull request then removes the trigger and flips the docs. The window between 6.3 and 6.4 leaves a trigger for a deleted branch, which is harmless. The prep pull request also:
    - names `feature/metro-rebuild` as the current base branch in CONTRIBUTING.md, workflow.md and plane.md and points each at step 6.4, which flips all three at once (`branches:check` keeps them in agreement);
+   - lists in the step 6.4 pull request the deletion of `docs/agents/current-phase.md` and the links to it (in `AGENTS.md`), because that file holds only text that is true before the switch;
    - leaves `.github/renovate.json5` without `baseBranchPatterns` (formerly `baseBranches`; Web-verified in the Renovate docs, 2026-11-05). Renovate reads its config from the default branch only and, with no option set, processes only the default branch, so there is no Renovate edit at the flip: the file arrives on `main` with step 2 and Renovate targets `main` once step 3 makes it the default. A test fails if the option comes back. If a base branch is ever pinned again, `"$default"` denotes the default branch.
 
 ## 1. Freeze
@@ -111,7 +112,7 @@ Then, in order:
 ## 4. Production, then the release
 
 1. Deploy `MAIN_SHA` to production with the METRO-57 workflow and run its smoke. This must succeed on exactly `MAIN_SHA` or the Plane release cannot become `released`. The workflow and its owner setup are in the [deploy runbook](deploy-runbook.md) and [ADR-0012](../adr/0012-production-deploy.md): after its setup steps, `gh workflow run production-deploy.yml --repo $R --ref main`.
-2. Ensure the Plane release `v1.0.0` exists, is `unreleased` and has no external source; fill its release log with the tickets, pull requests and a `Deferred` heading ([policy](release-policy.md#release-notes)).
+2. Ensure the Plane release `v1.0.0` exists, is `unreleased` and has no external source; fill its release log with the tickets, pull requests and a `Deferred` heading ([policy](workflow.md#releases)).
 3. Create the draft on the exact commit and approve the `release` environment prompt after checking tag and commit:
 
    ```powershell
