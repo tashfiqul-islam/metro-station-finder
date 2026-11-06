@@ -1,5 +1,5 @@
-import type { Station } from "../domain/index.ts";
-import { stationId } from "../domain/index.ts";
+import { stationId } from "./station.ts";
+import type { Station } from "./station.ts";
 import type { StationDataset } from "./validate-dataset.ts";
 
 function station(
@@ -19,7 +19,7 @@ function station(
  * (docs/evidence/dhaka-mrt-line-6.md): display names "Shahbag" and "Bijoy Sarani" (the legacy
  * spellings stay as aliases, with DMTCL's "Bijoy Sarawni"), and the Bijoy Sarani coordinate, taken
  * from OpenStreetMap node 10294553601 (retrieved 2026-11-05). Array order is the legacy order and
- * is the tie-break order. v1 was the uncorrected copy. No publisher or effective date is known.
+ * is the tie-break order. v1 was the uncorrected copy. Publisher and notice date are recorded in `datasetProvenance`.
  */
 const stations: readonly Station[] = [
   station("uttara-north", "Uttara North", 23.869076247909604, 90.36749888965423),
@@ -72,4 +72,59 @@ export const baselineDataset: StationDataset = {
   source: "legacy commit af903d7a2c1bf08165cfcf4a00ca0c0d73eedead",
   stations,
   fares: { order: stations.map((s) => s.id), amounts },
+};
+
+/**
+ * Where the dataset values come from. Filled in only from docs/evidence/dhaka-mrt-line-6.md (METRO-65,
+ * retrieved 2026-11-05). A value the evidence does not give is `null`, never a guess.
+ */
+export interface DatasetProvenance {
+  readonly fares: {
+    /** Authority that set the fares. */
+    readonly setBy: "DTCA";
+    /** Date of the DTCA fare notice (ISO 8601). */
+    readonly noticeDate: string;
+    /** The notice states no separate effective date. */
+    readonly effectiveDate: string | null;
+    readonly cellsMatchingOfficialTable: number;
+    readonly cellsCompared: number;
+    /** Date the official table was retrieved for the comparison (ISO 8601). */
+    readonly officialTableRetrieved: string;
+  };
+  readonly operator: {
+    readonly name: "DMTCL";
+    /** First section opened (DMTCL FAQ), ISO 8601. */
+    readonly firstServiceDate: string;
+  };
+  readonly coordinates: {
+    readonly sources: readonly ["OpenStreetMap", "Wikidata"];
+    /** Every station coordinate is within this many metres of both sources. */
+    readonly maxDistanceMeters: number;
+    /** No official coordinate source exists. */
+    readonly officialSource: string | null;
+  };
+}
+
+export const datasetProvenance: DatasetProvenance = {
+  fares: {
+    // DTCA notice dated 8 September 2022 (evidence S3, Primary); the notice gives no effective date.
+    setBy: "DTCA",
+    noticeDate: "2022-09-08",
+    effectiveDate: null,
+    // All 256 cells of the 16 x 16 matrix equal the official table (comparison run 2026-11-05).
+    cellsMatchingOfficialTable: 256,
+    cellsCompared: 256,
+    officialTableRetrieved: "2026-11-05",
+  },
+  operator: {
+    // Dhaka Mass Transit Company Limited; first section (Uttara North to Agargaon) opened 28 December 2022.
+    name: "DMTCL",
+    firstServiceDate: "2022-12-28",
+  },
+  coordinates: {
+    // OpenStreetMap and Wikidata (Secondary); every station within 150 m of both. No official source.
+    sources: ["OpenStreetMap", "Wikidata"],
+    maxDistanceMeters: 150,
+    officialSource: null,
+  },
 };

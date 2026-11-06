@@ -281,9 +281,12 @@ export async function runGithubSettingsCli(
 }
 
 /** Process entry: prints the lines (stdout on a pass, stderr on drift) and fails the process on drift. */
-export async function githubSettingsMain(args: readonly string[]): Promise<void> {
+export async function githubSettingsMain(
+  args: readonly string[],
+  gh: GhRunner = runGh,
+): Promise<void> {
   try {
-    console.log(await runGithubSettingsCli(args));
+    console.log(await runGithubSettingsCli(args, gh));
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;

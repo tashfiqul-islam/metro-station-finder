@@ -1,6 +1,8 @@
-import { findFare, findNearestStation, resolveStation } from "../application/stations.ts";
-import { stationId } from "../domain/index.ts";
-import { baselineDataset } from "./baseline-dataset.ts";
+import { findFare } from "../fares/quote-fare.ts";
+import { baselineDataset, datasetProvenance } from "./dataset.ts";
+import type { DatasetProvenance } from "./dataset.ts";
+import { findNearestStation, resolveStation } from "./find-nearest.ts";
+import { stationId } from "./station.ts";
 import { validateDataset } from "./validate-dataset.ts";
 
 const { stations, fares } = baselineDataset;
@@ -219,5 +221,39 @@ describe("baseline dataset v2 (legacy af903d7 plus METRO-67 corrections)", () =>
       expect(result.kind === "nearest" && result.station.id).toBe(s.id);
       expect(result.kind === "nearest" ? Number(result.distance) : -1).toBe(0);
     }
+  });
+});
+
+describe("dataset provenance (docs/evidence/dhaka-mrt-line-6.md, METRO-65)", () => {
+  test("records the fare notice, operator and coordinate sources, and nothing guessed", () => {
+    const expected: DatasetProvenance = {
+      fares: {
+        setBy: "DTCA",
+        noticeDate: "2022-09-08",
+        effectiveDate: null,
+        cellsMatchingOfficialTable: 256,
+        cellsCompared: 256,
+        officialTableRetrieved: "2026-11-05",
+      },
+      operator: { name: "DMTCL", firstServiceDate: "2022-12-28" },
+      coordinates: {
+        sources: ["OpenStreetMap", "Wikidata"],
+        maxDistanceMeters: 150,
+        officialSource: null,
+      },
+    };
+    expect(datasetProvenance).toEqual(expected);
+  });
+
+  test("the compared fare cells are the whole 16 x 16 baseline matrix", () => {
+    expect(datasetProvenance.fares.cellsCompared).toBe(fares.amounts.length ** 2);
+    expect(datasetProvenance.fares.cellsMatchingOfficialTable).toBe(
+      datasetProvenance.fares.cellsCompared,
+    );
+  });
+
+  test("a value the evidence does not give is null, never a guess", () => {
+    expect(datasetProvenance.fares.effectiveDate).toBeNull();
+    expect(datasetProvenance.coordinates.officialSource).toBeNull();
   });
 });

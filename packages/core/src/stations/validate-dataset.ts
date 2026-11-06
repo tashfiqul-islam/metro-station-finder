@@ -1,4 +1,5 @@
-import type { FareTable, Station } from "../domain/index.ts";
+import type { FareTable } from "../fares/fare-matrix.ts";
+import type { Station } from "./station.ts";
 
 export interface StationDataset {
   readonly version: string;

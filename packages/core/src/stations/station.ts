@@ -1,4 +1,4 @@
-import type { Coordinate } from "./coordinate.ts";
+import type { Coordinate } from "../geo/coordinate.ts";
 
 declare const stationIdBrand: unique symbol;
 

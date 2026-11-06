@@ -89,9 +89,7 @@ const cruise = async (files: Record<string, string>) => (await cruiseTree(files,
  */
 const sharedTargets: Record<string, string> = {
   "packages/core/src/index.ts": "export const core = 1;\nexport type Core = number;\n",
-  "packages/core/src/domain/station.ts": "export const s = 1;\nexport type S = number;\n",
-  "packages/core/src/application/x.ts": "export const x = 1;\n",
-  "packages/core/src/data/x.ts": "export const x = 1;\n",
+  "packages/core/src/stations/station.ts": "export const s = 1;\nexport type S = number;\n",
   "packages/contracts/src/index.ts": "export const c = 1;\nexport type C = number;\n",
   "packages/contracts/src/internal.ts": "export const i = 1;\nexport type I = number;\n",
   "apps/api/src/app.ts": "export const app = 1;\n",
@@ -226,31 +224,22 @@ test("FND-R6 core importing contracts is rejected", async () => {
   expect(result.output).toContain("core-imports-only-core");
 });
 
-const domainImports = ["application", "data"].map((layer) =>
-  scenario((at) => ({
-    [at("packages/core/src/domain")]:
-      `import { x } from "../${layer}/x.ts";\nexport const s = x;\n`,
-  })),
-);
+// METRO-87 (blueprint D10): core is split into concept folders with no direction rules between them,
+// so the old core-domain-imports-only-domain rule and its two fixtures are gone. The cycle check
+// (no-cycles) and core-imports-only-core remain; the cycle fixture below proves a core cycle fails.
+const coreCycle = scenario((at) => {
+  const name = at("x").split("/").pop() ?? "";
+  return {
+    [at("packages/core/src/stations")]:
+      `import { f } from "../fares/${name}";\nexport const s = f;\n`,
+    [at("packages/core/src/fares")]:
+      `import { s } from "../stations/${name}";\nexport const f = s;\n`,
+  };
+});
 test(
-  "METRO-40 core domain importing core application or data is rejected",
+  "METRO-87 a cycle between core concept folders is rejected",
   async () => {
-    for (const id of domainImports)
-      expect((await verdict(id)).errorRules).toContain("core-domain-imports-only-domain");
-  },
-  LONG,
-);
-
-const layersImportDomain = ["application", "data"].map((layer) =>
-  scenario((at) => ({
-    [at(`packages/core/src/${layer}`)]:
-      'import { s } from "../domain/station.ts";\nexport const f = s;\n',
-  })),
-);
-test(
-  "METRO-40 core application and data may import the domain",
-  async () => {
-    for (const id of layersImportDomain) expect((await verdict(id)).violations).toEqual([]);
+    expect((await verdict(coreCycle)).errorRules).toContain("no-cycles");
   },
   LONG,
 );
@@ -368,7 +357,7 @@ for (const specifier of ["../../../packages/core/src/index.ts", "@metro/core"]) 
 
 for (const form of [...runtime, ...erased]) {
   const id = scenario((at) => ({
-    [at("apps/web/src")]: importSource(form, "../../../packages/core/src/domain/station.ts", "s"),
+    [at("apps/web/src")]: importSource(form, "../../../packages/core/src/stations/station.ts", "s"),
   }));
   test(
     `METRO-89 web ${form} of a core internal module by relative path is rejected`,
@@ -380,12 +369,15 @@ for (const form of [...runtime, ...erased]) {
 }
 
 const webDeepCore = scenario((at) => ({
-  [at("apps/web/src")]: importSource("value", "@metro/core/src/domain/station.ts", "s"),
+  [at("apps/web/src")]: importSource("value", "@metro/core/src/stations/dataset.ts", "s"),
 }));
 test(
   "METRO-89 web deep import of a core internal path by package name is rejected",
   async () => {
-    // The package exports map hides the path, so it surfaces as no-unresolved (as for contracts).
+    // Why it fails: @metro/core's exports map exposes only "." (src/index.ts), so
+    // @metro/core/src/stations/dataset.ts cannot be resolved and the cruiser reports no-unresolved,
+    // not web-imports-core-public-entry-only. That rule matches resolved paths, so its hint text cannot
+    // reach this form without a new rule. The relative-path form above carries the public-entry hint.
     expect((await verdict(webDeepCore)).errorRules).toContain("no-unresolved");
   },
   LONG,

@@ -2,7 +2,14 @@ import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
 import { cleanGitEnv } from "./git-env";
-import { gitArgs, objectSizes, planChunks, readChunk, stagingPath } from "./secrets-index";
+import {
+  gitArgs,
+  objectSizes,
+  planChunks,
+  readChunk,
+  stagingPath,
+  type GitRunner,
+} from "./secrets-index";
 
 /**
  * METRO-28: the secret scan reads what the index holds (what the next commit would contain), never
@@ -253,6 +260,28 @@ test(
     }),
   30000,
 );
+
+test("METRO-92 a git failure is reported with the command and git's own message", async () => {
+  const missing = resolve(".local", "secrets-index-no-such-repository");
+  expect(() => objectSizes(missing, ["0".repeat(40)])).toThrow(
+    /git cat-file --batch-check failed: .*/su,
+  );
+});
+
+test("METRO-92 cat-file output whose blob is not followed by a newline fails visibly", () => {
+  const object = "a".repeat(40);
+  const sizes = new Map([[object, 3]]);
+  const serve = (tail: string): GitRunner => {
+    return () => Buffer.from(`${object} blob 3\nabc${tail}`);
+  };
+  expect(readChunk("/r", [object], sizes, serve("\n")).get(object)?.toString("utf8")).toBe("abc");
+  expect(() => readChunk("/r", [object], sizes, serve(""))).toThrow(
+    `Truncated git cat-file output at ${object}`,
+  );
+  expect(() => readChunk("/r", [object], sizes, serve("Z"))).toThrow(
+    `Truncated git cat-file output at ${object}`,
+  );
+});
 
 test(
   "METRO-28 an unmerged index entry fails visibly instead of scanning one stage",

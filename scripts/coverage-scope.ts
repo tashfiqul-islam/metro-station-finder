@@ -13,7 +13,7 @@ import { cleanGitEnv } from "./git-env.ts";
  */
 export const EXEMPT_PRODUCT_SOURCES: readonly (readonly [string, string])[] = [
   [
-    "packages/core/src/domain/scaffold-status.ts",
+    "packages/core/src/fares/fare-matrix.ts",
     "Type-only module with no executable code, so there is nothing to measure.",
   ],
 ];
@@ -82,7 +82,12 @@ export function trackedFiles(root: string): string[] {
     .filter(Boolean);
 }
 
-if (import.meta.main) {
-  const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
-  await runCoverageScope(root, trackedFiles(root));
+/** Process entry: checks the repository containing this script (or the given root and file list). */
+export async function coverageScopeMain(
+  root: string = resolve(fileURLToPath(new URL("..", import.meta.url))),
+  files: readonly string[] = trackedFiles(root),
+): Promise<void> {
+  await runCoverageScope(root, files);
 }
+
+if (import.meta.main) await coverageScopeMain();

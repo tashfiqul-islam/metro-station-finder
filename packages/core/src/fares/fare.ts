@@ -1,15 +1,7 @@
-import type { StationId } from "./station.ts";
-
 /** A fare amount in BDT. Zero is a real fare (same station); absence is `UnknownFare`. */
 export interface Fare {
   readonly amount: number;
   readonly currency: "BDT";
-}
-
-/** Square matrix: `amounts[i][j]` is the fare from `order[i]` to `order[j]`. */
-export interface FareTable {
-  readonly order: readonly StationId[];
-  readonly amounts: readonly (readonly number[])[];
 }
 
 /** Explicit "no fare". Deliberately has no amount field, so it can never read as zero. */

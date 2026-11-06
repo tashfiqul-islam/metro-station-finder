@@ -100,7 +100,7 @@ test("type gate rejects malformed existing domain data", () =>
   fixture(async (root) => {
     await writeFile(
       join(root, "fixture.ts"),
-      `import type { ScaffoldStatus } from ${JSON.stringify(resolve("packages/core/src/domain/scaffold-status").replaceAll("\\", "/"))}; export const data: ScaffoldStatus = { kind: 'real-service', ready: false };`,
+      `import type { ScaffoldStatus } from ${JSON.stringify(resolve("packages/core/src/status/scaffold-status").replaceAll("\\", "/"))}; export const data: ScaffoldStatus = { kind: 'real-service', ready: false };`,
     );
     await writeFile(
       join(root, "tsconfig.json"),
