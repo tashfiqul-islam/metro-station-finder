@@ -29,7 +29,7 @@ A spike ported three tests (ARIA snapshot, axe scan, header and CSP checks) to W
 ## Consequences
 
 - Nothing changes in the repository, CI or dependencies. The toolchain stays at 5 browser-test packages and no install scripts.
-- A future native lane means new tests either way, so deferring has no measured cost (shared helpers or CI setup could still have value; not measured). It will need Appium, a device or emulator provider and, if it uses a cloud device farm, a credentialed job under the no-restored-cache rule in [maintenance](../agents/maintenance.md#credentialed-ci-jobs-metro-47).
+- A future native lane means new tests either way, so deferring has no measured cost (shared helpers or CI setup could still have value; not measured). It will need Appium, a device or emulator provider and, if it uses a cloud device farm, a credentialed job under the no-restored-cache rule in [maintenance](../agents/maintenance.md).
 - We stay on one vendor's test runner, whose WebKit build is a Playwright patch of WebKit and not Safari itself. Playwright's WebKit is a proxy for Safari, not Safari; real Safari and real-device checks remain a gap, as they are today. Appium can drive real iOS Safari, which is one reason to revisit a device lane (never tried here).
 - Playwright's own Android support is experimental and has no iOS (Web-verified), so it is not a native plan either.
 - The spike measured one machine, 8 tests and no Appium or Safari; if the decision is reopened, those are the first things to measure.
