@@ -109,3 +109,11 @@ test("METRO-51 the skills lock states what it pins and for which agent", async (
   expect(text).not.toMatch(/Installed Codex/u);
   expect(text).not.toMatch(/[A-Za-z]:[\\/]Users/u);
 });
+
+test("METRO-51 quality-gates keeps the no-bypass rule: no HK_SKIP_HOOK and --no-verify only after Never", async () => {
+  const gates = await read("docs/agents/quality-gates.md");
+  expect(gates).not.toContain("HK_SKIP_HOOK");
+  const lines = gates.split(/\r?\n/u);
+  for (const line of lines.filter((candidate) => candidate.includes("--no-verify")))
+    expect(line).toContain("Never");
+});
