@@ -15,7 +15,7 @@ The independent Metro rebuild started with a scaffold whose decisions were recor
 3. **Hono on a Cloudflare Worker.** `apps/api` is a Hono application with a Worker default export, run locally in workerd. See [workspace boundaries](../development.md#boundaries-and-choices).
 4. **React and Vite.** `apps/web` is a React DOM application built with Vite. Frontend stack choices beyond this (router, styling, data fetching, internationalisation) are not decided here.
 5. **Core purity.** `packages/core` is dependency-free and uses ES types only; `scripts/boundaries.ts` enforces it. See [architecture](../agents/architecture.md).
-6. **Plane as issue tracker.** Tickets, specifications and readiness live in Plane; GitHub is the code host only. See [issue tracker](../agents/issue-tracker.md) and [Plane adapter](../agents/plane.md).
+6. **Plane as issue tracker.** Tickets, specifications and readiness live in Plane; GitHub is the code host only. See [issue tracker](../agents/plane.md) and [Plane adapter](../agents/plane.md).
 
 ## Consequences
 
