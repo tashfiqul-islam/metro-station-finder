@@ -128,7 +128,7 @@ jobs:
           key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium
       - name: Install Playwright browsers
         # A stalled apt download hung this step for 13 to 20 minutes. Each attempt is cut at 140 s, with one retry
-        # (a retry resumes from the partial downloads) after stopping the orphaned apt-get, inside a 5 minute step limit.
+        # (a retry resumes from the partial downloads) after stopping the orphaned apt-get and moving to another mirror, inside a 5 minute step limit.
         timeout-minutes: 5
         run: |
           for attempt in 1 2; do
@@ -138,6 +138,8 @@ jobs:
             sudo pkill -x apt-get || true
             sleep 3
             sudo dpkg --configure -a
+            # The Azure mirror was the slow one in every stall (docs/evidence/metro-90.md); retry from Canonical's archive.
+            sudo sed -i 's#mirror+file:/etc/apt/apt-mirrors.txt#http://archive.ubuntu.com/ubuntu/#' /etc/apt/sources.list.d/*.sources
           done
           exit 1
       - name: Prepare the system package cache for saving
@@ -213,7 +215,7 @@ jobs:
           key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-${{ matrix.browsers }}
       - name: Install Playwright browsers
         # A stalled apt download hung this step for 13 to 20 minutes. Each attempt is cut at 140 s, with one retry
-        # (a retry resumes from the partial downloads) after stopping the orphaned apt-get, inside a 5 minute step limit.
+        # (a retry resumes from the partial downloads) after stopping the orphaned apt-get and moving to another mirror, inside a 5 minute step limit.
         timeout-minutes: 5
         env:
           BROWSERS: ${{ matrix.browsers }}
@@ -225,6 +227,8 @@ jobs:
             sudo pkill -x apt-get || true
             sleep 3
             sudo dpkg --configure -a
+            # The Azure mirror was the slow one in every stall (docs/evidence/metro-90.md); retry from Canonical's archive.
+            sudo sed -i 's#mirror+file:/etc/apt/apt-mirrors.txt#http://archive.ubuntu.com/ubuntu/#' /etc/apt/sources.list.d/*.sources
           done
           exit 1
       - name: Prepare the system package cache for saving

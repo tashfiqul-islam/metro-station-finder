@@ -137,6 +137,8 @@ test("METRO-90 every Playwright install step has a step timeout of at most ten m
     expect(textOf(install?.["run"]), id).toContain("for attempt in 1 2; do");
     // The killed attempt leaves its root apt-get running; the retry would fail on the dpkg lock without this.
     expect(textOf(install?.["run"]), id).toContain("sudo pkill -x apt-get");
+    // The retry leaves the Azure mirror, which was the slow one in every stall.
+    expect(textOf(install?.["run"]), id).toContain("http://archive.ubuntu.com/ubuntu/");
     expect(textOf(install?.["run"]), id).toContain(
       "timeout --kill-after=5s 140s bun run playwright install --with-deps",
     );
