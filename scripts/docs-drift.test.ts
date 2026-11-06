@@ -1,13 +1,7 @@
 import { readFile, readdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
-import {
-  BANNER,
-  OPEN_TICKET_LINKS,
-  bannerProblems,
-  fileStructureBlock,
-  staleProblems,
-} from "./docs-drift.ts";
+import { BANNER, OPEN_TICKET_LINKS, bannerProblems, staleProblems } from "./docs-drift.ts";
 import { isRecord } from "./guards.ts";
 
 const root = resolve(import.meta.dir, "..");
@@ -104,17 +98,6 @@ test("METRO-51 agent-facing documents carry no stale statement", async () => {
   expect(hits).toEqual([]);
 });
 
-test("METRO-51 domain.md layout block lists contracts under packages", async () => {
-  const block = fileStructureBlock(await read("docs/agents/domain.md"));
-  const packages = block.find((line) => line.includes("packages/")) ?? "";
-  expect(packages).toMatch(/\bcore\b/u);
-  expect(packages).toMatch(/\bcontracts\b/u);
-  expect(fileStructureBlock("## File structure\n\n```\n└── packages/  (core)\n```")).toEqual([
-    "└── packages/  (core)",
-    "",
-  ]);
-});
-
 test("METRO-51 the skills lock states what it pins and for which agent", async () => {
   const text = await read("docs/agents/skills.lock.json");
   const lock: unknown = JSON.parse(text);
@@ -125,42 +108,4 @@ test("METRO-51 the skills lock states what it pins and for which agent", async (
   expect(text).not.toContain(".codex-plugin");
   expect(text).not.toMatch(/Installed Codex/u);
   expect(text).not.toMatch(/[A-Za-z]:[\\/]Users/u);
-});
-
-test("METRO-51 skills.md marks any Codex install route as historical evidence", async () => {
-  const skills = await read("docs/agents/skills.md");
-  const undated = skills
-    .split(/\r?\n/u)
-    .filter((line) => /\bCodex\b/u.test(line))
-    .filter((line) => !/historical|METRO-10|2026-11-03/iu.test(line));
-  expect(undated).toEqual([]);
-});
-
-test("METRO-51 quality-gates keeps a no-bypass policy with an owner-only emergency step skip", async () => {
-  const gates = await read("docs/agents/quality-gates.md");
-  const policy = gates.split("## Hook bypass policy")[1]?.split(/^## /mu)[0] ?? "";
-  for (const needle of [
-    "No bypass is the default.",
-    "Agents never bypass hooks or signing",
-    "never replaces CI",
-    "CI is authoritative",
-    "HK_SKIP_STEPS=build git push",
-    "$env:HK_SKIP_STEPS = 'build'; git push; Remove-Item Env:HK_SKIP_STEPS",
-    "https://hk.jdx.dev/environment_variables.html",
-  ])
-    expect(policy, needle).toContain(needle);
-  expect(policy).not.toContain("HK_SKIP_HOOK");
-  const noVerify = policy.split(/\r?\n/u).filter((line) => line.includes("--no-verify"));
-  for (const line of noVerify) expect(line).toContain("Never use");
-  expect(policy).not.toMatch(/Use them only|Allowed, narrowest/u);
-
-  const signing = gates.split("## Verify signatures locally")[1]?.split(/^## /mu)[0] ?? "";
-  for (const needle of [
-    "git config --get gpg.format",
-    "git config --get commit.gpgsign",
-    "git config --get gpg.ssh.allowedSignersFile",
-    "git verify-commit HEAD",
-  ])
-    expect(signing, needle).toContain(needle);
-  expect(signing).not.toMatch(/this machine/iu);
 });

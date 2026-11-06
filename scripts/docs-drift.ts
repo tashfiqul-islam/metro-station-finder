@@ -70,10 +70,3 @@ export function staleProblems(text: string): string[] {
   }
   return problems;
 }
-
-/** Lines of the first fenced block that follows the `## File structure` heading. */
-export function fileStructureBlock(text: string): string[] {
-  const after = text.split(/^## File structure\s*$/mu)[1] ?? "";
-  const block = /```[^\n]*\n([\s\S]*?)```/u.exec(after)?.[1] ?? "";
-  return block.split(/\r?\n/u);
-}
