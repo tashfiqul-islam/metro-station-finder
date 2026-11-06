@@ -4,6 +4,7 @@ const passing = {
   changes: { result: "success", outputs: { docs_only: "false" } },
   checks: { result: "success" },
   build: { result: "success" },
+  smoke: { result: "success" },
   security: { result: "success" },
 };
 test("aggregate accepts all required successes", () =>
@@ -45,6 +46,23 @@ test("METRO-62 an unexpected build skip fails when changes has no outputs", () =
 for (const result of ["failure", "cancelled"]) {
   test(`METRO-62 a ${result} build fails even on a docs-only change`, () =>
     expect(requiredJobsSucceeded({ ...docsOnly, build: { result } })).toBe(false));
+}
+// METRO-90: the Firefox, WebKit and mobile-viewport smoke legs are one required `smoke` job with the same docs-only rule as build.
+test("METRO-90 smoke skipped because the change is docs-only passes", () =>
+  expect(requiredJobsSucceeded({ ...docsOnly, smoke: { result: "skipped" } })).toBe(true));
+for (const docs_only of ["false", "", "TRUE", "1"]) {
+  test(`METRO-90 an unexpected smoke skip fails when docs_only is ${JSON.stringify(docs_only)}`, () =>
+    expect(
+      requiredJobsSucceeded({
+        ...passing,
+        changes: { result: "success", outputs: { docs_only } },
+        smoke: { result: "skipped" },
+      }),
+    ).toBe(false));
+}
+for (const result of ["failure", "cancelled"]) {
+  test(`METRO-90 a ${result} smoke fails even on a docs-only change`, () =>
+    expect(requiredJobsSucceeded({ ...docsOnly, smoke: { result } })).toBe(false));
 }
 for (const job of ["checks", "security"]) {
   test(`METRO-62 a skipped ${job} fails even on a docs-only change`, () =>

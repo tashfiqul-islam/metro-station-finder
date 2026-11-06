@@ -14,14 +14,14 @@ function job(text: string, name: string): string {
 
 test("METRO-13 the preview job waits for every quality job and only runs for same-repository PRs", () => {
   const preview = job(quality, "preview");
-  expect(preview).toContain("needs: [changes, checks, build, security]");
+  expect(preview).toContain("needs: [changes, checks, build, smoke, security]");
   expect(preview).toContain("github.event_name == 'pull_request'");
   expect(preview).toContain("github.event.pull_request.head.repo.full_name == github.repository");
   expect(preview).toContain("name: preview");
 });
 
 test("METRO-13 the required aggregate does not depend on the preview job", () => {
-  expect(job(quality, "quality")).toContain("needs: [changes, checks, build, security]");
+  expect(job(quality, "quality")).toContain("needs: [changes, checks, build, smoke, security]");
   expect(job(quality, "quality")).not.toContain("preview");
 });
 

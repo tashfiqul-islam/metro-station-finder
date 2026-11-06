@@ -83,7 +83,7 @@ test("METRO-48 dependency review is not part of the required Quality gates aggre
   const quality = readFileSync(".github/workflows/quality.yml", "utf8");
   const jobs = record(record(Bun.YAML.parse(quality), "quality")["jobs"], "jobs");
   const aggregate = record(jobs["quality"], "quality");
-  expect(aggregate["needs"]).toEqual(["changes", "checks", "build", "security"]);
+  expect(aggregate["needs"]).toEqual(["changes", "checks", "build", "smoke", "security"]);
   for (const job of Object.values(jobs))
     expect(JSON.stringify(job)).not.toContain("dependency-review-action");
 });

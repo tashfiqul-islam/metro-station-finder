@@ -113,7 +113,11 @@ test("METRO-35 the repository bunfig randomizes without a fixed seed, so the ord
 
 test("METRO-35 CI runs the browser smoke in shuffled order", async () => {
   const workflow = await readFile(resolve(".github/workflows/quality.yml"), "utf8");
-  expect(workflow).toMatch(/run: bun run smoke -- --shuffle\s*$/mu);
+  // METRO-90: one chromium run in the build job and one run per matrix leg in the smoke job.
+  expect(
+    workflow.match(/run: bun run smoke -- --shuffle --project=(?:chromium|"\$PROJECT")\s*$/gmu),
+  ).toHaveLength(2);
+  expect(workflow).not.toMatch(/run: bun run smoke(?! -- --shuffle)/u);
 });
 
 // ADR-0016: Vitest runs beside Bun. Its order is shuffled by `sequence.shuffle`, prints a seed and is
