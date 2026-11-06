@@ -135,6 +135,8 @@ test("METRO-90 every Playwright install step has a step timeout of at most ten m
     expect(install?.["timeout-minutes"], id).toBe(5);
     // Bounded attempts: every attempt is cut by `timeout` (it also ends a root child started with sudo).
     expect(textOf(install?.["run"]), id).toContain("for attempt in 1 2; do");
+    // The killed attempt leaves its root apt-get running; the retry would fail on the dpkg lock without this.
+    expect(textOf(install?.["run"]), id).toContain("sudo pkill -x apt-get");
     expect(textOf(install?.["run"]), id).toContain(
       "timeout --kill-after=5s 140s bun run playwright install --with-deps",
     );

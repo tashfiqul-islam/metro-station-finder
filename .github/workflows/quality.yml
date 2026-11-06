@@ -128,12 +128,16 @@ jobs:
           key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium
       - name: Install Playwright browsers
         # A stalled apt download hung this step for 13 to 20 minutes. Each attempt is cut at 140 s, with one retry
-        # (a retry resumes from the partial downloads), inside a 5 minute step limit.
+        # (a retry resumes from the partial downloads) after stopping the orphaned apt-get, inside a 5 minute step limit.
         timeout-minutes: 5
         run: |
           for attempt in 1 2; do
             if timeout --kill-after=5s 140s bun run playwright install --with-deps chromium; then exit 0; fi
             echo "::warning::Playwright browser install attempt $attempt failed or timed out"
+            # timeout stops bun and sudo but not the root apt-get they started; stop it so the retry gets the dpkg lock.
+            sudo pkill -x apt-get || true
+            sleep 3
+            sudo dpkg --configure -a
           done
           exit 1
       - name: Prepare the system package cache for saving
@@ -209,7 +213,7 @@ jobs:
           key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-${{ matrix.browsers }}
       - name: Install Playwright browsers
         # A stalled apt download hung this step for 13 to 20 minutes. Each attempt is cut at 140 s, with one retry
-        # (a retry resumes from the partial downloads), inside a 5 minute step limit.
+        # (a retry resumes from the partial downloads) after stopping the orphaned apt-get, inside a 5 minute step limit.
         timeout-minutes: 5
         env:
           BROWSERS: ${{ matrix.browsers }}
@@ -217,6 +221,10 @@ jobs:
           for attempt in 1 2; do
             if timeout --kill-after=5s 140s bun run playwright install --with-deps "$BROWSERS"; then exit 0; fi
             echo "::warning::Playwright browser install attempt $attempt failed or timed out"
+            # timeout stops bun and sudo but not the root apt-get they started; stop it so the retry gets the dpkg lock.
+            sudo pkill -x apt-get || true
+            sleep 3
+            sudo dpkg --configure -a
           done
           exit 1
       - name: Prepare the system package cache for saving
