@@ -9,7 +9,8 @@ minimumReleaseAge = 259200
 
 [test]
 # Random order exposes shared-state coupling. Bun picks a new seed per run and prints ` --seed=N` in the
-# summary; reproduce with `bun test --seed N`. Never set `seed` here: a fixed seed is a fixed order.
+# summary; reproduce with `bun test --parallel=4 --seed N` (the order inside a file follows the seed; file-to-worker
+# assignment is timing-dependent, so if it does not reproduce try serial). Never set `seed` here: a fixed seed is a fixed order.
 randomize = true
 # Files Vitest owns (ADR-0016 stages 1 and 2): the API tests run in workerd and the web tests in happy-dom,
 # both under vitest, never under Bun.

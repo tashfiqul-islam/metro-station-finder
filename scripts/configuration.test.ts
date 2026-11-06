@@ -286,7 +286,7 @@ for (const tool of ["actionlint", "zizmor"]) {
 test("FND-S2 the real Renovate configuration passes the pinned strict validator", () => {
   const result = spawnRenovate(resolve(".github/renovate.json5"));
   expect(result.exitCode).toBe(0);
-});
+}, 30000);
 
 async function setTrusted(root: string, value: unknown): Promise<void> {
   const path = join(root, "package.json");

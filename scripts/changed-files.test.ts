@@ -171,4 +171,4 @@ test("METRO-62 real git ranges: docs-only, mixed and rename", () => {
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
-});
+}, 30000);

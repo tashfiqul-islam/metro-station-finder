@@ -278,7 +278,7 @@ test("METRO-36 a rename from code to docs lists both paths, so the deletion coun
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
-});
+}, 30000);
 
 test("METRO-36 the default dependencies use real git and the console", () => {
   const head = Bun.spawnSync(["git", "rev-parse", "HEAD"]).stdout.toString().trim();

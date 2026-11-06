@@ -129,7 +129,7 @@ for (const dependency of ["hono", "react"]) {
     });
     expect(result.code).not.toBe(0);
     expect(result.output).toContain("contracts-imports-only-core-and-schema-library");
-  });
+  }, 30000);
 }
 
 test("FND-R6 contracts importing an app is rejected", async () => {
