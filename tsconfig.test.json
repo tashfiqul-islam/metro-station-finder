@@ -7,10 +7,10 @@
     "scripts/**/*.test.ts",
     "packages/**/*.test.ts",
     "apps/**/*.test.ts",
-    "apps/api/test-env.d.ts",
     "scripts/configuration.ts",
     "scripts/hooks-status.ts",
     "scripts/mise-lock.ts",
     "scripts/tools.ts"
-  ]
+  ],
+  "exclude": ["apps/api/**"]
 }

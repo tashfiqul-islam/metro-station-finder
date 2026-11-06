@@ -1,3 +1,5 @@
+import { expect, test } from "vitest";
+
 import { createApp } from "./app";
 import app from "./index";
 

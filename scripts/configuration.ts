@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { isRecord } from "./guards.ts";
@@ -69,6 +69,7 @@ export async function validateConfiguration(root: string): Promise<void> {
   if (testTable["randomize"] !== true) throw new Error("bunfig.toml test.randomize must be true");
   if (testTable["seed"] !== undefined)
     throw new Error("bunfig.toml test.seed must not be set (a fixed seed defeats randomization)");
+  await validateVitestConfigs(root);
   const renovate = await readRenovate(root);
   const renovateAge = renovate["minimumReleaseAge"];
   if (typeof renovateAge !== "string")
@@ -77,6 +78,72 @@ export async function validateConfiguration(root: string): Promise<void> {
     throw new Error(
       `${RENOVATE_FILE}: minimumReleaseAge "${renovateAge}" must equal bunfig.toml install.minimumReleaseAge (${RELEASE_COOLDOWN_SECONDS} seconds)`,
     );
+}
+
+const VITEST_ROOT_CONFIG = "vitest.config.ts";
+const VITEST_SHARED_OPTIONS = "vitest.shared.ts";
+const VITEST_CONFIG_NAMES = ["vitest.config.ts", "vitest.config.mts", "vitest.config.js"];
+
+/** Removes block comments and `//` comments (whole-line or trailing); a `//` inside a URL has no space before it. */
+function stripComments(source: string): string {
+  return source.replaceAll(/(^|\s)\/\*[\s\S]*?\*\//gu, "$1").replaceAll(/(^|\s)\/\/.*$/gmu, "$1");
+}
+
+async function exists(path: string): Promise<boolean> {
+  return readFile(path, "utf8").then(
+    () => true,
+    () => false,
+  );
+}
+
+/** Project Vitest config files under apps/*, packages/* and scripts, as repository-relative POSIX paths. */
+async function projectVitestConfigs(root: string): Promise<string[]> {
+  const directories = ["scripts"];
+  for (const group of ["apps", "packages"]) {
+    const entries = await readdir(join(root, group), { withFileTypes: true }).catch(() => []);
+    for (const entry of entries)
+      if (entry.isDirectory()) directories.push(`${group}/${entry.name}`);
+  }
+  const found: string[] = [];
+  for (const directory of directories)
+    for (const name of VITEST_CONFIG_NAMES) {
+      const path = `${directory}/${name}`;
+      if (await exists(join(root, path))) found.push(path);
+    }
+  return found;
+}
+
+/**
+ * ADR-0016: Vitest runs beside Bun, so its order is held to the same rule as bunfig.toml (METRO-35).
+ * A Vitest project does not inherit the root `test.sequence` (measured in workerd: with `shuffle` only in
+ * the root config the tests inside a project's files kept their source order), so the rule lives in
+ * vitest.shared.ts. That file must turn `sequence.shuffle` on, every Vitest config must spread
+ * `sharedTestOptions`, and no config may set a fixed `seed` or switch shuffle off. The configs are
+ * TypeScript, so this reads the text with comments removed.
+ */
+async function validateVitestConfigs(root: string): Promise<void> {
+  const read = async (file: string): Promise<string> =>
+    stripComments(
+      await readFile(join(root, file), "utf8").catch((error: unknown) => {
+        throw new Error(`${file}: ${String(error)}`, { cause: error });
+      }),
+    );
+  if (!/\bshuffle\s*:\s*true\b/u.test(await read(VITEST_SHARED_OPTIONS)))
+    throw new Error(`${VITEST_SHARED_OPTIONS}: test.sequence.shuffle must be true`);
+  const configs = [VITEST_ROOT_CONFIG, ...(await projectVitestConfigs(root))];
+  for (const file of [VITEST_SHARED_OPTIONS, ...configs]) {
+    const source = await read(file);
+    if (/\bseed\s*:/u.test(source))
+      throw new Error(
+        `${file}: test.sequence.seed must not be set (a fixed seed defeats randomization)`,
+      );
+    if (/\bshuffle\s*:\s*false\b/u.test(source))
+      throw new Error(`${file}: test.sequence.shuffle must not be false`);
+    if (file !== VITEST_SHARED_OPTIONS && !/\.\.\.\s*sharedTestOptions\b/u.test(source))
+      throw new Error(
+        `${file}: must spread sharedTestOptions from ${VITEST_SHARED_OPTIONS} (a project does not inherit the root sequence)`,
+      );
+  }
 }
 
 const RELEASE_COOLDOWN_SECONDS = 259200;

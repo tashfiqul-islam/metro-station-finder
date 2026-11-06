@@ -1,13 +1,13 @@
-import { existsSync, readFileSync } from "node:fs";
-
 import { parseErrorEnvelope } from "@metro/contracts";
+import { expect, test } from "vitest";
 
+import adr from "../../../docs/adr/0013-api-error-format.md?raw";
 import { createApp } from "./app";
 
 // ADR-0013 keeps the { error: { code, message } } envelope and does not adopt RFC 9457
 // application/problem+json. These tests pin what 404, 405 and 500 return today, so adopting
 // problem+json (or any new error shape) must change them deliberately, through a new ADR.
-const ADR = "docs/adr/0013-api-error-format.md";
+// The ADR text is imported with Vite `?raw`: workerd has no view of the repository file system.
 
 const healthy = () => ({ kind: "synthetic-scaffold", ready: true });
 const failing = () => {
@@ -15,8 +15,8 @@ const failing = () => {
 };
 
 test("METRO-53 ADR-0013 exists and records both decisions", () => {
-  expect(existsSync(ADR)).toBe(true);
-  const text = readFileSync(ADR, "utf8");
+  expect(adr.length).toBeGreaterThan(0);
+  const text = adr;
   expect(text).toContain("application/problem+json");
   expect(text).toContain("RFC 9457");
   expect(text).toContain("tolerant reader");

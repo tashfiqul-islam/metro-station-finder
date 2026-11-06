@@ -19,6 +19,7 @@ const PROJECTS = [
   { config: "apps/web/tsconfig.json", fixture: "apps/web/src/zz-fixture.ts" },
   { config: "tsconfig.dom-test.json", fixture: "apps/web/src/zz-fixture.test.tsx" },
   { config: "apps/api/tsconfig.json", fixture: "apps/api/src/zz-fixture.ts" },
+  { config: "apps/api/tsconfig.worker-test.json", fixture: "apps/api/src/zz-fixture.test.ts" },
   { config: "packages/contracts/tsconfig.json", fixture: "packages/contracts/src/zz-fixture.ts" },
   { config: "packages/core/tsconfig.json", fixture: "packages/core/src/zz-fixture.ts" },
   { config: "scripts/tsconfig.json", fixture: "scripts/zz-fixture.ts" },
@@ -53,6 +54,8 @@ async function scratchCopy(run: (copy: string) => Promise<void>) {
       "tsconfig.dom-test.json",
       "tsconfig.e2e.json",
       "playwright.config.ts",
+      "vitest.config.ts",
+      "vitest.shared.ts",
       ".dependency-cruiser.mts",
       "apps",
       "packages",
@@ -160,7 +163,7 @@ test("METRO-42 the typecheck script is a single tsc -b over the solution file", 
 }, 30000);
 
 test(
-  "METRO-42 tsc -b checks all eight referenced projects",
+  "METRO-42 tsc -b checks all nine referenced projects",
   () =>
     scratchCopy(async (copy) => {
       const verbose = Bun.spawnSync(["bun", "run", "tsc", "-b", "--verbose"], {

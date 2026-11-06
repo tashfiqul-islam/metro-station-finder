@@ -115,3 +115,102 @@ test("METRO-35 CI runs the browser smoke in shuffled order", async () => {
   const workflow = await readFile(resolve(".github/workflows/quality.yml"), "utf8");
   expect(workflow).toMatch(/run: bun run smoke -- --shuffle\s*$/mu);
 });
+
+// ADR-0016: Vitest runs beside Bun. Its order is shuffled by `sequence.shuffle`, prints a seed and is
+// reproduced with `--sequence.seed`. scripts/configuration.ts fails when the Vitest config lacks the
+// shuffle or sets a fixed seed; these tests prove what that setting buys, using the repository's own
+// `sequence` option in a throwaway project under `.local/`.
+const VITEST = resolve("node_modules/vitest/vitest.mjs");
+
+const VITEST_COUPLED_FIXTURE = COUPLED_FIXTURE.replace(
+  'import { expect, test } from "bun:test";',
+  'import { expect, test } from "vitest";',
+);
+
+/** The `sequence: { ... }` option of the repository's shared Vitest options, as written there. */
+async function repositorySequenceOption(): Promise<string> {
+  const source = await readFile(resolve("vitest.shared.ts"), "utf8");
+  const option = /sequence:\s*\{[^}]*\}/u.exec(source)?.[0];
+  if (option === undefined) throw new Error("vitest.shared.ts has no sequence option");
+  return option;
+}
+
+async function withVitestFixture(sequence: string, run: (root: string) => void | Promise<void>) {
+  await mkdir(".local", { recursive: true });
+  const root = await mkdtemp(resolve(".local/vitest-order-"));
+  try {
+    await writeFile(join(root, "coupled.test.ts"), VITEST_COUPLED_FIXTURE);
+    await writeFile(
+      join(root, "vitest.config.ts"),
+      `import { defineConfig } from "vitest/config";\n\nexport default defineConfig({ test: { ${sequence} } });\n`,
+    );
+    await run(root);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}
+
+/** Runs Vitest in the fixture; `order` is the sequence in which the fixture's tests actually ran. */
+async function vitestRun(root: string, ...args: string[]) {
+  await rm(join(root, "order.log"), { force: true });
+  const result = Bun.spawnSync(["node", VITEST, "run", ...args], {
+    cwd: root,
+    env: cleanGitEnv(),
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const order = (await readFile(join(root, "order.log"), "utf8")).trim().split("\n").join(",");
+  const output = result.stdout.toString() + result.stderr.toString();
+  return {
+    exitCode: result.exitCode,
+    output,
+    order,
+    seed: /Running tests with seed "(\d+)"/u.exec(output)?.[1],
+  };
+}
+
+async function findExposingVitestSeed(root: string): Promise<number> {
+  for (const seed of SEARCH_SEEDS) {
+    if ((await vitestRun(root, `--sequence.seed=${seed}`)).exitCode !== 0) return seed;
+  }
+  throw new Error(`No seed in ${SEARCH_SEEDS[0]}..${SEARCH_SEEDS.at(-1)} exposed the coupling`);
+}
+
+test(
+  "ADR-0016 without sequence.shuffle Vitest runs in source order, so the config guard is needed",
+  () =>
+    withVitestFixture("", async (root) => {
+      const result = await vitestRun(root);
+      expect(result.exitCode).toBe(0);
+      expect(result.order).toBe("0,1,2,3,4");
+      expect(result.seed).toBeUndefined();
+    }),
+  60000,
+);
+
+test("ADR-0016 the repository's sequence option exposes the coupling, prints the seed and reproduces", async () => {
+  const sequence = await repositorySequenceOption();
+  await withVitestFixture(sequence, async (root) => {
+    const seed = await findExposingVitestSeed(root);
+    const first = await vitestRun(root, `--sequence.seed=${seed}`);
+    const second = await vitestRun(root, `--sequence.seed=${seed}`);
+    expect(first.exitCode).not.toBe(0);
+    expect(first.seed).toBe(String(seed));
+    expect(first.order).not.toBe("0,1,2,3,4");
+    expect(second.exitCode).toBe(first.exitCode);
+    expect(second.order).toBe(first.order);
+  });
+}, 180000);
+
+test("ADR-0016 the repository's sequence option picks a new seed per run", async () => {
+  const sequence = await repositorySequenceOption();
+  await withVitestFixture(sequence, async (root) => {
+    const seeds = new Set<string>();
+    for (let run = 0; run < 3; run += 1) {
+      const seed = (await vitestRun(root)).seed;
+      expect(seed).toBeDefined();
+      seeds.add(String(seed));
+    }
+    expect(seeds.size).toBeGreaterThan(1);
+  });
+}, 120000);

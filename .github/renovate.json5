@@ -14,6 +14,9 @@
   packageRules: [
     { groupName: "react", matchPackageNames: ["react", "react-dom", "@types/react", "@types/react-dom"] },
     { groupName: "cloudflare", matchPackageNames: ["wrangler", "@cloudflare/**"] },
+    // vitest and @vitest/coverage-istanbul must be one version, and @cloudflare/vitest-plugin (in the cloudflare
+    // group above) brings its own wrangler, miniflare and workerd; scripts/vitest-sync.test.ts checks all of it.
+    { groupName: "vitest", matchPackageNames: ["vitest", "@vitest/**"] },
     { groupName: "oxc", matchPackageNames: ["oxfmt", "oxlint", "oxlint-tsgolint"] },
     // bun-types must equal the version @types/bun depends on (scripts/lint-config.test.ts checks it).
     { groupName: "bun types", matchPackageNames: ["bun-types", "@types/bun"] },

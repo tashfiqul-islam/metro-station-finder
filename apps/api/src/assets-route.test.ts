@@ -1,9 +1,19 @@
 import { parseErrorEnvelope } from "@metro/contracts";
+import { expect, test } from "vitest";
 
 import { createApp } from "./app";
 
 function envWith(respond: (request: Request) => Response): Env {
-  return { ASSETS: { fetch: (request) => Promise.resolve(respond(request)) } };
+  // The generated Env types ASSETS as the full workerd Fetcher; only `fetch` is used here.
+  return {
+    ASSETS: {
+      fetch: (input, init) =>
+        Promise.resolve(respond(input instanceof Request ? input : new Request(input, init))),
+      connect: () => {
+        throw new Error("connect is not used by the assets route");
+      },
+    },
+  };
 }
 
 function html(contentType = "text/html; charset=utf-8"): Response {

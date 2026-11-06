@@ -1,3 +1,5 @@
+import { expect, test } from "vitest";
+
 import { createApp, type LogLine } from "./app";
 
 function recorded() {

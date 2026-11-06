@@ -6,7 +6,13 @@
     "types": ["node"],
     "skipLibCheck": true
   },
-  "include": ["./*.ts", "../apps/web/vite.config.ts", "../.dependency-cruiser.mts"],
+  "include": [
+    "./*.ts",
+    "../apps/web/vite.config.ts",
+    "../vitest.config.ts",
+    "../apps/api/vitest.config.ts",
+    "../.dependency-cruiser.mts"
+  ],
   "exclude": [
     "./*.test.ts",
     "./configuration.ts",

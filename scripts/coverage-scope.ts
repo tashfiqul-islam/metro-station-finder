@@ -8,7 +8,8 @@ import { cleanGitEnv } from "./git-env.ts";
 /**
  * Bun's per-file coverage gate only measures files that some test loads. This check closes that gap
  * for product source: every tracked non-test file under `apps/*\/src` and `packages/*\/src` must
- * appear in `coverage/lcov.info`, except the documented exemptions below.
+ * appear in `coverage/lcov.info` (Bun) or `coverage/vitest/lcov.info` (Vitest in workerd, ADR-0016), except
+ * the documented exemptions below.
  */
 export const EXEMPT_PRODUCT_SOURCES: readonly (readonly [string, string])[] = [
   [
@@ -40,11 +41,24 @@ export function unmeasuredProductSources(
     .filter((file) => !measured.some((entry) => entry === file || entry.endsWith(`/${file}`)));
 }
 
-/** CLI body: reads `coverage/lcov.info` under `root` and sets the exit code. */
+/** The lcov files that together measure product source: Bun's and the Vitest (workerd) run's. */
+export const LCOV_FILES = [
+  ["coverage", "lcov.info"],
+  ["coverage", "vitest", "lcov.info"],
+] as const;
+
+/** CLI body: reads every lcov file under `root` and sets the exit code. */
 export async function runCoverageScope(root: string, files: readonly string[]): Promise<void> {
-  const lcov = await readFile(join(root, "coverage", "lcov.info"), "utf8").catch(() => {
-    throw new Error("coverage/lcov.info is missing; run `bun test` first");
-  });
+  const reports = await Promise.all(
+    LCOV_FILES.map((parts) =>
+      readFile(join(root, ...parts), "utf8").catch(() => {
+        throw new Error(
+          `${parts.join("/")} is missing; run \`bun test\` and \`bun run test:vitest\` first`,
+        );
+      }),
+    ),
+  );
+  const lcov = reports.join("\n");
   const missing = unmeasuredProductSources(lcov, files);
   if (missing.length) {
     console.error(

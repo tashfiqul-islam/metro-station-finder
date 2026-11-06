@@ -1,7 +1,14 @@
 export default {
   forbidden: [
     { name: "no-cycles", severity: "error", from: {}, to: { circular: true } },
-    { name: "no-unresolved", severity: "error", from: {}, to: { couldNotResolve: true } },
+    {
+      name: "no-unresolved",
+      comment:
+        "cloudflare:workers and cloudflare:test are runtime modules that only workerd provides (types come from the Worker test project).",
+      severity: "error",
+      from: {},
+      to: { couldNotResolve: true, pathNot: "^cloudflare:(workers|test)$" },
+    },
     {
       name: "core-imports-only-core",
       comment: "Core is dependency-free: it may import only other core modules.",

@@ -65,12 +65,21 @@ test("FND-T1 runCoverageScope fails visibly for a missing lcov file and an unmea
   const root = await mkdtemp(join(tmpdir(), "metro-scope-"));
   try {
     await expectRejection(runCoverageScope(root, ["apps/api/src/app.ts"]), "lcov.info");
-    await mkdir(join(root, "coverage"));
-    await writeFile(join(root, "coverage", "lcov.info"), lcov("apps/api/src/app.ts"));
-    await runCoverageScope(root, ["apps/api/src/app.ts"]);
+    await mkdir(join(root, "coverage", "vitest"), { recursive: true });
+    await writeFile(join(root, "coverage", "lcov.info"), lcov("packages/core/src/a.ts"));
+    await expectRejection(
+      runCoverageScope(root, ["apps/api/src/app.ts"]),
+      "coverage/vitest/lcov.info",
+    );
+    await writeFile(join(root, "coverage", "vitest", "lcov.info"), lcov("apps/api/src/app.ts"));
+    await runCoverageScope(root, ["apps/api/src/app.ts", "packages/core/src/a.ts"]);
     expect(process.exitCode ?? 0).toBe(0);
     expect(log).toHaveBeenCalledWith(expect.stringContaining("Coverage scope ok"));
-    await runCoverageScope(root, ["apps/api/src/app.ts", "apps/api/src/forgotten.ts"]);
+    await runCoverageScope(root, [
+      "apps/api/src/app.ts",
+      "packages/core/src/a.ts",
+      "apps/api/src/forgotten.ts",
+    ]);
     expect(process.exitCode).toBe(1);
     expect(String(error.mock.calls[0]?.[0])).toContain("apps/api/src/forgotten.ts");
   } finally {

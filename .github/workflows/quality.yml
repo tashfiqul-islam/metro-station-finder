@@ -84,7 +84,11 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: coverage-lcov
-          path: coverage/lcov.info
+          # Bun's lcov (v8-style lines and functions) and the Vitest workerd run's (istanbul, with branches):
+          # two separate runs, two files.
+          path: |
+            coverage/lcov.info
+            coverage/vitest/lcov.info
           if-no-files-found: error
   build:
     name: Build and smoke

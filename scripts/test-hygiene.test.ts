@@ -124,3 +124,51 @@ for (const [rule, source] of REJECTED)
     expect(result.output).toContain(`(${rule})`);
     expect(result.exitCode).not.toBe(0);
   }, 30000);
+
+// METRO-77 / ADR-0016: Vitest test files import their API from "vitest", which the jest rules do see (the
+// spike measured this on Oxlint 1.90.0), so every rule above must reject the same weak test written for
+// Vitest. Each Bun fixture is rewritten: `vi` replaces `jest` and the used helpers are imported from
+// "vitest". The `bun:test` import ban has no Vitest twin; it stays proven above.
+const VITEST_HELPERS = ["describe", "beforeEach", "expect", "test", "vi"] as const;
+
+function asVitestFixture(source: string): string {
+  const body = source.replaceAll("jest.", "vi.");
+  const used = VITEST_HELPERS.filter((name) => new RegExp(`\\b${name}\\b`, "u").test(body));
+  return `import { ${used.join(", ")} } from "vitest";\n${body}`;
+}
+
+const VITEST_REJECTED = REJECTED.filter(([rule]) => rule !== "no-restricted-imports");
+
+test("METRO-77 control: a Vitest test with an assertion passes the hygiene rules", async () => {
+  const result = await lintFixture(
+    `import { expect, test } from "vitest";\n\ntest("adds", () => {\n  expect(1 + 1).toBe(2);\n});\n`,
+  );
+  expect(result.output).toBe("");
+  expect(result.exitCode).toBe(0);
+});
+
+test("METRO-77 the expectRejection helper counts as an assertion in a Vitest file", async () => {
+  const result = await lintFixture(
+    `import { test } from "vitest";\n\nimport { expectRejection } from "./test-support";\n\ntest("rejects", async () => {\n  await expectRejection(Promise.reject(new Error("x")));\n});\n`,
+  );
+  expect(result.output).toBe("");
+  expect(result.exitCode).toBe(0);
+});
+
+for (const [rule, source] of VITEST_REJECTED)
+  test(`METRO-77 ${rule} rejects the same weak test in a file importing vitest`, async () => {
+    const fixture = asVitestFixture(source);
+    expect(fixture).toContain('from "vitest"');
+    expect(fixture).not.toContain("bun:test");
+    const result = await lintFixture(fixture);
+    expect(result.output).toContain(`(${rule})`);
+    expect(result.exitCode).not.toBe(0);
+  }, 30000);
+
+test("METRO-77 a file importing from bun:test is still rejected next to the Vitest files", async () => {
+  const result = await lintFixture(
+    `import { expect, test } from "bun:test";\n\ntest("imported", () => {\n  expect(1).toBe(1);\n});\n`,
+  );
+  expect(result.output).toContain("(no-restricted-imports)");
+  expect(result.exitCode).not.toBe(0);
+});
