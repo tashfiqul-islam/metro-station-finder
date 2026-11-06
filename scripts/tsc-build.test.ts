@@ -41,7 +41,7 @@ const exists = (path: string) =>
   );
 
 /** Copy the project structure (no dependencies, no VCS) and link the installed dependencies. */
-async function scratchCopy(run: (copy: string) => Promise<void>) {
+async function createScratchCopy(): Promise<string> {
   await mkdir(join(root, ".local"), { recursive: true });
   const copy = await mkdtemp(join(root, ".local", "tsc-build-"));
   try {
@@ -80,11 +80,78 @@ async function scratchCopy(run: (copy: string) => Promise<void>) {
       if (await exists(join(root, dependencies)))
         await symlink(join(root, dependencies), join(copy, dependencies), "junction");
     }
-    await run(copy);
-  } finally {
+    return copy;
+  } catch (error) {
     await removeWithRetry(copy);
+    throw error;
   }
 }
+
+const BROKEN = 'export const broken: number = "not a number";\n';
+const SYNTAX_FIXTURES = [
+  ["an enum", "scripts/zz-enum.ts", "export enum Color {\n  Red,\n}\n"],
+  [
+    "a runtime namespace",
+    "scripts/zz-namespace.ts",
+    "export namespace Runtime {\n  export const value = 1;\n}\n",
+  ],
+  [
+    "a constructor parameter property",
+    "scripts/zz-parameter-property.ts",
+    "export class Holder {\n  constructor(public readonly value: string) {}\n}\n",
+  ],
+] as const;
+
+/**
+ * METRO-83. One disposable copy and three `tsc -b` runs serve every test in this file, instead of one copy
+ * and one cold build per test. The copy is per test-file process (`mkdtemp`), never shared across files, so
+ * `--parallel` workers cannot collide. The runs, in order: (1) a verbose build of the pristine copy; (2)
+ * `bun run typecheck` on it; (3) `bun run typecheck` after writing one broken fixture into every project
+ * at once, plus the three non-erasable syntax fixtures into the scripts project. The nine projects have no
+ * `references` between them, so one project's error cannot skip another (a later `references` entry would
+ * make a dependent's own test fail visibly, not pass silently). The tests below assert on these outputs.
+ */
+let copyDir: string | undefined;
+let shared:
+  | Promise<{
+      copy: string;
+      cold: { exitCode: number; output: string };
+      pristine: { exitCode: number };
+      broken: { exitCode: number; output: string };
+    }>
+  | undefined;
+function sharedRun() {
+  shared ??= (async () => {
+    const copy = await createScratchCopy();
+    copyDir = copy;
+    const verbose = Bun.spawnSync(["bun", "run", "tsc", "-b", "--verbose"], {
+      cwd: copy,
+      env: cleanGitEnv(),
+    });
+    const pristine = typecheck(copy);
+    for (const { fixture } of PROJECTS) await writeFile(join(copy, fixture), BROKEN);
+    for (const [, file, source] of SYNTAX_FIXTURES) await writeFile(join(copy, file), source);
+    return {
+      copy,
+      cold: {
+        exitCode: verbose.exitCode,
+        output: verbose.stdout.toString() + verbose.stderr.toString(),
+      },
+      pristine,
+      broken: typecheck(copy),
+    };
+  })();
+  return shared;
+}
+
+afterAll(async () => {
+  try {
+    await shared;
+  } catch {
+    // The test that awaited the same promise reports the failure; here only the copy is removed.
+  }
+  if (copyDir !== undefined) await removeWithRetry(copyDir);
+});
 
 /**
  * Windows can briefly hold the copy (EBUSY) right after tsc exits, and Bun's `rm` does not retry that code
@@ -129,30 +196,14 @@ test("METRO-42 the base config enables erasableSyntaxOnly and no project turns i
   expect(overrides).toEqual([]);
 }, 30000);
 
-for (const [name, source] of [
-  ["an enum", "export enum Color {\n  Red,\n}\n"],
-  ["a runtime namespace", "export namespace Runtime {\n  export const value = 1;\n}\n"],
-  [
-    "a constructor parameter property",
-    "export class Holder {\n  constructor(public readonly value: string) {}\n}\n",
-  ],
-] as const) {
-  test(
-    `METRO-42 the scripts project rejects ${name}`,
-    () =>
-      scratchCopy(async (copy) => {
-        await writeFile(join(copy, "scripts", "zz-fixture.ts"), source);
-        const result = Bun.spawnSync(
-          ["bun", "run", "tsc", "-p", join(copy, "scripts", "tsconfig.json"), "--pretty", "false"],
-          { cwd: copy, env: cleanGitEnv() },
-        );
-        const output = result.stdout.toString() + result.stderr.toString();
-        expect(output).toContain("zz-fixture.ts");
-        expect(output).toContain("TS1294");
-        expect(result.exitCode).not.toBe(0);
-      }),
-    60000,
-  );
+for (const [name, file] of SYNTAX_FIXTURES) {
+  test(`METRO-42 the scripts project rejects ${name}`, async () => {
+    const { broken } = await sharedRun();
+    const lines = broken.output.split(/\r?\n/u).filter((line) => line.startsWith(`${file}(`));
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toContain("error TS1294");
+    expect(broken.exitCode).not.toBe(0);
+  }, 120000);
 }
 
 test("METRO-42 the typecheck script is a single tsc -b over the solution file", async () => {
@@ -162,36 +213,22 @@ test("METRO-42 the typecheck script is a single tsc -b over the solution file", 
   expect(scripts["typecheck"]).toBe("tsc -b");
 }, 30000);
 
-test(
-  "METRO-42 tsc -b checks all nine referenced projects",
-  () =>
-    scratchCopy(async (copy) => {
-      const verbose = Bun.spawnSync(["bun", "run", "tsc", "-b", "--verbose"], {
-        cwd: copy,
-        env: cleanGitEnv(),
-      });
-      const output = verbose.stdout.toString() + verbose.stderr.toString();
-      expect(verbose.exitCode).toBe(0);
-      for (const { config } of PROJECTS) expect(output).toContain(`Building project '${config}'`);
-      expect(typecheck(copy).exitCode).toBe(0);
-    }),
-  120000,
-);
+test("METRO-42 tsc -b checks all nine referenced projects", async () => {
+  // The verbose `tsc -b` ran once on the pristine copy; its output is the evidence here.
+  const { cold, pristine } = await sharedRun();
+  expect(cold.exitCode).toBe(0);
+  for (const { config } of PROJECTS) expect(cold.output).toContain(`Building project '${config}'`);
+  expect(pristine.exitCode).toBe(0);
+}, 120000);
 
 for (const { config, fixture } of PROJECTS) {
   // Plain `tsc -b` prints the failing file, not the project config; each fixture lives in exactly
-  // one project, so its path identifies the project. Every other project still builds and is silent.
-  test(
-    `METRO-42 a type error in ${config} fails the typecheck and names its file`,
-    () =>
-      scratchCopy(async (copy) => {
-        await writeFile(join(copy, fixture), 'export const broken: number = "not a number";\n');
-        const result = typecheck(copy);
-        expect(result.exitCode).not.toBe(0);
-        expect(result.output).toContain(`${fixture}(1,14): error TS2322`);
-        for (const other of PROJECTS.filter((project) => project.fixture !== fixture))
-          expect(result.output).not.toContain(other.fixture);
-      }),
-    120000,
-  );
+  // one project, so its path identifies the project. Every project got its own fixture in the same run, so
+  // each fixture must be reported exactly once: a second report would mean another project also picked it up.
+  test(`METRO-42 a type error in ${config} fails the typecheck and names its file`, async () => {
+    const { broken } = await sharedRun();
+    expect(broken.exitCode).not.toBe(0);
+    expect(broken.output).toContain(`${fixture}(1,14): error TS2322`);
+    expect(broken.output.split(`${fixture}(`).length - 1).toBe(1);
+  }, 120000);
 }
