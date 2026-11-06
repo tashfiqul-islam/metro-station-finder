@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 
-import { expect, isWebKitReportOnlyNoise, test } from "./fixtures";
+import { expect, test } from "./fixtures";
 
 const shared = {
   "x-content-type-options": "nosniff",
@@ -9,15 +9,24 @@ const shared = {
   "permissions-policy": "geolocation=(self)",
 };
 
-function collect(page: Page, browserName: string): string[] {
-  const violations: string[] = [];
+/** Console messages that name a Content Security Policy, with the level the browser logged them at. */
+function collect(page: Page): { level: string; text: string }[] {
+  const violations: { level: string; text: string }[] = [];
   page.on("console", (message) => {
     const text = message.text();
-    if (text.includes("Content Security Policy") && !isWebKitReportOnlyNoise(browserName, text)) {
-      violations.push(text);
-    }
+    if (text.includes("Content Security Policy")) violations.push({ level: message.type(), text });
   });
   return violations;
+}
+
+async function injectBlockedImage(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const image = document.createElement("img");
+    image.alt = "";
+    // A different origin from the app (127.0.0.1), so `img-src 'self'` blocks it.
+    image.src = "http://localhost:4173/csp-control.png";
+    document.body.append(image);
+  });
 }
 
 test.describe("security headers and caching (METRO-31)", () => {
@@ -25,11 +34,9 @@ test.describe("security headers and caching (METRO-31)", () => {
     test(`METRO-31 ${path} carries the security headers`, async ({ request }) => {
       const headers = (await request.get(path)).headers();
       expect(headers).toMatchObject(shared);
-      // Report-Only CSP guards pages; the JSON API has none. No enforcing CSP and no HSTS anywhere yet.
-      expect(headers["content-security-policy-report-only"] !== undefined).toBe(
-        !path.startsWith("/api/"),
-      );
-      expect(headers["content-security-policy"]).toBeUndefined();
+      // An enforced CSP guards pages (METRO-88); the JSON API has none. No Report-Only policy and no HSTS anywhere.
+      expect(headers["content-security-policy"] !== undefined).toBe(!path.startsWith("/api/"));
+      expect(headers["content-security-policy-report-only"]).toBeUndefined();
       expect(headers["strict-transport-security"]).toBeUndefined();
     });
   }
@@ -56,39 +63,34 @@ test.describe("security headers and caching (METRO-31)", () => {
     }
   });
 
-  // Chromium logs a report-only violation as a console "info" message (not an error), so the shared
-  // fixture would not catch it. Firefox and WebKit word or route it differently; Chromium is the guard.
-  test.describe("CSP report-only console messages", () => {
-    test.use({ allowedConsoleError: /Failed to load resource/u });
+  // The CSP is enforced (METRO-88, ADR-0011 amendment). Chromium logs an enforced violation as a console
+  // "error", which the shared fixture already fails on; the tests below prove that instead of assuming it.
+  // Firefox and WebKit word the message differently, so the message text is checked on Chromium only.
+  const BLOCKED_IMAGE = /violates the following Content Security Policy directive/u;
 
-    test("METRO-31 positive control: a disallowed image is reported", async ({
+  test.describe("CSP console errors", () => {
+    test.use({ allowedConsoleError: BLOCKED_IMAGE });
+
+    test("METRO-88 positive control: a blocked image is logged at error level", async ({
       page,
       browserName,
     }) => {
       test.skip(browserName !== "chromium", "console wording is verified on Chromium only");
-      const violations = collect(page, browserName);
+      const violations = collect(page);
       await page.goto("/");
       await expect(page.getByLabel("Scaffold status")).toBeVisible();
-      await page.evaluate(() => {
-        const image = document.createElement("img");
-        image.alt = "";
-        image.src = "http://localhost:4173/csp-control.png";
-        document.body.append(image);
-      });
+      await injectBlockedImage(page);
       await expect.poll(() => violations.length).toBeGreaterThan(0);
-      expect(violations.join("\n")).toContain("report-only");
+      expect(violations[0]?.level).toBe("error");
+      expect(violations[0]?.text).toMatch(BLOCKED_IMAGE);
+      expect(violations[0]?.text).not.toContain("report-only");
     });
 
-    test("METRO-31 the app itself produces no CSP report-only violation", async ({
-      page,
-      browserName,
-    }) => {
-      const violations = collect(page, browserName);
+    test("METRO-31 the app itself produces no CSP violation", async ({ page }) => {
+      const violations = collect(page);
       await page.goto("/");
       await expect(page.getByLabel("Scaffold status")).toBeVisible();
       expect(violations).toEqual([]);
-      // WebKit reports a stylesheet violation on any page under this policy (see fixtures.ts), so also
-      // prove directly that the app applies no inline or injected style.
       const styling = await page.evaluate(() => ({
         stylesheets: document.styleSheets.length,
         styleElements: document.querySelectorAll("style").length,
@@ -97,5 +99,22 @@ test.describe("security headers and caching (METRO-31)", () => {
       // One same-origin stylesheet (focus.css, METRO-58) is allowed by `style-src 'self'`; nothing inline.
       expect(styling).toEqual({ stylesheets: 1, styleElements: 0, styleAttributes: 0 });
     });
+  });
+
+  // Proves the console-error fixture itself: with no `allowedConsoleError`, the same blocked image must
+  // fail the test. `test.fail` passes only when the fixture reports the violation.
+  test("METRO-88 the console-error fixture fails a test that triggers a CSP violation", async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(browserName !== "chromium", "console wording is verified on Chromium only");
+    test.fail();
+    const logged = page.waitForEvent("console", {
+      predicate: (message) => BLOCKED_IMAGE.test(message.text()),
+    });
+    await page.goto("/");
+    await expect(page.getByLabel("Scaffold status")).toBeVisible();
+    await injectBlockedImage(page);
+    await logged;
   });
 });

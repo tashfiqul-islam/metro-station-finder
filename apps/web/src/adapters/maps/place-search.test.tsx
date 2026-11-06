@@ -2,23 +2,39 @@ import { act, cleanup, render } from "@testing-library/react";
 import { StrictMode } from "react";
 import { afterAll, afterEach, beforeAll, expect, test, vi } from "vitest";
 
+import { PlacesContext } from "./context";
 import { PLACE_FIELDS, PlaceSearch } from "./place-search";
+import type { PlaceSearchProps } from "./port";
 
-const library = vi.hoisted(() => ({
-  places: null as unknown,
-  made: [] as unknown[],
-}));
-
-vi.mock("@vis.gl/react-google-maps", () => ({ useMapsLibrary: () => library.places }));
+const library = { ready: false, made: [] as unknown[] };
 
 const bias = { center: { lat: 23.8, lng: 90.4 }, radiusMeters: 25_000 };
 
-/** A stand-in for `google.maps.places.PlaceAutocompleteElement`: a plain element that records its options. */
-function FakeAutocomplete(options: unknown): HTMLElement {
-  const element = Object.assign(document.createElement("div"), { options });
-  element.setAttribute("data-fake-autocomplete", "");
-  library.made.push(element);
-  return element;
+/** A stand-in for `google.maps.places.PlaceAutocompleteElement`: an element that records its options. */
+class FakeAutocomplete extends HTMLElement {
+  readonly options: unknown;
+  constructor(options: unknown) {
+    super();
+    this.options = options;
+    this.setAttribute("data-fake-autocomplete", "");
+    library.made.push(this);
+  }
+}
+customElements.define("fake-autocomplete", FakeAutocomplete);
+
+const places = { PlaceAutocompleteElement: FakeAutocomplete };
+
+/** Makes the places library available, as the provider does once it has loaded. */
+function enable(): void {
+  library.ready = true;
+}
+
+function Wrapped(props: PlaceSearchProps) {
+  return (
+    <PlacesContext value={library.ready ? places : null}>
+      <PlaceSearch {...props} />
+    </PlacesContext>
+  );
 }
 
 function selectEvent(chosen: unknown): Event {
@@ -50,7 +66,7 @@ function mount() {
   const onPlace = vi.fn();
   const onFailure = vi.fn();
   const view = render(
-    <PlaceSearch labelId="label" bias={bias} onPlace={onPlace} onFailure={onFailure} />,
+    <Wrapped labelId="label" bias={bias} onPlace={onPlace} onFailure={onFailure} />,
   );
   return { onPlace, onFailure, view };
 }
@@ -65,7 +81,7 @@ beforeAll(() => {
 });
 afterEach(() => {
   cleanup();
-  library.places = null;
+  library.ready = false;
   library.made.length = 0;
 });
 afterAll(() => {
@@ -83,7 +99,7 @@ test("METRO-88 renders a group named by the label and no element until the place
 });
 
 test("METRO-88 creates one Dhaka-biased element restricted to Bangladesh", () => {
-  library.places = { PlaceAutocompleteElement: FakeAutocomplete };
+  enable();
   const { view } = mount();
   expect(library.made).toHaveLength(1);
   expect(Reflect.get(made(), "options")).toEqual({
@@ -94,7 +110,7 @@ test("METRO-88 creates one Dhaka-biased element restricted to Bangladesh", () =>
 });
 
 test("METRO-88 a selection calls fetchFields once with location only and reports a plain coordinate", async () => {
-  library.places = { PlaceAutocompleteElement: FakeAutocomplete };
+  enable();
   const { onPlace, onFailure } = mount();
   const fetchFields = vi.fn(() => Promise.resolve());
   const chosen = makePrediction(fetchFields, { lat: () => 23.75, lng: () => 90.39 });
@@ -107,7 +123,7 @@ test("METRO-88 a selection calls fetchFields once with location only and reports
 });
 
 test("METRO-88 a second selection while one is in flight is ignored", async () => {
-  library.places = { PlaceAutocompleteElement: FakeAutocomplete };
+  enable();
   const { onPlace } = mount();
   const fetchFields = vi.fn(pendingFetch);
   const chosen = makePrediction(fetchFields, { lat: () => 1, lng: () => 2 });
@@ -121,7 +137,7 @@ test("METRO-88 a second selection while one is in flight is ignored", async () =
 });
 
 test("METRO-88 a rejected fetch, a missing location and gmp-error all report a failure without a cause", async () => {
-  library.places = { PlaceAutocompleteElement: FakeAutocomplete };
+  enable();
   const { onPlace, onFailure } = mount();
   const errors = vi.spyOn(console, "error").mockImplementation(() => {});
   made().dispatchEvent(
@@ -140,7 +156,7 @@ test("METRO-88 a rejected fetch, a missing location and gmp-error all report a f
 });
 
 test("METRO-88 an event without a prediction is ignored", async () => {
-  library.places = { PlaceAutocompleteElement: FakeAutocomplete };
+  enable();
   const { onPlace, onFailure } = mount();
   made().dispatchEvent(new Event("gmp-select"));
   await settleAll();
@@ -149,7 +165,7 @@ test("METRO-88 an event without a prediction is ignored", async () => {
 });
 
 test("METRO-88 after unmount the element is removed and a late result reports nothing", async () => {
-  library.places = { PlaceAutocompleteElement: FakeAutocomplete };
+  enable();
   const { onPlace, onFailure, view } = mount();
   const slow = makePrediction(pendingFetch, { lat: () => 1, lng: () => 2 });
   const element = made();
@@ -167,7 +183,7 @@ test("METRO-88 after unmount the element is removed and a late result reports no
 });
 
 test("METRO-88 a late failure after unmount reports nothing", async () => {
-  library.places = { PlaceAutocompleteElement: FakeAutocomplete };
+  enable();
   const { onFailure, view } = mount();
   made().dispatchEvent(selectEvent(makePrediction(pendingFetch, null)));
   await settleAll();
@@ -178,10 +194,10 @@ test("METRO-88 a late failure after unmount reports nothing", async () => {
 });
 
 test("METRO-88 StrictMode leaves exactly one element in the DOM", () => {
-  library.places = { PlaceAutocompleteElement: FakeAutocomplete };
+  enable();
   const view = render(
     <StrictMode>
-      <PlaceSearch labelId="label" bias={bias} onPlace={vi.fn()} onFailure={vi.fn()} />
+      <Wrapped labelId="label" bias={bias} onPlace={vi.fn()} onFailure={vi.fn()} />
     </StrictMode>,
   );
   expect(view.container.querySelectorAll("[data-fake-autocomplete]")).toHaveLength(1);

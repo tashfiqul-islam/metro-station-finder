@@ -39,7 +39,13 @@ async function cruiseTree(
       );
     }
     // Stand-in third-party packages so resolution succeeds and only layering rules can fire.
-    for (const name of ["hono", "react", "valibot"]) {
+    for (const name of [
+      "hono",
+      "react",
+      "valibot",
+      "@vis.gl/react-google-maps",
+      "@googlemaps/js-api-loader",
+    ]) {
       await mkdir(join(root, "node_modules", name), { recursive: true });
       await writeFile(
         join(root, "node_modules", name, "package.json"),
@@ -354,6 +360,33 @@ for (const specifier of ["../../../packages/core/src/index.ts", "@metro/core"]) 
     );
   }
 }
+
+// METRO-88: the Maps libraries stay inside apps/web/src/adapters/maps.
+for (const library of ["@vis.gl/react-google-maps", "@googlemaps/js-api-loader"]) {
+  for (const form of [...runtime, ...erased]) {
+    const id = scenario((at) => ({
+      [at("apps/web/src/features/nearest-station")]: importSource(form, library, "maps"),
+    }));
+    test(
+      `METRO-88 a feature ${form} of ${library} is rejected`,
+      async () => {
+        expect((await verdict(id)).errorRules).toContain("maps-library-only-in-maps-adapter");
+      },
+      LONG,
+    );
+  }
+}
+
+const adapterImportsMaps = scenario((at) => ({
+  [at("apps/web/src/adapters/maps")]: importSource("value", "@vis.gl/react-google-maps", "maps"),
+}));
+test(
+  "METRO-88 the maps adapter may import the Maps library",
+  async () => {
+    expect((await verdict(adapterImportsMaps)).violations).toEqual([]);
+  },
+  LONG,
+);
 
 for (const form of [...runtime, ...erased]) {
   const id = scenario((at) => ({

@@ -1,7 +1,5 @@
 import { walkingDistanceMeters } from "@metro/core";
 import type { Coordinate } from "@metro/core";
-import { useMapsLibrary } from "@vis.gl/react-google-maps";
-import { useMemo } from "react";
 
 import type { RouteService, WalkingRoute } from "./port";
 
@@ -68,9 +66,4 @@ export function createRouteService(api: RouteApi): RouteService {
       return pending;
     },
   };
-}
-
-export function useRouteService(): RouteService | null {
-  const library = useMapsLibrary("routes");
-  return useMemo(() => (library === null ? null : createRouteService(library.Route)), [library]);
 }

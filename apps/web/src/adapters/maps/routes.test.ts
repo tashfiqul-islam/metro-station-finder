@@ -1,12 +1,7 @@
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, expect, test, vi } from "vitest";
+import { expect, test, vi } from "vitest";
 
-import { createRouteService, useRouteService } from "./routes";
+import { createRouteService } from "./routes";
 import type { RouteApi, RouteResponse } from "./routes";
-
-const library = vi.hoisted(() => ({ routes: null as unknown }));
-
-vi.mock("@vis.gl/react-google-maps", () => ({ useMapsLibrary: () => library.routes }));
 
 const origin = { lat: 23.8, lng: 90.4 };
 const destination = { lat: 23.7, lng: 90.41 };
@@ -15,11 +10,6 @@ function fakeApi(result: RouteResponse) {
   const calls = vi.fn<RouteApi["computeRoutes"]>(() => Promise.resolve(result));
   return { api: { computeRoutes: calls }, calls };
 }
-
-afterEach(() => {
-  cleanup();
-  library.routes = null;
-});
 
 test("METRO-88 asks for WALKING with only distance and duration and returns plain values", async () => {
   const { api, calls } = fakeApi({ routes: [{ distanceMeters: 1234, durationMillis: 900_400 }] });
@@ -85,17 +75,4 @@ test("METRO-88 a negative distance from the provider is a failure, not a value",
   await expect(createRouteService(api).walk(origin, destination)).rejects.toThrow(
     "Walking distance must be",
   );
-});
-
-function Probe() {
-  return <p>{useRouteService() === null ? "waiting" : "ready"}</p>;
-}
-
-test("METRO-88 the hook is null until the routes library is loaded, then a service", () => {
-  render(<Probe />);
-  expect(screen.getByText("waiting")).toBeTruthy();
-  cleanup();
-  library.routes = { Route: fakeApi({ routes: [] }).api };
-  render(<Probe />);
-  expect(screen.getByText("ready")).toBeTruthy();
 });

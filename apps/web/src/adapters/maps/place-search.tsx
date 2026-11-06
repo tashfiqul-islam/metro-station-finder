@@ -1,6 +1,6 @@
-import { useMapsLibrary } from "@vis.gl/react-google-maps";
 import { useEffect, useEffectEvent, useRef } from "react";
 
+import { usePlaces } from "./context";
 import type { PlaceSearchProps } from "./port";
 
 /** The only field requested for a selected place: Essentials tier, no displayName, no address. */
@@ -11,7 +11,17 @@ const REGION_CODES = ["bd"];
 
 function noop(): void {}
 
-function isSelection(event: Event): event is google.maps.places.PlacePredictionSelectEvent {
+/** The `gmp-select` event as we use it: a prediction that becomes a place whose fields we fetch. */
+interface SelectEvent extends Event {
+  readonly placePrediction: {
+    toPlace(): {
+      fetchFields(request: { fields: string[] }): Promise<unknown>;
+      readonly location?: { lat(): number; lng(): number } | null | undefined;
+    };
+  };
+}
+
+function isSelection(event: Event): event is SelectEvent {
   return "placePrediction" in event;
 }
 
@@ -23,7 +33,7 @@ function isSelection(event: Event): event is google.maps.places.PlacePredictionS
  * except a plain coordinate.
  */
 export function PlaceSearch({ labelId, bias, onPlace, onFailure }: PlaceSearchProps) {
-  const places = useMapsLibrary("places");
+  const places = usePlaces();
   const { lat, lng } = bias.center;
   const { radiusMeters } = bias;
   const host = useRef<HTMLFieldSetElement>(null);
@@ -39,7 +49,7 @@ export function PlaceSearch({ labelId, bias, onPlace, onFailure }: PlaceSearchPr
     });
     let alive = true;
     let busy = false;
-    const select = async (event: google.maps.places.PlacePredictionSelectEvent): Promise<void> => {
+    const select = async (event: SelectEvent): Promise<void> => {
       if (busy) return;
       busy = true;
       try {
