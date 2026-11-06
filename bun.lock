@@ -48,6 +48,7 @@
       "name": "@metro/web",
       "dependencies": {
         "@metro/contracts": "workspace:*",
+        "@metro/core": "workspace:*",
         "react": "19.3.1",
         "react-dom": "19.3.1",
       },

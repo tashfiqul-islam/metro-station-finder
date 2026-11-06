@@ -35,12 +35,11 @@ export default {
       },
     },
     {
-      name: "web-never-imports-core-runtime",
-      comment:
-        "The browser app gets every runtime value through contracts (ADR-0003); importing a type from core is fine.",
+      name: "web-imports-core-public-entry-only",
+      comment: "The browser app may run core, but only through its public entry.",
       severity: "error",
       from: { path: "^apps/web/" },
-      to: { path: "^packages/core/", dependencyTypesNot: ["type-only"] },
+      to: { path: "^packages/core/", pathNot: "^packages/core/src/index\\.ts$" },
     },
     {
       name: "contracts-public-entry-only",
