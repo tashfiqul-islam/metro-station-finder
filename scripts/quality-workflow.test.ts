@@ -4,17 +4,37 @@ import { isRecord } from "./guards";
 import {
   browserInstallTimeoutViolations,
   credentialedCacheViolations,
+  installBudgetSeconds,
+  installBudgetViolations,
   isCredentialed,
   playwrightProjects,
   setupDriftViolations,
   smokeProjectViolations,
   toParsedWorkflow,
+  type DriftOptions,
   type ParsedWorkflow,
 } from "./workflow-policy";
 
 const text = readFileSync(".github/workflows/quality.yml", "utf8");
 const config = readFileSync("playwright.config.ts", "utf8");
 const quality = toParsedWorkflow("quality.yml", Bun.YAML.parse(text));
+
+/** The steps that must be identical between `build` and `smoke`, and the one step only `build` has. */
+const DRIFT_IDENTICAL = [
+  "Check out the repository",
+  "Install pinned tools with mise",
+  "Install dependencies",
+  "Resolve Playwright version and runner image",
+  "Keep downloaded system packages in a cacheable directory",
+  "Prepare the system package cache for saving",
+  "Build the application",
+];
+
+const DRIFT: DriftOptions = {
+  identical: DRIFT_IDENTICAL,
+  // The bundle budget is checked once, by the Chromium job, because the bundle does not depend on the browser.
+  onlyIn: { build: ["Check the bundle budget"] },
+};
 
 function job(workflow: ParsedWorkflow, id: string): Record<string, unknown> {
   const found = workflow.jobs[id];
@@ -45,14 +65,14 @@ function matrixInclude(workflow: ParsedWorkflow): unknown[] {
   return include;
 }
 
-function stepAt(steps: Record<string, unknown>[], index: number): Record<string, unknown> {
-  const step = steps[index];
-  if (step === undefined) throw new Error(`No step ${index}`);
-  return step;
+function stepNamed(workflow: ParsedWorkflow, id: string, name: string): Record<string, unknown> {
+  const found = stepsOf(job(workflow, id)).find((step) => step["name"] === name);
+  if (found === undefined) throw new Error(`No step ${name} in ${id}`);
+  return found;
 }
 
 /** A one-job workflow with a single Playwright install step; `limit` is the YAML lines for its timeout. */
-function installFixture(limit: string): ParsedWorkflow {
+function installFixture(limit: string, command = "bun run playwright install"): ParsedWorkflow {
   return toParsedWorkflow(
     "fixture.yml",
     Bun.YAML.parse(`on: pull_request
@@ -61,7 +81,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Install browsers
-${limit}        run: bun run playwright install --with-deps chromium
+${limit}        run: ${command} --with-deps chromium
 `),
   );
 }
@@ -100,7 +120,7 @@ test("METRO-90 the smoke runs every Playwright project, in the build job or the 
   expect(smokeProjectViolations(quality, config)).toEqual([]);
 });
 
-test("METRO-90 the smoke check flags a dropped project and an unknown one", () => {
+test("METRO-90 the smoke check flags a dropped project, an unknown one and a wrong browser", () => {
   const dropped = cloneQuality();
   const include = matrixInclude(dropped);
   include.pop();
@@ -109,40 +129,149 @@ test("METRO-90 the smoke check flags a dropped project and an unknown one", () =
   ]);
   include.push({ project: "opera", browsers: "chromium" });
   expect(smokeProjectViolations(dropped, config)).toContain("quality.yml: unknown project opera");
+  const wrong = cloneQuality();
+  const entry = matrixInclude(wrong)[0];
+  if (!isRecord(entry)) throw new Error("matrix entry is not an object");
+  entry["browsers"] = "webkit";
+  expect(smokeProjectViolations(wrong, config)).toEqual([
+    'quality.yml: smoke matrix project firefox installs "webkit", needs firefox',
+  ]);
 });
 
-test("METRO-90 build and smoke repeat the same setup steps with the same pinned actions", () => {
-  expect(setupDriftViolations(quality, "build", "smoke")).toEqual([]);
+test("METRO-90 the smoke check flags a run step that ignores the matrix project or browsers", () => {
+  const fixed = cloneQuality();
+  stepNamed(fixed, "smoke", "Run browser smoke tests")["run"] = "bun run smoke -- --shuffle";
+  expect(smokeProjectViolations(fixed, config)).toEqual([
+    'quality.yml: smoke run step does not pass --project="$PROJECT"',
+  ]);
+  const env = cloneQuality();
+  const run = stepNamed(env, "smoke", "Run browser smoke tests");
+  run["env"] = { PROJECT: "chromium" };
+  expect(smokeProjectViolations(env, config)).toEqual([
+    "quality.yml: smoke run step PROJECT is not the matrix project",
+  ]);
+  const browsers = cloneQuality();
+  const install = stepNamed(browsers, "smoke", "Install Playwright browsers");
+  install["run"] = textOf(install["run"]).replaceAll('"$BROWSERS"', "chromium");
+  install["env"] = { BROWSERS: "chromium" };
+  expect(smokeProjectViolations(browsers, config)).toEqual([
+    'quality.yml: smoke install step does not install "$BROWSERS"',
+    "quality.yml: smoke install step BROWSERS is not the matrix browsers",
+  ]);
 });
 
-test("METRO-90 the setup check flags a changed pin and an extra step", () => {
+test("METRO-90 the smoke check flags a switched-off job or step", () => {
+  const off = cloneQuality();
+  job(off, "smoke")["if"] = false;
+  stepNamed(off, "build", "Run browser smoke tests")["if"] = "${{ false }}";
+  stepNamed(off, "smoke", "Build the application")["if"] = "false";
+  expect(smokeProjectViolations(off, config)).toEqual([
+    "quality.yml: job build step Run browser smoke tests is switched off",
+    "quality.yml: job smoke is switched off",
+    "quality.yml: job smoke step Build the application is switched off",
+  ]);
+});
+
+test("METRO-90 build and smoke repeat the same setup with the same pinned actions", () => {
+  expect(setupDriftViolations(quality, "build", "smoke", DRIFT)).toEqual([]);
+});
+
+test("METRO-90 the setup check flags a changed pin, changed run text and an unlisted tail step", () => {
   const drifted = cloneQuality();
-  const smoke = stepsOf(job(drifted, "smoke"));
-  stepAt(smoke, 0)["uses"] = "actions/checkout@0000000000000000000000000000000000000000";
-  stepAt(smoke, 3)["name"] = "Renamed";
-  expect(setupDriftViolations(drifted, "build", "smoke")).toEqual([
-    'quality.yml: step 1 differs: build has "Check out the repository | actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1", smoke has "Check out the repository | actions/checkout@0000000000000000000000000000000000000000"',
-    'quality.yml: step 4 differs: build has "Resolve Playwright version and runner image | run", smoke has "Renamed | run"',
+  stepNamed(drifted, "smoke", "Check out the repository")["uses"] =
+    "actions/checkout@0000000000000000000000000000000000000000";
+  stepNamed(drifted, "smoke", "Install dependencies")["run"] = "bun install";
+  expect(setupDriftViolations(drifted, "build", "smoke", DRIFT)).toEqual([
+    'quality.yml: step "Check out the repository" uses a different action in build and smoke',
+    'quality.yml: step "Install dependencies" differs between build and smoke',
+  ]);
+  // The bundle check is allowed only in build; without the allow-list it is a drift.
+  expect(setupDriftViolations(quality, "build", "smoke", { identical: DRIFT_IDENTICAL })).toEqual([
+    'quality.yml: step "Check the bundle budget" is only in build',
+  ]);
+  // A tail step dropped from build (the report upload) is reported as only in smoke.
+  const dropped = cloneQuality();
+  const buildSteps = job(dropped, "build")["steps"];
+  if (!Array.isArray(buildSteps)) throw new Error("steps is not a list");
+  buildSteps.splice(
+    buildSteps.findIndex(
+      (step) => isRecord(step) && step["name"] === "Upload Playwright report and traces",
+    ),
+    1,
+  );
+  expect(setupDriftViolations(dropped, "build", "smoke", DRIFT)).toEqual([
+    'quality.yml: step "Upload Playwright report and traces" is only in smoke',
+  ]);
+});
+
+test("METRO-90 the setup check flags shared steps in a different order and a job without steps", () => {
+  const swapped = cloneQuality();
+  const smokeSteps = job(swapped, "smoke")["steps"];
+  if (!Array.isArray(smokeSteps)) throw new Error("steps is not a list");
+  const list: unknown[] = smokeSteps;
+  const head = list.splice(0, 2);
+  list.unshift(head[1], head[0]);
+  expect(setupDriftViolations(swapped, "build", "smoke", DRIFT)).toEqual([
+    "quality.yml: shared steps of build and smoke are in a different order",
+  ]);
+  expect(setupDriftViolations(quality, "build", "missing", DRIFT)).toEqual([
+    "quality.yml: job build or missing has no steps",
+  ]);
+  expect(setupDriftViolations(quality, "missing", "smoke")).toEqual([
+    "quality.yml: job missing or smoke has no steps",
   ]);
 });
 
 test("METRO-90 every Playwright install step has a step timeout of at most ten minutes", () => {
   expect(browserInstallTimeoutViolations([quality])).toEqual([]);
   for (const id of ["build", "smoke"]) {
-    const install = stepsOf(job(quality, id)).find(
-      (step) => step["name"] === "Install Playwright browsers",
-    );
-    expect(install?.["timeout-minutes"], id).toBe(5);
+    const install = stepNamed(quality, id, "Install Playwright browsers");
+    expect(install["timeout-minutes"], id).toBe(6);
+    const run = textOf(install["run"]);
     // Bounded attempts: every attempt is cut by `timeout` (it also ends a root child started with sudo).
-    expect(textOf(install?.["run"]), id).toContain("for attempt in 1 2; do");
-    // The killed attempt leaves its root apt-get running; the retry would fail on the dpkg lock without this.
-    expect(textOf(install?.["run"]), id).toContain("sudo pkill -x apt-get");
-    // The retry leaves the Azure mirror, which was the slow one in every stall.
-    expect(textOf(install?.["run"]), id).toContain("http://archive.ubuntu.com/ubuntu/");
-    expect(textOf(install?.["run"]), id).toContain(
+    expect(run, id).toContain("for attempt in 1 2; do");
+    expect(run, id).toContain(
       "timeout --kill-after=5s 140s bun run playwright install --with-deps",
     );
+    // The killed attempt leaves its root apt-get running; the retry would fail on the dpkg lock without this.
+    expect(run, id).toContain("sudo pkill -x apt-get");
+    expect(run, id).toContain("sudo dpkg --configure -a || true");
+    // The mirror switch runs only between attempts, cannot abort the step, and says whether it worked.
+    expect(run, id).toContain('if [ "$attempt" = 1 ]; then');
+    expect(run, id).toContain(
+      'if compgen -G "/etc/apt/sources.list.d/*.sources" > /dev/null; then',
+    );
+    expect(run, id).toContain("http://archive.ubuntu.com/ubuntu/");
+    expect(run, id).toContain("|| true\n");
+    expect(run, id).toContain('grep -qs "http://archive.ubuntu.com/ubuntu/"');
+    expect(run, id).toContain("::notice::Retrying the Playwright install from archive.ubuntu.com");
+    expect(run, id).toContain("::warning::Could not switch the apt mirror");
   }
+});
+
+test("METRO-90 the retry budget fits inside the step timeout", () => {
+  expect(installBudgetViolations([quality])).toEqual([]);
+  for (const id of ["build", "smoke"]) {
+    const run = textOf(stepNamed(quality, id, "Install Playwright browsers")["run"]);
+    expect(installBudgetSeconds(run), id).toBe(2 * (5 + 140) + 15);
+  }
+});
+
+test("METRO-90 the budget check flags a step limit that cuts the retry and a missing loop", () => {
+  const tight = cloneQuality();
+  stepNamed(tight, "build", "Install Playwright browsers")["timeout-minutes"] = 5;
+  expect(installBudgetViolations([tight])).toEqual([
+    "quality.yml job build step Install Playwright browsers: retry budget 305 s does not fit in timeout-minutes 5",
+  ]);
+  const noLoop = installFixture("        timeout-minutes: 5\n");
+  expect(installBudgetViolations([noLoop])).toEqual([
+    "fixture.yml job one step Install browsers: no bounded retry loop",
+  ]);
+  const unset = cloneQuality();
+  delete stepNamed(unset, "smoke", "Install Playwright browsers")["timeout-minutes"];
+  expect(installBudgetViolations([unset])).toEqual([
+    "quality.yml job smoke step Install Playwright browsers: retry budget 305 s does not fit in timeout-minutes undefined",
+  ]);
 });
 
 test("METRO-90 the timeout check flags a missing, zero, oversized or non-numeric limit", () => {
@@ -160,22 +289,46 @@ test("METRO-90 the timeout check flags a missing, zero, oversized or non-numeric
     ]);
 });
 
-test("METRO-90 the system package cache is keyed by image and Playwright version and saved only after the install", () => {
+test("METRO-90 the timeout check sees an install command with extra spaces or tabs", () => {
+  for (const command of ["bun run playwright  install", "bunx playwright\tinstall"])
+    expect(browserInstallTimeoutViolations([installFixture("", command)])).toEqual([
+      "fixture.yml job one step Install browsers: needs timeout-minutes between 1 and 10, found undefined",
+    ]);
+});
+
+test("METRO-90 the caches are restored before the install and saved right after it, before any repository code", () => {
   for (const id of ["build", "smoke"]) {
     const steps = stepsOf(job(quality, id));
     const names = steps.map((step) => textOf(step["name"]));
-    const restore = steps.find((step) => step["name"] === "Restore the system package cache");
-    const withInputs = restore?.["with"];
-    expect(isRecord(withInputs) ? withInputs["path"] : undefined, id).toBe("~/apt-archives");
-    const key = isRecord(withInputs) ? textOf(withInputs["key"]) : "";
+    const at = (name: string) => names.indexOf(name);
+    for (const [restore, save, path] of [
+      ["Restore the system package cache", "Save the system package cache", "~/apt-archives"],
+      [
+        "Restore the Playwright browser cache",
+        "Save the Playwright browser cache",
+        "~/.cache/ms-playwright",
+      ],
+    ] as const) {
+      const restoreStep = stepNamed(quality, id, restore);
+      const saveStep = stepNamed(quality, id, save);
+      expect(textOf(restoreStep["uses"]), id).toMatch(/^actions\/cache\/restore@[0-9a-f]{40}$/u);
+      expect(textOf(saveStep["uses"]), id).toMatch(/^actions\/cache\/save@[0-9a-f]{40}$/u);
+      expect(restoreStep["with"], id).toMatchObject({ path });
+      expect(saveStep["with"], id).toMatchObject({ path });
+      // Saved only when the restore missed, and under the exact key the restore tried.
+      expect(textOf(saveStep["if"]), id).toContain("cache-hit != 'true'");
+      expect(textOf(isRecord(saveStep["with"]) ? saveStep["with"]["key"] : ""), id).toContain(
+        "cache-primary-key",
+      );
+      expect(at(restore), id).toBeLessThan(at("Install Playwright browsers"));
+      expect(at(save), id).toBeGreaterThan(at("Install Playwright browsers"));
+      // Nothing from the repository (build, smoke, report upload) runs between the install and the save.
+      expect(at(save), id).toBeLessThan(at("Build the application"));
+    }
+    const inputs = stepNamed(quality, id, "Restore the system package cache")["with"];
+    const key = textOf(isRecord(inputs) ? inputs["key"] : undefined);
     expect(key, id).toContain("steps.playwright.outputs.image");
     expect(key, id).toContain("steps.playwright.outputs.version");
-    expect(names.indexOf("Restore the system package cache"), id).toBeLessThan(
-      names.indexOf("Install Playwright browsers"),
-    );
-    expect(names.indexOf("Install Playwright browsers"), id).toBeLessThan(
-      names.indexOf("Prepare the system package cache for saving"),
-    );
   }
 });
 
@@ -203,6 +356,10 @@ test("METRO-90 the credentialed cache rule fails when the preview job restores a
     [
       { name: "Restore only", uses: "actions/cache/restore@x", with: { path: "p", key: "k" } },
       "quality.yml job preview step Restore only: restores a cache",
+    ],
+    [
+      { name: "Save only", uses: "actions/cache/save@x", with: { path: "p", key: "k" } },
+      "quality.yml job preview step Save only: restores a cache",
     ],
     [
       { name: "Fetch the build", uses: "actions/download-artifact@x", with: { name: "dist" } },

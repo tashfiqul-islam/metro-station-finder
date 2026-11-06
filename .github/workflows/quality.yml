@@ -112,40 +112,67 @@ jobs:
           echo "image=$ImageVersion" >> "$GITHUB_OUTPUT"
       - name: Keep downloaded system packages in a cacheable directory
         # Playwright's --with-deps runs apt-get as root; its ~100 MB download from the Ubuntu mirror stalled or crawled
-        # in six hosted installs (docs/evidence/metro-90.md). apt re-checks every cached package against the signed index.
+        # in seven hosted installs (docs/evidence/metro-90.md). apt re-checks every cached package against the signed index.
         run: |
           mkdir -p "$HOME/apt-archives/partial"
           echo "Dir::Cache::Archives \"$HOME/apt-archives\";" | sudo tee /etc/apt/apt.conf.d/90-ci-archives > /dev/null
       - name: Restore the system package cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: apt-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/apt-archives
           key: apt-${{ steps.playwright.outputs.image }}-${{ steps.playwright.outputs.version }}-chromium
       - name: Restore the Playwright browser cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: browser-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium
       - name: Install Playwright browsers
-        # A stalled apt download hung this step for 13 to 20 minutes. Each attempt is cut at 140 s, with one retry
-        # (a retry resumes from the partial downloads) after stopping the orphaned apt-get and moving to another mirror, inside a 5 minute step limit.
-        timeout-minutes: 5
+        # Budget: two attempts of at most 140 s plus 5 s to stop each, a few seconds of cleanup between them (about
+        # 300 s in all) inside a 6 minute step limit. Normal installs took 37 to 99 s and slow ones 107 to 148 s
+        # (docs/evidence/metro-90.md); a retry resumes from the partial downloads. The ticket said about 5 minutes; the
+        # attempts do not fit in 5.
+        timeout-minutes: 6
         run: |
           for attempt in 1 2; do
             if timeout --kill-after=5s 140s bun run playwright install --with-deps chromium; then exit 0; fi
             echo "::warning::Playwright browser install attempt $attempt failed or timed out"
-            # timeout stops bun and sudo but not the root apt-get they started; stop it so the retry gets the dpkg lock.
-            sudo pkill -x apt-get || true
-            sleep 3
-            sudo dpkg --configure -a
-            # The Azure mirror was the slow one in every stall (docs/evidence/metro-90.md); retry from Canonical's archive.
-            sudo sed -i 's#mirror+file:/etc/apt/apt-mirrors.txt#http://archive.ubuntu.com/ubuntu/#' /etc/apt/sources.list.d/*.sources
+            if [ "$attempt" = 1 ]; then
+              # timeout stops bun and sudo but not the root apt-get they started; stop it so the retry gets the dpkg lock.
+              sudo pkill -x apt-get || true
+              sleep 3
+              sudo dpkg --configure -a || true
+              # Both stalled logs read in detail ended during the fetch from azure.archive.ubuntu.com; retry from Canonical's archive.
+              if compgen -G "/etc/apt/sources.list.d/*.sources" > /dev/null; then
+                sudo sed -i 's#mirror+file:/etc/apt/apt-mirrors.txt#http://archive.ubuntu.com/ubuntu/#' /etc/apt/sources.list.d/*.sources || true
+              fi
+              if grep -qs "http://archive.ubuntu.com/ubuntu/" /etc/apt/sources.list.d/*.sources; then
+                echo "::notice::Retrying the Playwright install from archive.ubuntu.com"
+              else
+                echo "::warning::Could not switch the apt mirror; retrying with the default"
+              fi
+            fi
           done
           exit 1
       - name: Prepare the system package cache for saving
         run: |
           sudo chown -R "$USER" "$HOME/apt-archives"
           sudo rm -rf "$HOME/apt-archives/partial" "$HOME/apt-archives/lock"
+      # Both caches are saved here, before any repository code (build, smoke) runs with sudo available, so that code
+      # can never write into a cache that later runs restore. Only a restore miss saves.
+      - name: Save the system package cache
+        if: ${{ steps.apt-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/apt-archives
+          key: ${{ steps.apt-cache.outputs.cache-primary-key }}
+      - name: Save the Playwright browser cache
+        if: ${{ steps.browser-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ steps.browser-cache.outputs.cache-primary-key }}
       - name: Build the application
         run: bun run build
       - name: Run browser smoke tests
@@ -199,42 +226,69 @@ jobs:
           echo "image=$ImageVersion" >> "$GITHUB_OUTPUT"
       - name: Keep downloaded system packages in a cacheable directory
         # Playwright's --with-deps runs apt-get as root; its ~100 MB download from the Ubuntu mirror stalled or crawled
-        # in six hosted installs (docs/evidence/metro-90.md). apt re-checks every cached package against the signed index.
+        # in seven hosted installs (docs/evidence/metro-90.md). apt re-checks every cached package against the signed index.
         run: |
           mkdir -p "$HOME/apt-archives/partial"
           echo "Dir::Cache::Archives \"$HOME/apt-archives\";" | sudo tee /etc/apt/apt.conf.d/90-ci-archives > /dev/null
       - name: Restore the system package cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: apt-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/apt-archives
           key: apt-${{ steps.playwright.outputs.image }}-${{ steps.playwright.outputs.version }}-${{ matrix.browsers }}
       - name: Restore the Playwright browser cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: browser-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-${{ matrix.browsers }}
       - name: Install Playwright browsers
-        # A stalled apt download hung this step for 13 to 20 minutes. Each attempt is cut at 140 s, with one retry
-        # (a retry resumes from the partial downloads) after stopping the orphaned apt-get and moving to another mirror, inside a 5 minute step limit.
-        timeout-minutes: 5
+        # Budget: two attempts of at most 140 s plus 5 s to stop each, a few seconds of cleanup between them (about
+        # 300 s in all) inside a 6 minute step limit. Normal installs took 37 to 99 s and slow ones 107 to 148 s
+        # (docs/evidence/metro-90.md); a retry resumes from the partial downloads. The ticket said about 5 minutes; the
+        # attempts do not fit in 5.
+        timeout-minutes: 6
         env:
           BROWSERS: ${{ matrix.browsers }}
         run: |
           for attempt in 1 2; do
             if timeout --kill-after=5s 140s bun run playwright install --with-deps "$BROWSERS"; then exit 0; fi
             echo "::warning::Playwright browser install attempt $attempt failed or timed out"
-            # timeout stops bun and sudo but not the root apt-get they started; stop it so the retry gets the dpkg lock.
-            sudo pkill -x apt-get || true
-            sleep 3
-            sudo dpkg --configure -a
-            # The Azure mirror was the slow one in every stall (docs/evidence/metro-90.md); retry from Canonical's archive.
-            sudo sed -i 's#mirror+file:/etc/apt/apt-mirrors.txt#http://archive.ubuntu.com/ubuntu/#' /etc/apt/sources.list.d/*.sources
+            if [ "$attempt" = 1 ]; then
+              # timeout stops bun and sudo but not the root apt-get they started; stop it so the retry gets the dpkg lock.
+              sudo pkill -x apt-get || true
+              sleep 3
+              sudo dpkg --configure -a || true
+              # Both stalled logs read in detail ended during the fetch from azure.archive.ubuntu.com; retry from Canonical's archive.
+              if compgen -G "/etc/apt/sources.list.d/*.sources" > /dev/null; then
+                sudo sed -i 's#mirror+file:/etc/apt/apt-mirrors.txt#http://archive.ubuntu.com/ubuntu/#' /etc/apt/sources.list.d/*.sources || true
+              fi
+              if grep -qs "http://archive.ubuntu.com/ubuntu/" /etc/apt/sources.list.d/*.sources; then
+                echo "::notice::Retrying the Playwright install from archive.ubuntu.com"
+              else
+                echo "::warning::Could not switch the apt mirror; retrying with the default"
+              fi
+            fi
           done
           exit 1
       - name: Prepare the system package cache for saving
         run: |
           sudo chown -R "$USER" "$HOME/apt-archives"
           sudo rm -rf "$HOME/apt-archives/partial" "$HOME/apt-archives/lock"
+      # Both caches are saved here, before any repository code (build, smoke) runs with sudo available, so that code
+      # can never write into a cache that later runs restore. Only a restore miss saves.
+      - name: Save the system package cache
+        if: ${{ steps.apt-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/apt-archives
+          key: ${{ steps.apt-cache.outputs.cache-primary-key }}
+      - name: Save the Playwright browser cache
+        if: ${{ steps.browser-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ steps.browser-cache.outputs.cache-primary-key }}
       - name: Build the application
         run: bun run build
       - name: Run browser smoke tests
