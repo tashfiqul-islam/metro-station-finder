@@ -20,6 +20,7 @@
     "lint": "oxlint --type-aware --deny-warnings apps packages scripts e2e playwright.config.ts vitest.config.ts",
     "scan": "bun run scan:dependencies && bun run scan:secrets",
     "imports:check": "bun run imports -- apps packages scripts e2e playwright.config.ts vitest.config.ts",
+    "check:timed": "node scripts/timed-check.ts",
     "check:fast": "bun run scripts/tools.ts && bun run format:check && bun run lint",
     "scan:secrets": "node scripts/secrets.ts",
     "bundle:check": "node scripts/bundle.ts",

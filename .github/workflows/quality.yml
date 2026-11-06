@@ -78,8 +78,8 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: node scripts/commit-message.ts --range "$BASE_SHA..$HEAD_SHA"
-      - name: Run all checks
-        run: bun run check
+      - name: Run all checks with per-command timing
+        run: bun run check:timed
       - name: Upload lcov coverage
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
