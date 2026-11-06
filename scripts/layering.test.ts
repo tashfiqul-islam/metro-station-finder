@@ -166,7 +166,7 @@ test("FND-R6 api importing web is rejected", async () => {
 // METRO-54. "contracts importing an app" is already covered by the FND-R6 test above.
 // The cruiser drops imports TypeScript erases unless tsPreCompilationDeps is on, so these tests also
 // guard that option: a type-only import of a contracts internal module must still be rejected, and
-// the type-only carve-out of web-never-imports-core-runtime is only meaningful with the option on.
+// type-only edges to core internals are only rejected with the option on.
 const typedCore = {
   "packages/core/src/index.ts": "export const core = 1;\nexport type Core = number;\n",
 };
@@ -193,19 +193,28 @@ function importSource(form: Form, specifier: string, name: string): string {
   return forms[form](specifier, erased.includes(form) ? name.toUpperCase() : name);
 }
 
+// METRO-89 (ADR-0018 follow-up 1) replaces web-never-imports-core-runtime with
+// web-imports-core-public-entry-only. Mapping of the old assertions:
+//   web runtime import of core rejected   -> now allowed through the public entry (inverted on purpose)
+//   web type-only import of core allowed  -> kept, still allowed through the public entry
+//   (new) web import of a core internal   -> rejected naming web-imports-core-public-entry-only
+const coreInternal = {
+  "packages/core/src/domain/station.ts": "export const s = 1;\nexport type S = number;\n",
+};
+
 for (const specifier of ["../../../packages/core/src/index.ts", "@metro/core"]) {
   for (const form of runtime) {
-    test(`METRO-54 web ${form} of ${specifier} is rejected`, async () => {
+    test(`METRO-89 web ${form} of the core public entry ${specifier} is allowed`, async () => {
       const result = await cruise({
         ...typedCore,
         "apps/web/src/main.ts": importSource(form, specifier, "core"),
       });
-      expect(result.code).not.toBe(0);
-      expect(result.output).toContain("web-never-imports-core-runtime");
+      expect(result.output).not.toContain("error");
+      expect(result.code).toBe(0);
     });
   }
   for (const form of erased) {
-    test(`METRO-54 web ${form} of ${specifier} is allowed (type-only carve-out)`, async () => {
+    test(`METRO-54 web ${form} of ${specifier} is allowed (type-only)`, async () => {
       const result = await cruise({
         ...typedCore,
         "apps/web/src/main.ts": forms[form](specifier, "Core"),
@@ -215,6 +224,33 @@ for (const specifier of ["../../../packages/core/src/index.ts", "@metro/core"]) 
     });
   }
 }
+
+for (const form of [...runtime, ...erased]) {
+  test(`METRO-89 web ${form} of a core internal module by relative path is rejected`, async () => {
+    const result = await cruise({
+      ...typedCore,
+      ...coreInternal,
+      "apps/web/src/main.ts": importSource(
+        form,
+        "../../../packages/core/src/domain/station.ts",
+        "s",
+      ),
+    });
+    expect(result.code).not.toBe(0);
+    expect(result.output).toContain("web-imports-core-public-entry-only");
+  });
+}
+
+test("METRO-89 web deep import of a core internal path by package name is rejected", async () => {
+  const result = await cruise({
+    ...typedCore,
+    ...coreInternal,
+    "apps/web/src/main.ts": importSource("value", "@metro/core/src/domain/station.ts", "s"),
+  });
+  // The package exports map hides the path, so it surfaces as no-unresolved (as for contracts).
+  expect(result.code).not.toBe(0);
+  expect(result.output).toContain("no-unresolved");
+});
 
 test("METRO-54 api may import a runtime value from core", async () => {
   const result = await cruise({
