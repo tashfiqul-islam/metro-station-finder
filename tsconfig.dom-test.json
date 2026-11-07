@@ -2,8 +2,9 @@
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "jsx": "react-jsx",
-    "types": ["node", "react", "react-dom"],
-    "lib": ["ES2022", "DOM", "DOM.Iterable"]
+    "types": ["node", "react", "react-dom", "vite/client", "google.maps"],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "skipLibCheck": true
   },
   "include": ["apps/web/src/**/*.test.ts", "apps/web/src/**/*.test.tsx"]
 }

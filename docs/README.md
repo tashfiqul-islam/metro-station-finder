@@ -22,24 +22,25 @@ Every file under `docs/` has exactly one kind. The Kinds table defines the kinds
 
 First cell is a path: a trailing `/` covers a directory, otherwise it is one file. An exact file row beats a directory row.
 
-| Path                                 | Kind      | Note                                                              |
-| ------------------------------------ | --------- | ----------------------------------------------------------------- |
-| `docs/README.md`                     | index     | this file                                                         |
-| `docs/agents/`                       | guide     | policies and how-tos routed from `CLAUDE.md`                      |
-| `docs/agents/cutover-runbook.md`     | runbook   | default-branch cutover, run by the owner                          |
-| `docs/agents/deploy-runbook.md`      | runbook   | production deploy and rollback                                    |
-| `docs/agents/github-settings.md`     | runbook   | owner-run GitHub security settings check and owner steps          |
-| `docs/agents/maintenance-runbook.md` | runbook   | token rotation, expiry alarm and the wrangler types re-test       |
-| `docs/agents/skills.lock.json`       | data      | pinned skill hashes, checked by the preparation scripts and tests |
-| `docs/adr/`                          | decision  | MADR, numbered `NNNN-title.md`; `0000-template.md` is the form    |
-| `docs/adr/0000-template.md`          | template  | the ADR form                                                      |
-| `docs/specifications/`               | contract  | one settled specification per ticket slice                        |
-| `docs/evidence/`                     | evidence  | ticket evidence and dated audits; see Naming                      |
-| `docs/product/`                      | reference | legacy parity and glossary                                        |
-| `docs/development.md`                | reference | local workspace facts                                             |
-| `docs/templates/`                    | template  | specification and Plane ticket forms                              |
-| `docs/examples/`                     | example   | synthetic preparation and untrusted-input fixtures                |
-| `docs/superpowers/plans/`            | history   | dated task plans; their task lists are frozen history             |
+| Path                                     | Kind      | Note                                                                        |
+| ---------------------------------------- | --------- | --------------------------------------------------------------------------- |
+| `docs/README.md`                         | index     | this file                                                                   |
+| `docs/agents/`                           | guide     | policies and how-tos routed from `CLAUDE.md`                                |
+| `docs/agents/cutover-runbook.md`         | runbook   | default-branch cutover, run by the owner                                    |
+| `docs/agents/deploy-runbook.md`          | runbook   | production deploy and rollback                                              |
+| `docs/agents/github-settings.md`         | runbook   | owner-run GitHub security settings check and owner steps                    |
+| `docs/agents/maintenance-runbook.md`     | runbook   | token rotation, expiry alarm and the wrangler types re-test                 |
+| `docs/agents/maps-live-check-runbook.md` | runbook   | owner-run `smoke:live` against real Google, key restrictions and quota caps |
+| `docs/agents/skills.lock.json`           | data      | pinned skill hashes, checked by the preparation scripts and tests           |
+| `docs/adr/`                              | decision  | MADR, numbered `NNNN-title.md`; `0000-template.md` is the form              |
+| `docs/adr/0000-template.md`              | template  | the ADR form                                                                |
+| `docs/specifications/`                   | contract  | one settled specification per ticket slice                                  |
+| `docs/evidence/`                         | evidence  | ticket evidence and dated audits; see Naming                                |
+| `docs/product/`                          | reference | legacy parity and glossary                                                  |
+| `docs/development.md`                    | reference | local workspace facts                                                       |
+| `docs/templates/`                        | template  | specification and Plane ticket forms                                        |
+| `docs/examples/`                         | example   | synthetic preparation and untrusted-input fixtures                          |
+| `docs/superpowers/plans/`                | history   | dated task plans; their task lists are frozen history                       |
 
 ## Ownership: code, docs, Plane, git
 

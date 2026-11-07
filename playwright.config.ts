@@ -22,9 +22,14 @@ export default defineConfig({
   use: { baseURL: origin, trace: "retain-on-failure", screenshot: "only-on-failure" },
   projects: ["true", "1"].includes(process.env["CI"] ?? "") ? projects : projects.slice(0, 1),
   webServer: {
-    // The built app, served by `vite preview` with the Worker running in workerd.
-    command: "node ../../node_modules/vite/bin/vite.js preview",
+    // The built app, served by `vite preview` with the Worker running in workerd. The web app is rebuilt
+    // first with the fake key below (METRO-88): the key is compiled in, and `bun run build` has none. A
+    // variable set here wins over any `.env` file, so a smoke run can never carry a real key, and the
+    // Google hosts are stubbed in the tests, so it never reaches Google either.
+    command:
+      "node ../../node_modules/vite/bin/vite.js build && node ../../node_modules/vite/bin/vite.js preview",
     cwd: "apps/web",
+    env: { VITE_GOOGLE_MAPS_API_KEY: "fake-key-for-tests" },
     url: origin,
     reuseExistingServer: false,
     timeout: 60_000,

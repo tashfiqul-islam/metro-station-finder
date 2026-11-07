@@ -51,7 +51,8 @@ differ and cannot be linted, without copying root policy.
 | Station or fare data           | `packages/core/src/stations/dataset.ts`    |
 | Shape that crosses the network | `packages/contracts/src/` (via `index.ts`) |
 | API route and headers          | `apps/api/src/app.ts`                      |
-| UI                             | `apps/web/src/`                            |
+| UI, feature                    | `apps/web/src/features/`                   |
+| Google Maps, Places, Routes    | `apps/web/src/adapters/maps/`              |
 | Journey, keyboard, axe         | `e2e/`                                     |
 | Repository gate                | `scripts/<gate>.ts` with `<gate>.test.ts`  |
 
@@ -60,8 +61,8 @@ and api never import each other. Packages are reached only through `index.ts`.
 
 ## New feature
 
-Follow an existing slice, explain any deviation in the PR, and write an ADR for a new pattern
-([template](docs/adr/0000-template.md)).
+Copy the reference slice in the [golden path](docs/agents/golden-path.md), explain any deviation in
+the PR, and write an ADR for a new pattern ([template](docs/adr/0000-template.md)).
 
 ## Read when triggered
 
@@ -92,8 +93,8 @@ Routing evidence and current gaps: [METRO-8 evidence](docs/evidence/metro-8.md).
 
 ## Reviewers: not findings here
 
-Strict schemas. Fixed UI error copy. Report-Only CSP before the reference slice. No
-branch-coverage gate on Bun-run files. The web app importing core's public entry.
+Strict schemas. Fixed UI error copy. No branch-coverage gate on Bun-run files. The web app
+importing core's public entry.
 
 ## Upkeep
 

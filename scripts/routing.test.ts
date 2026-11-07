@@ -149,3 +149,16 @@ test("METRO-51 AGENTS.md routes every recorded METRO-8 scenario to its expected 
     expect({ name, set: readSet(table, needles) }).toEqual({ name, set: expected.get(name) ?? [] });
   }
 });
+
+test("METRO-88 AGENTS.md links the golden path in its New feature section, and the guide exists", async () => {
+  const agents = await read("AGENTS.md");
+  const section = agents.slice(
+    agents.indexOf("## New feature"),
+    agents.indexOf("## Read when triggered"),
+  );
+  expect(section).toContain("](docs/agents/golden-path.md)");
+  expect(existsSync(join(root, "docs/agents/golden-path.md"))).toBe(true);
+  // A link removed or retargeted is caught: the same check on a changed copy fails.
+  const removed = section.replace("(docs/agents/golden-path.md)", "(docs/agents/ui.md)");
+  expect(removed).not.toContain("](docs/agents/golden-path.md)");
+});

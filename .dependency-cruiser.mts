@@ -34,6 +34,14 @@ export default {
       to: { path: "^packages/core/", pathNot: "^packages/core/src/index\\.ts$" },
     },
     {
+      name: "maps-library-only-in-maps-adapter",
+      comment:
+        "Google Maps libraries (@vis.gl/react-google-maps and @googlemaps/*) are imported only by apps/web/src/adapters/maps, the one place that touches Google; everything else gets a fake in tests.",
+      severity: "error",
+      from: { pathNot: "^apps/web/src/adapters/maps/" },
+      to: { path: "(^|/)node_modules/(@vis\\.gl/react-google-maps|@googlemaps)/" },
+    },
+    {
       name: "contracts-public-entry-only",
       comment:
         "Outside the package, contracts is reached only through its public entry (src/index.ts, the package exports map).",

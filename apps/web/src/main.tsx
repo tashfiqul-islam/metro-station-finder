@@ -1,7 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
-import { App } from "./App";
+import { AppRoutes } from "./AppRoutes";
 import { ErrorBoundary } from "./error-boundary";
 import { rootErrorOptions } from "./report-error";
 
@@ -11,7 +11,7 @@ if (!root) throw new Error("Missing application root");
 createRoot(root, rootErrorOptions).render(
   <StrictMode>
     <ErrorBoundary>
-      <App />
+      <AppRoutes pathname={window.location.pathname} />
     </ErrorBoundary>
   </StrictMode>,
 );

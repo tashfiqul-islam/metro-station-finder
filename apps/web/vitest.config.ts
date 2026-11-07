@@ -10,6 +10,8 @@ export default defineProject({
     ...sharedTestOptions,
     name: "web",
     environment: "happy-dom",
+    // Unit tests must never see a real Maps key from the shell or a `.env` file: blank means "no key".
+    env: { VITE_GOOGLE_MAPS_API_KEY: "" },
     include: ["src/**/*.test.{ts,tsx}"],
   },
 });

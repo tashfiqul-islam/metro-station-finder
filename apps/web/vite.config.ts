@@ -4,6 +4,9 @@ import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 export default defineConfig({
+  // The owner keeps the Maps key in the repository root `.env` (git-ignored). Only `VITE_`-prefixed
+  // names reach the client bundle, so the other secrets in that file stay out of it.
+  envDir: "../..",
   plugins: [
     react(),
     babel({ presets: [reactCompilerPreset()] }),
