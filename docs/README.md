@@ -58,7 +58,7 @@ First cell is a path: a trailing `/` covers a directory, otherwise it is one fil
 
 ## Naming
 
-- ADR: `docs/adr/NNNN-short-title.md`, number never reused. ADR-0010 is unused and stays unused; the next ADR takes the next number after the highest in `docs/adr/` (0020 at the time of writing).
+- ADR: `docs/adr/NNNN-short-title.md`, number never reused. ADR-0010 is unused and stays unused; the next ADR takes the next number after the highest in `docs/adr/` (0021 at the time of writing).
 - A dated amendment note on an accepted ADR is allowed when it does not change the decision (ADR-0002 already has one). A note that changes the decision needs a superseding ADR.
 - Evidence: `metro-<ticket-or-topic>.md` for ticket evidence (for example `metro-12.md`, `metro-release-sync.md`), `<topic>-YYYY-MM.md` for dated audits and measurements (for example `audit-2026-11.md`). One file, `dhaka-mrt-line-6.md`, fits neither pattern. Naming is a convention; it is not machine-checked.
 - Plans: `YYYY-MM-DD-topic.md`.
