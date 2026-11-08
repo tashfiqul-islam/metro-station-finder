@@ -22,5 +22,6 @@ Read when: adding or reading logs, traces or request signals, changing Workers L
 
 ## Read more
 
+- [Uptime runbook](uptime-runbook.md): the scheduled probe, the availability SLO and triage from a failed run to its `requestId`.
 - [Moved observability detail](../evidence/metro-86-moved-observability.md): retention and pricing facts (Web-verified 2026-11-05), cost arithmetic, form and precedence notes.
 - [Specification quality-gates](../specifications/quality-gates.md), [ADR-0006](../adr/0006-cloudflare-preview.md).
