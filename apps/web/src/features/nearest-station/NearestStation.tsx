@@ -167,6 +167,7 @@ function Slice({ maps }: SliceProps) {
             <maps.PlaceSearch
               labelId="place-label"
               description={copy.searchHint}
+              placeholder={copy.searchLabel}
               bias={SEARCH_BIAS}
               onPlace={choosePlace}
               onFailure={() => setSearchFailed(true)}
