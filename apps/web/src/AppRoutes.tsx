@@ -19,10 +19,15 @@ const Landing = lazyFeature(async () => {
  * The schematic line map fills the shell's map slot (METRO-111). Pure SVG from the core dataset: no network and
  * no Google code, its own lazy chunk, so the first visit does not carry it. The Google JS map is untouched.
  */
-const LineMapSlot = lazyFeature(async () => {
-  const { LineMap } = await import("./features/line-map/LineMap");
-  return { default: LineMap };
-});
+const LineMapSlot = lazyFeature(
+  async () => {
+    const { LineMap } = await import("./features/line-map/LineMap");
+    return { default: LineMap };
+  },
+  undefined,
+  // Silent while loading: the slice beside it already announces "Loading this part of the page."
+  null,
+);
 
 /** Wiring only: the shell around the slice. */
 export function AppRoutes() {

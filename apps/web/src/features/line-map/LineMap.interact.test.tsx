@@ -31,10 +31,14 @@ function wheel(init: {
   deltaMode?: number;
   clientX: number;
   clientY: number;
+  ctrlKey?: boolean;
+  metaKey?: boolean;
 }): boolean {
   const event = createEvent.wheel(map(), { deltaY: init.deltaY, deltaMode: init.deltaMode ?? 0 });
   Object.defineProperty(event, "clientX", { value: init.clientX });
   Object.defineProperty(event, "clientY", { value: init.clientY });
+  Object.defineProperty(event, "ctrlKey", { value: init.ctrlKey ?? false });
+  Object.defineProperty(event, "metaKey", { value: init.metaKey ?? false });
   return fireEvent(map(), event);
 }
 const press = (key: string, init: KeyboardEventInit = {}): boolean =>
@@ -128,6 +132,19 @@ test("METRO-111 a wheel in line mode counts 16 px a line", () => {
   expect(width).toBeCloseTo(470 / Math.exp(3 * 16 * 0.002), 1);
 });
 
+test("METRO-111 a wheel in page mode counts one map height a page", () => {
+  render(<LineMap />);
+  wheel({ deltaY: -0.1, deltaMode: 2, clientX: 235, clientY: 440 });
+  expect(Number(box().split(" ")[2])).toBeCloseTo(470 / Math.exp(0.1 * 880 * 0.002), 1);
+});
+
+test("METRO-111 a wheel with Ctrl or Meta is the browser's page zoom: not stopped and not used", () => {
+  render(<LineMap />);
+  expect(wheel({ deltaY: -100, clientX: 235, clientY: 440, ctrlKey: true })).toBe(true);
+  expect(wheel({ deltaY: -100, clientX: 235, clientY: 440, metaKey: true })).toBe(true);
+  expect(box()).toBe("100 70 470 880");
+});
+
 test("METRO-111 dragging pans with the pointer; releasing, cancelling and other pointers are handled", () => {
   render(<LineMap />);
   const pointer = { pointerId: 1, pointerType: "touch" };
@@ -148,6 +165,33 @@ test("METRO-111 dragging pans with the pointer; releasing, cancelling and other 
   fireEvent.lostPointerCapture(map(), pointer);
   fireEvent.pointerMove(map(), { ...pointer, clientX: 50, clientY: 0 });
   expect(box()).toBe("130 40 470 880");
+});
+
+test("METRO-111 a secondary button, a pen barrel button and a Ctrl click do not start a drag", () => {
+  render(<LineMap />);
+  const pen = { pointerId: 4, pointerType: "pen" };
+  fireEvent.pointerDown(map(), { ...pen, button: 2, clientX: 100, clientY: 100 });
+  fireEvent.pointerMove(map(), { ...pen, clientX: 50, clientY: 100 });
+  expect(box()).toBe("100 70 470 880");
+  const mouse = { pointerId: 5, pointerType: "mouse" };
+  fireEvent.pointerDown(map(), { ...mouse, button: 0, ctrlKey: true, clientX: 100, clientY: 100 });
+  fireEvent.pointerMove(map(), { ...mouse, clientX: 50, clientY: 100 });
+  expect(box()).toBe("100 70 470 880");
+});
+
+test("METRO-111 a pointer that cannot be captured starts no drag and leaves nothing tracked", () => {
+  render(<LineMap />);
+  const capture = vi.spyOn(SVGSVGElement.prototype, "setPointerCapture").mockImplementation(() => {
+    throw new DOMException("gone", "NotFoundError");
+  });
+  const touch = { pointerId: 6, pointerType: "touch" };
+  fireEvent.pointerDown(map(), { ...touch, clientX: 100, clientY: 100 });
+  fireEvent.pointerMove(map(), { ...touch, clientX: 50, clientY: 100 });
+  expect(box()).toBe("100 70 470 880");
+  capture.mockRestore();
+  fireEvent.pointerDown(map(), { ...touch, clientX: 100, clientY: 100 });
+  fireEvent.pointerMove(map(), { ...touch, clientX: 50, clientY: 100 });
+  expect(box()).toBe("150 70 470 880");
 });
 
 test("METRO-111 only the primary mouse button drags", () => {
@@ -198,12 +242,23 @@ test("METRO-111 a drag or key before the map has a size changes nothing", () => 
   expect(box()).toBe("100 70 470 880");
 });
 
-test("METRO-111 the interactive map still carries no style attribute and makes no request", () => {
+test("METRO-111 using the map does not call fetch, XHR, sendBeacon or Image and adds no style attribute", () => {
   const fetchSpy = vi.spyOn(globalThis, "fetch");
+  const open = vi.spyOn(XMLHttpRequest.prototype, "open");
+  const beacon = vi.fn(() => true);
+  Object.defineProperty(navigator, "sendBeacon", { value: beacon, configurable: true });
+  const image = vi.fn();
+  vi.stubGlobal("Image", image);
   const { container } = render(<LineMap />);
   press("+");
   fireEvent.click(screen.getByRole("button", { name: "Zoom in" }));
   wheel({ deltaY: -50, clientX: 10, clientY: 10 });
+  fireEvent.pointerDown(map(), { pointerId: 1, pointerType: "touch", clientX: 5, clientY: 5 });
+  fireEvent.pointerMove(map(), { pointerId: 1, pointerType: "touch", clientX: 40, clientY: 5 });
   expect(container.querySelectorAll("[style]")).toHaveLength(0);
   expect(fetchSpy).not.toHaveBeenCalled();
+  expect(open).not.toHaveBeenCalled();
+  expect(beacon).not.toHaveBeenCalled();
+  expect(image).not.toHaveBeenCalled();
+  vi.unstubAllGlobals();
 });

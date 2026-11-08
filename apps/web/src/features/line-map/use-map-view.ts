@@ -1,13 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import type { KeyboardEvent, PointerEvent } from "react";
 
-import { FIT, ZOOM_STEP, keyView, panPx, toMap, zoomBy } from "./view";
+import { FIT, ZOOM_STEP, keyView, panPx, toMap, wheelPixels, zoomBy } from "./view";
 import type { View } from "./view";
 
 /** Wheel zoom: one 100-pixel notch is about 22 percent. */
 const WHEEL_RATE = 0.002;
-/** A wheel in "lines" mode (Firefox) is scaled to pixels. */
-const LINE_PX = 16;
 
 interface Touch {
   readonly x: number;
@@ -29,9 +27,12 @@ export function useMapView() {
     const element = svg.current;
     if (element === null) return () => {};
     const onWheel = (event: WheelEvent): void => {
+      // Ctrl or Meta with the wheel is the browser's own page zoom (and a trackpad pinch): leave it alone, so
+      // WCAG 1.4.4 Resize Text keeps working over the map.
+      if (event.ctrlKey || event.metaKey) return;
       event.preventDefault();
       const rect = element.getBoundingClientRect();
-      const pixels = event.deltaMode === 1 ? event.deltaY * LINE_PX : event.deltaY;
+      const pixels = wheelPixels(event.deltaY, event.deltaMode, rect.height);
       setView((current) =>
         zoomBy(
           current,
@@ -46,8 +47,14 @@ export function useMapView() {
   }, []);
 
   function down(event: PointerEvent<SVGSVGElement>): void {
-    if (event.pointerType === "mouse" && event.button !== 0) return;
-    event.currentTarget.setPointerCapture(event.pointerId);
+    // Primary button only; Ctrl with a mouse button is a context click on a Mac, not a drag.
+    if (event.button !== 0 || (event.pointerType === "mouse" && event.ctrlKey)) return;
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {
+      // The pointer is already gone (NotFoundError): no drag starts and nothing is left tracked.
+      return;
+    }
     pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
   }
 

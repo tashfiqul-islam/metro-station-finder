@@ -200,7 +200,8 @@
 
 /* The controls sit in the shell's map frame, which is inset from the screen edge to leave them room
    (shell.css: top 104px and right 64px on phones, top 84px and right 76px from 768px). These offsets put them where
-   the handoff draws them, relative to the screen. */
+   the handoff draws them, relative to the screen. The coupling is deliberate (custom properties in shell.css would
+   cost entry bytes); e2e/line-map.e2e.ts measures the result and fails if shell.css moves the frame. */
 .line-map .map-controls {
   top: -38px;
   right: calc(var(--space-3) - 64px);

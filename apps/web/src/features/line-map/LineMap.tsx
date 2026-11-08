@@ -23,8 +23,6 @@ export interface LineMapProps {
 }
 
 const NONE: readonly StationId[] = [];
-/** The map is the one tab stop: it takes the keys that pan and zoom. */
-const KEYBOARD_STOP = 0;
 const STOPS = lineStops();
 const FIRST = STOPS[0];
 const LAST = STOPS[STOPS.length - 1];
@@ -109,7 +107,8 @@ export function LineMap({ highlighted = NONE, position, walk, trip }: LineMapPro
         aria-labelledby="map-title"
         aria-describedby="map-desc"
         aria-keyshortcuts={mapCopy.shortcuts}
-        tabIndex={KEYBOARD_STOP}
+        // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- custom pan and zoom widget: it takes arrow keys, plus, minus and 0
+        tabIndex={0}
         {...handlers}
       >
         <title id="map-title">{mapCopy.title}</title>

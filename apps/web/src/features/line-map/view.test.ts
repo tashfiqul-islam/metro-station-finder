@@ -11,6 +11,7 @@ import {
   scaleOf,
   toMap,
   viewBoxOf,
+  wheelPixels,
   zoomBy,
 } from "./view";
 
@@ -88,4 +89,10 @@ test("plus and minus zoom, zero fits, other keys do nothing", () => {
 
 test("arrow keys do nothing before the element has a size", () => {
   expect(keyView(FIT, "ArrowRight", { left: 0, top: 0, width: 0, height: 0 })).toEqual(FIT);
+});
+
+test("a wheel delta is normalised to pixels for pixel, line and page modes", () => {
+  expect(wheelPixels(-100, 0, 880)).toBe(-100);
+  expect(wheelPixels(-3, 1, 880)).toBe(-48);
+  expect(wheelPixels(1, 2, 880)).toBe(880);
 });

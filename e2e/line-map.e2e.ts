@@ -1,6 +1,7 @@
-import type { Locator, Page, Request } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 
 import { axeBuilder, expect, test } from "./fixtures";
+import { linksAreTabbable } from "./keyboard";
 import { installMapsStub } from "./maps-stub";
 
 /**
@@ -67,10 +68,17 @@ test.describe("line map", () => {
     });
   }
 
-  test("METRO-111 the map makes no network request and keeps working with the context offline", async ({
+  test("METRO-111 the map adds no request of its own and keeps working with the context offline", async ({
     page,
     context,
+    baseURL,
   }) => {
+    // The listener is attached before the page loads, so every request is seen, the chunk loads included.
+    const requests: string[] = [];
+    const settled = new Set<string>();
+    page.on("request", (request) => requests.push(request.url()));
+    page.on("requestfinished", (request) => settled.add(request.url()));
+    page.on("requestfailed", (request) => settled.add(request.url()));
     // The app's own web-vitals beacon (ADR-0019) is not the map; answer it so going offline cannot log an error.
     await page.route("**/api/vitals", (route) => route.fulfill({ status: 204 }));
     await open(page);
@@ -79,21 +87,104 @@ test.describe("line map", () => {
     await expect(
       page.getByRole("heading", { level: 1, name: "Nearest Metro station" }),
     ).toBeVisible();
+    // Everything the page asked for is a same-origin app file, the vitals beacon, or the Nearby slice's own
+    // (stubbed) Maps API: the map and its chunk reach no other host.
+    const origin = new URL(baseURL ?? "").origin;
+    const allowed = (url: string): boolean =>
+      (url.startsWith(`${origin}/`) && !url.startsWith(`${origin}/api/`)) ||
+      url === `${origin}/api/vitals` ||
+      url.startsWith("https://maps.googleapis.com/");
+    expect(requests.filter((url) => !allowed(url))).toEqual([]);
+    // The app loads its web-vitals chunk when the page is idle; wait for it, and for every request, to settle
+    // before the network goes away, so no late load of the app's own can fail offline.
+    await expect
+      .poll(() => requests.some((url) => url.includes("web-vitals-")), { timeout: 10_000 })
+      .toBe(true);
+    await expect
+      .poll(() => requests.filter((url) => !settled.has(url)).length, { timeout: 10_000 })
+      .toBe(0);
+    const loaded = requests.length;
     await context.setOffline(true);
-    const requests: Request[] = [];
-    page.on("request", (request) => {
-      if (!request.url().endsWith("/api/vitals")) requests.push(request);
-    });
     await map.focus();
     await page.keyboard.press("ArrowRight");
     await expect(map).toBeFocused();
     await expect(map).not.toHaveAttribute("viewBox", FIT);
     await page.getByRole("button", { name: "Show whole line" }).click();
     await expect(map).toHaveAttribute("viewBox", FIT);
+    await page.getByRole("button", { name: "Zoom in" }).click();
+    await page.mouse.move(300, 300);
+    await page.mouse.wheel(0, -200);
     await expect(map).toBeVisible();
     await expect(page.locator("svg.map circle.map__pin")).toHaveCount(16);
-    expect(requests.map((request) => request.url())).toEqual([]);
+    // Using the map made no request at all (the vitals beacon is the app's, answered by the route above).
+    expect(requests.slice(loaded).filter((url) => !url.endsWith("/api/vitals"))).toEqual([]);
   });
+
+  test("METRO-111 Tab reaches the Home link first, the panel next, and the map and its buttons last", async ({
+    page,
+  }) => {
+    await open(page);
+    await expect(page.getByRole("button", { name: "Use my location" })).toBeVisible();
+    await page.evaluate(() => {
+      if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+    });
+    const regions: string[] = [];
+    let first = "";
+    for (let press = 0; press < 25; press += 1) {
+      await page.keyboard.press("Tab");
+      const stop = await page.evaluate(() => {
+        const element = document.activeElement;
+        if (!(element instanceof Element)) return { region: "none", name: "" };
+        const region = element.closest(".app__map")
+          ? "map"
+          : element.closest("header")
+            ? "header"
+            : element.closest("main")
+              ? "panel"
+              : "other";
+        return { region, name: element.getAttribute("aria-label") ?? element.textContent ?? "" };
+      });
+      if (press === 0) first = stop.name;
+      regions.push(stop.region);
+      if (stop.name === "Show whole line") break;
+    }
+    // The first stop is in the header (the Home link where this browser Tabs to links, else the theme button).
+    expect(regions[0]).toBe("header");
+    if (await linksAreTabbable(page)) expect(first).toMatch(/home/iu);
+    const firstMap = regions.indexOf("map");
+    const lastPanel = regions.lastIndexOf("panel");
+    expect(lastPanel, "the panel has stops").toBeGreaterThanOrEqual(2);
+    expect(firstMap, "the map comes after every panel control").toBeGreaterThan(lastPanel);
+    expect(regions.slice(firstMap)).toEqual(["map", "map", "map", "map"]);
+  });
+
+  for (const size of [
+    { width: 390, height: 844 },
+    { width: 1280, height: 800 },
+  ]) {
+    test(`METRO-111 the controls sit where the handoff draws them, clear of the header, at ${size.width} px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(size);
+      await open(page);
+      const controls = await page.locator(".map-controls").boundingBox();
+      const header = await page.locator(".app-header > *").first().boundingBox();
+      if (controls === null || header === null) throw new Error("no layout");
+      const phone = size.width < 768;
+      // These are the offsets of the handoff (top 66 or 84 px, right space-3 or space-4). They depend on the
+      // shell's map frame insets in shell.css, so a change there fails this test instead of moving the buttons.
+      const gap = await page.evaluate(
+        (name) =>
+          Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue(name)),
+        phone ? "--space-3" : "--space-4",
+      );
+      expect(controls.y).toBeCloseTo(phone ? 66 : 84, 0);
+      expect(size.width - (controls.x + controls.width)).toBeCloseTo(gap, 0);
+      expect(controls.y, "below the header's first control").toBeGreaterThanOrEqual(
+        header.y + header.height,
+      );
+    });
+  }
 
   test("METRO-111 the three controls are named 44 px buttons that zoom and fit at once", async ({
     page,
@@ -166,7 +257,8 @@ test.describe("line map", () => {
     await page.mouse.down();
     await page.mouse.move(cx - 80, cy - 40, { steps: 4 });
     await page.mouse.up();
-    expect(await map.getAttribute("viewBox")).not.toBe(before);
+    // React applies a drag at "continuous" priority, so the new box can land a moment after the pointer is up.
+    await expect(map).not.toHaveAttribute("viewBox", before);
   });
 
   test("METRO-111 under reduced motion the view changes at once, with no transition", async ({

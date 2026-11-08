@@ -109,3 +109,12 @@ export function keyView(view: View, key: string, rect: Rect): View | null {
   if (key === "0") return FIT;
   return null;
 }
+
+const LINE_PX = 16;
+
+/** A wheel delta in pixels, whatever its `deltaMode`: 0 pixels, 1 lines (Firefox), 2 pages (one element height). */
+export function wheelPixels(delta: number, mode: number, pageHeight: number): number {
+  if (mode === 1) return delta * LINE_PX;
+  if (mode === 2) return delta * pageHeight;
+  return delta;
+}
