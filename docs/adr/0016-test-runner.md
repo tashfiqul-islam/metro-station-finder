@@ -8,7 +8,7 @@
 
 Unit, component and in-process API tests run on `bun test` ([ADR-0005](0005-test-strategy.md), [testing](../agents/testing.md)). Known gaps:
 
-- Bun cannot measure branch coverage (METRO-50: lcov has `DA`, `FNF`, `FNH`, `LF`, `LH` only), so the per-file 90 percent gate in `bunfig.toml` covers lines and functions.
+- Bun cannot measure branch coverage (METRO-50: lcov has `DA`, `FNF`, `FNH`, `LF`, `LH` only), so the per-file gate in `bunfig.toml` covers lines and functions (100 percent since METRO-94; it was 90 percent when this ADR was accepted).
 - Bun runs all files in one process, which forced the happy-dom global swap in `apps/web/src/dom-test-env.ts`.
 - The API tests run on Bun, not on workerd, where the Worker runs ([ADR-0002](0002-runtime-topology.md)).
 - The `jest/*` lint rules cannot see `bun:test` imports, so tests use injected globals and a ban on the import.
@@ -37,7 +37,7 @@ We will move the API and web test projects to Vitest (stages 1 and 2 below) and 
 `bun test` stays in `check` for every project not yet moved, so no test file runs under neither runner.
 
 - **Versions.** The newest Vitest the release cooldown allows when each ticket starts, pinned exactly (the spike passed on 4.1.12 and 5.1.0), with the plugin and both coverage packages pinned to match.
-- **Gate.** The per-file 90 percent gate for lines and functions stays. A 90 percent per-file branch threshold is added in the stage that moves a project. "No threshold is weakened" means no existing number is lowered; it does not mean the new branch gate passes today (see Consequences).
+- **Gate.** The per-file gate for lines and functions stays (amended 2026-11-08, METRO-94: Bun-run files now need 100 percent, the Vitest app thresholds stay 90). A 90 percent per-file branch threshold is added in the stage that moves a project. "No threshold is weakened" means no existing number is lowered; it does not mean the new branch gate passes today (see Consequences).
 - **Order.** Randomised with a printed seed (`sequence.shuffle`), no fixed seed, no retries.
 - **Imports.** Test files import from `vitest` (globals stay off) so the `jest/*` rules see them.
 - **E2E.** Playwright is unchanged.
@@ -89,7 +89,7 @@ Today: `scripts/adr.test.ts` checks this ADR's shape. Nothing else enforces the 
 
 ## Follow-up ticket drafts (tickets 1 and 2 created in Plane; 3 and 4 are not)
 
-Common acceptance for every ticket: per-file 90 percent lines and functions kept, a 90 percent branch threshold for the project it moves, randomised order with a printed seed, no weakened assertion or lowered number, exact pins within the cooldown, and lint rules re-pointed. Order is dependency order: 1, then 2, then the go/no-go in 3, then 4. There is no separate lint ticket: lint is part of ticket 1.
+Common acceptance for every ticket: per-file lines and functions gate kept (90 percent when written, 100 percent for Bun-run files since METRO-94), a 90 percent branch threshold for the project it moves, randomised order with a printed seed, no weakened assertion or lowered number, exact pins within the cooldown, and lint rules re-pointed. Order is dependency order: 1, then 2, then the go/no-go in 3, then 4. There is no separate lint ticket: lint is part of ticket 1.
 
 1. **Vitest foundation and the workerd API project.** Created in Plane as the next implementation ticket.
    - Scope:
