@@ -14,6 +14,7 @@ import type {
   WalkingRoute,
 } from "../../adapters/maps/context";
 import { copy } from "./copy";
+import { WATCHDOG_MS } from "./geolocate";
 import { fakePosition, fakePositionError } from "./geolocation-fakes";
 import { NearestStation } from "./NearestStation";
 
@@ -304,11 +305,13 @@ test("METRO-113 denied: a labelled group with the search action, focus on that f
   fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
   const group = await screen.findByRole("group", { name: copy.denied });
   expect(group.textContent).toContain(copy.denied);
-  const action = within(group).getByRole("link", { name: copy.searchLabel });
-  expect(action.getAttribute("href")).toBe("#place-label");
+  const action = within(group).getByRole("button", { name: copy.searchLabel });
   expect(document.activeElement).toBe(action);
   // Denied offers no Try again: the browser will not ask again.
-  expect(within(group).queryByRole("button")).toBeNull();
+  expect(within(group).queryAllByRole("button")).toEqual([action]);
+  // The action is a button that moves focus into the search field (a hash link to a paragraph cannot).
+  fireEvent.click(action);
+  expect(document.activeElement).toBe(screen.getByRole("textbox", { name: "fake search box" }));
   // Focus moved, so the notice is not also an alert (no double announcement).
   expect(screen.queryByRole("alert")).toBeNull();
   pickPlace(NEAR_MOTIJHEEL);
@@ -322,7 +325,7 @@ test("METRO-113 denied with Maps unavailable has no action: focus goes to the no
   render(<NearestStation maps={fakeMaps} />);
   fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
   const group = await screen.findByRole("group", { name: copy.denied });
-  expect(within(group).queryByRole("link")).toBeNull();
+  expect(within(group).queryByRole("button")).toBeNull();
   expect(document.activeElement).toBe(group);
 });
 
@@ -333,11 +336,9 @@ test("METRO-113 a timeout and a missing API show the unavailable copy with Try a
   const group = await screen.findByRole("group", { name: copy.unavailable });
   const retry = within(group).getByRole("button", { name: copy.tryAgain });
   expect(document.activeElement).toBe(retry);
-  expect(within(group).getByRole("link", { name: copy.searchLabel })).toBeTruthy();
+  const search = within(group).getByRole("button", { name: copy.searchLabel });
   // The order inside the notice: Try again, then Search for a place.
-  expect(retry.compareDocumentPosition(within(group).getByRole("link"))).toBe(
-    Node.DOCUMENT_POSITION_FOLLOWING,
-  );
+  expect(retry.compareDocumentPosition(search)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
 });
 
 test("METRO-113 Try again asks again, keeps focus on a control and the second answer replaces the notice", async () => {
@@ -376,11 +377,154 @@ test("METRO-113 locating: an output status with the looping mark and the handoff
   expect(status.textContent).toContain(copy.locatingSub);
   expect(status.querySelector("svg.mark--searching")?.getAttribute("aria-hidden")).toBe("true");
   expect(onSettle).toHaveBeenCalledTimes(1);
-  // A second press while locating asks for nothing more.
-  const asks = vi.fn();
-  geolocation(asks);
+});
+
+test("METRO-113 the status region is mounted and empty before locating, and the same node fills", () => {
+  geolocation(() => {});
+  render(<NearestStation maps={fakeMaps} />);
+  const status = screen.getByRole("status");
+  expect(status.textContent).toBe("");
+  expect(status.className).toBe("visually-hidden");
+  fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
+  expect(screen.getByRole("status")).toBe(status);
+  expect(status.textContent).toContain(copy.locating);
+  expect(status.className).toBe("status");
+});
+
+test("METRO-113 pressing the button again while locating asks again, and only the later answer counts", async () => {
+  const successes: PositionCallback[] = [];
+  geolocation((success) => {
+    successes.push(success);
+  });
+  const onLocation = vi.fn();
+  render(<NearestStation maps={fakeMaps} onLocation={onLocation} />);
+  const button = screen.getByRole("button", { name: copy.locateButton });
   fireEvent.click(button);
-  expect(asks).not.toHaveBeenCalled();
+  fireEvent.click(button);
+  expect(successes).toHaveLength(2);
+  await act(async () => {
+    successes[0]?.(fakePosition(NEAR_MOTIJHEEL.lat, NEAR_MOTIJHEEL.lng));
+    await Promise.resolve();
+  });
+  expect(onLocation).not.toHaveBeenCalled();
+  await act(async () => {
+    successes[1]?.(fakePosition(NEAR_UTTARA_NORTH.lat, NEAR_UTTARA_NORTH.lng));
+    await Promise.resolve();
+  });
+  expect(onLocation).toHaveBeenCalledTimes(1);
+  expect(heading("Uttara North")).toBeTruthy();
+});
+
+test("METRO-113 a locating that never answers ends as unavailable after the watchdog, with Try again", async () => {
+  vi.useFakeTimers();
+  try {
+    geolocation(() => {});
+    render(<NearestStation maps={fakeMaps} />);
+    fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
+    expect(screen.getByRole("status").textContent).toContain(copy.locating);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(WATCHDOG_MS);
+    });
+    expect(screen.getByRole("status").textContent).toBe("");
+    const group = screen.getByRole("group", { name: copy.unavailable });
+    expect(document.activeElement).toBe(within(group).getByRole("button", { name: copy.tryAgain }));
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+test("METRO-113 a station pick cancels a locating in flight: a late fix is ignored (no result, focus, sheet or callback)", async () => {
+  const successes: PositionCallback[] = [];
+  geolocation((success) => {
+    successes.push(success);
+  });
+  const onLocation = vi.fn();
+  const onSettle = vi.fn();
+  const view = render(
+    <NearestStation maps={fakeMaps} onLocation={onLocation} onSettle={onSettle} />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
+  expect(screen.getByRole("status").textContent).toContain(copy.locating);
+  expect(onSettle).toHaveBeenCalledTimes(1);
+  const other = document.body.appendChild(document.createElement("button"));
+  other.focus();
+  view.rerender(
+    <NearestStation maps={fakeMaps} onLocation={onLocation} onSettle={onSettle} pickSeq={1} />,
+  );
+  // The status is gone at once; the answer arrives later and changes nothing.
+  expect(screen.getByRole("status").textContent).toBe("");
+  await act(async () => {
+    successes[0]?.(fakePosition(NEAR_UTTARA_NORTH.lat, NEAR_UTTARA_NORTH.lng));
+    await Promise.resolve();
+  });
+  expect(onLocation).not.toHaveBeenCalled();
+  expect(onSettle).toHaveBeenCalledTimes(1);
+  expect(document.querySelector(".result")).toBeNull();
+  expect(document.activeElement).toBe(other);
+  other.remove();
+});
+
+test("METRO-113 a station pick clears a stale notice", async () => {
+  geolocation((_success, failure) => failure(denied));
+  const view = render(<NearestStation maps={fakeMaps} />);
+  fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
+  await screen.findByRole("group", { name: copy.denied });
+  view.rerender(<NearestStation maps={fakeMaps} pickSeq={1} />);
+  expect(document.querySelector(".notice")).toBeNull();
+});
+
+test("METRO-113 unmounting during a locating means no callback and no sheet move when the answer arrives", async () => {
+  const successes: PositionCallback[] = [];
+  geolocation((success) => {
+    successes.push(success);
+  });
+  const onLocation = vi.fn();
+  const onSettle = vi.fn();
+  const view = render(
+    <NearestStation maps={fakeMaps} onLocation={onLocation} onSettle={onSettle} />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
+  view.unmount();
+  await act(async () => {
+    successes[0]?.(fakePosition(NEAR_UTTARA_NORTH.lat, NEAR_UTTARA_NORTH.lng));
+    await Promise.resolve();
+  });
+  expect(onLocation).not.toHaveBeenCalled();
+  expect(onSettle).toHaveBeenCalledTimes(1);
+});
+
+/** Midpoint of the first two stations: the worst place for "nearest" (a bisector), from the real dataset. */
+const BISECTOR: Coordinate = (() => {
+  const [a, b] = Core.baselineDataset.stations;
+  if (a === undefined || b === undefined) throw new Error("dataset too small");
+  return {
+    lat: (a.coordinate.lat + b.coordinate.lat) / 2,
+    lng: (a.coordinate.lng + b.coordinate.lng) / 2,
+  };
+})();
+
+function pressAtBisector(accuracy: number): void {
+  geolocation((success) => success(fakePosition(BISECTOR.lat, BISECTOR.lng, accuracy)));
+  render(<NearestStation maps={fakeMaps} />);
+  fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
+}
+
+// The handoff's "up to 2,000 m is a result" is superseded by METRO-103: with real core, accuracy above 100 m
+// is rough when the runner-up could be nearer (the 2r rule), so a 1,500 m fix at a bisector is rough.
+test("METRO-103 at a bisector, core's rule gives a 100 m fix a station", async () => {
+  pressAtBisector(100);
+  await screen.findByText(copy.distanceLabel);
+  expect(document.querySelector(".notice")).toBeNull();
+});
+
+test("METRO-103 at a bisector, core's rule makes 1,500 m and 2,000 m fixes rough", async () => {
+  pressAtBisector(1500);
+  expect(await screen.findByText(/with an error of about 1\.5 km/u)).toBeTruthy();
+  expect(document.querySelector(".result")).toBeNull();
+  cleanup();
+  pressAtBisector(2000);
+  expect(await screen.findByText(/with an error of about 2 km/u)).toBeTruthy();
+  expect(document.querySelector(".result")).toBeNull();
 });
 
 test("METRO-113 the locating status is the only status of its concern and holds no control", () => {

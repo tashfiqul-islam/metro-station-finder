@@ -1,6 +1,6 @@
 import { assessNearestReliability, baselineDataset, findNearestStation } from "@metro/core";
 import type { Coordinate, StationId } from "@metro/core";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
 import { useMaps } from "../../adapters/maps/context";
@@ -61,6 +61,12 @@ interface SliceProps {
   readonly onLocation?: (outcome: LocationOutcome | null) => void;
   /** Locating began, a result appeared or a notice showed: the screen snaps its sheet to half. */
   readonly onSettle?: () => void;
+  /**
+   * Counts station picks (the picker, METRO-112). A new pick cancels a Use my location in flight and clears a
+   * notice: the pick is the user's latest choice, and a late fix must not replace it, take focus or move the
+   * sheet.
+   */
+  readonly pickSeq?: number;
 }
 
 function noticeText(notice: Notice): string {
@@ -71,7 +77,7 @@ function noticeText(notice: Notice): string {
     : copy.roughKnown(formatAccuracy(notice.meters));
 }
 
-function Slice({ maps, after, suppressed = false, onLocation, onSettle }: SliceProps) {
+function Slice({ maps, after, suppressed = false, onLocation, onSettle, pickSeq = 0 }: SliceProps) {
   const { status } = useMaps();
   const [locating, setLocating] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
@@ -80,6 +86,7 @@ function Slice({ maps, after, suppressed = false, onLocation, onSettle }: SliceP
   /** Counts user actions; a slower earlier action (a position fix, say) must not overwrite a later one. */
   const latestAction = useRef(0);
   const results = useRef(0);
+  const searchBox = useRef<HTMLDivElement>(null);
   const locateButton = useRef<HTMLButtonElement>(null);
   /**
    * True once the user touches the search box (focus, key or input) after pressing "Use my location".
@@ -90,6 +97,31 @@ function Slice({ maps, after, suppressed = false, onLocation, onSettle }: SliceP
   const engage = (): void => {
     engagedWithSearch.current = true;
   };
+
+  // A pick (`pickSeq`) and unmounting cancel an answer still on its way: it is ignored when it arrives (no
+  // callback to the screen, no focus, no sheet move after unmount).
+  const [seenPick, setSeenPick] = useState(pickSeq);
+  const pickNow = useRef(pickSeq);
+  useEffect(() => {
+    pickNow.current = pickSeq;
+  }, [pickSeq]);
+  if (seenPick !== pickSeq) {
+    // Derived from the prop during render (no effect needed): the status and any stale notice go at once.
+    setSeenPick(pickSeq);
+    setLocating(false);
+    setNotice(null);
+  }
+  useEffect(
+    () => () => {
+      latestAction.current += 1;
+    },
+    [],
+  );
+
+  /** "Search for a place" in a notice: moves focus into the search field. */
+  function focusSearch(): void {
+    searchBox.current?.querySelector<HTMLElement>("input, gmp-place-autocomplete")?.focus();
+  }
 
   function show(origin: Coordinate, source: LocationSource): void {
     // A late device fix never pulls focus (or the sheet) out of the search box the user is typing in.
@@ -120,9 +152,9 @@ function Slice({ maps, after, suppressed = false, onLocation, onSettle }: SliceP
   }
 
   async function findMe(): Promise<void> {
-    if (locating) return;
     latestAction.current += 1;
     const mine = latestAction.current;
+    const pickAtStart = pickNow.current;
     engagedWithSearch.current = false;
     // Try again unmounts the notice that held focus: keep focus on the stable button.
     if (document.activeElement?.closest(".notice")) locateButton.current?.focus();
@@ -130,7 +162,8 @@ function Slice({ maps, after, suppressed = false, onLocation, onSettle }: SliceP
     setLocating(true);
     onSettle?.();
     const outcome = await locate();
-    if (mine !== latestAction.current) return;
+    // Superseded by a later action, a station pick, or unmounting (the cleanup above bumps the counter).
+    if (mine !== latestAction.current || pickAtStart !== pickNow.current) return;
     const focus = !engagedWithSearch.current;
     if (outcome.kind !== "position") {
       showNotice({ kind: outcome.kind, focus });
@@ -149,12 +182,14 @@ function Slice({ maps, after, suppressed = false, onLocation, onSettle }: SliceP
     }
   }
 
+  // With place search unavailable (the library failed or has no key) there is nothing to move to, so the action
+  // is left out and the notice keeps Try again (or, for denied, nothing: the notice itself takes focus).
   const searchLink =
     status === "unavailable" ? null : (
-      <a className="btn btn--quiet btn--sm" href="#place-label">
+      <button type="button" className="btn btn--quiet btn--sm" onClick={focusSearch}>
         <Icon icon={searchIcon} size={16} />
         {copy.searchLabel}
-      </a>
+      </button>
     );
   const retry = (
     <button type="button" className="btn btn--primary btn--sm" onClick={() => void findMe()}>
@@ -207,13 +242,16 @@ function Slice({ maps, after, suppressed = false, onLocation, onSettle }: SliceP
           <Icon icon={chevronIcon} size={20} />
         </button>
         {/* The status sits right under the button, so it is in view when the sheet settles at half. */}
-        {locating && (
-          <output className="status">
-            <SearchingMark />
-            <span className="status__text">{copy.locating}</span>
-            <span className="status__sub">{copy.locatingSub}</span>
-          </output>
-        )}
+        {/* Mounted from the start and empty, so the status is announced when it fills (a region inserted with its text is announced less reliably). Empty it takes no room. */}
+        <output className={locating ? "status" : "visually-hidden"}>
+          {locating && (
+            <>
+              <SearchingMark />
+              <span className="status__text">{copy.locating}</span>
+              <span className="status__sub">{copy.locatingSub}</span>
+            </>
+          )}
+        </output>
         <p className="consent" id="consent">
           {copy.consent}
         </p>
@@ -224,7 +262,13 @@ function Slice({ maps, after, suppressed = false, onLocation, onSettle }: SliceP
           {copy.searchHint}
         </p>
         {status === "loading" && <output className="ns-status">{copy.loadingSearch}</output>}
-        <div role="presentation" onFocus={engage} onKeyDown={engage} onInput={engage}>
+        <div
+          ref={searchBox}
+          role="presentation"
+          onFocus={engage}
+          onKeyDown={engage}
+          onInput={engage}
+        >
           {status !== "unavailable" && (
             <maps.PlaceSearch
               labelId="place-label"

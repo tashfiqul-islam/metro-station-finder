@@ -125,6 +125,9 @@ const resultHeadings = (): string[] =>
     .map((h) => h.textContent);
 const sheet = (): string =>
   screen.getByRole("button", { name: /^Resize panel\./u }).getAttribute("aria-label") ?? "";
+/** The locating status (the shell has its own, for the panel size). */
+const locatingStatus = (): HTMLElement =>
+  must(screen.getAllByRole("status").find((node) => !node.textContent.startsWith("Panel")));
 /** Lets the map's passive effect run: `findBy*` can resolve before it. */
 async function flush(): Promise<void> {
   await act(async () => {});
@@ -249,4 +252,76 @@ test("METRO-113 a fix sends no request of any kind and logs nothing", async () =
   for (const spy of logs) expect(spy).not.toHaveBeenCalled();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+});
+
+test("METRO-113 a station picked while locating cancels it: the late fix neither replaces the pick, nor takes focus, nor moves the sheet", async () => {
+  const successes: PositionCallback[] = [];
+  Object.defineProperty(navigator, "geolocation", {
+    configurable: true,
+    value: {
+      getCurrentPosition: (success: PositionCallback) => {
+        successes.push(success);
+      },
+    },
+  });
+  render(<Harness initialSnap="peek" />);
+  fireEvent.click(locate());
+  expect(sheet()).toContain("half");
+  expect(locatingStatus().textContent).toContain("Finding your position");
+  pick("farm");
+  await flush();
+  expect(locatingStatus().textContent).toBe("");
+  const farmgate = screen.getByRole("heading", { level: 2, name: "Farmgate" });
+  expect(document.activeElement).toBe(farmgate);
+  // The user drops the sheet to peek, then the old fix arrives.
+  fireEvent.click(screen.getByRole("button", { name: "Show on map" }));
+  expect(sheet()).toContain("peek");
+  await act(async () => {
+    successes[0]?.(fakePosition(23.87, 90.367, 20));
+    await Promise.resolve();
+  });
+  await flush();
+  expect(resultHeadings()).toEqual(["Farmgate"]);
+  expect(mapDesc()).toContain("Highlighted: Farmgate.");
+  expect(mapDesc()).not.toContain("Your position is shown.");
+  expect(document.querySelectorAll(".result")).toHaveLength(0);
+  expect(sheet()).toContain("peek");
+  expect(document.activeElement).not.toBe(
+    screen.queryByRole("heading", { level: 2, name: "Uttara North" }),
+  );
+});
+
+test("METRO-113 a station pick clears a stale notice on the screen", async () => {
+  geolocation(25_000);
+  render(<Harness />);
+  fireEvent.click(locate());
+  await screen.findByRole("group", { name: /found your position only roughly/u });
+  pick("farm");
+  await flush();
+  expect(document.querySelector(".notice")).toBeNull();
+  expect(resultHeadings()).toEqual(["Farmgate"]);
+});
+
+test("METRO-113 unmounting the screen during a locating leaves the shell alone when the fix arrives", async () => {
+  const successes: PositionCallback[] = [];
+  Object.defineProperty(navigator, "geolocation", {
+    configurable: true,
+    value: {
+      getCurrentPosition: (success: PositionCallback) => {
+        successes.push(success);
+      },
+    },
+  });
+  const view = render(<Harness initialSnap="peek" />);
+  fireEvent.click(locate());
+  view.rerender(<Harness initialSnap="peek" mounted={false} />);
+  const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+  await act(async () => {
+    successes[0]?.(fakePosition(23.87, 90.367, 20));
+    await Promise.resolve();
+  });
+  expect(errors).not.toHaveBeenCalled();
+  errors.mockRestore();
+  expect(sheet()).toContain("half");
+  expect(screen.queryByRole("heading", { level: 2, name: "Uttara North" })).toBeNull();
 });

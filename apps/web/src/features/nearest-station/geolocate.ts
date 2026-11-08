@@ -18,6 +18,14 @@ type Locator = Pick<Geolocation, "getCurrentPosition">;
  */
 const OPTIONS: PositionOptions = { timeout: 8_000, maximumAge: 0, enableHighAccuracy: false };
 
+/**
+ * The 8 s browser limit plus margin. Some browsers never call back (a lost request, an ignored timeout); without
+ * this the locating state would never end. The browser's timeout does not count the time a permission prompt is
+ * open, so a prompt left open longer than this also reads as unavailable (Try again appears); an answer to that
+ * earlier request is ignored.
+ */
+export const WATCHDOG_MS = 10_000;
+
 function knownAccuracy(value: number): number | undefined {
   return Number.isFinite(value) && value >= 0 ? value : undefined;
 }
@@ -30,22 +38,29 @@ function knownAccuracy(value: number): number | undefined {
 export function locate(geo: Locator | undefined = readGeolocation()): Promise<LocateResult> {
   if (geo === undefined) return Promise.resolve({ kind: "unavailable" });
   return new Promise((resolve) => {
+    // A promise settles once, so whichever of the callbacks and the watchdog comes first wins and a later
+    // callback is ignored.
+    const watchdog = setTimeout(() => resolve({ kind: "unavailable" }), WATCHDOG_MS);
+    const settle = (result: LocateResult): void => {
+      clearTimeout(watchdog);
+      resolve(result);
+    };
     try {
       geo.getCurrentPosition(
         (position) =>
-          resolve({
+          settle({
             kind: "position",
             coordinate: { lat: position.coords.latitude, lng: position.coords.longitude },
             accuracyMeters: knownAccuracy(position.coords.accuracy),
           }),
         (error) =>
-          resolve({ kind: error.code === error.PERMISSION_DENIED ? "denied" : "unavailable" }),
+          settle({ kind: error.code === error.PERMISSION_DENIED ? "denied" : "unavailable" }),
         OPTIONS,
       );
     } catch {
       // Some embedded or policy-restricted contexts throw instead of calling the error callback. The cause is
       // dropped on purpose: it is not shown or logged.
-      resolve({ kind: "unavailable" });
+      settle({ kind: "unavailable" });
     }
   });
 }

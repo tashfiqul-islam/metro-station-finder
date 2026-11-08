@@ -215,7 +215,13 @@ export async function stubGeolocation(
         success: (position: unknown) => void,
         failure: (error: unknown) => void,
       ) => {
-        if (given === "pending") return;
+        if (given === "pending") {
+          // Never answers by itself; a test can answer later with `window.__answerLater()` (a precise fix).
+          Reflect.set(window, "__answerLater", () =>
+            success({ coords: { latitude: 23.87, longitude: 90.367, accuracy: 20 } }),
+          );
+          return;
+        }
         if (given === "denied" || given === "unavailable") {
           failure({
             code: given === "denied" ? 1 : 2,

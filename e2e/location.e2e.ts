@@ -163,10 +163,39 @@ test.describe("use my location (METRO-113)", () => {
       name: "Location is turned off. Search for a place instead.",
     });
     await expect(notice).toBeVisible();
-    await expect(notice.getByRole("link", { name: "Search for a place" })).toBeFocused();
-    await expect(notice.getByRole("button")).toHaveCount(0);
+    const search = notice.getByRole("button", { name: "Search for a place" });
+    await expect(search).toBeFocused();
+    // The search action is the only control: no Try again for a refusal.
+    await expect(notice.getByRole("button")).toHaveCount(1);
     await expect(page.getByRole("alert")).toHaveCount(0);
     expect(await snap(page)).toBe("half");
+    // Activating it moves focus into the search field (the stub's input stands for Google's).
+    await search.click();
+    await expect(
+      page.getByRole("textbox", { name: "Search For a Place", exact: true }),
+    ).toBeFocused();
+  });
+
+  test("METRO-113 a station picked while locating cancels it: the status goes and the late answer changes nothing", async ({
+    page,
+  }) => {
+    await stubGeolocation(page, "pending");
+    await open(page);
+    await locate(page).click();
+    const status = page.getByRole("status").filter({ hasText: "Finding your position" });
+    await expect(status).toBeVisible();
+    await combo(page).fill("farm");
+    await combo(page).press("Enter");
+    await expect(heading(page, "Farmgate")).toBeFocused();
+    await expect(page.getByText("Finding your position")).toHaveCount(0);
+    // The old request now answers with a good fix.
+    await page.evaluate(() => {
+      const give: unknown = Reflect.get(window, "__answerLater");
+      if (typeof give === "function") Reflect.apply(give, window, []);
+    });
+    await expect(heading(page, "Farmgate")).toBeFocused();
+    await expect(page.locator(".result")).toHaveCount(0);
+    await expect(page.locator("svg.map .map__me")).toHaveCount(0);
   });
 
   test("METRO-113 unavailable or timeout: Try again first and focused, then it asks again", async ({
@@ -177,7 +206,9 @@ test.describe("use my location (METRO-113)", () => {
     await locate(page).click();
     const retry = unavailable(page).getByRole("button", { name: "Try again" });
     await expect(retry).toBeFocused();
-    await expect(unavailable(page).getByRole("link", { name: "Search for a place" })).toBeVisible();
+    await expect(
+      unavailable(page).getByRole("button", { name: "Search for a place" }),
+    ).toBeVisible();
     // Switch the seam to a good answer for the second ask.
     await page.evaluate(() => {
       Object.defineProperty(navigator, "geolocation", {
@@ -345,9 +376,11 @@ test.describe("use my location (METRO-113)", () => {
     const index = (text: string | RegExp): number =>
       stops.findIndex((stop) => (typeof text === "string" ? stop === text : text.test(stop)));
     const locateAt = index(/^Use my location/u);
+    const searchAt = index("Search For a Place");
     const pickAt = index("Or pick a station");
     expect(locateAt, "Use my location").toBeGreaterThan(-1);
-    expect(pickAt, "picker").toBeGreaterThan(locateAt);
+    expect(searchAt, "place search").toBeGreaterThan(locateAt);
+    expect(pickAt, "picker").toBeGreaterThan(searchAt);
     if (await linksAreTabbable(page)) {
       const dirAt = index(/^Directions in Google Maps/u);
       expect(dirAt, "Directions").toBeGreaterThan(pickAt);

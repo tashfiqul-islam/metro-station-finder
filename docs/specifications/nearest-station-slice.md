@@ -74,7 +74,7 @@ All copy is fixed in `features/nearest-station/copy.ts`; `error.message` and sta
 ### Data flow
 
 1. Search: `PlaceAutocompleteElement` (`includedRegionCodes: ['bd']`, circle `locationBias` centred on the mean of the dataset stations, radius 25 km) fires `gmp-select`. The adapter calls `toPlace()` and exactly one `fetchFields({ fields: ['location'] })` (Essentials; no `displayName`, no `formattedAddress`), converts the `LatLng` to a plain coordinate and hands it to the feature. The element owns the session token; one selection ends one session.
-2. Device position: the button calls `getCurrentPosition` (`timeout: 8000` since METRO-113, was 10000; `maximumAge: 0`, `enableHighAccuracy: false`), never on load.
+2. Device position: the button calls `getCurrentPosition` (`timeout: 8000` since METRO-113, was 10000, plus a 10 s watchdog in `locate()` for a browser that never calls back; `maximumAge: 0`, `enableHighAccuracy: false`), never on load.
 3. Core, in the browser: `findNearestStation(baselineDataset.stations, coordinate)`. No network.
 4. Route: once per (origin, station) pair, `Route.computeRoutes({ origin, destination, travelMode: 'WALKING', fields: ['distanceMeters', 'durationMillis'] })`, result cached in memory; a failure is not retried and is not cached.
 5. Fare: `findFare(baselineDataset.fares, nearest.id, destination.id)`; an unknown fare shows fixed copy, never zero.

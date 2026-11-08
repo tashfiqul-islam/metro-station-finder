@@ -65,3 +65,8 @@ test("METRO-113 an estimated distance is rounded: tens of metres under 1 km, one
 test("METRO-113 a distance that rounds up to 1 km reads as kilometres, never 1000 m", () => {
   expect(formatEstimate(0.996)).toBe("1.0 km");
 });
+
+test("METRO-113 a distance that is not a number gives no figure, never NaN", () => {
+  expect(formatEstimate(Number.NaN)).toBe("");
+  expect(formatEstimate(Infinity)).toBe("");
+});

@@ -43,6 +43,7 @@ function focusMap(): void {
 export function Nearby({ maps, setMap }: NearbyProps): ReactElement {
   const { setSnap } = useSheet();
   const [current, setCurrent] = useState<Current | null>(null);
+  const [picks, setPicks] = useState(0);
 
   const highlightedId =
     current?.kind === "pick" ? current.id : (current?.outcome.stationId ?? null);
@@ -73,12 +74,16 @@ export function Nearby({ maps, setMap }: NearbyProps): ReactElement {
     <NearestStation
       maps={maps}
       suppressed={current?.kind === "pick"}
+      pickSeq={picks}
       onLocation={onLocation}
       onSettle={settle}
       after={
         <StationPicker
           current={current?.kind === "pick"}
-          onPick={(id) => setCurrent({ kind: "pick", id })}
+          onPick={(id) => {
+            setPicks((count) => count + 1);
+            setCurrent({ kind: "pick", id });
+          }}
           onShowOnMap={focusMap}
         />
       }

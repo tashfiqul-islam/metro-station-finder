@@ -10,6 +10,8 @@ export function formatKm(km: number): string {
  * nearest 10 below 1 km (never "0 m"), else kilometres with one decimal. The caller adds "about" and "est.".
  */
 export function formatEstimate(km: number): string {
+  // Not a number (never from the dataset): no figure rather than "NaN m".
+  if (!Number.isFinite(km)) return "";
   const tens = Math.max(10, Math.round((km * 1000) / 10) * 10);
   return tens < 1000 ? `${tens} m` : `${(Math.round(km * 10) / 10).toFixed(1)} km`;
 }

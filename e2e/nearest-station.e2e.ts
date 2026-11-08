@@ -123,7 +123,7 @@ test.describe("nearest station from a searched place (METRO-88)", () => {
       name: "Location is turned off. Search for a place instead.",
     });
     await expect(notice).toBeVisible();
-    await expect(notice.getByRole("link", { name: "Search for a place" })).toBeFocused();
+    await expect(notice.getByRole("button", { name: "Search for a place" })).toBeFocused();
     await expect(page.getByRole("alert")).toHaveCount(0);
     await searchFor(page, "uttara");
     await expect(station(page, "Uttara North")).toBeVisible();
