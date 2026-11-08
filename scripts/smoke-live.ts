@@ -70,23 +70,29 @@ async function main(): Promise<boolean> {
     let step = "open the page";
     try {
       await page.goto(`${origin}/nearest`);
-      step = "find the place search (is VITE_GOOGLE_MAPS_API_KEY set in the root .env?)";
-      // Playwright locators pierce open shadow roots; whether Google's is open is part of what this proves.
-      const input = page.locator("gmp-place-autocomplete input").first();
-      await input.waitFor({ timeout: 30_000 });
-      step = "type the query and select the first suggestion";
-      await input.pressSequentially(QUERY, { delay: 120 });
+      step =
+        "wait for the place search element (is VITE_GOOGLE_MAPS_API_KEY set, and did Maps load?)";
+      // Google's PlaceAutocompleteElement keeps its input in a shadow root that is probably closed
+      // (Unverified), so no locator can reach the input. Drive the host element like a user instead:
+      // a click focuses the inner input, then the keyboard types into it.
+      const host = page.locator("gmp-place-autocomplete").first();
+      await host.waitFor({ state: "attached", timeout: 30_000 });
+      // Read right away, so the version prints even when a later step fails.
+      const version: unknown = await page.evaluate("window.google?.maps?.version ?? null");
+      run.version = typeof version === "string" ? version : null;
+      step = "focus the place search element and type the query";
+      await host.click();
+      await page.keyboard.type(QUERY, { delay: 120 });
       await page.waitForTimeout(1500);
-      await input.press("ArrowDown");
-      await input.press("Enter");
+      step = "choose the first suggestion (ArrowDown, Enter)";
+      await page.keyboard.press("ArrowDown");
+      await page.keyboard.press("Enter");
       step = "show the nearest station";
       await page.getByText("Straight-line distance").waitFor({ timeout: 30_000 });
       run.stationShown = true;
       step = "show the walking route";
       await page.getByText(/\d+(\.\d+)? (m|km), \d+ min/u).waitFor({ timeout: 30_000 });
       run.routeShown = true;
-      const version: unknown = await page.evaluate("window.google?.maps?.version ?? null");
-      run.version = typeof version === "string" ? version : null;
     } catch {
       run.failedStep = step;
     }

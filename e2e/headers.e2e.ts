@@ -41,6 +41,28 @@ test.describe("security headers and caching (METRO-31)", () => {
     });
   }
 
+  test("METRO-96 the served CSP allows the Google font hosts and two style hashes, nothing broader", async ({
+    request,
+  }) => {
+    const policy = (await request.get("/")).headers()["content-security-policy"] ?? "";
+    const sources = (name: string): string[] | undefined =>
+      policy
+        .split(";")
+        .map((part) => part.trim().split(/\s+/u))
+        .find(([directive]) => directive === name)
+        ?.slice(1);
+    expect(sources("style-src")).toEqual([
+      "'self'",
+      "https://fonts.googleapis.com",
+      "'sha256-6THUUcZnIM+50QUKRA2tjLYNFvBVYjT3//X9aTSTJWc='",
+      "'sha256-5wjeBWXQ+uhb+jIpjvGSs73Ok5HO26+ZJJAPeEXZDT8='",
+    ]);
+    expect(sources("font-src")).toEqual(["'self'", "https://fonts.gstatic.com"]);
+    for (const banned of ["'unsafe-inline'", "'unsafe-eval'", "'unsafe-hashes'", "blob:", "*"]) {
+      expect(policy.split(/[\s;]+/u)).not.toContain(banned);
+    }
+  });
+
   test("METRO-31 the hashed asset is immutable; / and /index.html are not", async ({ request }) => {
     const html = await (await request.get("/")).text();
     const asset = /(?:src|href)="(\/assets\/[^"]+)"/u.exec(html)?.[1];
