@@ -14,5 +14,3 @@ export { createFare } from "./fares/fare.ts";
 export type { Fare, FareResult, UnknownFare } from "./fares/fare.ts";
 export type { FareTable } from "./fares/fare-matrix.ts";
 export { findFare } from "./fares/quote-fare.ts";
-export { getScaffoldStatus } from "./status/scaffold-status.ts";
-export type { ScaffoldStatus } from "./status/scaffold-status.ts";

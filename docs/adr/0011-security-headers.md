@@ -26,7 +26,7 @@ The SPA is served by Workers Static Assets and `/api/*` by the Hono Worker (ADR-
 ## Consequences
 
 - The shared values live in two places (`_headers` and `app.ts`) because Cloudflare applies them to disjoint response sets. Tests assert both; keep them identical.
-- Tested at three levels: `bun test` parses the committed `_headers` and calls the API through `app.request`; the Playwright smoke fetches `/`, a deep link, `/api/scaffold/status` and the hashed asset from the built app in workerd and checks for report-only CSP violations in Chromium.
+- Tested at three levels: `bun test` parses the committed `_headers` and calls the API through `app.request`; the Playwright smoke fetches `/`, a deep link, an unknown `/api/*` path and the hashed asset from the built app in workerd and checks for report-only CSP violations in Chromium.
 - Unverified until a preview or production deploy: that the deployed Cloudflare edge applies `_headers` the same way as the local workerd emulation, and edge-cache behavior for `/assets/*`.
 - A hashed filename must change with its content; anything copied unhashed into `/assets/` would be cached immutably for a year.
 - Finding (Repo-verified locally, 2026-11-05): with `run_worker_first` as an array, Cloudflare no longer interprets `Sec-Fetch-Mode: navigate` (Web-verified, SPA routing docs), so `GET /assets/does-not-exist.js` returned `200 text/html` (index.html) carrying the `/assets/*` rule's `immutable`. `_headers` cannot condition on file existence. Fix: route `/assets/*` through the Worker and turn an HTML answer under `/assets/` into a 404 JSON envelope. Cost: every `/assets/*` request now invokes the Worker (billed as Worker requests) instead of the free static path.
