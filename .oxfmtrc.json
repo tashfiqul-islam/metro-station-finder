@@ -29,6 +29,7 @@
     "test-results/**",
     "apps/api/worker-configuration.d.ts",
     "bun.lock",
-    ".mise/locks/**"
+    ".mise/locks/**",
+    "docs/design/handoff/**"
   ]
 }

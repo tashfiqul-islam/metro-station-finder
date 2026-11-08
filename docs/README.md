@@ -39,6 +39,7 @@ First cell is a path: a trailing `/` covers a directory, otherwise it is one fil
 | `docs/evidence/`                         | evidence  | ticket evidence and dated audits; see Naming                                |
 | `docs/product/`                          | reference | legacy parity, glossary and the brand and install assets note               |
 | `docs/development.md`                    | reference | local workspace facts                                                       |
+| `docs/design/handoff/`                   | reference | owner design handoff, reference only, never shipped or imported             |
 | `docs/templates/`                        | template  | specification and Plane ticket forms                                        |
 | `docs/examples/`                         | example   | synthetic preparation and untrusted-input fixtures                          |
 | `docs/superpowers/plans/`                | history   | dated task plans; their task lists are frozen history                       |

@@ -26,4 +26,4 @@ Read when: building or changing components in `apps/web/src`, interaction, focus
 ## Read more
 
 - [Moved UI detail](../evidence/metro-86-moved-ui.md): axe tag measurements, browser differences, StrictMode and focus trade-offs, unverified items.
-- [Quality gates](quality-gates.md), [ADR-0011](../adr/0011-security-headers.md), [ADR-0021](../adr/0021-design-foundation-styling.md), [METRO-105 evidence](../evidence/metro-105.md).
+- [Design handoff reference](../design/handoff/README.md), [Quality gates](quality-gates.md), [ADR-0011](../adr/0011-security-headers.md), [ADR-0021](../adr/0021-design-foundation-styling.md), [METRO-105 evidence](../evidence/metro-105.md).
