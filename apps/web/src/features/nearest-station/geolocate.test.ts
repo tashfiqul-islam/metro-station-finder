@@ -12,7 +12,11 @@ function fakeGeo(run: (success: Success, failure: Failure, options?: PositionOpt
 
 test("METRO-88 a fix becomes a plain coordinate and the request uses the ADR-0009 options", async () => {
   const geo = fakeGeo((success) => success(fakePosition(23.8, 90.4)));
-  expect(await locate(geo)).toEqual({ kind: "position", coordinate: { lat: 23.8, lng: 90.4 } });
+  expect(await locate(geo)).toEqual({
+    kind: "position",
+    coordinate: { lat: 23.8, lng: 90.4 },
+    accuracyMeters: 10,
+  });
   expect(geo.getCurrentPosition).toHaveBeenCalledTimes(1);
   expect(geo.getCurrentPosition.mock.calls[0]?.[2]).toEqual({
     timeout: 10_000,
@@ -42,4 +46,17 @@ test("METRO-88 a missing geolocation API is unavailable and nothing is requested
   });
   expect(await locate()).toEqual({ kind: "unavailable" });
   if (original) Object.defineProperty(globalThis.navigator, "geolocation", original);
+});
+
+async function read(accuracy: number) {
+  const result = await locate(fakeGeo((success) => success(fakePosition(23.8, 90.4, accuracy))));
+  return result.kind === "position" ? result.accuracyMeters : "not a position";
+}
+
+test("METRO-103 the accuracy radius is carried; NaN, infinite and negative are unknown", async () => {
+  expect(await read(25_000)).toBe(25_000);
+  expect(await read(0)).toBe(0);
+  for (const bad of [Number.NaN, Infinity, -1]) {
+    expect(await read(bad)).toBeUndefined();
+  }
 });

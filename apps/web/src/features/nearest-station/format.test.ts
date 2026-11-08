@@ -1,6 +1,12 @@
 import { expect, test } from "vitest";
 
-import { formatIsoDate, formatKm, formatMinutes, formatWalkingDistance } from "./format";
+import {
+  formatAccuracy,
+  formatIsoDate,
+  formatKm,
+  formatMinutes,
+  formatWalkingDistance,
+} from "./format";
 
 test("METRO-88 straight-line distance is kilometres with two decimals", () => {
   expect(formatKm(2.3149)).toBe("2.31 km");
@@ -29,4 +35,18 @@ test("METRO-88 a walking distance that rounds to 1000 m reads 1.00 km, never 100
   expect(formatWalkingDistance(999.4)).toBe("999 m");
   expect(formatWalkingDistance(999.5)).toBe("1.00 km");
   expect(formatWalkingDistance(1000)).toBe("1.00 km");
+});
+
+test("METRO-103 formatAccuracy: approximate, metres below 1 km, else km, capped at 1000 km", () => {
+  expect(formatAccuracy(0)).toBe("about 0 m");
+  expect(formatAccuracy(19.6)).toBe("about 20 m");
+  expect(formatAccuracy(999.4)).toBe("about 999 m");
+  expect(formatAccuracy(999.6)).toBe("about 1 km");
+  expect(formatAccuracy(1000)).toBe("about 1 km");
+  expect(formatAccuracy(1540)).toBe("about 1.5 km");
+  expect(formatAccuracy(25_000)).toBe("about 25 km");
+  expect(formatAccuracy(999_999)).toBe("about 1000 km");
+  expect(formatAccuracy(1_000_000)).toBe("more than 1000 km");
+  expect(formatAccuracy(1e308)).toBe("more than 1000 km");
+  expect(formatAccuracy(Number.MAX_VALUE)).toBe("more than 1000 km");
 });

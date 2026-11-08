@@ -14,3 +14,5 @@ export { createFare } from "./fares/fare.ts";
 export type { Fare, FareResult, UnknownFare } from "./fares/fare.ts";
 export type { FareTable } from "./fares/fare-matrix.ts";
 export { findFare } from "./fares/quote-fare.ts";
+export { assessNearestReliability } from "./stations/nearest-reliability.ts";
+export type { NearestReliability } from "./stations/nearest-reliability.ts";
