@@ -16,7 +16,7 @@ jobs:
   check:
     name: Check the Cloudflare API token
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 12
     # The environment holds the Cloudflare deploy token. A failed run is announced only by GitHub's
     # normal workflow-failure notifications (docs/agents/maintenance-runbook.md, open decision).
     environment: preview
@@ -27,13 +27,31 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # METRO-99 (METRO-97 pattern, docs/evidence/metro-99.md): a GitHub release 504 must not fail the job on
+      # one try. 2 attempts of at most 4 minutes, each only after a failed one; the last fails the job.
       - name: Install pinned tools with mise
+        id: mise1
+        continue-on-error: true
+        timeout-minutes: 4
+        uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          version: 2026.10.25
+          install_args: node
+          cache: false # this job holds the Cloudflare credential; never restore a cache into it
+      - name: Wait before the second tool install
+        if: ${{ steps.mise1.outcome == 'failure' }}
+        run: sleep 30
+      - name: Install pinned tools with mise (second attempt)
+        id: mise2
+        if: ${{ steps.mise1.outcome == 'failure' }}
+        timeout-minutes: 4
         uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
         with:
           version: 2026.10.25
           install_args: node
           cache: false # this job holds the Cloudflare credential; never restore a cache into it
       - name: Verify the token is active and not expiring within 14 days
+        timeout-minutes: 3 # a few API calls take seconds; the job limit grew for the install retries (METRO-99)
         run: node scripts/cloudflare-token-check.ts
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

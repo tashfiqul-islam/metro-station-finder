@@ -25,7 +25,7 @@ test("METRO-14 permissions are minimal and the tag reaches the script only throu
   expect(workflow).not.toMatch(/contents: write|pull-requests|issues:/u);
   expect(workflow).toContain("RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}");
   const run = workflow.split("\n").filter((line) => line.includes("run:"));
-  expect(run).toEqual(["        run: node scripts/release-sync.ts"]);
+  expect(run).toEqual(["        run: sleep 30", "        run: node scripts/release-sync.ts"]);
 });
 
 test("METRO-14 runs for one tag never overlap or cancel each other", () => {
@@ -50,11 +50,16 @@ test("METRO-14 the parsed job is gated, minimal and has no cache or persisted cr
   const { job, steps } = syncJob();
   expect(job["environment"]).toBe("release");
   expect(job["permissions"]).toEqual({ contents: "read", deployments: "read" });
-  expect(steps).toHaveLength(3);
-  const [checkout = {}, tools = {}, sync = {}] = steps;
+  // METRO-99: checkout, two mise attempts with a pause between them, then the sync step.
+  expect(steps).toHaveLength(5);
+  const [checkout = {}, tools = {}, , retry = {}] = steps;
+  const sync = steps.at(-1) ?? {};
   expect(String(checkout["uses"])).toContain("actions/checkout@");
   expect(record(checkout["with"], "checkout.with")["persist-credentials"]).toBe(false);
-  expect(record(tools["with"], "tools.with")["cache"]).toBe(false);
+  for (const attempt of [tools, retry]) {
+    expect(record(attempt["with"], "tools.with")["cache"]).toBe(false);
+    expect(attempt["env"]).toBeUndefined();
+  }
   expect(sync["run"]).toBe("node scripts/release-sync.ts");
   expect(new Set(Object.keys(record(sync["env"], "sync.env")))).toEqual(
     new Set(["GITHUB_TOKEN", "PLANE_API_KEY", "PLANE_WORKSPACE", "RELEASE_TAG"]),

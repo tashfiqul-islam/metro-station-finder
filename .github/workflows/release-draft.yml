@@ -22,7 +22,7 @@ jobs:
   draft:
     name: Draft GitHub release from Plane
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 12
     # The environment requires the owner's approval and holds the Plane API key.
     environment: release
     permissions:
@@ -32,7 +32,24 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # METRO-99 (METRO-97 pattern, docs/evidence/metro-99.md): a GitHub release 504 must not fail the job on
+      # one try. 2 attempts of at most 4 minutes, each only after a failed one; the last fails the job.
       - name: Install pinned tools with mise
+        id: mise1
+        continue-on-error: true
+        timeout-minutes: 4
+        uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          version: 2026.10.25
+          install_args: node
+          cache: false # this job holds the release credential; never restore a cache into it
+      - name: Wait before the second tool install
+        if: ${{ steps.mise1.outcome == 'failure' }}
+        run: sleep 30
+      - name: Install pinned tools with mise (second attempt)
+        id: mise2
+        if: ${{ steps.mise1.outcome == 'failure' }}
+        timeout-minutes: 4
         uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
         with:
           version: 2026.10.25

@@ -52,7 +52,35 @@ jobs:
             echo "Commit $COMMIT is not on main. Tag only commits that are already merged to main; nothing was deployed." >&2
             exit 1
           fi
+      # METRO-99 (METRO-97 pattern, docs/evidence/metro-99.md): a GitHub release 504 must not fail the job on
+      # one try. 3 attempts of at most 4 minutes, each only after a failed one; the last fails the job.
       - name: Install pinned tools with mise
+        id: mise1
+        continue-on-error: true
+        timeout-minutes: 4
+        uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          version: 2026.10.25
+          cache: false # this job holds the Cloudflare token; never restore a cache into it
+      - name: Wait before the second tool install
+        if: ${{ steps.mise1.outcome == 'failure' }}
+        run: sleep 30
+      - name: Install pinned tools with mise (second attempt)
+        id: mise2
+        if: ${{ steps.mise1.outcome == 'failure' }}
+        continue-on-error: true
+        timeout-minutes: 4
+        uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          version: 2026.10.25
+          cache: false # this job holds the Cloudflare token; never restore a cache into it
+      - name: Wait before the third tool install
+        if: ${{ steps.mise2.outcome == 'failure' }}
+        run: sleep 60
+      - name: Install pinned tools with mise (third attempt)
+        id: mise3
+        if: ${{ steps.mise2.outcome == 'failure' }}
+        timeout-minutes: 4
         uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
         with:
           version: 2026.10.25
