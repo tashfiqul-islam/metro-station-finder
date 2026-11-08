@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+# Add after deploy: Sitemap: <absolute URL of /sitemap.xml>
