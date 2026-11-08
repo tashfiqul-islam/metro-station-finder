@@ -253,14 +253,16 @@ test("METRO-44 the CLI fails non-zero with one fixed message and never prints th
     process.exitCode = 0;
     await uptimeProbeMain([], {});
     expect(process.exitCode).toBe(1);
-    expect(String(error.mock.calls.at(-2)?.[0])).toContain("PRODUCTION_URL");
+    // Configuration failures happen before any request: one line, no request id.
+    expect(error.mock.calls.at(-1)).toHaveLength(1);
+    expect(String(error.mock.calls.at(-1)?.[0])).toContain("PRODUCTION_URL");
     await uptimeProbeMain([], { PROBE_BASE_URL: "   " });
-    expect(String(error.mock.calls.at(-2)?.[0])).toContain("PRODUCTION_URL");
+    expect(String(error.mock.calls.at(-1)?.[0])).toContain("PRODUCTION_URL");
 
     process.exitCode = 0;
     await uptimeProbeMain(["https://example.com/?token=abc"], {});
     expect(process.exitCode).toBe(1);
-    expect(String(error.mock.calls.at(-2)?.[0])).toContain("bare https origin");
+    expect(String(error.mock.calls.at(-1)?.[0])).toContain("bare https origin");
 
     // A non-ProbeFailure cause (a fake fetch that throws a plain value) still prints only a fixed message.
     process.exitCode = 0;

@@ -16,7 +16,7 @@ Each request has a 10 s limit and redirects are not followed (any 3xx fails). Ev
 - Repository variable (not a secret): Settings, Secrets and variables, Actions, Variables, New repository variable. Name `PRODUCTION_URL`, value the bare https origin of the production Worker, no path or query. The value is created at the v1.0.0 cutover ([cutover runbook](cutover-runbook.md)); this document records no URL.
 - A dispatched run may pass `base-url` instead; it wins over the variable.
 - With neither set, the run fails with "Uptime probe has no base URL". This is deliberate (Repo-verified, tested): a silent green run before production exists would read as a healthy site. Set the variable in the same step that makes production live, or accept red scheduled runs until then.
-- The schedule is inert until the default-branch switch (GitHub runs schedules only from the default branch). Until then dispatch by hand: Actions, Uptime probe, Run workflow (Unverified until run).
+- The schedule is inert until the default-branch switch (GitHub runs schedules only from the default branch). Dispatch needs the file on the default branch too (a dispatch from a pull request branch answered HTTP 404, see [evidence](../evidence/metro-44a.md)), so before the switch run the script by hand: `bun scripts/uptime-probe.ts <origin>`. After the switch, dispatch from Actions, Uptime probe, Run workflow (Unverified until run).
 - A failed run is announced only by GitHub's normal workflow-failure notifications (same decision as the token check, [maintenance runbook](maintenance-runbook.md)); routing to the owner depends on their notification settings (Unverified). No pager exists.
 
 ## SLO

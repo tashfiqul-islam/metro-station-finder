@@ -179,7 +179,12 @@ export async function uptimeProbeMain(
     // Only the fixed ProbeFailure text is ever printed; anything else maps to the connection message.
     console.error(error instanceof ProbeFailure ? error.message : MESSAGES.network);
     // Our own id, not network data: the Workers Logs search key for the probe's API request (runbook).
-    console.error(`x-request-id sent to the API route: ${requestId}`);
+    // Configuration failures happen before any request, so there is no id to search for.
+    const sent = !(
+      error instanceof ProbeFailure &&
+      (error.mode === "not-configured" || error.mode === "bad-url")
+    );
+    if (sent) console.error(`x-request-id sent to the API route: ${requestId}`);
     process.exitCode = 1;
   }
 }
