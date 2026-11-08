@@ -8,9 +8,9 @@ Recorded 2026-11-08 on branch `ticket/metro-104-first-visit-budget`, cut from `c
 | --------- | ------------------------------------------------ | ---------------------- | -------------------- | ------------------------------------------------------------------------------------------- |
 | `c081baf` | before (old gate: one total, one chunk)          | 248,941 / 79,213       | 248,941 / 79,213     | entry `index-BI89DYpL.js` 248,870 / 79,127, CSS 71 / 86                                     |
 | `45e152c` | manifest gate, build unchanged                   | 248,941 / 79,213       | 248,941 / 79,213     | same files, now marked `first-visit`                                                        |
-| `f6a921f` | web-vitals lazy (unchanged by the later commits) | 242,819 / 77,181       | 250,781 / 80,239     | entry `index-RolPBpSL.js` 242,748 / 77,095; `web-vitals-CMUBx256.js` 7,962 / 3,058 (`lazy`) |
+| `f6a921f` | web-vitals lazy (unchanged by the later commits) | 242,839 / 77,186       | 250,801 / 80,244     | entry `index-BHmbQghi.js` 242,768 / 77,100; `web-vitals-CMUBx256.js` 7,962 / 3,058 (`lazy`) |
 
-Limits: first visit 250,000 / 80,000 (unchanged), ceiling 400,000 / 125,000. First-visit headroom after: 7,181 raw / 2,819 gzip (before: 1,059 / 787). The first visit fell by 6,122 raw / 2,032 gzip, less than the ticket's "about 10 KB / 3.7 KB": the library is 7,962 / 3,058 as its own chunk, and the split adds overhead (separate module wrapper, the preload helper that stays in the entry). All files now exceed the old 250,000 / 80,000 total (250,781 / 80,239); that passes because the ceiling applies to them, which is the point of the redesign.
+Limits: first visit 250,000 / 80,000 (unchanged), ceiling 400,000 / 125,000. First-visit headroom after: 7,161 raw / 2,814 gzip (before: 1,059 / 787). The first visit fell by 6,102 raw / 2,027 gzip, less than the ticket's "about 10 KB / 3.7 KB": the library is 7,962 / 3,058 as its own chunk, and the split adds overhead (separate module wrapper, the preload helper that stays in the entry). All files now exceed the old 250,000 / 80,000 total (250,801 / 80,244); that passes because the ceiling applies to them, which is the point of the redesign.
 
 Ceiling choice: 400,000 / 125,000 is about 1.6 times the measured all-files size, the owner's recommendation. It leaves room for a few lazy features and trips on a runaway; it is a growth tripwire to revisit when half is used.
 
@@ -20,7 +20,7 @@ Ceiling choice: 400,000 / 125,000 is about 1.6 times the measured all-files size
 
 ## Manifest published
 
-The build writes `apps/web/dist/client/.vite/manifest.json` (Context7-verified: `build.manifest: true`). `wrangler deploy --dry-run` read 9 asset files with it and 7 without, so it is served as a static asset. It holds hashed file names only, already visible in `index.html`; left as is.
+The build writes `apps/web/dist/client/.vite/manifest.json` (Context7-verified: `build.manifest: true`). Repo-verified, `apps/api` `bun run build` (`wrangler deploy --dry-run`) with `WRANGLER_LOG=debug`: `dist/client` holds `_headers`, `.assetsignore`, `favicon.svg`, `index.html`, `assets/index-*.css`, `assets/index-*.js`, `assets/web-vitals-*.js` and `.vite/manifest.json`; the bare "files read" counts were 7 before and 9 after, a difference of exactly the two new outputs (`assets/web-vitals-*.js` and `.vite/manifest.json`). `.assetsignore` did not exclude `.vite`, so the manifest was uploaded and served at `/.vite/manifest.json`. It is now excluded through `apps/web/public/.assetsignore` (`.vite`), which the plugin merges into the built `.assetsignore` (`.vite`, `wrangler.json`, `.dev.vars`); the dry-run then logs `Ignoring asset: .vite\manifest.json`. The budget script reads the local `dist/client`, so it is unaffected.
 
 ## Changed assertions (every one)
 
@@ -30,4 +30,8 @@ The build writes `apps/web/dist/client/.vite/manifest.json` (Context7-verified: 
 
 ## Unverified
 
-Real-user effect of the late chunk (INP, LCP timing as reported); behaviour where `requestIdleCallback` is missing (timer path unit-tested only); the second new asset in the dry-run count.
+Real-user effect of the late chunk (INP, LCP timing as reported); behaviour where `requestIdleCallback` is missing (timer path unit-tested only); whether a browser caches a failed dynamic import (the helper reloads the page instead of importing again; unit tests mock the loader and the reload).
+
+## Review follow-ups (second round)
+
+Reload button instead of a second import (the failure region takes focus, no `role="alert"`); vitals idle wait capped at 1 s; per-observer `try`; stale-manifest rule (every emitted JS and CSS file must be in the manifest, one fixed message); ceiling percentage and a non-failing note above 50 percent (already printed now, all files use about 63 percent); `.vite` excluded from upload. Assertions changed: `scripts/bundle-budget.test.ts` first listing test gained the `Ceiling used` line, the tie-order fixture lists its second file in the manifest (the stale rule), and the `bundleMain` output indexes moved by one line; `apps/web/src/vitals.test.ts` timeout and fallback expectations changed from 3000 and 2000 to 1000; `apps/web/src/lazy-feature.test.tsx` Retry tests replaced by reload tests. No limit lowered or raised.

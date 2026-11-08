@@ -68,9 +68,9 @@ export const loadObservers: LoadObservers = async () => {
 };
 
 /** Longest wait for an idle period before the task runs anyway. */
-const IDLE_TIMEOUT_MS = 3000;
+const IDLE_TIMEOUT_MS = 1000;
 /** Where `requestIdleCallback` is missing (Safari), a timer stands in. */
-const FALLBACK_DELAY_MS = 2000;
+const FALLBACK_DELAY_MS = 1000;
 
 /** Runs `task` once the page has loaded and the browser is idle, so the chunk never competes with the first paint. */
 export const afterIdle: Schedule = (task) => {
@@ -101,7 +101,14 @@ export function startVitals(
     if (payload !== undefined) send(payload);
   };
   const register = async (): Promise<void> => {
-    for (const observe of await load()) observe(report);
+    for (const observe of await load()) {
+      // One failing observer must not skip the others; the error text is never kept or logged.
+      try {
+        observe(report);
+      } catch {
+        continue;
+      }
+    }
   };
   schedule(() => {
     register().catch(() => null);

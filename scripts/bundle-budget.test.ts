@@ -6,6 +6,7 @@ import {
   ALL_FILES_CEILING,
   FIRST_VISIT_BUDGET,
   MANIFEST_FAILURE,
+  MANIFEST_STALE,
   bundleMain,
   collectAssets,
   evaluateBundle,
@@ -144,6 +145,7 @@ test("evaluateBundle marks each file first-visit or lazy, prints both totals and
     "  assets/index.css: 10 raw; 10 gzip; first-visit",
     `First-visit JS/CSS: 1530 bytes raw; 630 bytes gzip (budget 250000 / 80000)`,
     `All JS/CSS: 3560 bytes raw; 760 bytes gzip (ceiling 400000 / 125000)`,
+    "Ceiling used: 1 percent raw; 1 percent gzip",
   ]);
 });
 
@@ -155,7 +157,10 @@ test("the listing order is deterministic whatever order the files arrive in", ()
   ).lines;
   expect(rotated).toEqual(forward);
   // Equal sizes fall back to the path.
-  const one = manifest({ "index.html": { file: "assets/b.js", isEntry: true } });
+  const one = manifest({
+    "index.html": { file: "assets/b.js", isEntry: true, dynamicImports: ["a.js"] },
+    "a.js": { file: "assets/a.js" },
+  });
   const tie = [asset("assets/b.js", 5, 5), asset("assets/a.js", 5, 5)];
   expect(evaluateBundle(tie, one).lines.slice(1, 3)).toEqual([
     "  assets/a.js: 5 raw; 5 gzip; lazy",
@@ -292,10 +297,10 @@ test("bundleMain reads the manifest from disk: exit 0 within budget, 1 over (out
     } finally {
       console.log = log;
     }
-    expect(lines.at(-2)).toMatch(
+    expect(lines.at(-3)).toMatch(
       /^First-visit JS\/CSS: \d+ bytes raw; \d+ bytes gzip \(budget \d+ \/ \d+\)$/u,
     );
-    expect(lines.at(-1)).toMatch(
+    expect(lines.at(-2)).toMatch(
       /^All JS\/CSS: \d+ bytes raw; \d+ bytes gzip \(ceiling \d+ \/ \d+\)$/u,
     );
     // Highly compressible, so only raw is exceeded.
@@ -329,3 +334,68 @@ test("bundleMain fails closed when the manifest file is missing", () =>
     }
     expect(errors).toEqual([MANIFEST_FAILURE]);
   }));
+
+test("an emitted JS or CSS file the manifest does not list fails closed with the stale-manifest message", () => {
+  const files = split(2000);
+  for (const orphan of ["assets/orphan.js", "assets/orphan.css"])
+    expect(evaluateBundle([...files, asset(orphan, 10, 10)], SPLIT), orphan).toEqual({
+      lines: [],
+      problems: [MANIFEST_STALE],
+    });
+});
+
+test("a file the manifest names but the disk lacks fails with the missing-file message", () => {
+  // The lazy chunk is only dynamic, so it is not in the first-visit set; the entry is.
+  const noLazy = split(2000).filter((a) => a.path !== "assets/lazy.js");
+  expect(evaluateBundle(noLazy, SPLIT).problems).toEqual([]);
+  const noEntry = split(2000).filter((a) => a.path !== "assets/index.js");
+  expect(evaluateBundle(noEntry, SPLIT).problems).toEqual([MANIFEST_FAILURE]);
+});
+
+test("the ceiling use is printed, and a note appears above half of it without failing", () => {
+  const low = evaluateBundle(split(2000), SPLIT).lines.join("\n");
+  expect(low).toContain("Ceiling used: 1 percent raw; 1 percent gzip");
+  expect(low).not.toContain("Growth tripwire");
+  const rawHalf = evaluateBundle(split(200_000), SPLIT);
+  expect(rawHalf.problems).toEqual([]);
+  expect(rawHalf.lines).toContain("Ceiling used: 50 percent raw; 1 percent gzip");
+  expect(rawHalf.lines.join("\n")).toContain("Growth tripwire: revisit the ceiling");
+  const gzipHalf = evaluateBundle(split(2000, 1000, 70_000), SPLIT);
+  expect(gzipHalf.problems).toEqual([]);
+  expect(gzipHalf.lines.join("\n")).toContain("Growth tripwire");
+});
+
+test("a diamond: a static chunk with CSS shared by the entry's chain and a lazy importer counts once", () => {
+  const diamond = manifest({
+    "index.html": {
+      file: "assets/index.js",
+      isEntry: true,
+      imports: ["_left.js", "_right.js"],
+      dynamicImports: ["lazy.js"],
+    },
+    "_left.js": { file: "assets/left.js", imports: ["_shared.js"] },
+    "_right.js": { file: "assets/right.js", imports: ["_shared.js"] },
+    "_shared.js": { file: "assets/shared.js", css: ["assets/shared.css"] },
+    "lazy.js": {
+      file: "assets/lazy.js",
+      imports: ["_shared.js", "_right.js"],
+      css: ["assets/lazy.css"],
+    },
+  });
+  const assets = [
+    asset("assets/index.js", 100, 10),
+    asset("assets/left.js", 200, 20),
+    asset("assets/right.js", 300, 30),
+    asset("assets/shared.js", 400, 40),
+    asset("assets/shared.css", 50, 5),
+    asset("assets/lazy.js", 60_000, 6000),
+    asset("assets/lazy.css", 7000, 700),
+  ];
+  const report = evaluateBundle(assets, diamond);
+  expect(report.problems).toEqual([]);
+  expect(report.lines).toContain(
+    "First-visit JS/CSS: 1050 bytes raw; 105 bytes gzip (budget 250000 / 80000)",
+  );
+  expect(report.lines).toContain("  assets/lazy.css: 7000 raw; 700 gzip; lazy");
+  expect(report.lines).toContain("  assets/shared.css: 50 raw; 5 gzip; first-visit");
+});

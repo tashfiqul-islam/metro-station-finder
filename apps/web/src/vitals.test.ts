@@ -154,6 +154,29 @@ test("METRO-104 a failed chunk load or registration is swallowed: no log, no thr
   expect(unhandled).not.toHaveBeenCalled();
 });
 
+test("METRO-104 a throwing first observer does not stop the others from registering", async () => {
+  const error = vi.spyOn(console, "error");
+  const second = vi.fn();
+  const third = vi.fn();
+  startVitals(
+    true,
+    () =>
+      Promise.resolve([
+        () => {
+          throw new RangeError("lat=23.81");
+        },
+        second,
+        third,
+      ]),
+    vi.fn(),
+    now,
+  );
+  await settle();
+  expect(second).toHaveBeenCalledTimes(1);
+  expect(third).toHaveBeenCalledTimes(1);
+  expect(error).not.toHaveBeenCalled();
+});
+
 test("METRO-104 loadObservers resolves the three web-vitals observers from a dynamic import", async () => {
   const observers = await loadObservers();
   expect(observers).toHaveLength(3);
@@ -173,16 +196,16 @@ describe("METRO-104 afterIdle", () => {
     afterIdle(task);
     expect(idle).not.toHaveBeenCalled();
     dispatchEvent(new Event("load"));
-    expect(idle).toHaveBeenCalledWith(task, { timeout: 3000 });
+    expect(idle).toHaveBeenCalledWith(task, { timeout: 1000 });
   });
 
-  test("with a loaded page and no requestIdleCallback it falls back to a 2 s timer", () => {
+  test("with a loaded page and no requestIdleCallback it falls back to a 1 s timer", () => {
     vi.useFakeTimers();
     vi.spyOn(document, "readyState", "get").mockReturnValue("complete");
     vi.stubGlobal("requestIdleCallback", null);
     const task = vi.fn();
     afterIdle(task);
-    vi.advanceTimersByTime(1999);
+    vi.advanceTimersByTime(999);
     expect(task).not.toHaveBeenCalled();
     vi.advanceTimersByTime(1);
     expect(task).toHaveBeenCalledTimes(1);

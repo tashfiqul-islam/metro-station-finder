@@ -22,6 +22,10 @@ export const MANIFEST_PATH = ".vite/manifest.json";
 export const MANIFEST_FAILURE =
   "First-visit set cannot be computed: .vite/manifest.json is missing, unparsable, has no index.html entry, or names a file that is not built";
 
+/** One fixed message when a built JS/CSS file is missing from the manifest (an orphan or a stale manifest). */
+export const MANIFEST_STALE =
+  "Bundle manifest is stale: a built JS or CSS file is not listed in .vite/manifest.json";
+
 export interface Asset {
   /** Path relative to the build root, with forward slashes. */
   readonly path: string;
@@ -137,6 +141,14 @@ export function evaluateBundle(
   const onDisk = new Set(assets.map((asset) => asset.path));
   if (files === null || [...files].some((file) => !onDisk.has(file)))
     return { lines: [], problems: [MANIFEST_FAILURE] };
+  // Every emitted file must be known to the manifest, as a chunk `file` or in a `css` list.
+  const listed = new Set<string>();
+  for (const chunk of manifest?.values() ?? []) {
+    listed.add(chunk.file);
+    for (const file of chunk.css) listed.add(file);
+  }
+  if (assets.some((asset) => !listed.has(asset.path)))
+    return { lines: [], problems: [MANIFEST_STALE] };
 
   const sorted = [...assets];
   sorted.sort((a, b) => b.raw - a.raw || a.path.localeCompare(b.path));
@@ -149,6 +161,15 @@ export function evaluateBundle(
     `First-visit JS/CSS: ${first.raw} bytes raw; ${first.gzip} bytes gzip (budget ${FIRST_VISIT_BUDGET.raw} / ${FIRST_VISIT_BUDGET.gzip})`,
     `All JS/CSS: ${all.raw} bytes raw; ${all.gzip} bytes gzip (ceiling ${ALL_FILES_CEILING.raw} / ${ALL_FILES_CEILING.gzip})`,
   );
+  const usedRaw = all.raw / ALL_FILES_CEILING.raw;
+  const usedGzip = all.gzip / ALL_FILES_CEILING.gzip;
+  lines.push(
+    `Ceiling used: ${Math.round(usedRaw * 100)} percent raw; ${Math.round(usedGzip * 100)} percent gzip`,
+  );
+  if (Math.max(usedRaw, usedGzip) > 0.5)
+    lines.push(
+      "Note: all files use more than half of the ceiling. Growth tripwire: revisit the ceiling (ADR-0020).",
+    );
   const problems: string[] = [];
   if (first.raw > FIRST_VISIT_BUDGET.raw || first.gzip > FIRST_VISIT_BUDGET.gzip)
     problems.push(
