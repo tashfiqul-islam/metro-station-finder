@@ -13,7 +13,7 @@ import {
   snapshotEntries,
   typingReachedWidget,
 } from "./smoke-live-report.ts";
-import type { AxEntry, LiveRun, TabEnd } from "./smoke-live-report.ts";
+import type { AccessibilityRun, AxEntry, LiveRun, TabEnd } from "./smoke-live-report.ts";
 
 /**
  * Owner-run live check (METRO-88), never run by CI or an agent: `bun run smoke:live`. It builds the web app
@@ -105,12 +105,7 @@ async function main(): Promise<boolean> {
     stationShown: false,
     routeShown: false,
     failedStep: null,
-    accessibility: {
-      afterAttach: null,
-      afterSuggestions: null,
-      tabOrder: [],
-      tabEnd: "read failed",
-    },
+    accessibility: null,
   };
   // Everything after the server starts is inside try/finally, so a launch failure cannot orphan it.
   let browser: Browser | null = null;
@@ -145,17 +140,28 @@ async function main(): Promise<boolean> {
       // Accessibility, first read: the closed shadow root hides the input from locators, but the browser's
       // own tree should include it (Unverified; the report says when it does not). Tab does not search.
       step = "read the accessibility tree";
+      // From here a read was attempted, so the report prints its lines (failed reads as such).
+      let reads: AccessibilityRun = {
+        afterAttach: null,
+        afterSuggestions: null,
+        tabOrder: [],
+        tabEnd: "read failed",
+      };
+      run.accessibility = reads;
       cdp = await bounded(page.context().newCDPSession(page)).catch(() => null);
       const attached = await readTree(cdp);
       const walk = await walkTab(page, cdp);
-      run.accessibility = {
-        ...run.accessibility,
+      reads = {
+        ...reads,
         afterAttach: attached === null ? null : snapshotEntries(attached),
         tabOrder: walk.order,
         tabEnd: walk.end,
       };
-      // Focus alone might send a Places request. Count what arrived so far as the baseline, so only a
-      // request beyond it can prove that the typing reached the widget.
+      run.accessibility = reads;
+      // Focus alone might send a Places request. Count what arrived so far as the baseline, so a request
+      // seen during the Tab walk cannot pass for typing. This excludes only the walk: a request caused by
+      // host.click() itself would still satisfy the check, and a late walk request can arrive after this
+      // snapshot. The report prints the walk count so the owner can see it.
       const baseline = run.placesRequests;
       run.placesDuringTabWalk = baseline;
       step = "focus the place search element and type the query";
@@ -174,10 +180,11 @@ async function main(): Promise<boolean> {
       await page.waitForTimeout(1500);
       // Second read, with the suggestions showing.
       const suggested = await readTree(cdp);
-      run.accessibility = {
-        ...run.accessibility,
+      reads = {
+        ...reads,
         afterSuggestions: suggested === null ? null : snapshotEntries(suggested),
       };
+      run.accessibility = reads;
       step = "choose the first suggestion (ArrowDown, Enter)";
       await page.keyboard.press("ArrowDown");
       await page.keyboard.press("Enter");
@@ -192,7 +199,7 @@ async function main(): Promise<boolean> {
     }
     run.cspMessages = csp;
   } finally {
-    await cdp?.detach().catch(() => null);
+    if (cdp !== null) await bounded(cdp.detach()).catch(() => null);
     await browser?.close();
     server.kill();
   }

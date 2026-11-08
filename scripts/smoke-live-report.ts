@@ -67,17 +67,32 @@ export interface AccessibilityRun {
 const FIELD_ROLES = new Set(["textbox", "combobox", "searchbox"]);
 const SNAPSHOT_ROLES = new Set([...FIELD_ROLES, "listbox", "option"]);
 
+/** Raw names are cut to this many code points before any regex runs, so a hostile name cannot make the scrub slow. */
+const MAX_RAW_NAME_LENGTH = 1000;
+/** A role is printed only if it looks like one; anything else (newline, escape codes, bidi, a huge string) prints as this. */
+const UNKNOWN_ROLE = "unknown";
+
+/** Roles are short ASCII words (`textbox`, `RootWebArea`). Anything else is untrusted text and is never printed. */
+function cleanRole(role: string): string {
+  const trimmed = role.trim();
+  return /^[A-Za-z]{1,40}$/u.test(trimmed) ? trimmed : UNKNOWN_ROLE;
+}
+
 /**
- * Makes an accessible name safe to print. Order matters: whitespace becomes one space, then control and
- * format characters (NUL, bidi overrides, zero-width) are deleted so they cannot split a key past the scrub,
- * then anything URL-like becomes a fixed token, then the scrub runs, then the cut is made on code points.
+ * Makes an accessible name safe to print. Order matters: cut the raw text to a generous length (the scrub
+ * has a quadratic pattern), whitespace becomes one space, control and format characters (NUL, bidi
+ * overrides, zero-width) are deleted so they cannot split a key past the scrub, URL-like text (a scheme or
+ * `www.` form, or a bare domain followed by a path) becomes a fixed token, the scrub runs, and the final
+ * cut to 80 is made on code points. A bare domain with no path (`evil.test`) is left: it is not a link.
  */
 export function cleanName(name: string): string {
-  const flat = name
+  const flat = Array.from(name)
+    .slice(0, MAX_RAW_NAME_LENGTH)
+    .join("")
     .replaceAll(/\s+/gu, " ")
     .replaceAll(/[\p{Cc}\p{Cf}]/gu, "")
     .trim()
-    .replaceAll(/(?:https?:\/\/|www\.)\S*/giu, "[url removed]");
+    .replaceAll(/(?:https?:\/\/|www\.)\S*|\b(?:[a-z0-9-]+\.)+[a-z]{2,}\/\S*/giu, "[url removed]");
   const points = Array.from(scrub(flat));
   return points.length > MAX_NAME_LENGTH
     ? `${points.slice(0, MAX_NAME_LENGTH).join("")}…`
@@ -122,8 +137,9 @@ function parseNodes(nodes: unknown): ParsedNode[] {
   const parsed: ParsedNode[] = [];
   for (const node of nodes as unknown[]) {
     if (typeof node !== "object" || node === null) continue;
-    const roleText = textOf(propertyOf(node, "role"));
-    if (propertyOf(node, "ignored") === true || roleText === "") continue;
+    const rawRole = textOf(propertyOf(node, "role"));
+    if (propertyOf(node, "ignored") === true || rawRole === "") continue;
+    const roleText = cleanRole(rawRole);
     const domId = propertyOf(node, "backendDOMNodeId");
     parsed.push({
       role: roleText,
@@ -154,6 +170,7 @@ export function focusedEntry(nodes: unknown): AxEntry | null {
   return node === undefined ? null : entryOf(node);
 }
 
+/** Same node by id when both have one; when only one has an id, or neither, by role and name. */
 function sameStop(a: AxEntry, b: AxEntry): boolean {
   return a.id !== undefined && b.id !== undefined
     ? a.id === b.id
@@ -213,7 +230,13 @@ function reachedByTab(control: AxEntry, order: readonly AxEntry[]): boolean {
   return order.some((stop) => sameStop(control, stop));
 }
 
-function accessibilityLines(run: AccessibilityRun): { lines: string[]; failure: string | null } {
+function accessibilityLines(run: AccessibilityRun | null): {
+  lines: string[];
+  failure: string | null;
+} {
+  if (run === null) {
+    return { lines: ["Accessibility: not attempted (the run stopped earlier)"], failure: null };
+  }
   const control = findControl(run);
   const entries = run.afterSuggestions ?? [];
   const options = entries.filter((entry) => entry.role === "option").length;
@@ -255,7 +278,8 @@ export interface LiveRun {
   readonly routeShown: boolean;
   /** Name of the step that threw, or null. */
   readonly failedStep: string | null;
-  readonly accessibility: AccessibilityRun;
+  /** Null when the run stopped before the accessibility step, so nothing was read. */
+  readonly accessibility: AccessibilityRun | null;
 }
 
 export function liveReport(run: LiveRun): { lines: string[]; pass: boolean } {
@@ -263,6 +287,7 @@ export function liveReport(run: LiveRun): { lines: string[]; pass: boolean } {
   const versionOk = run.version?.startsWith(PINNED_VERSION_PREFIX) ?? false;
   const accessibility = accessibilityLines(run.accessibility);
   const pass =
+    run.accessibility !== null &&
     accessibility.failure === null &&
     messages.length === 0 &&
     versionOk &&

@@ -367,3 +367,79 @@ test("cleanName cuts on code points, never inside a surrogate pair", () => {
   expect(cut).toBe(`${"x".repeat(79)}\u{1F600}…`);
   expect(cleanName("\u{1F600}".repeat(80))).toBe("\u{1F600}".repeat(80));
 });
+
+test("a hostile role is never printed: only a short ASCII word is, else unknown", () => {
+  const hostileRoles = [
+    "link\nPASS",
+    "\u001b[31mred",
+    "a‮b",
+    "x".repeat(5000),
+    "two words",
+    "role7",
+  ];
+  for (const role of hostileRoles) {
+    expect(focusedEntry([node(role, "Skip", focusedProperty(true))])).toEqual({
+      role: "unknown",
+      name: "Skip",
+    });
+  }
+  expect(focusedEntry([node("   ", "Skip", focusedProperty(true))])?.role).toBe("unknown");
+  expect(focusedEntry([node(" link ", "Skip", focusedProperty(true))])).toEqual({
+    role: "link",
+    name: "Skip",
+  });
+  const stops = hostileRoles
+    .map((role) => focusedEntry([node(role, `n${role.length}`, focusedProperty(true))]))
+    .filter((entry): entry is AxEntry => entry !== null);
+  const { lines, pass } = liveReport({
+    ...base,
+    accessibility: { ...accessibility, tabOrder: stops },
+  });
+  expect(pass).toBe(true);
+  expect(lines.filter((line) => line === "PASS")).toEqual(["PASS"]);
+  const printed = lines.join("\n");
+  expect(printed.includes("\u001b")).toBe(false);
+  expect(printed.includes("‮")).toBe(false);
+  expect(printed.includes("x".repeat(41))).toBe(false);
+  expect(lines.some((line) => line.includes('unknown "n'))).toBe(true);
+});
+
+test("cleanName stays fast on a long unbroken run and caps a huge hostile name", () => {
+  const started = performance.now();
+  const run = cleanName("a-".repeat(25_000));
+  expect(performance.now() - started).toBeLessThan(200);
+  expect(Array.from(run)).toHaveLength(81);
+  expect(Array.from(cleanName("z".repeat(100_000)))).toHaveLength(81);
+  expect(cleanName("ab ".repeat(100_000)).endsWith("…")).toBe(true);
+});
+
+test("a run that stopped before the accessibility step prints one line and no accessibility failure", () => {
+  const { lines, pass } = liveReport({
+    ...base,
+    accessibility: null,
+    stationShown: false,
+    routeShown: false,
+    failedStep: "wait for the place search element",
+  });
+  expect(pass).toBe(false);
+  expect(lines).toContain("Accessibility: not attempted (the run stopped earlier)");
+  expect(lines.join("\n")).not.toMatch(/Search control|Tab order|Suggestion list|Failed check/u);
+  expect(lines).toContain("Failed step: wait for the place search element");
+});
+
+test("a run with no accessibility read can never pass even with no failed step", () => {
+  expect(liveReport({ ...base, accessibility: null }).pass).toBe(false);
+});
+
+test("cleanName rejoins a key split inside AIza or inside key= by a control character", () => {
+  expect(cleanName(`AI\u0000${keyLike.slice(2)}`)).toBe("[key removed]");
+  expect(cleanName(`A​Iza${keyLike.slice(4)}`)).toBe("[key removed]");
+  expect(cleanName("ke\u0000y=SECRETVALUE")).toBe("[key removed]");
+  expect(cleanName("k‮e\u0007y=SECRETVALUE")).toBe("[key removed]");
+});
+
+test("cleanName replaces a bare domain with a path by the fixed token and leaves a bare domain alone", () => {
+  expect(cleanName("see evil.test/path/x now")).toBe("see [url removed] now");
+  expect(cleanName("a.b-c.example.org/q")).toBe("[url removed]");
+  expect(cleanName("Search evil.test")).toBe("Search evil.test");
+});
