@@ -126,7 +126,7 @@ test.describe("nearest station from a searched place (METRO-88)", () => {
       await page.getByRole("button", { name: "Use my location" }).click();
       const alert = page.getByRole("alert");
       await expect(alert).toHaveText(
-        "Your device found your position only roughly, within about 25 km. The nearest station could be wrong, so none is shown. Search for a place instead.",
+        "Your device found your position only roughly, with an error of about 25 km. The nearest station could be wrong, so none is shown. Search for a place instead.",
       );
       await expect(alert).toBeFocused();
       await expect(page.getByRole("heading", { name: /Nearest station/u })).toHaveCount(0);

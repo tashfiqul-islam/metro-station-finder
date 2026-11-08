@@ -87,11 +87,6 @@ function useWalkingRoute(
 
 function noop(): void {}
 
-/** Programmatic focus for an alert; the outline comes from `focus.css` (`[tabindex="-1"]`). */
-function focusOnMount(node: HTMLElement | null): void {
-  node?.focus();
-}
-
 interface SliceProps {
   readonly maps: MapsAdapter;
 }
@@ -118,6 +113,11 @@ function Slice({ maps }: SliceProps) {
     engagedWithSearch.current = true;
   };
   /** Stable, so focus moves when the heading mounts (a new origin re-keys it) and not on every render. */
+  /** Whether the geolocation alert may take focus when it mounts; the outline comes from `focus.css`. */
+  const focusAlertNext = useRef(true);
+  const focusAlert = useCallback((node: HTMLElement | null): void => {
+    if (node !== null && focusAlertNext.current) node.focus();
+  }, []);
   const focusResult = useCallback((node: HTMLElement | null): void => {
     if (node !== null && focusNext.current) node.focus();
   }, []);
@@ -150,7 +150,9 @@ function Slice({ maps }: SliceProps) {
 
   /** The nearest station could be wrong: show no result, and request no route. The position is dropped. */
   function applyRoughFix(accuracyMeters: number | undefined): void {
-    focusNext.current = true;
+    // Same rule as a reliable fix: a late fix never pulls focus out of the search box. The alert is still
+    // announced (role="alert"), it just does not take focus.
+    focusAlertNext.current = !engagedWithSearch.current;
     setDestinationId("");
     setSearchFailed(false);
     setLocating("idle");
@@ -172,11 +174,14 @@ function Slice({ maps }: SliceProps) {
     const outcome = await locate();
     if (mine !== latestAction.current) return;
     if (outcome.kind !== "position") {
+      focusAlertNext.current = true;
       setRough(null);
       setLocating(outcome.kind);
     } else if (
+      // An invalid position is never "rough": it takes the usual empty state.
+      findNearestStation(stations, outcome.coordinate).kind !== "nearest" ||
       assessNearestReliability(stations, outcome.coordinate, outcome.accuracyMeters).kind ===
-      "reliable"
+        "reliable"
     ) {
       applyLocation(outcome.coordinate, true);
     } else {
@@ -231,7 +236,7 @@ function Slice({ maps }: SliceProps) {
         <p id="consent">{copy.consent}</p>
         {locating === "locating" && <output>{copy.locating}</output>}
         {geoAlert !== null && (
-          <p role="alert" tabIndex={-1} ref={focusOnMount}>
+          <p role="alert" tabIndex={-1} ref={focusAlert}>
             {geoAlert}
           </p>
         )}

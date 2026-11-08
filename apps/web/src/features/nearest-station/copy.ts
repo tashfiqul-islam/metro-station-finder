@@ -17,7 +17,7 @@ export const copy = {
   unavailable: "Your position could not be found. Search for a place instead.",
   // METRO-103: shown instead of a station when the device located the user too roughly to name one.
   roughKnown: (size: string): string =>
-    `Your device found your position only roughly, within about ${size}. The nearest station could be wrong, so none is shown. Search for a place instead.`,
+    `Your device found your position only roughly, with an error of ${size}. The nearest station could be wrong, so none is shown. Search for a place instead.`,
   roughUnknown:
     "Your device could not say how precisely it found your position. The nearest station could be wrong, so none is shown. Search for a place instead.",
   searchUnavailable: "Place search is unavailable. You can still use your location.",
