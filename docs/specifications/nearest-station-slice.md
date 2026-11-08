@@ -165,8 +165,7 @@ Research (2026-11-08):
 - No DOCUMENTED property, attribute, slot or part sets the input's accessible name or ARIA label. The element's documented properties include `description`, `placeholder` and `name` (a form field name), and no `ariaLabel`, `label` or labelled-by option (Repo-verified in `@types/google.maps` 3.66.9; Context7-verified against the places-widget reference; Web-verified on the official reference and the place-autocomplete guide, which says only "Enhanced accessibility, including support for screen readers and keyboard interaction").
 - `description` is documented as "detected by screen readers when the input element is focused" and links `aria-describedby`: a description, not a name (Repo-, Context7- and Web-verified).
 - Whether an `aria-label` or `aria-labelledby` set on the host reaches the inner combobox: Unverified. The documentation is silent, the host sits outside the shadow root, and ARIA on a role-less custom element is not a documented route. Not used.
-- The `placeholder` option (typed `placeholder?: string | null` in `@types/google.maps` 3.66.9) is UNTESTED as a possible lever. Hypothesis: Google's name "Search For a Place" may come from its default placeholder. Not set now. Follow-up: try it in a future owner-run `smoke:live` and read the accessible name.
-- Whether the real element shows its own placeholder text, which would be a second visible label that must also be contained in the name: Unverified.
+- The `placeholder` option (typed `placeholder?: string | null` in `@types/google.maps` 3.66.9) was tried as a possible lever in METRO-102 and did not change the name (see the METRO-102 subsection below); it was removed.
 
 Decision: WCAG 2.5.3 Label in Name needs the visible label text to be contained in the accessible name, compared case-insensitively. No documented property sets Google's name, so the visible label is now exactly "Search for a place", which "Search For a Place" contains. The "Dhaka" meaning moves to a separate visible hint, "Suggestions favor places in Dhaka.", passed to the element as `description` (the one supported accessibility hook). The group (`fieldset` with `aria-labelledby` the visible label) is kept. No custom combobox, no CSP change, no host ARIA.
 
@@ -175,27 +174,28 @@ Limits, stated plainly:
 - (a) WCAG 2.5.3 is claimed only on the strength of the relayed owner probe that the real name is "Search For a Place". No agent has seen the real tree.
 - (b) Our visible text is a paragraph that names the fieldset through `aria-labelledby`. It is not a `<label for>` of the combobox, so the combobox's accessible name is entirely Google's, and the group and the combobox announce nearly the same words twice. That is redundant, not a failure.
 - (c) If the widget ignores the `description` option, the visible hint paragraph is the fallback for sighted users and for screen-reader users browsing the page.
-- (d) Whether the real element shows its own placeholder is Unverified (see above).
+- (d) Whether the real element shows its own hint text is Unverified (see the METRO-102 subsection).
 
 What the stubs show: the e2e fake copies the measured name (one shared constant, `MEASURED_GOOGLE_NAME`) and the `description` option. The unit copy guard only checks that our visible label stays contained in that name. The adapter unit test asserts `description` is passed. The e2e asserts the wiring we control (visible hint, `description` option, `aria-describedby`), axe, and the unchanged Tab order (search, then Use my location). None of this proves the real widget's tree.
 
 Unverified until the owner runs `bun run smoke:live` (METRO-100): the real widget's accessibility tree. Expect `combobox "Search For a Place"` (or a name that contains "search for a place", ignoring case), its description reading "Suggestions favor places in Dhaka." if Google wires `description` as documented, one Tab stop for the search, then `button "Use my location"`, and no axe violation. If the name differs, or the description is absent, record it on METRO-101.
 
-## The placeholder experiment and the live unknowns (METRO-102, 2026-11-08)
+## The hint-text experiment and the live unknowns (METRO-102, 2026-11-08)
 
-Measured (owner runs 2026-11-08, relayed, not re-run by an agent): the combobox name is still "Search For a Place"; `Combobox expanded` goes no to yes; a listbox with 5 options; Tab order combobox then "Use my location"; `Widget images: before typing 1 (1 unnamed), after typing 8 (7 unnamed)`.
+Measured (owner's third live run, 2026-11-08 19:17, relayed in a comment on PR #102 (id 6721991523), not re-run by an agent), with the hint-text (`placeholder`) option passed as "Search for a place":
 
-Change: the adapter takes a `placeholder` option, passed to `PlaceAutocompleteElement` and set from `copy.searchLabel` ("Search for a place") in the slice. The e2e fake stores it and reflects it as the input placeholder, so tests assert the wiring; they do not show that the real widget honors it. `smoke:live` additionally prints the combobox description status and the unnamed images grouped by parent role (see the [runbook](../agents/maps-live-check-runbook.md) and [METRO-102 evidence](../evidence/metro-102.md)).
+- `Search control: combobox "Search For a Place"`: UNCHANGED.
+- `Combobox description: before typing matches the hint, after typing matches the hint`: Google DID wire our `description`.
+- `Unnamed images by parent: before typing group 1, after typing option 5, button 1, group 1`; `Named images: before typing 0, after typing 1`; `Widget images: before typing 1 (1 unnamed), after typing 8 (7 unnamed)`.
+- Places requests 10, Routes 1, CSP messages 0, PASS.
+- Earlier runs: `Combobox expanded` goes no to yes; a listbox with 5 options; Tab order combobox then "Use my location".
 
-Decision rule, applied after the owner's next run (one rule, exact case):
+Decision (closed): the hint-text option does not control the accessible name, so it is removed (adapter option, local `PlacesApi` type, the slice's argument, the stub's reflection and their assertions). The name was compared character for character with `Search for a place`; `Search For a Place` means unchanged, and the rule removes the option even if a hint text is visible.
 
-| Outcome                             | `Search control` name printed                                           | Decision                                                                                                                                                                                                                                                       |
-| ----------------------------------- | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| (a) changed to the placeholder text | exactly `Search for a place`                                            | KEEP only if the owner also confirms by eye and with a screen reader that no duplicate placeholder is visible or announced twice (WCAG 3.3.2: a placeholder is not a label; its contrast is Google's). Otherwise REMOVE. If kept, record the name as Measured. |
-| (b) unchanged                       | `Search For a Place`                                                    | REMOVE in a second small PR, including when a placeholder is visible.                                                                                                                                                                                          |
-| (c) something else                  | any other name                                                          | Record it, default REMOVE, decide on the ticket.                                                                                                                                                                                                               |
-| (d) description                     | `matches the hint`, `present but different`, `absent` or `not reported` | Independent of the placeholder decision.                                                                                                                                                                                                                       |
+What the result settles:
 
-Compare the printed name EXACTLY, case-sensitive, with `Search for a place`; `Search For a Place` (capital F and P) means unchanged. The integration branch carries the experiment only until the owner's run; the default is REMOVE.
+- Google wires `description`, so METRO-101's description reaches the combobox. Label in name still rests on Google's own name "Search For a Place" containing our visible label "Search for a place", case-insensitively.
+- The 7 unnamed images are Google's own icons: 5 inside the suggestion options, 1 inside a button, 1 inside a group; one more image is named. They are inside Google's widget and we cannot name them (no documented option). Whether a screen reader announces them: Unverified.
+- Whether the real element showed a visible hint text of its own: Unverified (the run printed no visual check). Whether a screen reader announces the combobox description: Unverified.
 
-Unverified until that run: whether the real widget honors `placeholder`, whether it then shows a visible placeholder (a second visible label that must also be contained in the name), whether Google wired `description` to the combobox, and what the unnamed images are.
+See the [runbook](../agents/maps-live-check-runbook.md) and [METRO-102 evidence](../evidence/metro-102.md).

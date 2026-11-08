@@ -9,7 +9,7 @@ import { GOOGLE_HOSTS, expect } from "./fixtures";
  * enforced `script-src`. Every other Google host is aborted and recorded: a test run never reaches Google.
  * It does not reproduce Google's shadow DOM or ARIA, so the real widget needs the manual live check. It
  * copies the one name Google was measured to expose (owner probe 2026-11-08, METRO-101) and the documented
- * `description` and `placeholder` options (the latter is the METRO-102 experiment), so the wiring we control is asserted; the real tree is verified only by smoke:live.
+ * `description` option, so the wiring we control is asserted; the real tree is verified only by smoke:live.
  * Synthetic coordinates only; the key the app sends is the fake `fake-key-for-tests`.
  */
 
@@ -50,7 +50,6 @@ const STUB_SCRIPT = `
       const input = document.createElement("input");
       input.type = "text";
       input.setAttribute("aria-label", ${JSON.stringify(MEASURED_GOOGLE_NAME)});
-      if (this.options.placeholder) input.placeholder = this.options.placeholder;
       if (this.options.description) {
         const hint = document.createElement("span");
         hint.id = "fake-autocomplete-description";
