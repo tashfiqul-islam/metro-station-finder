@@ -47,6 +47,10 @@ export interface AxEntry {
   readonly role: string;
   readonly name: string;
   readonly id?: string;
+  /** Tab stops only: whether the node sits inside the widget's subtree (absent when that was not resolved). */
+  readonly inWidget?: boolean;
+  /** Comboboxes only: the `expanded` state when the tree reports one. */
+  readonly expanded?: boolean;
 }
 
 /** Why the Tab walk ended. */
@@ -65,7 +69,9 @@ export interface AccessibilityRun {
 }
 
 const FIELD_ROLES = new Set(["textbox", "combobox", "searchbox"]);
-const SNAPSHOT_ROLES = new Set([...FIELD_ROLES, "listbox", "option"]);
+/** Chrome reports icons as `image`; `img` is the HTML name and is accepted too. */
+const IMAGE_ROLES = new Set(["image", "img"]);
+const SNAPSHOT_ROLES = new Set([...FIELD_ROLES, ...IMAGE_ROLES, "listbox", "option"]);
 
 /** Raw names are cut to this many code points before any regex runs, so a hostile name cannot make the scrub slow. */
 const MAX_RAW_NAME_LENGTH = 1000;
@@ -101,6 +107,7 @@ export function cleanName(name: string): string {
 
 interface ParsedNode extends AxEntry {
   readonly focused: boolean;
+  readonly domId: number | undefined;
 }
 
 function propertyOf(object: object, key: string): unknown {
@@ -131,6 +138,17 @@ function isFocused(properties: unknown): boolean {
   );
 }
 
+function isExpanded(properties: unknown): boolean | undefined {
+  if (!Array.isArray(properties)) return undefined;
+  for (const property of properties as unknown[]) {
+    if (typeof property !== "object" || property === null) continue;
+    if (propertyOf(property, "name") !== "expanded") continue;
+    const value = valueOf(propertyOf(property, "value"));
+    return typeof value === "boolean" ? value : undefined;
+  }
+  return undefined;
+}
+
 /** Keeps the nodes a screen reader reaches (not `ignored`), reading only role, name, focus and node id; a value is never read. */
 function parseNodes(nodes: unknown): ParsedNode[] {
   if (!Array.isArray(nodes)) return [];
@@ -140,34 +158,104 @@ function parseNodes(nodes: unknown): ParsedNode[] {
     const rawRole = textOf(propertyOf(node, "role"));
     if (propertyOf(node, "ignored") === true || rawRole === "") continue;
     const roleText = cleanRole(rawRole);
-    const domId = propertyOf(node, "backendDOMNodeId");
+    const rawId = propertyOf(node, "backendDOMNodeId");
+    const domId = typeof rawId === "number" ? rawId : undefined;
+    const properties = propertyOf(node, "properties");
+    const expanded = roleText === "combobox" ? isExpanded(properties) : undefined;
     parsed.push({
       role: roleText,
       name: cleanName(textOf(propertyOf(node, "name"))),
-      focused: isFocused(propertyOf(node, "properties")),
-      ...(typeof domId === "number" ? { id: String(domId) } : {}),
+      focused: isFocused(properties),
+      domId,
+      ...(domId === undefined ? {} : { id: String(domId) }),
+      ...(expanded === undefined ? {} : { expanded }),
     });
   }
   return parsed;
 }
 
-function entryOf({ role, name, id }: ParsedNode): AxEntry {
-  return id === undefined ? { role, name } : { role, name, id };
+function entryOf({ role, name, id, expanded }: ParsedNode): AxEntry {
+  return {
+    role,
+    name,
+    ...(id === undefined ? {} : { id }),
+    ...(expanded === undefined ? {} : { expanded }),
+  };
 }
 
-/** The text fields, listbox and options of one `Accessibility.getFullAXTree` result, as roles and names only. */
-export function snapshotEntries(nodes: unknown): AxEntry[] {
+/**
+ * The text fields, images, listbox and options of one `Accessibility.getFullAXTree` result that sit inside
+ * the widget (their DOM node id is in `widgetIds`), as roles and names only. Nodes with no id are dropped.
+ */
+export function snapshotEntries(nodes: unknown, widgetIds: ReadonlySet<number>): AxEntry[] {
   return parseNodes(nodes)
-    .filter((node) => SNAPSHOT_ROLES.has(node.role))
+    .filter(
+      (node) =>
+        SNAPSHOT_ROLES.has(node.role) && node.domId !== undefined && widgetIds.has(node.domId),
+    )
     .map(entryOf);
 }
 
-/** The element that has focus, whatever its role, or null when none (or only the page itself) does. */
-export function focusedEntry(nodes: unknown): AxEntry | null {
+/**
+ * The element that has focus, whatever its role, or null when none (or only the page itself) does. With
+ * `widgetIds` the entry says whether the focused node is inside the widget.
+ */
+export function focusedEntry(
+  nodes: unknown,
+  widgetIds: ReadonlySet<number> | null = null,
+): AxEntry | null {
   const node = parseNodes(nodes).find(
     (candidate) => candidate.focused && candidate.role !== "RootWebArea",
   );
-  return node === undefined ? null : entryOf(node);
+  if (node === undefined) return null;
+  return widgetIds === null
+    ? entryOf(node)
+    : {
+        ...entryOf(node),
+        inWidget: node.domId !== undefined && widgetIds.has(node.domId),
+      };
+}
+
+const isWidget = (node: object): boolean =>
+  String(propertyOf(node, "nodeName")).toLowerCase() === "gmp-place-autocomplete";
+const childrenOf = (node: object): object[] =>
+  ["children", "shadowRoots", "pseudoElements"].flatMap((key) => {
+    const list = propertyOf(node, key);
+    return Array.isArray(list)
+      ? (list as unknown[]).filter(
+          (item): item is object => typeof item === "object" && item !== null,
+        )
+      : [];
+  });
+const contentOf = (node: object): object[] => {
+  const content = propertyOf(node, "contentDocument");
+  return typeof content === "object" && content !== null ? [content] : [];
+};
+const below = (node: object): object[] => [...childrenOf(node), ...contentOf(node)];
+
+/**
+ * The DOM node ids of the widget element (`gmp-place-autocomplete`, the first in document order) and
+ * everything below it, shadow roots included, from a `DOM.getDocument` tree read with `pierce: true`. Null
+ * when the element is not in the tree, so the caller reports that nothing could be read inside the widget.
+ */
+export function widgetNodeIds(root: unknown): Set<number> | null {
+  // Document order: depth first, so the first widget found is the first on the page.
+  const stack: object[] = typeof root === "object" && root !== null ? [root] : [];
+  let widget: object | null = null;
+  while (widget === null) {
+    const node = stack.shift();
+    if (node === undefined) return null;
+    if (isWidget(node)) widget = node;
+    else stack.unshift(...below(node));
+  }
+  const ids = new Set<number>();
+  const pending: object[] = [widget];
+  for (let node = pending.pop(); node !== undefined; node = pending.pop()) {
+    const id = propertyOf(node, "backendNodeId");
+    if (typeof id === "number") ids.add(id);
+    pending.push(...below(node));
+  }
+  return ids.size === 0 ? null : ids;
 }
 
 /** Same node by id when both have one; when only one has an id, or neither, by role and name. */
@@ -230,6 +318,20 @@ function reachedByTab(control: AxEntry, order: readonly AxEntry[]): boolean {
   return order.some((stop) => sameStop(control, stop));
 }
 
+/** `yes`, `no`, or `not reported` when the tree gave no `expanded` state (Unverified, never guessed). */
+function expandedText(entries: readonly AxEntry[] | null): string {
+  const state = entries?.find((entry) => entry.role === "combobox")?.expanded;
+  if (state === undefined) return "not reported";
+  return state ? "yes" : "no";
+}
+
+/** Counts only: icon names are not needed. */
+function imageText(entries: readonly AxEntry[] | null): string {
+  if (entries === null) return "not read";
+  const images = entries.filter((entry) => IMAGE_ROLES.has(entry.role));
+  return `${images.length} (${images.filter((entry) => entry.name === "").length} unnamed)`;
+}
+
 function accessibilityLines(run: AccessibilityRun | null): {
   lines: string[];
   failure: string | null;
@@ -256,11 +358,18 @@ function accessibilityLines(run: AccessibilityRun | null): {
     failure = control.entry.name === "" ? UNNAMED : null;
   }
   lines.push(
+    `  Combobox expanded: before typing ${expandedText(run.afterAttach)}, after typing ${expandedText(run.afterSuggestions)}`,
+    `  Widget images: before typing ${imageText(run.afterAttach)}, after typing ${imageText(run.afterSuggestions)}`,
+  );
+  lines.push(
     entries.some((entry) => entry.role === "listbox")
       ? `  Suggestion list after typing: listbox with ${options} options`
       : "  Suggestion list after typing: no listbox seen",
     `  Tab order (${run.tabOrder.length} stops, at most ${MAX_TAB_STOPS}; ended: ${run.tabEnd}):`,
-    ...run.tabOrder.map((entry, index) => `    ${index + 1}. ${describe(entry)}`),
+    ...run.tabOrder.map(
+      (entry, index) =>
+        `    ${index + 1}. ${describe(entry)}${entry.inWidget === true ? " [in widget]" : ""}`,
+    ),
   );
   return { lines, failure };
 }

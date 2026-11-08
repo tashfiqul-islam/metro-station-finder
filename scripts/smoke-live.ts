@@ -12,6 +12,7 @@ import {
   liveReport,
   snapshotEntries,
   typingReachedWidget,
+  widgetNodeIds,
 } from "./smoke-live-report.ts";
 import type { AccessibilityRun, AxEntry, LiveRun, TabEnd } from "./smoke-live-report.ts";
 
@@ -69,17 +70,33 @@ async function readTree(cdp: CDPSession | null): Promise<unknown> {
   }
 }
 
+/**
+ * The DOM node ids of the widget element and everything below it, shadow roots included (`pierce`), or null
+ * when the element is not found or the call fails or times out. The accessibility nodes carry the same ids
+ * (`backendDOMNodeId`), which is how the report is limited to the widget.
+ */
+async function readWidgetIds(cdp: CDPSession | null): Promise<ReadonlySet<number> | null> {
+  if (cdp === null) return null;
+  try {
+    const { root } = await bounded(cdp.send("DOM.getDocument", { depth: -1, pierce: true }));
+    return widgetNodeIds(root);
+  } catch {
+    return null;
+  }
+}
+
 /** Presses Tab from the top of the page and records the focused role and name, up to the cap. */
 async function walkTab(
   page: Page,
   cdp: CDPSession | null,
+  widgetIds: ReadonlySet<number> | null,
 ): Promise<{ order: AxEntry[]; end: TabEnd }> {
   let order: readonly AxEntry[] = [];
   for (let press = 0; press < MAX_TAB_STOPS; press += 1) {
     await page.keyboard.press("Tab");
     await page.waitForTimeout(100);
     const tree = await readTree(cdp);
-    const step = addTabStop(order, focusedEntry(tree), tree !== null);
+    const step = addTabStop(order, focusedEntry(tree, widgetIds), tree !== null);
     order = step.order;
     if (step.end !== null) return { order: [...order], end: step.end };
   }
@@ -150,10 +167,12 @@ async function main(): Promise<boolean> {
       run.accessibility = reads;
       cdp = await bounded(page.context().newCDPSession(page)).catch(() => null);
       const attached = await readTree(cdp);
-      const walk = await walkTab(page, cdp);
+      const attachedIds = await readWidgetIds(cdp);
+      const walk = await walkTab(page, cdp, attachedIds);
       reads = {
         ...reads,
-        afterAttach: attached === null ? null : snapshotEntries(attached),
+        afterAttach:
+          attached === null || attachedIds === null ? null : snapshotEntries(attached, attachedIds),
         tabOrder: walk.order,
         tabEnd: walk.end,
       };
@@ -180,9 +199,13 @@ async function main(): Promise<boolean> {
       await page.waitForTimeout(1500);
       // Second read, with the suggestions showing.
       const suggested = await readTree(cdp);
+      const suggestedIds = await readWidgetIds(cdp);
       reads = {
         ...reads,
-        afterSuggestions: suggested === null ? null : snapshotEntries(suggested),
+        afterSuggestions:
+          suggested === null || suggestedIds === null
+            ? null
+            : snapshotEntries(suggested, suggestedIds),
       };
       run.accessibility = reads;
       step = "choose the first suggestion (ArrowDown, Enter)";

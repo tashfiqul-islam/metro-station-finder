@@ -8,6 +8,7 @@ import {
   scrub,
   snapshotEntries,
   typingReachedWidget,
+  widgetNodeIds,
 } from "./smoke-live-report.ts";
 import type { AxEntry } from "./smoke-live-report.ts";
 
@@ -67,6 +68,8 @@ test("a clean run passes and prints only counts, the version and the verdict", (
     "Accessibility (roles and names only):",
     '  Search control: combobox "Search for a place"',
     "  Reached by Tab: yes (information only)",
+    "  Combobox expanded: before typing not reported, after typing not reported",
+    "  Widget images: before typing 0 (0 unnamed), after typing 0 (0 unnamed)",
     "  Suggestion list after typing: listbox with 2 options",
     "  Tab order (2 stops, at most 12; ended: wrapped to the first stop):",
     '    1. link "Skip to content"',
@@ -208,27 +211,40 @@ test("a hostile name cannot break out of its quoted line", () => {
   expect(lines).toContain(String.raw`    1. link "a\" PASS Failed step: none"`);
 });
 
-test("snapshotEntries keeps only fields, listbox and options, drops ignored nodes and never reads a value", () => {
-  const entries = snapshotEntries([
-    node("RootWebArea", "Page"),
-    node("combobox", "Search", { value: { type: "string", value: "Motijheel" } }),
-    node("textbox", "Ignored", { ignored: true }),
-    node("listbox", ""),
-    node("option", "Motijheel, Dhaka"),
-    node("button", "Use my location"),
-    node("", "no role"),
-    "junk",
-    null,
-    { role: "not an object", name: 3 },
-  ]);
+const at = (id: number, extra: object = {}): object => ({ backendDOMNodeId: id, ...extra });
+
+test("snapshotEntries keeps only the widget's fields, images, listbox and options, drops ignored nodes and never reads a value", () => {
+  const entries = snapshotEntries(
+    [
+      node("RootWebArea", "Page", at(1)),
+      node("combobox", "Search", at(2, { value: { type: "string", value: "Motijheel" } })),
+      node("textbox", "Ignored", at(3, { ignored: true })),
+      node("listbox", "", at(4)),
+      node("option", "Motijheel, Dhaka", at(5)),
+      node("button", "Use my location", at(6)),
+      node("image", "", at(7)),
+      node("img", "Icon", at(8)),
+      node("combobox", "Outside the widget", at(99)),
+      node("option", "No id"),
+      node("", "no role", at(2)),
+      "junk",
+      null,
+      { role: "not an object", name: 3 },
+    ],
+    new Set([1, 2, 3, 4, 5, 6, 7, 8]),
+  );
   expect(entries).toEqual([
-    { role: "combobox", name: "Search" },
-    { role: "listbox", name: "" },
-    { role: "option", name: "Motijheel, Dhaka" },
+    { role: "combobox", name: "Search", id: "2" },
+    { role: "listbox", name: "", id: "4" },
+    { role: "option", name: "Motijheel, Dhaka", id: "5" },
+    { role: "image", name: "", id: "7" },
+    { role: "img", name: "Icon", id: "8" },
   ]);
-  expect(snapshotEntries("text")).toEqual([]);
-  expect(snapshotEntries({})).toEqual([]);
-  expect(snapshotEntries([])).toEqual([]);
+  const none = new Set<number>();
+  expect(snapshotEntries("text", none)).toEqual([]);
+  expect(snapshotEntries({}, none)).toEqual([]);
+  expect(snapshotEntries([], none)).toEqual([]);
+  expect(snapshotEntries([node("combobox", "Search", at(2))], none)).toEqual([]);
 });
 
 test("focusedEntry finds the focused node of any role and ignores the page root and unfocused nodes", () => {
@@ -276,8 +292,10 @@ test("duplicate role and name does not end the walk when node ids differ; the sa
 test("focusedEntry and snapshotEntries carry the DOM node id for comparison, never print it", () => {
   const withId = [node("combobox", "Search", { backendDOMNodeId: 42, ...focusedProperty(true) })];
   expect(focusedEntry(withId)).toEqual({ role: "combobox", name: "Search", id: "42" });
-  expect(snapshotEntries(withId)).toEqual([{ role: "combobox", name: "Search", id: "42" }]);
-  const run = { ...accessibility, afterAttach: snapshotEntries(withId) };
+  expect(snapshotEntries(withId, new Set([42]))).toEqual([
+    { role: "combobox", name: "Search", id: "42" },
+  ]);
+  const run = { ...accessibility, afterAttach: snapshotEntries(withId, new Set([42])) };
   expect(liveReport({ ...base, accessibility: run }).lines.join("\n")).not.toContain("42");
 });
 
@@ -333,12 +351,16 @@ test("Reached by Tab is information only: no, and the run still passes", () => {
 });
 
 test("a hostile raw name goes through liveReport as one safe quoted line", () => {
-  const raw = snapshotEntries([
-    node(
-      "combobox",
-      `Find\u202Eevil\u200B ${keyLike} at https://x.test/a and www.evil.test/b\nPASS`,
-    ),
-  ]);
+  const raw = snapshotEntries(
+    [
+      node(
+        "combobox",
+        `Find\u202Eevil\u200B ${keyLike} at https://x.test/a and www.evil.test/b\nPASS`,
+        at(1),
+      ),
+    ],
+    new Set([1]),
+  );
   const { lines } = liveReport({ ...base, accessibility: { ...accessibility, afterAttach: raw } });
   const shown = lines.find((line) => line.startsWith("  Search control:")) ?? "";
   expect(shown).not.toContain(keyLike);
@@ -442,4 +464,144 @@ test("cleanName replaces a bare domain with a path by the fixed token and leaves
   expect(cleanName("see evil.test/path/x now")).toBe("see [url removed] now");
   expect(cleanName("a.b-c.example.org/q")).toBe("[url removed]");
   expect(cleanName("Search evil.test")).toBe("Search evil.test");
+});
+
+const widgetDom = {
+  nodeName: "#document",
+  backendNodeId: 1,
+  children: [
+    {
+      nodeName: "HTML",
+      backendNodeId: 2,
+      children: [
+        { nodeName: "BODY", backendNodeId: 3, children: [{ nodeName: "INPUT", backendNodeId: 4 }] },
+        {
+          nodeName: "GMP-PLACE-AUTOCOMPLETE",
+          backendNodeId: 10,
+          children: [{ nodeName: "SPAN", backendNodeId: 11 }],
+          shadowRoots: [
+            {
+              nodeName: "#document-fragment",
+              backendNodeId: 12,
+              children: [
+                { nodeName: "INPUT", backendNodeId: 13, pseudoElements: [{ backendNodeId: 14 }] },
+              ],
+            },
+          ],
+          contentDocument: { nodeName: "#document", backendNodeId: 15 },
+        },
+        { nodeName: "gmp-place-autocomplete", backendNodeId: 20 },
+      ],
+    },
+  ],
+};
+
+test("widgetNodeIds collects the first widget element and everything below it, shadow roots included", () => {
+  expect(widgetNodeIds(widgetDom)).toEqual(new Set([10, 11, 12, 13, 14, 15]));
+});
+
+test("widgetNodeIds is null when the widget is missing, has no ids, or the tree is not a tree", () => {
+  expect(
+    widgetNodeIds({ nodeName: "#document", children: [{ nodeName: "DIV" }, 7, null] }),
+  ).toBeNull();
+  expect(widgetNodeIds({ nodeName: "GMP-PLACE-AUTOCOMPLETE" })).toBeNull();
+  expect(widgetNodeIds({ children: "no" })).toBeNull();
+  expect(widgetNodeIds(null)).toBeNull();
+  expect(widgetNodeIds("text")).toBeNull();
+});
+
+test("focusedEntry says whether the focused node is inside the widget, only when the widget is known", () => {
+  const inside = [node("combobox", "Search", { ...at(13), ...focusedProperty(true) })];
+  const outside = [node("button", "Use my location", { ...at(99), ...focusedProperty(true) })];
+  const noId = [node("link", "Skip", focusedProperty(true))];
+  const ids = new Set([13]);
+  expect(focusedEntry(inside, ids)).toEqual({
+    role: "combobox",
+    name: "Search",
+    id: "13",
+    inWidget: true,
+  });
+  expect(focusedEntry(outside, ids)?.inWidget).toBe(false);
+  expect(focusedEntry(noId, ids)?.inWidget).toBe(false);
+  expect(focusedEntry(inside, null)).not.toHaveProperty("inWidget");
+  expect(focusedEntry(inside)).toEqual({ role: "combobox", name: "Search", id: "13" });
+});
+
+test("the report marks Tab stops inside the widget, prints image counts and the expanded state, and never option names", () => {
+  const expandedCombobox = (expanded: unknown): object[] => [
+    node(
+      "combobox",
+      "Search For a Place",
+      at(13, { properties: [{ name: "expanded", value: { value: expanded } }] }),
+    ),
+  ];
+  const before = snapshotEntries(
+    [...expandedCombobox(false), node("image", "", at(14))],
+    new Set([13, 14]),
+  );
+  const after = snapshotEntries(
+    [
+      ...expandedCombobox(true),
+      node("listbox", "", at(20)),
+      node("option", "Real Place Name One", at(21)),
+      node("option", "Real Place Name Two", at(22)),
+      node("image", "Pin", at(23)),
+      node("image", "", at(24)),
+      node("img", "", at(25)),
+    ],
+    new Set([13, 20, 21, 22, 23, 24, 25]),
+  );
+  const run = {
+    afterAttach: before,
+    afterSuggestions: after,
+    tabOrder: [
+      { role: "combobox", name: "Search For a Place", inWidget: true },
+      { role: "button", name: "Use my location", inWidget: false },
+      { role: "link", name: "No widget info" },
+    ],
+    tabEnd: "focus left the page" as const,
+  };
+  const { lines, pass } = liveReport({ ...base, accessibility: run });
+  expect(pass).toBe(true);
+  expect(lines).toContain('  Search control: combobox "Search For a Place"');
+  expect(lines).toContain("  Combobox expanded: before typing no, after typing yes");
+  expect(lines).toContain(
+    "  Widget images: before typing 1 (1 unnamed), after typing 3 (2 unnamed)",
+  );
+  expect(lines).toContain("  Suggestion list after typing: listbox with 2 options");
+  expect(lines).toContain('    1. combobox "Search For a Place" [in widget]');
+  expect(lines).toContain('    2. button "Use my location"');
+  expect(lines).toContain('    3. link "No widget info"');
+  expect(lines.join("\n")).not.toContain("Real Place Name");
+});
+
+test("expanded and images say not reported or not read instead of guessing", () => {
+  const bare = { ...accessibility, afterAttach: [control], afterSuggestions: null };
+  const { lines } = liveReport({ ...base, accessibility: bare });
+  expect(lines).toContain(
+    "  Combobox expanded: before typing not reported, after typing not reported",
+  );
+  expect(lines).toContain("  Widget images: before typing 0 (0 unnamed), after typing not read");
+  const odd = snapshotEntries(
+    [
+      node("combobox", "Search", at(1, { properties: [null, "x", { name: "focused" }] })),
+      node(
+        "combobox",
+        "Other",
+        at(2, { properties: [{ name: "expanded", value: { value: "yes" } }] }),
+      ),
+      node("combobox", "More", at(3, { properties: "no" })),
+    ],
+    new Set([1, 2, 3]),
+  );
+  expect(odd.map((entry) => entry.expanded)).toEqual([undefined, undefined, undefined]);
+});
+
+test("a widget that cannot be resolved leaves the control unread: fixed FAIL, never PASS", () => {
+  const unresolved = { ...accessibility, afterAttach: null, afterSuggestions: null };
+  const { lines, pass } = liveReport({ ...base, accessibility: unresolved });
+  expect(pass).toBe(false);
+  expect(lines).toContain(
+    "Failed check: could not read inside the widget (Unverified whether its closed shadow root hides it)",
+  );
 });
