@@ -11,6 +11,7 @@ import {
   type MockInstance,
 } from "vitest";
 
+import { ErrorBoundary } from "./error-boundary";
 import { lazyCopy, lazyFeature } from "./lazy-feature";
 import { rootErrorOptions } from "./report-error";
 
@@ -154,6 +155,55 @@ test("METRO-104 roles and keyboard: focus lands on one named region, not an aler
   // One announcement path only: moved focus, no live region.
   expect(container.querySelector('[role="alert"], [aria-live]')).toBeNull();
   expect(container.querySelectorAll("output")).toHaveLength(0);
+});
+
+function Broken(): never {
+  throw new TypeError(LEAK);
+}
+function BrokenWithLookalike(): never {
+  const lookalike: Error = { name: "Lookalike", message: "plain object, not an Error" };
+  throw lookalike;
+}
+
+test("METRO-105 a loaded feature that throws while rendering reaches the parent boundary, not the load-failure region", async () => {
+  const Lazy = lazyFeature<{ name: string }>(() => Promise.resolve({ default: Broken }));
+  await act(async () => {
+    root.render(
+      <ErrorBoundary>
+        <Lazy name="x" />
+      </ErrorBoundary>,
+    );
+  });
+  await settle();
+  expect(container.textContent).not.toContain(lazyCopy.failed);
+  expect(container.querySelector('[role="alert"]')?.textContent).toContain("Something went wrong");
+  const shown = container.textContent ?? "";
+  for (const fragment of LEAKS) expect(shown).not.toContain(fragment);
+});
+
+test("METRO-105 a feature that throws a plain object that only looks like an Error also reaches the parent boundary", async () => {
+  const Lazy = lazyFeature<{ name: string }>(() =>
+    Promise.resolve({ default: BrokenWithLookalike }),
+  );
+  await act(async () => {
+    root.render(
+      <ErrorBoundary>
+        <Lazy name="x" />
+      </ErrorBoundary>,
+    );
+  });
+  await settle();
+  expect(container.textContent).not.toContain(lazyCopy.failed);
+  expect(container.querySelector('[role="alert"]')?.textContent).toContain("Something went wrong");
+});
+
+test("METRO-105 a loader that rejects with a non-Error is still a load failure", async () => {
+  const Lazy = lazyFeature<{ name: string }>(() => Promise.reject("offline"));
+  await act(async () => {
+    root.render(<Lazy name="x" />);
+  });
+  await settle();
+  expect(failure()?.textContent).toContain(lazyCopy.failed);
 });
 
 test("METRO-104 two mounts of one lazy feature share the loaded chunk", async () => {

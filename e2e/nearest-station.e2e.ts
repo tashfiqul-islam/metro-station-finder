@@ -21,6 +21,12 @@ async function openSlice(page: Page, options: StubOptions = {}) {
   return stub;
 }
 
+/** Controls the layout shell adds before the slice: the theme button, and the sheet handle's three below 768 px. */
+async function shellControls(page: Page): Promise<number> {
+  const width = await page.evaluate(() => window.innerWidth);
+  return width < 768 ? 4 : 1;
+}
+
 async function searchFor(page: Page, text: string) {
   const search = page.getByRole("textbox", { name: MEASURED_GOOGLE_NAME, exact: true });
   await search.fill(text);
@@ -66,7 +72,7 @@ test.describe("nearest station from a searched place (METRO-88)", () => {
     expect(stub.blocked).toEqual([]);
   });
 
-  test("METRO-88 A5 the slice applies no inline style and one same-origin stylesheet", async ({
+  test("METRO-88 A5 the slice applies no inline style and only same-origin linked stylesheets", async ({
     page,
   }) => {
     await openSlice(page);
@@ -74,10 +80,23 @@ test.describe("nearest station from a searched place (METRO-88)", () => {
     await expect(page.getByText("1.23 km, 15 min")).toBeVisible();
     const styling = await page.evaluate(() => ({
       stylesheets: document.styleSheets.length,
+      linked: document.querySelectorAll('link[rel="stylesheet"]').length,
+      foreign: [...document.styleSheets].filter(
+        (sheet) => sheet.href !== null && new URL(sheet.href).origin !== location.origin,
+      ).length,
       styleElements: document.querySelectorAll("style").length,
       styleAttributes: document.querySelectorAll("[style]").length,
     }));
-    expect(styling).toEqual({ stylesheets: 1, styleElements: 0, styleAttributes: 0 });
+    // Only same-origin stylesheets, as linked files (the entry's, then the slice chunk's), allowed by
+    // `style-src 'self'`; nothing inline (METRO-58, METRO-105).
+    expect(styling.stylesheets).toBeGreaterThanOrEqual(1);
+    expect(styling).toEqual({
+      stylesheets: styling.linked,
+      linked: styling.linked,
+      foreign: 0,
+      styleElements: 0,
+      styleAttributes: 0,
+    });
   });
 
   test("METRO-88 A9 no /api request carries a coordinate", async ({ page }) => {
@@ -216,13 +235,16 @@ test.describe("nearest station from a searched place (METRO-88)", () => {
     await expect(
       page.getByRole("textbox", { name: MEASURED_GOOGLE_NAME, exact: true }),
     ).toBeVisible();
-    // Search input and the location button; the destination select appears with the first result.
-    await expectTabReachesEveryControl(page, { expected: 2 });
+    // Search input and the location button (the destination select appears with the first result), after the
+    // shell's controls: the theme button, plus the three sheet-handle controls where the sheet is drawn.
+    const shell = await shellControls(page);
+    await expectTabReachesEveryControl(page, { expected: shell + 2 });
     await searchFor(page, "motijheel");
     await expect(page.getByText("1.23 km, 15 min")).toBeVisible();
-    // Clicking the heading moves the sequential focus starting point back above the controls.
-    await page.getByRole("heading", { level: 1 }).click();
-    await expectTabReachesEveryControl(page, { expected: 3 });
+    // Clicking the empty map corner moves the sequential focus starting point back above all controls,
+    // including the shell's own (the heading now sits after the theme button).
+    await page.locator(".app__map").click({ position: { x: 2, y: 2 } });
+    await expectTabReachesEveryControl(page, { expected: shell + 3 });
   });
 
   test("METRO-101 stub wiring: the hint, the description option and aria-describedby we control", async ({

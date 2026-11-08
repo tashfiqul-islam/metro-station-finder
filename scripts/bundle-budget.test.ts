@@ -399,3 +399,31 @@ test("a diamond: a static chunk with CSS shared by the entry's chain and a lazy 
   expect(report.lines).toContain("  assets/lazy.css: 7000 raw; 700 gzip; lazy");
   expect(report.lines).toContain("  assets/shared.css: 50 raw; 5 gzip; first-visit");
 });
+
+test("METRO-105 a classic head script from public/ counts as first-visit and is not an orphan", () => {
+  const withHead = [...split(100), asset("theme-boot.js", 400, 250)];
+  const report = evaluateBundle(withHead, SPLIT);
+  expect(report.problems).toEqual([]);
+  expect(report.lines).toContain("  theme-boot.js: 400 raw; 250 gzip; first-visit");
+  expect(report.lines).toContain(
+    `First-visit JS/CSS: ${1000 + 10 + 500 + 20 + 400} bytes raw; ${400 + 10 + 200 + 20 + 250} bytes gzip (budget 250000 / 80000)`,
+  );
+  const without = evaluateBundle(split(100), SPLIT);
+  expect(without.problems).toEqual([]);
+  expect(without.lines.some((line) => line.includes("theme-boot.js"))).toBe(false);
+});
+
+test("METRO-105 the head script counts against the first-visit budget", () => {
+  const nearlyFull = [
+    asset("assets/index.js", FIRST_VISIT_BUDGET.raw - 500, 400),
+    asset("assets/index.css", 10, 10),
+    asset("assets/shared.js", 400, 200),
+    asset("assets/shared.css", 20, 20),
+    asset("assets/lazy.js", 100, 100),
+    asset("assets/lazy.css", 30, 30),
+  ];
+  expect(evaluateBundle(nearlyFull, SPLIT).problems).toEqual([]);
+  expect(evaluateBundle([...nearlyFull, asset("theme-boot.js", 400, 200)], SPLIT).problems).toEqual(
+    [FIRST_OVER],
+  );
+});

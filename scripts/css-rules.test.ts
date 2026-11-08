@@ -1,0 +1,127 @@
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+
+import { checkLoadOrder, checkSource, checkStylesheet, checkTree } from "./css-rules.ts";
+
+/** Every file the rules govern: the web app's HTML and everything under src (public/ holds brand files). */
+function webFiles(): Record<string, string> {
+  const files: Record<string, string> = {
+    "apps/web/index.html": readFileSync("apps/web/index.html", "utf8"),
+  };
+  for (const entry of readdirSync("apps/web/src", { recursive: true, withFileTypes: true })) {
+    if (!entry.isFile() || !/\.(css|html|tsx?)$/u.test(entry.name)) continue;
+    const path = join(entry.parentPath, entry.name).replaceAll("\\", "/");
+    files[path.slice(path.indexOf("apps/web/"))] = readFileSync(path, "utf8");
+  }
+  return files;
+}
+
+const files = webFiles();
+
+test("the web app has no inline style, no colour literal outside tokens.css and the right load order", () => {
+  expect(Object.keys(files).length).toBeGreaterThan(40);
+  expect(Object.keys(files)).toContain("apps/web/src/styles/tokens.css");
+  expect(Object.keys(files)).toContain("apps/web/src/styles/components/common.css");
+  expect(checkTree(files)).toEqual([]);
+});
+
+test("tokens.css is the one stylesheet with colour literals, and it has them", () => {
+  const tokens = files["apps/web/src/styles/tokens.css"] ?? "";
+  expect(tokens).toMatch(/#[0-9A-F]{6}/iu);
+  expect(tokens).toMatch(/rgb\(/u);
+  expect(checkStylesheet("apps/web/src/styles/tokens.css", tokens)).toEqual([]);
+});
+
+test("a stylesheet outside tokens.css fails on hex and on colour functions, not on comments or color-mix", () => {
+  const css = [
+    "/* a comment with #FFF and rgb(1 2 3) is fine */",
+    ".a { color: #0B7A84; }",
+    ".b { background: rgb(0 0 0 / 0.5); }",
+    ".c { color: hsl(10 10% 10%); }",
+    ".d { color: oklch(0.5 0.1 200); }",
+    ".e { color: color-mix(in oklch, var(--color-accent) 40%, transparent); }",
+    ".f { color: var(--color-fg); outline: 2px solid CanvasText; fill: url(#map-line); }",
+  ].join("\n");
+  const found = checkStylesheet("apps/web/src/styles/components/x.css", css);
+  expect(found.map((finding) => finding.line)).toEqual([2, 3, 4, 5]);
+  expect(found.every((finding) => finding.rule === "colour-literal")).toBe(true);
+});
+
+test("a comment spanning lines keeps the line numbers of what follows", () => {
+  const css = "/* one\ntwo #FFF */\n.a { color: #fff; }";
+  expect(checkStylesheet("x.css", css).map((finding) => finding.line)).toEqual([3]);
+});
+
+test("every inline-style route is a finding in source", () => {
+  const samples: Record<string, string> = {
+    "inline-style-attribute": '<div style="color:red"></div>',
+    "style-element": "<style>a{}</style>",
+    "set-style-attribute": 'el.setAttribute("style", "x")',
+    "css-text": "el.style.cssText = ''",
+    "style-property-write": "el.style.width = '3px'",
+    "style-prop": "const props = { style: { width: 3 } }",
+  };
+  for (const [rule, line] of Object.entries(samples)) {
+    expect(
+      checkSource("apps/web/src/x.tsx", line).map((finding) => finding.rule),
+      rule,
+    ).toContain(rule);
+  }
+  expect(checkSource("apps/web/index.html", '<p style="x">')[0]?.rule).toBe(
+    "inline-style-attribute",
+  );
+});
+
+test("CSSOM setProperty and removeProperty, reads and comparisons are allowed", () => {
+  const ok = [
+    'app.style.setProperty("--sheet-h", "3px");',
+    'app.style.removeProperty("--sheet-h");',
+    'const value = app.style.getPropertyValue("--sheet-h");',
+    "if (el.style.width === '') return;",
+    "const style = 1;",
+    "const hidden = container.querySelector('[style]');",
+  ].join("\n");
+  expect(checkSource("apps/web/src/x.tsx", ok)).toEqual([]);
+});
+
+test("a hex string in source is a finding, except in HTML meta tags and in tests", () => {
+  expect(checkSource("apps/web/src/x.tsx", 'const c = "#0B7A84";').map((f) => f.rule)).toEqual([
+    "colour-literal",
+  ]);
+  expect(checkSource("apps/web/src/x.test.tsx", 'expect(c).toBe("#0B7A84");')).toEqual([]);
+  expect(
+    checkSource("apps/web/index.html", '<meta name="theme-color" content="#0f172a" />'),
+  ).toEqual([]);
+  expect(checkSource("apps/web/src/x.tsx", 'href="#panel"')).toEqual([]);
+});
+
+test("the load order is fonts, tokens, base, components and nothing may precede or be missing", () => {
+  const good =
+    '@import "./fonts.css";\n@import "./tokens.css";\n@import "./base.css";\n@import "./components/shell.css";';
+  expect(checkLoadOrder("styles/index.css", good)).toEqual([]);
+  const wrong = [
+    '@import "./tokens.css";\n@import "./fonts.css";\n@import "./base.css";',
+    '@import "./fonts.css";\n@import "./tokens.css";\n@import "./components/shell.css";\n@import "./base.css";',
+    '@import "./fonts.css";\n@import "./base.css";',
+    '@import "./fonts.css";\n@import "./tokens.css";\n@import "./base.css";\n@import "./other.css";',
+    "",
+  ];
+  for (const text of wrong) {
+    expect(
+      checkLoadOrder("styles/index.css", text).map((finding) => finding.rule),
+      text,
+    ).toEqual(["load-order"]);
+  }
+  expect(checkLoadOrder("styles/index.css", "/* @import './x'; */" + good)).toEqual([]);
+});
+
+test("checkTree applies stylesheet, source and load-order rules by file kind", () => {
+  const found = checkTree({
+    "apps/web/src/styles/index.css": '@import "./base.css";',
+    "apps/web/src/styles/components/a.css": ".a{color:#fff}",
+    "apps/web/src/a.tsx": '<i style="x" />',
+  });
+  expect(new Set(found.map((finding) => finding.rule))).toEqual(
+    new Set(["colour-literal", "inline-style-attribute", "load-order"]),
+  );
+});

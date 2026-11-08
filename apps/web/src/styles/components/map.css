@@ -1,0 +1,182 @@
+/* map.css: Schematic SVG map. Colours only via var(--…). Breakpoint 768px. */
+
+/* ════════════ Map (schematic SVG) ════════════ */
+.map {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+}
+.map__bg {
+  fill: var(--color-map-bg);
+}
+.map__plane--1 {
+  fill: var(--color-map-plane-1);
+}
+.map__plane--2 {
+  fill: var(--color-map-plane-2);
+}
+.map__dot {
+  fill: var(--color-map-dot);
+}
+.map__shadow {
+  stroke: var(--color-map-shadow);
+}
+.map__casing {
+  stroke: var(--color-map-casing);
+}
+.map__stop-a {
+  stop-color: var(--color-mark-a);
+}
+.map__stop-b {
+  stop-color: var(--color-mark-b);
+}
+.map__pin {
+  fill: var(--color-map-pin);
+  stroke: var(--color-map-pin-ring);
+}
+.map__pin--hl {
+  fill: var(--color-map-label);
+  stroke: var(--color-map-pin);
+}
+.map__pin-halo {
+  fill: var(--color-accent-soft);
+}
+.map__label {
+  fill: var(--color-map-label);
+  stroke: var(--color-map-halo);
+  font-family: var(--font-sans);
+  font-weight: var(--fw-medium);
+  paint-order: stroke;
+  stroke-linejoin: round;
+}
+.map__label--hl {
+  font-weight: var(--fw-strong);
+}
+.map__pill {
+  fill: var(--color-map-label);
+}
+.map__pill-text {
+  fill: var(--color-map-halo);
+  font-family: var(--font-sans);
+  font-weight: var(--fw-strong);
+}
+.map__me {
+  fill: var(--color-accent);
+  stroke: var(--color-map-pin);
+}
+.map__me-pulse {
+  fill: var(--color-accent);
+  opacity: 0.35;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ping-ring 2s ease-out infinite;
+}
+.map__walk {
+  stroke: var(--color-map-walk);
+  stroke-dasharray: 2 6;
+  animation: walk-march 1.1s linear infinite;
+}
+@keyframes walk-march {
+  to {
+    stroke-dashoffset: -16;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .map__me-pulse,
+  .map__walk {
+    animation: none;
+  }
+}
+@media (forced-colors: active) {
+  .map__label {
+    fill: CanvasText;
+    stroke: Canvas;
+  }
+  .map__pin {
+    fill: Canvas;
+    stroke: CanvasText;
+  }
+}
+
+.map-controls {
+  position: absolute;
+  z-index: calc(var(--z-panel) - 1);
+  right: var(--space-3);
+  top: 66px;
+  display: flex;
+  flex-direction: column;
+  padding: 4px 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-glass-thick);
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+  box-shadow:
+    var(--shadow-rim),
+    0 0 0 1px var(--color-hair),
+    var(--shadow-1);
+}
+@media (min-width: 768px) {
+  .map-controls {
+    right: var(--space-4);
+    top: 84px;
+  }
+}
+.map-controls__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--target);
+  height: var(--target);
+  border-radius: var(--radius-pill);
+  color: var(--color-fg);
+}
+.map-controls__btn:hover {
+  background: var(--color-muted);
+}
+.map-scale {
+  position: absolute;
+  z-index: calc(var(--z-panel) - 1);
+  left: var(--space-3);
+  top: 66px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: var(--radius-pill);
+  background: var(--color-glass-thick);
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+  box-shadow:
+    var(--shadow-rim),
+    0 0 0 1px var(--color-hair);
+  font-family: var(--font-mono);
+  font-size: var(--fs-12);
+  color: var(--color-fg);
+}
+.map-scale__bar {
+  width: 60px;
+  height: 6px;
+  border: 1.5px solid currentColor;
+  border-top: 0;
+  border-radius: 0 0 2px 2px;
+}
+@media (min-width: 768px) {
+  .map-scale {
+    left: calc(var(--side-w) + 24px);
+    top: auto;
+    bottom: 20px;
+  }
+}
+
+.map__pill--term {
+  fill: var(--color-card);
+  stroke: var(--color-hair);
+  stroke-width: 1;
+}
+.map__pill--term + .map__pill-text {
+  fill: var(--color-fg);
+}

@@ -1,0 +1,6 @@
+/* Entry set, in load order: fonts, tokens, base, then the shell (ADR-0021). Component files that a screen or
+   component needs are imported by that screen or component, so they load with its chunk. */
+@import "./fonts.css";
+@import "./tokens.css";
+@import "./base.css";
+@import "./components/shell.css";

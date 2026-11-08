@@ -146,8 +146,10 @@ test.describe("lab web vitals (METRO-44 part C)", () => {
     expect(evaluateVitals(await measure(page)).problems).toEqual([]);
     await page.evaluate(() => {
       const block = document.createElement("div");
-      block.style.height = "400px";
-      document.body.prepend(block);
+      block.style.height = "2000px"; // taller than the 1280 px viewport width: the full shift distance counts
+      // The app is a fixed shell (METRO-105), so a block prepended to <body> shifts nothing: insert it where
+      // the visible content starts, at the top of the panel's scroll area.
+      document.querySelector(".panel__body")?.prepend(block);
     });
     const verdict = report(await measure(page));
     expect(verdict.cls).toBeGreaterThan(0.1);

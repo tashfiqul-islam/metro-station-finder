@@ -17,6 +17,14 @@ export const FIRST_VISIT_BUDGET = { raw: 250_000, gzip: 80_000 } as const;
  */
 export const ALL_FILES_CEILING = { raw: 400_000, gzip: 125_000 } as const;
 
+/**
+ * Classic scripts that `index.html` loads from `apps/web/public/` by their own name (METRO-105, ADR-0021).
+ * Vite copies them unhashed and leaves them out of the manifest, but they are on the first-visit path, so they
+ * count toward the first-visit total and are not orphans. One that is absent is skipped here; the browser
+ * journeys fail on the 404 (`e2e/app-shell.e2e.ts`).
+ */
+export const HEAD_SCRIPTS = ["theme-boot.js"] as const;
+
 export const MANIFEST_PATH = ".vite/manifest.json";
 /** One fixed message for every way the first-visit set cannot be computed. */
 export const MANIFEST_FAILURE =
@@ -137,12 +145,14 @@ export function evaluateBundle(
   if (total(assets).raw === 0)
     return { lines: [], problems: ["No production JS/CSS artifacts found"] };
   const manifest = parseManifest(manifestText);
-  const files = manifest === null ? null : firstVisitFiles(manifest);
+  const chunks = manifest === null ? null : firstVisitFiles(manifest);
   const onDisk = new Set(assets.map((asset) => asset.path));
+  const heads = HEAD_SCRIPTS.filter((script) => onDisk.has(script));
+  const files = chunks === null ? null : new Set([...chunks, ...heads]);
   if (files === null || [...files].some((file) => !onDisk.has(file)))
     return { lines: [], problems: [MANIFEST_FAILURE] };
   // Every emitted file must be known to the manifest, as a chunk `file` or in a `css` list.
-  const listed = new Set<string>();
+  const listed = new Set<string>(heads);
   for (const chunk of manifest?.values() ?? []) {
     listed.add(chunk.file);
     for (const file of chunk.css) listed.add(file);

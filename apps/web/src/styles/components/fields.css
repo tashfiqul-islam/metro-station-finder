@@ -1,0 +1,170 @@
+/* fields.css: Fields: Google Places slot container, station combobox and listbox. Colours only via var(--…). Breakpoint 768px. */
+
+/* ════════════ Fields ════════════ */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.field__label {
+  font-size: var(--fs-13);
+  font-weight: var(--fw-semibold);
+  color: var(--color-fg);
+  padding: 0 4px;
+}
+.field__hint {
+  font-size: var(--fs-12);
+  color: var(--color-muted-fg);
+  padding: 0 4px;
+}
+/* Google Places autocomplete slot: we style only the container. Google draws the input, icons and suggestion popup. */
+.place-slot {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 56px;
+  padding: 6px;
+  border-radius: var(--radius-field);
+  background: var(--color-card);
+  box-shadow: inset 0 0 0 1px var(--color-ctl-line);
+}
+.place-slot:focus-within {
+  box-shadow:
+    inset 0 0 0 2px var(--color-focus),
+    0 0 0 6px var(--color-accent-soft);
+}
+.place-slot__widget {
+  display: block;
+  width: 100%;
+  color-scheme: inherit;
+}
+.place-slot__mock {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  padding: 0 12px;
+  color: var(--color-muted-fg);
+  font-size: var(--fs-16);
+}
+.place-slot[data-state="unavailable"] {
+  display: none;
+}
+.combo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 56px;
+  padding: 0 6px 0 14px;
+  border-radius: var(--radius-field);
+  background: var(--color-card);
+  box-shadow: inset 0 0 0 1px var(--color-ctl-line);
+  color: var(--color-muted-fg);
+  transition: box-shadow var(--dur-base);
+}
+.combo:focus-within {
+  box-shadow:
+    inset 0 0 0 2px var(--color-focus),
+    0 0 0 6px var(--color-accent-soft);
+}
+.combo__input {
+  flex: 1;
+  height: 100%;
+  font-size: var(--fs-16);
+  font-weight: var(--fw-medium);
+  color: var(--color-fg);
+}
+.combo__input:focus-visible {
+  outline: none;
+} /* the container shows the ring */
+.combo__clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--target);
+  height: var(--target);
+  border-radius: var(--radius-pill);
+  color: var(--color-fg);
+}
+.combo__clear:hover {
+  background: var(--color-muted);
+}
+
+/* ════════════ Listbox (station suggestions, palette) ════════════ */
+.listbox {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  border-radius: var(--radius-tile);
+  background: var(--color-raised);
+  box-shadow:
+    var(--shadow-rim),
+    0 0 0 1px var(--color-hair),
+    var(--shadow-1);
+  animation: rise var(--dur-slow) var(--ease-out) both;
+}
+.listbox__group {
+  font-size: var(--fs-11);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--track-caps);
+  text-transform: uppercase;
+  color: var(--color-muted-fg);
+  padding: 8px 10px 4px;
+}
+.option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 56px;
+  padding: 8px 10px;
+  border-radius: var(--radius-row);
+  cursor: pointer;
+  color: var(--color-fg);
+}
+.option:hover,
+.option[aria-selected="true"] {
+  background: var(--color-muted);
+}
+.option__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.option__name {
+  font-size: var(--fs-15);
+  font-weight: var(--fw-medium);
+}
+.option__match {
+  font-weight: var(--fw-bold);
+  background: var(--color-accent-soft);
+  border-radius: 4px;
+}
+.option__sub {
+  font-size: var(--fs-12);
+  color: var(--color-muted-fg);
+}
+.option__end {
+  display: flex;
+  color: var(--color-muted-fg);
+}
+.option__hint {
+  font-size: var(--fs-12);
+  color: var(--color-muted-fg);
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .listbox {
+    animation: none;
+  }
+}
