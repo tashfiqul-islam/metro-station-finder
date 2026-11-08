@@ -40,7 +40,10 @@ test("METRO-111 the map is one named application with a description and the fit 
 
 test("METRO-111 the map is the only tab stop and the station list names all 16 stations", () => {
   const { container } = render(<LineMap />);
-  expect(container.querySelectorAll("[tabindex], a[href], button, input, select")).toHaveLength(1);
+  expect(container.querySelectorAll("[tabindex]")).toHaveLength(1);
+  expect(container.querySelectorAll("a[href], input, select")).toHaveLength(0);
+  // The only other controls are the three zoom buttons (LineMap.interact.test.tsx).
+  expect(container.querySelectorAll("button")).toHaveLength(3);
   const list = screen.getByRole("list", { name: "Stations on MRT Line 6, north to south" });
   const items = within(list).getAllByRole("listitem");
   expect(items).toHaveLength(16);

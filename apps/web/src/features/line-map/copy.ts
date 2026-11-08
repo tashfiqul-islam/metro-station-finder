@@ -2,6 +2,12 @@
 export const mapCopy = {
   /** The landmark that holds the map, so no page content sits outside a landmark. */
   region: "Line map",
+  controls: "Map controls",
+  zoomIn: "Zoom in",
+  zoomOut: "Zoom out",
+  fit: "Show whole line",
+  /** The keys the focused map takes (ARIA key shortcuts syntax). */
+  shortcuts: "ArrowUp ArrowDown ArrowLeft ArrowRight Plus Minus 0",
   title: "Schematic map of MRT Line 6",
   listLabel: "Stations on MRT Line 6, north to south",
   highlightedSuffix: ", highlighted",

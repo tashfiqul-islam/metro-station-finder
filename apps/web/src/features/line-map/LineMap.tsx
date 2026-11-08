@@ -1,9 +1,13 @@
 import type { Coordinate, StationId } from "@metro/core";
 import type { ReactElement } from "react";
 
+import { Icon } from "../../icons/Icon";
+import { fitIcon, zoomInIcon, zoomOutIcon } from "./control-icons";
 import { mapCopy } from "./copy";
-import { FIT_VIEW, lineStops, project, round1 } from "./projection";
+import { lineStops, project, round1 } from "./projection";
 import type { LineStop, Point } from "./projection";
+import { useMapView } from "./use-map-view";
+import { viewBoxOf } from "./view";
 
 import "../../styles/components/map.css";
 
@@ -71,10 +75,11 @@ function tripStops(trip: LineMapProps["trip"]): readonly LineStop[] {
  * user pin, station pins, labels. Every value is an attribute or a class; colours come from tokens.
  *
  * The svg is `role="application"` (named by its title, described by its desc) because it is a keyboard
- * stop that pans and zooms; the station list beside it is the text equivalent.
+ * stop that pans and zooms (`use-map-view.ts`, `view.ts`); the station list beside it is the text equivalent.
  */
 export function LineMap({ highlighted = NONE, position, walk, trip }: LineMapProps): ReactElement {
   if (FIRST === undefined || LAST === undefined) throw new Error("The station dataset is empty");
+  const { view, svg, handlers, zoomIn, zoomOut, fit } = useMapView();
   const marked = new Set<StationId>(highlighted);
   const stretch = tripStops(trip);
   const user = position === undefined ? null : project(position);
@@ -97,12 +102,15 @@ export function LineMap({ highlighted = NONE, position, walk, trip }: LineMapPro
     <section className="line-map" aria-label={mapCopy.region}>
       <svg
         className="map"
-        viewBox={`${FIT_VIEW.x} ${FIT_VIEW.y} ${FIT_VIEW.width} ${FIT_VIEW.height}`}
+        ref={svg}
+        viewBox={viewBoxOf(view)}
         preserveAspectRatio="xMidYMid meet"
         role="application"
         aria-labelledby="map-title"
         aria-describedby="map-desc"
+        aria-keyshortcuts={mapCopy.shortcuts}
         tabIndex={KEYBOARD_STOP}
+        {...handlers}
       >
         <title id="map-title">{mapCopy.title}</title>
         <desc id="map-desc">{description}</desc>
@@ -249,6 +257,27 @@ export function LineMap({ highlighted = NONE, position, walk, trip }: LineMapPro
           );
         })}
       </svg>
+      <fieldset className="map-controls" aria-label={mapCopy.controls}>
+        <button
+          type="button"
+          className="map-controls__btn"
+          aria-label={mapCopy.zoomIn}
+          onClick={zoomIn}
+        >
+          <Icon icon={zoomInIcon} />
+        </button>
+        <button
+          type="button"
+          className="map-controls__btn"
+          aria-label={mapCopy.zoomOut}
+          onClick={zoomOut}
+        >
+          <Icon icon={zoomOutIcon} />
+        </button>
+        <button type="button" className="map-controls__btn" aria-label={mapCopy.fit} onClick={fit}>
+          <Icon icon={fitIcon} size={18} />
+        </button>
+      </fieldset>
       <ol className="line-map__list visually-hidden" aria-label={mapCopy.listLabel}>
         {STOPS.map((stop) => (
           <li key={stop.id}>

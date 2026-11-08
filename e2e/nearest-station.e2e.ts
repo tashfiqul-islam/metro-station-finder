@@ -240,8 +240,8 @@ test.describe("nearest station from a searched place (METRO-88)", () => {
     ).toBeVisible();
     // Search input and the location button (the destination select appears with the first result), after the
     // shell's controls: the Home link, the theme button, plus the three sheet-handle controls where the sheet is drawn.
-    // The line map adds one tab stop (METRO-111); it is first in the shell's DOM order.
-    const shell = (await shellControls(page)) + 1;
+    // The line map adds four tab stops (METRO-111): the map and its three zoom buttons, first in the shell's DOM order.
+    const shell = (await shellControls(page)) + 4;
     await expectTabReachesEveryControl(page, { expected: shell + 2 });
     await searchFor(page, "motijheel");
     await expect(page.getByText("1.23 km, 15 min")).toBeVisible();
