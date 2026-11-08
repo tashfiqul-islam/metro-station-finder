@@ -5,6 +5,7 @@ import { expectNoCoordinateInApi, installMapsStub, trackApiRequests } from "./ma
 test.describe("real-user web vitals beacon (METRO-44)", () => {
   test("METRO-44 the built app sends contract-valid, position-free beacons to /api/vitals and the Worker accepts them", async ({
     page,
+    browserName,
   }) => {
     const apiRequests = trackApiRequests(page);
     const beacons: {
@@ -36,7 +37,7 @@ test.describe("real-user web vitals beacon (METRO-44)", () => {
       page.getByRole("heading", { level: 1, name: "Nearest Metro station" }),
     ).toBeVisible();
     // LCP is final at the first input and CLS when the page is hidden. Click once, then hide the page on
-    // every poll until both beacons have arrived (a later hide adds no duplicate).
+    // every poll until the beacons have arrived (CLS is Chromium-only: Firefox and WebKit do not implement layout-shift) (a later hide adds no duplicate).
     await page.mouse.click(5, 5);
     await expect
       .poll(
@@ -52,9 +53,9 @@ test.describe("real-user web vitals beacon (METRO-44)", () => {
             .map((beacon) => parseWebVitalPayload(JSON.parse(beacon.body)).name)
             .toSorted();
         },
-        { message: "LCP and CLS beacons" },
+        { message: "the expected beacons" },
       )
-      .toEqual(expect.arrayContaining(["LCP", "CLS"]));
+      .toEqual(expect.arrayContaining(browserName === "chromium" ? ["LCP", "CLS"] : ["LCP"]));
     await expect.poll(() => statuses.length).toBe(beacons.length);
     expect(statuses.every((status) => status === 204)).toBe(true);
 
