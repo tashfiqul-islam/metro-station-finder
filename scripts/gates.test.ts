@@ -153,13 +153,13 @@ test("bundle gate accepts artifacts within budget", () =>
     expect(result.exitCode).toBe(0);
   }));
 
-test("bundle gate rejects an entry chunk over its own budget while the totals still pass", () =>
+test("bundle gate rejects an entry chunk over its own budget (the entry budget equals the totals while there is one chunk)", () =>
   fixture(async (root) => {
-    await writeFile(join(root, "entry.js"), "x".repeat(248_000));
+    await writeFile(join(root, "entry.js"), "x".repeat(250_001));
     await writeFile(join(root, "index.html"), '<script type="module" src="/entry.js"></script>');
     const result = Bun.spawnSync(["node", resolve("scripts/bundle.ts"), root]);
     expect(result.stderr.toString()).toContain("Entry chunk budget exceeded");
-    expect(result.stderr.toString()).not.toContain("Bundle budget exceeded");
+    expect(result.stderr.toString()).toContain("Bundle budget exceeded");
     expect(result.exitCode).not.toBe(0);
   }));
 

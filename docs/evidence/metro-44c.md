@@ -71,3 +71,9 @@ Per-project test counts (Hosted-measured; read from the job logs). Before: Quali
 | mobile-chrome | 43 / 1 (128747329042)         | 43 / 1 (128751379963)        | none                           |
 
 `testIgnore` leaves the three other projects without the new spec: their counts are unchanged, and no test of theirs was skipped or removed. A spec ignored by `testIgnore` is not listed as skipped.
+
+## Note 2026-11-08: entry budget recalibrated to the totals (METRO-44 part B)
+
+Part B adds `web-vitals` 6.2.3 to the entry chunk (ADR-0019). Measured with `bun run bundle:check` after merging `003598e`: entry `assets/index-BI89DYpL.js` 248,870 bytes raw / 79,127 gzip, totals 248,941 / 79,213 (Repo-verified). That is over the entry budget part C set (247,500 / 78,500) and under the totals (250,000 / 80,000), which are unchanged.
+
+The owner's delegate set the entry budget to the same numbers as the totals, 250,000 raw / 80,000 gzip, because the entry is 99.97 percent of the total while the build is one chunk, so an entry budget tighter than the totals only tracks the same bytes with a different number. Its value starts when code is split, since lazy chunks count toward the totals only. The headroom after web-vitals is 1,059 raw / 787 gzip bytes. The entry-budget tests now expect both the totals and the entry message for an entry over the limit, because the entry is part of the total.
