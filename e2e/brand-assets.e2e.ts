@@ -25,8 +25,6 @@ const TYPES: Record<string, RegExp> = {
   "/icons/icon-maskable-192.png": /^image\/png/u,
   "/icons/icon-maskable-512.png": /^image\/png/u,
   "/icons/icon-monochrome-512.png": /^image\/png/u,
-  "/screenshots/narrow.webp": /^image\/webp/u,
-  "/screenshots/wide.webp": /^image\/webp/u,
   "/robots.txt": /^text\/plain/u,
 };
 

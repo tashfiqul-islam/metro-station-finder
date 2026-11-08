@@ -1,6 +1,6 @@
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 
 import type { Rasteriser } from "./brand-chromium.ts";
 import {
@@ -13,7 +13,9 @@ import {
   PNG_JOBS,
   PUBLIC_DIR,
   ROBOTS_TXT,
-  STATIC_FILES,
+  NO_SIZE_PAIR,
+  PIXEL_TOLERANCE,
+  isBinaryOutput,
   brandMain,
   buildAssets,
   cliMain,
@@ -36,6 +38,12 @@ import { expectRejection } from "./test-support.ts";
 const encode = (value: string): Uint8Array => new TextEncoder().encode(value);
 const quiet = (): void => {};
 
+/** The three channel values of the first #rrggbb colour in an SVG: a stand-in for rendered pixels. */
+function pixels(svg: string): Uint8Array {
+  const hex = /#([0-9a-f]{6})/iu.exec(svg)?.[1] ?? "000000";
+  return Uint8Array.from([0, 2, 4].map((at) => Number.parseInt(hex.slice(at, at + 2), 16)));
+}
+
 /** The shipped manifest with one change applied, for the cases a valid manifest cannot show. */
 function mutated(change: (draft: Record<string, unknown>) => void): unknown {
   const draft: unknown = JSON.parse(MANIFEST_JSON);
@@ -44,14 +52,28 @@ function mutated(change: (draft: Record<string, unknown>) => void): unknown {
   return draft;
 }
 
-/** A fake renderer: the "PNG" is the SVG text with its size, so output depends on the master and the size. */
+const u32be = (value: number): number[] => [
+  value >>> 24,
+  (value >>> 16) & 255,
+  (value >>> 8) & 255,
+  value & 255,
+];
+
+/** A PNG header of the given size followed by arbitrary payload bytes (enough for `imageSize`). */
+function fakePng(width: number, height: number, payload: Uint8Array): Uint8Array {
+  const header = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, ...u32be(13)];
+  const ihdr = [...encode("IHDR"), ...u32be(width), ...u32be(height)];
+  return Uint8Array.from([...header, ...ihdr, ...payload]);
+}
+
+/** A fake renderer: the "PNG" is a real header of the requested size plus the SVG text, so output depends on the master. */
 function fakeRasteriser(difference = 0): Rasteriser & { closed: number; rendered: string[] } {
   const state = {
     closed: 0,
     rendered: [] as string[],
     render(svg: string, size: number): Promise<Uint8Array> {
       state.rendered.push(`${size}:${svg}`);
-      return Promise.resolve(encode(`png|${size}|${svg}`));
+      return Promise.resolve(fakePng(size, size, encode(svg)));
     },
     largestDifference(a: Uint8Array, b: Uint8Array): Promise<number> {
       if (a.length !== b.length) return Promise.resolve(-1);
@@ -80,10 +102,6 @@ async function withProject<T>(run: (root: string) => Promise<T>): Promise<T> {
       await writeFile(join(root, BRAND_DIR, name), svgFor(name));
     }
     await writeFile(join(root, BRAND_DIR, "notes.txt"), "not a master");
-    for (const name of STATIC_FILES) {
-      await mkdir(dirname(join(root, PUBLIC_DIR, name)), { recursive: true });
-      await writeFile(join(root, PUBLIC_DIR, name), `static ${name}`);
-    }
     return await run(root);
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -121,6 +139,10 @@ describe("sized", () => {
     );
     expect(sized('<svg width="16.5" height="16.5"/>', 32)).toBe('<svg width="32" height="32"/>');
   });
+
+  test("throws a fixed error when the master has no width and height pair", () => {
+    expect(() => sized('<svg viewBox="0 0 24 24"/>', 64)).toThrow(NO_SIZE_PAIR);
+  });
 });
 
 describe("buildAssets", () => {
@@ -148,6 +170,39 @@ describe("buildAssets", () => {
     expect(rasteriser.rendered).toHaveLength(PNG_JOBS.length + ICO_JOBS.length);
     const ico = files.get("favicon.ico") ?? new Uint8Array();
     expect(imageSize(ico)?.sizes.map((size) => size.width)).toEqual([16, 32, 48]);
+    expect((unpackIco(ico) ?? []).map((png) => imageSize(png)?.sizes[0]?.width)).toEqual([
+      16, 32, 48,
+    ]);
+  });
+
+  test("fails when the rasteriser returns a PNG of the wrong size or something that is not a PNG", async () => {
+    const wrong = {
+      ...fakeRasteriser(),
+      render: () => Promise.resolve(fakePng(10, 10, encode("x"))),
+    };
+    await expectRejection(
+      buildAssets(wrong, (name) => Promise.resolve(svgFor(name))),
+      "apple-touch-icon.png was not rendered as a 180x180 PNG",
+    );
+    const notPng = {
+      ...fakeRasteriser(),
+      render: () => Promise.resolve(encode("not a png at all, long enough")),
+    };
+    await expectRejection(
+      buildAssets(notPng, (name) => Promise.resolve(svgFor(name))),
+      "was not rendered as a 180x180 PNG",
+    );
+    const onlyIcoWrong = {
+      ...fakeRasteriser(),
+      render: (svg: string, size: number) =>
+        Promise.resolve(
+          size <= 48 ? fakePng(size + 1, size, encode(svg)) : fakePng(size, size, encode(svg)),
+        ),
+    };
+    await expectRejection(
+      buildAssets(onlyIcoWrong, (name) => Promise.resolve(svgFor(name))),
+      "favicon.ico image 16 was not rendered as a 16x16 PNG",
+    );
   });
 });
 
@@ -164,8 +219,6 @@ describe("the manifest", () => {
       "/icons/icon-maskable-192.png",
       "/icons/icon-maskable-512.png",
       "/icons/icon-monochrome-512.png",
-      "/screenshots/wide.webp",
-      "/screenshots/narrow.webp",
     ]);
     expect(manifestFiles(null)).toEqual([]);
     expect(manifestFiles({ icons: [{ src: "/a.png" }, 7] })).toEqual([
@@ -228,22 +281,18 @@ describe("the manifest", () => {
     ]);
   });
 
-  test("rejects bad screenshots and tolerates a manifest with no icon or screenshot lists", () => {
-    const problems = manifestProblems(
-      mutated((draft) => {
-        draft["screenshots"] = [{ src: "x.webp", form_factor: "tall", label: "" }];
-      }),
-    );
-    expect(problems).toEqual([
-      "screenshot src is not a root path",
-      "screenshot form_factor is not wide or narrow",
-      "screenshot has no label",
-    ]);
+  test("rejects a screenshots member (they wait for the screens they show) and tolerates no icon list", () => {
+    expect(
+      manifestProblems(
+        mutated((draft) => {
+          draft["screenshots"] = [];
+        }),
+      ),
+    ).toEqual(["manifest has screenshots, which wait for the screens they show"]);
     expect(
       manifestProblems(
         mutated((draft) => {
           delete draft["icons"];
-          delete draft["screenshots"];
         }),
       ),
     ).toHaveLength(5);
@@ -252,44 +301,53 @@ describe("the manifest", () => {
 
 describe("the lock", () => {
   const sources = new Map([["a.svg", encode("a")]]);
-  const outputs = new Map([["b.png", encode("b")]]);
-  const statics = new Map([["c.webp", encode("c")]]);
+  const outputs = new Map([
+    ["robots.txt", encode("b")],
+    ["icons/icon.png", encode("binary one")],
+    ["favicon.ico", encode("binary two")],
+  ]);
 
-  test("hashes sorted by name in three sections, and agrees with itself", () => {
-    const lock = lockText(sources, outputs, statics);
+  test("hashes masters and text outputs only, sorted by name, and agrees with itself", () => {
+    const lock = lockText(sources, outputs);
     expect(JSON.parse(lock)).toEqual({
       sources: { "a.svg": sha256(encode("a")) },
-      outputs: { "b.png": sha256(encode("b")) },
-      static: { "c.webp": sha256(encode("c")) },
+      outputs: { "robots.txt": sha256(encode("b")) },
     });
-    expect(lockProblems(lock, sources, outputs, statics)).toEqual([]);
+    expect(lockProblems(lock, sources, outputs)).toEqual([]);
+    expect([
+      isBinaryOutput("x/a.png"),
+      isBinaryOutput("favicon.ico"),
+      isBinaryOutput("a.svg"),
+    ]).toEqual([true, true, false]);
   });
 
-  test("reports an edited master, an edited output, an added and a removed file", () => {
-    const lock = lockText(sources, outputs, statics);
+  test("does not read binary outputs, so a re-encoded PNG or ICO does not touch the lock", () => {
+    const lock = lockText(sources, outputs);
+    const reencoded = new Map(outputs);
+    reencoded.set("icons/icon.png", encode("same pixels, other bytes"));
+    reencoded.delete("favicon.ico");
+    expect(lockProblems(lock, sources, reencoded)).toEqual([]);
+  });
+
+  test("reports an edited master, an edited text output, an added and a removed text file", () => {
+    const lock = lockText(sources, outputs);
     const problems = lockProblems(
       lock,
       new Map([["a.svg", encode("edited")]]),
-      new Map([
-        ["b.png", encode("b")],
-        ["extra.png", encode("x")],
-      ]),
-      new Map(),
+      new Map([["extra.svg", encode("x")]]),
     );
     expect(problems).toEqual([
       "sources/a.svg differs from assets.lock.json",
-      "outputs/extra.png differs from assets.lock.json",
-      "static/c.webp differs from assets.lock.json",
+      "outputs/robots.txt differs from assets.lock.json",
+      "outputs/extra.svg differs from assets.lock.json",
     ]);
   });
 
   test("reports an unreadable lock and one with a missing section", () => {
-    expect(lockProblems("{", sources, outputs, statics)).toEqual([
-      "assets.lock.json is not valid JSON",
-    ]);
-    expect(lockProblems("[]", sources, outputs, statics)).toHaveLength(3);
-    expect(lockProblems('{"sources":{},"outputs":{}}', new Map(), new Map(), new Map())).toEqual([
-      'assets.lock.json has no "static" section',
+    expect(lockProblems("{", sources, outputs)).toEqual(["assets.lock.json is not valid JSON"]);
+    expect(lockProblems("[]", sources, outputs)).toHaveLength(2);
+    expect(lockProblems('{"sources":{}}', new Map(), new Map())).toEqual([
+      'assets.lock.json has no "outputs" section',
     ]);
   });
 });
@@ -297,10 +355,29 @@ describe("the lock", () => {
 describe("pixel comparison", () => {
   test("samePixels accepts a difference up to the tolerance and rejects more or a size change", async () => {
     const a = encode("aaaa");
+    expect(PIXEL_TOLERANCE).toBe(1);
     expect(await samePixels(fakeRasteriser(0), a, encode("aaaa"))).toBe(true);
-    expect(await samePixels(fakeRasteriser(2), a, encode("bbbb"))).toBe(true);
-    expect(await samePixels(fakeRasteriser(3), a, encode("bbbb"))).toBe(false);
+    expect(await samePixels(fakeRasteriser(PIXEL_TOLERANCE), a, encode("bbbb"))).toBe(true);
+    expect(await samePixels(fakeRasteriser(PIXEL_TOLERANCE + 1), a, encode("bbbb"))).toBe(false);
     expect(await samePixels(fakeRasteriser(0), a, encode("bb"))).toBe(false);
+  });
+
+  test("a master colour change of 3 per channel is caught, a change of 1 is not", async () => {
+    const colour: Rasteriser = {
+      render: (svg, size) => Promise.resolve(fakePng(size, size, pixels(svg))),
+      largestDifference: (a, b) =>
+        Promise.resolve(
+          a.length === b.length
+            ? Math.max(...a.map((value, at) => Math.abs(value - (b[at] ?? 0))))
+            : -1,
+        ),
+      close: () => Promise.resolve(),
+    };
+    const fresh = await colour.render('<svg fill="#102030"/>', 16);
+    const three = await colour.render('<svg fill="#132333"/>', 16);
+    const one = await colour.render('<svg fill="#112131"/>', 16);
+    expect(await sameOutput(colour, "icons/icon.png", fresh, three)).toBe(false);
+    expect(await sameOutput(colour, "icons/icon.png", fresh, one)).toBe(true);
   });
 
   test("sameOutput compares text by bytes, PNG by pixels and ICO image by image", async () => {

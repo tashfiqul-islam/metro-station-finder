@@ -20,8 +20,13 @@ export const BRAND_DIR = "apps/web/brand";
 export const PUBLIC_DIR = "apps/web/public";
 export const LOCK_FILE = "assets.lock.json";
 
-/** Text and copy outputs are compared byte for byte; PNG and ICO pixels may differ by this much per channel. */
-export const PIXEL_TOLERANCE = 2;
+/**
+ * Text outputs are compared byte for byte; PNG and ICO pixels may differ by this much per channel (of 255).
+ * PNG bytes depend on the Chromium build and OS, so decoded pixels are the drift check for binaries. The
+ * regenerated icons matched the committed ones with a largest difference of 0 on the author's machine; do not
+ * raise this to pass a hosted run, report the failure instead.
+ */
+export const PIXEL_TOLERANCE = 1;
 
 /** True when both PNGs decode to the same size and no channel differs by more than PIXEL_TOLERANCE. */
 export async function samePixels(
@@ -60,16 +65,16 @@ export const COPY_JOBS: readonly { readonly out: string; readonly source: string
   { out: "favicon.svg", source: "favicon.svg" },
 ];
 
-/** Files committed in public/ that no script can regenerate (app screenshots); locked by hash only. */
-export const STATIC_FILES: readonly string[] = ["screenshots/narrow.webp", "screenshots/wide.webp"];
-
 export const ROBOTS_TXT =
   "User-agent: *\nAllow: /\n# Add after deploy: Sitemap: <absolute URL of /sitemap.xml>\n";
 
 /**
  * The web app manifest. No `serviceworker` member and no offline claim: the offline service worker is
- * METRO-106 and the manifest says only what ships today. `theme_color` and `background_color` come from the
- * approved handoff.
+ * METRO-106 and the manifest says only what ships today. No `screenshots` member: the handoff screenshots
+ * show screens that do not exist yet, so they return after METRO-105 and the first slices. `theme_color`
+ * (#0B7A84, the brand teal, for the installed app's chrome) and `background_color` (#F2F6F6, the light page
+ * colour, for the splash) come from the approved handoff; they differ from the page `theme-color` tags in
+ * index.html, which follow the page background tokens (#F2F6F6 light, #060A0A dark).
  */
 export const MANIFEST = {
   name: "Metro Station Finder",
@@ -105,22 +110,6 @@ export const MANIFEST = {
       sizes: "512x512",
       type: "image/png",
       purpose: "monochrome",
-    },
-  ],
-  screenshots: [
-    {
-      src: "/screenshots/wide.webp",
-      sizes: "1280x800",
-      type: "image/webp",
-      form_factor: "wide",
-      label: "Nearest station on desktop",
-    },
-    {
-      src: "/screenshots/narrow.webp",
-      sizes: "780x1688",
-      type: "image/webp",
-      form_factor: "narrow",
-      label: "Nearest station on a phone",
     },
   ],
 } as const;
@@ -168,15 +157,33 @@ export function unpackIco(bytes: Uint8Array): Uint8Array[] | null {
   return images;
 }
 
-/** Sets the root `width` and `height` so one master renders at any size. */
+export const NO_SIZE_PAIR = "SVG master has no width and height pair to resize";
+
+const SIZE_PAIR = /width="\d+(\.\d+)?" height="\d+(\.\d+)?"/u;
+
+/** Sets the root `width` and `height` so one master renders at any size; throws when there is no pair. */
 export function sized(svg: string, size: number): string {
-  return svg.replace(
-    /width="\d+(\.\d+)?" height="\d+(\.\d+)?"/u,
-    `width="${size}" height="${size}"`,
-  );
+  if (!SIZE_PAIR.test(svg)) throw new Error(NO_SIZE_PAIR);
+  return svg.replace(SIZE_PAIR, `width="${size}" height="${size}"`);
 }
 
 export type Files = ReadonlyMap<string, Uint8Array>;
+
+/** Renders a master at `size` and fails unless the PNG that comes back really is `size` x `size`. */
+async function raster(
+  rasteriser: Rasteriser,
+  label: string,
+  svg: string,
+  size: number,
+): Promise<Uint8Array> {
+  const png = await rasteriser.render(sized(svg, size), size);
+  const info = imageSize(png);
+  const [only] = info?.sizes ?? [];
+  if (info?.format !== "png" || only?.width !== size || only.height !== size) {
+    throw new Error(`${label} was not rendered as a ${size}x${size} PNG`);
+  }
+  return png;
+}
 
 /** Every generated file, keyed by its path under public/. `read` returns a master by its name in brand/. */
 export async function buildAssets(
@@ -188,13 +195,14 @@ export async function buildAssets(
   out.set("robots.txt", text(ROBOTS_TXT));
   out.set("manifest.webmanifest", text(MANIFEST_JSON));
   for (const job of PNG_JOBS) {
-    out.set(job.out, await rasteriser.render(sized(await read(job.source), job.size), job.size));
+    out.set(job.out, await raster(rasteriser, job.out, await read(job.source), job.size));
   }
   const icons: { size: number; png: Uint8Array }[] = [];
   for (const job of ICO_JOBS) {
+    const label = `favicon.ico image ${job.size}`;
     icons.push({
       size: job.size,
-      png: await rasteriser.render(sized(await read(job.source), job.size), job.size),
+      png: await raster(rasteriser, label, await read(job.source), job.size),
     });
   }
   out.set("favicon.ico", packIco(icons));
@@ -213,22 +221,24 @@ function hashes(files: Files): Record<string, string> {
   return Object.fromEntries(entries.map(([name, bytes]) => [name, sha256(bytes)]));
 }
 
-/** The lock: the hash of every master, every generated file and every static file. */
-export function lockText(sources: Files, outputs: Files, statics: Files): string {
-  const lock = { sources: hashes(sources), outputs: hashes(outputs), static: hashes(statics) };
+/** PNG and ICO bytes depend on the Chromium build and OS, so they are never hashed into the lock. */
+export const isBinaryOutput = (name: string): boolean => /\.(png|ico)$/u.test(name);
+
+const textOutputs = (files: Files): Map<string, Uint8Array> =>
+  new Map([...files].filter(([name]) => !isBinaryOutput(name)));
+
+/** The lock: the SHA-256 of every master and of every text output (svg, manifest, robots.txt). */
+export function lockText(sources: Files, outputs: Files): string {
+  const lock = { sources: hashes(sources), outputs: hashes(textOutputs(outputs)) };
   return `${JSON.stringify(lock, null, 2)}\n`;
 }
 
 /**
- * Problems found by comparing the committed files with the lock: a master edited without regenerating, a
- * generated file edited or replaced by hand, a file added or removed. Empty when they agree.
+ * Problems found by comparing the committed masters and text outputs with the lock: a master edited without
+ * regenerating, a text output edited by hand, a file added or removed. Binary outputs are not in the lock
+ * (the Chromium pixel comparison covers them). Empty when they agree.
  */
-export function lockProblems(
-  lock: string,
-  sources: Files,
-  outputs: Files,
-  statics: Files,
-): string[] {
+export function lockProblems(lock: string, sources: Files, outputs: Files): string[] {
   let expected: unknown;
   try {
     expected = JSON.parse(lock);
@@ -238,8 +248,7 @@ export function lockProblems(
   const problems: string[] = [];
   const sections: [string, Files][] = [
     ["sources", sources],
-    ["outputs", outputs],
-    ["static", statics],
+    ["outputs", textOutputs(outputs)],
   ];
   for (const [section, files] of sections) {
     const recorded = isRecord(expected) ? expected[section] : undefined;
@@ -315,13 +324,12 @@ export async function brandMain(args: readonly string[], deps: BrandDeps): Promi
   const fresh = await buildAssets(deps.rasteriser, (name) =>
     Promise.resolve(new TextDecoder().decode(masters.get(name))),
   );
-  const statics = await readAll(pub, STATIC_FILES);
   if (mode === "--write") {
     for (const [name, bytes] of fresh) {
       await mkdir(dirname(join(pub, name)), { recursive: true });
       await writeFile(join(pub, name), bytes);
     }
-    await writeFile(join(brand, LOCK_FILE), lockText(masters, fresh, statics));
+    await writeFile(join(brand, LOCK_FILE), lockText(masters, fresh));
     deps.log(`Wrote ${fresh.size} files to ${PUBLIC_DIR} and ${LOCK_FILE}`);
     return 0;
   }
@@ -335,7 +343,7 @@ export async function brandMain(args: readonly string[], deps: BrandDeps): Promi
     }
   }
   const lock = await readFile(join(brand, LOCK_FILE), "utf8").catch(() => "");
-  problems.push(...lockProblems(lock, masters, committed, statics));
+  problems.push(...lockProblems(lock, masters, committed));
   for (const problem of problems) deps.log(problem);
   if (problems.length === 0) deps.log(`${fresh.size} generated files match the masters`);
   return problems.length === 0 ? 0 : 1;
@@ -365,7 +373,7 @@ const REQUIRED_ICONS: readonly [string, string][] = [
   ["512x512", "monochrome"],
 ];
 
-/** The icon and screenshot members of a manifest: the parts that name files. */
+/** An icon member of a manifest: the part that names a file. */
 export interface ManifestFile {
   readonly src: string;
   readonly sizes: string;
@@ -414,21 +422,15 @@ export function manifestProblems(data: unknown): string[] {
   for (const [size, purpose] of REQUIRED_ICONS) {
     if (!seen.has(`${size} ${purpose}`)) problems.push(`no ${purpose} icon at ${size}`);
   }
-  for (const shot of members(data, "screenshots")) {
-    if (typeof shot["src"] !== "string" || !shot["src"].startsWith("/"))
-      problems.push("screenshot src is not a root path");
-    if (shot["form_factor"] !== "wide" && shot["form_factor"] !== "narrow")
-      problems.push("screenshot form_factor is not wide or narrow");
-    if (typeof shot["label"] !== "string" || shot["label"] === "")
-      problems.push("screenshot has no label");
-  }
+  if ("screenshots" in data)
+    problems.push("manifest has screenshots, which wait for the screens they show");
   return problems;
 }
 
-/** Every file a manifest names (icons and screenshots) with the size and type it declares. */
+/** Every icon a manifest names with the size and type it declares. */
 export function manifestFiles(data: unknown): ManifestFile[] {
   if (!isRecord(data)) return [];
-  return [...members(data, "icons"), ...members(data, "screenshots")].map((entry) => ({
+  return members(data, "icons").map((entry) => ({
     src: String(entry["src"]),
     sizes: String(entry["sizes"]),
     type: String(entry["type"]),

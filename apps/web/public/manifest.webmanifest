@@ -47,21 +47,5 @@
       "type": "image/png",
       "purpose": "monochrome"
     }
-  ],
-  "screenshots": [
-    {
-      "src": "/screenshots/wide.webp",
-      "sizes": "1280x800",
-      "type": "image/webp",
-      "form_factor": "wide",
-      "label": "Nearest station on desktop"
-    },
-    {
-      "src": "/screenshots/narrow.webp",
-      "sizes": "780x1688",
-      "type": "image/webp",
-      "form_factor": "narrow",
-      "label": "Nearest station on a phone"
-    }
   ]
 }

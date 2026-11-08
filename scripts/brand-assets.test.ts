@@ -7,10 +7,10 @@ import {
   MANIFEST_JSON,
   PNG_JOBS,
   PUBLIC_DIR,
-  STATIC_FILES,
   lockProblems,
   manifestFiles,
   manifestProblems,
+  unpackIco,
 } from "./build-brand-assets.ts";
 import { imageSize } from "./image-size.ts";
 
@@ -29,8 +29,8 @@ const walk = (directory: string): string[] =>
       : [relative(publicDir, join(directory, entry.name)).replaceAll("\\", "/")],
   );
 const bytes = (name: string): Uint8Array => readFileSync(join(publicDir, name));
-const read = (directory: string, names: string[]) =>
-  new Map(names.map((name) => [name, readFileSync(join(directory, name))] as const));
+const read = (directory: string, names: string[]): Map<string, Uint8Array> =>
+  new Map(names.map((name) => [name, readFileSync(join(directory, name))]));
 const manifest: unknown = JSON.parse(readFileSync(join(publicDir, "manifest.webmanifest"), "utf8"));
 
 /**
@@ -50,8 +50,6 @@ const CAPS: Record<string, number> = {
   "icons/icon-monochrome-512.png": 10_000,
   "manifest.webmanifest": 2_000,
   "robots.txt": 200,
-  "screenshots/narrow.webp": 57_000,
-  "screenshots/wide.webp": 50_000,
 };
 
 describe("brand assets on disk (METRO-107)", () => {
@@ -74,7 +72,7 @@ describe("brand assets on disk (METRO-107)", () => {
 
   test("every file the manifest names exists with the type and the pixel size it declares", () => {
     const files = manifestFiles(manifest);
-    expect(files).toHaveLength(7);
+    expect(files).toHaveLength(5);
     for (const file of files) {
       const size = imageSize(bytes(file.src.slice(1)));
       const declared = /^(\d+)x(\d+)$/u.exec(file.sizes);
@@ -85,12 +83,11 @@ describe("brand assets on disk (METRO-107)", () => {
     }
   });
 
-  test("favicon.ico holds 16, 32 and 48 pixel images and the apple-touch icon is 180", () => {
+  test("favicon.ico holds 16, 32 and 48 pixel images", () => {
     expect(imageSize(bytes("favicon.ico"))?.sizes.map((size) => size.width)).toEqual([16, 32, 48]);
-    expect(imageSize(bytes("apple-touch-icon.png"))?.sizes).toEqual([{ width: 180, height: 180 }]);
   });
 
-  test("no shipped text asset or screenshot label claims offline use", () => {
+  test("no shipped text asset or master claims offline use", () => {
     for (const file of ["manifest.webmanifest", "robots.txt", "favicon.svg"]) {
       expect(readFileSync(join(publicDir, file), "utf8"), file).not.toMatch(/offline/iu);
     }
@@ -99,23 +96,56 @@ describe("brand assets on disk (METRO-107)", () => {
     }
   });
 
-  test("the committed files agree with assets.lock.json, so a master or output edited alone fails", () => {
-    const masters = readdirSync(brandDir).filter((name) => name.endsWith(".svg"));
-    const outputs = [
-      "favicon.svg",
+  /**
+   * What each layer catches. This lock (masters and text outputs, by SHA-256) catches a master edited
+   * without regenerating and a hand-edited svg, manifest or robots.txt. It cannot see PNG or ICO bytes
+   * (they differ between Chromium builds and operating systems), so for those this file checks existence,
+   * decoded size and size cap, and `e2e/brand-assets.e2e.ts` regenerates them in Chromium and compares
+   * decoded pixels: that is the layer that catches a swapped or hand-edited icon.
+   */
+  const masters = readdirSync(brandDir).filter((name) => name.endsWith(".svg"));
+  const textOutputs = ["favicon.svg", "robots.txt", "manifest.webmanifest"];
+  const lock = readFileSync(join(brandDir, LOCK_FILE), "utf8");
+
+  test("the committed masters and text outputs agree with assets.lock.json", () => {
+    expect(lockProblems(lock, read(brandDir, masters), read(publicDir, textOutputs))).toEqual([]);
+  });
+
+  test("tamper: an edited master or an edited text output fails the lock", () => {
+    const editedMasters = read(brandDir, masters);
+    editedMasters.set(
+      "app-icon.svg",
+      Uint8Array.from([...(editedMasters.get("app-icon.svg") ?? []), 32]),
+    );
+    expect(lockProblems(lock, editedMasters, read(publicDir, textOutputs))).toEqual([
+      "sources/app-icon.svg differs from assets.lock.json",
+    ]);
+    const editedOutputs = read(publicDir, textOutputs);
+    editedOutputs.set(
       "robots.txt",
-      "manifest.webmanifest",
-      "favicon.ico",
-      ...PNG_JOBS.map((job) => job.out),
-    ];
-    expect(
-      lockProblems(
-        readFileSync(join(brandDir, LOCK_FILE), "utf8"),
-        read(brandDir, masters),
-        read(publicDir, outputs),
-        read(publicDir, [...STATIC_FILES]),
-      ),
-    ).toEqual([]);
+      Uint8Array.from([...(editedOutputs.get("robots.txt") ?? []), 32]),
+    );
+    expect(lockProblems(lock, read(brandDir, masters), editedOutputs)).toEqual([
+      "outputs/robots.txt differs from assets.lock.json",
+    ]);
+  });
+
+  test("every generated PNG exists at its declared pixel size", () => {
+    for (const job of PNG_JOBS) {
+      expect(imageSize(bytes(job.out))?.sizes, job.out).toEqual([
+        { width: job.size, height: job.size },
+      ]);
+    }
+  });
+
+  test("each image inside favicon.ico really has the size its directory entry claims", () => {
+    const ico = bytes("favicon.ico");
+    const declared = imageSize(ico)?.sizes ?? [];
+    const inner = unpackIco(ico) ?? [];
+    expect(inner).toHaveLength(3);
+    expect(inner.map((png) => imageSize(png))).toEqual(
+      declared.map((size) => ({ format: "png", sizes: [size] })),
+    );
   });
 
   test("nothing in the app source reaches a brand asset, so none can enter the first-visit bundle", () => {
@@ -157,7 +187,7 @@ describe("index.html head (METRO-107)", () => {
       '<meta name="theme-color" content="#F2F6F6" media="(prefers-color-scheme: light)" />',
     );
     expect(html).toContain(
-      '<meta name="theme-color" content="#0B1114" media="(prefers-color-scheme: dark)" />',
+      '<meta name="theme-color" content="#060A0A" media="(prefers-color-scheme: dark)" />',
     );
     expect(html.match(/name="theme-color"/gu)).toHaveLength(2);
   });
