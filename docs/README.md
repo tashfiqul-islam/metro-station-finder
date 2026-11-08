@@ -37,7 +37,7 @@ First cell is a path: a trailing `/` covers a directory, otherwise it is one fil
 | `docs/adr/0000-template.md`              | template  | the ADR form                                                                |
 | `docs/specifications/`                   | contract  | one settled specification per ticket slice                                  |
 | `docs/evidence/`                         | evidence  | ticket evidence and dated audits; see Naming                                |
-| `docs/product/`                          | reference | legacy parity and glossary                                                  |
+| `docs/product/`                          | reference | legacy parity, glossary and the brand and install assets note               |
 | `docs/development.md`                    | reference | local workspace facts                                                       |
 | `docs/templates/`                        | template  | specification and Plane ticket forms                                        |
 | `docs/examples/`                         | example   | synthetic preparation and untrusted-input fixtures                          |
