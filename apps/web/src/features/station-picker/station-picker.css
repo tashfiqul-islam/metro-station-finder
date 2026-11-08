@@ -1,0 +1,51 @@
+/* station-picker.css: the picker's own rules, on top of fields.css, nearby.css and route.css. Tokens only. */
+
+@import "../../styles/tokens-parts.css";
+.pick {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+/* The popup is always in the DOM (aria-controls needs it) and shows only while expanded. It scrolls inside itself,
+   so a long list never pushes the page or hides behind the sheet's edge. */
+.listbox[hidden] {
+  display: none;
+}
+.listbox {
+  max-height: min(50dvh, 22rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.pick__combo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+/* The status is always in the tree (a live region must exist before its text changes) but takes no room. */
+.pick__feedback {
+  display: contents;
+}
+.ticket__amount--range {
+  font-size: var(--fs-40);
+  line-height: 1;
+  letter-spacing: var(--track-tight);
+}
+.pick__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+/* The focus ring is on the input itself, not only on its container: the keyboard check wants the focused control
+   to change its own look. The container keeps the soft halo of the handoff. */
+.combo:focus-within {
+  box-shadow:
+    inset 0 0 0 1px var(--color-ctl-line),
+    0 0 0 6px var(--color-accent-soft);
+}
+.combo__input:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: 0;
+  border-radius: var(--radius-field);
+}

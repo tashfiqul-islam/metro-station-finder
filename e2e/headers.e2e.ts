@@ -129,11 +129,11 @@ test.describe("security headers and caching (METRO-31)", () => {
         styleElements: document.querySelectorAll("style").length,
         styleAttributes: document.querySelectorAll("[style]").length,
       }));
-      // Only same-origin stylesheets, as linked files (exactly three: the entry's, the slice chunk's and the line map chunk's, METRO-111), allowed by
+      // Only same-origin stylesheets, as linked files (exactly two: the entry's and the Nearby screen chunk's, which holds the page, the line map and the picker, METRO-112), allowed by
       // `style-src 'self'`; nothing inline (METRO-58, METRO-105).
       expect(styling).toEqual({
-        stylesheets: 3,
-        linked: 3,
+        stylesheets: 2,
+        linked: 2,
         foreign: 0,
         styleElements: 0,
         styleAttributes: 0,

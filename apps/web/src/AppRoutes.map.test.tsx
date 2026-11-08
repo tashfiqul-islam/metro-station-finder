@@ -16,4 +16,7 @@ test("METRO-111 the shell's map slot shows the line map", async () => {
   render(<AppRoutes />);
   const list = await screen.findByRole("list", { name: "Stations on MRT Line 6, north to south" });
   expect(list.querySelectorAll("li")).toHaveLength(16);
+  // The control for the failure test: once the screen has loaded, the map frame and its region exist.
+  expect(document.querySelector(".app__map-frame")).not.toBeNull();
+  expect(screen.getByRole("region", { name: "Line map" })).toBeTruthy();
 });
