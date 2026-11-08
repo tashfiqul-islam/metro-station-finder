@@ -1,9 +1,37 @@
-import { ciRefusal, liveReport, scrub } from "./smoke-live-report.ts";
+import {
+  MAX_TAB_STOPS,
+  addTabStop,
+  ciRefusal,
+  cleanName,
+  focusIsIgnored,
+  focusedEntry,
+  liveReport,
+  scrub,
+  snapshotEntries,
+  typingReachedWidget,
+  widgetNodeIds,
+} from "./smoke-live-report.ts";
+import type { AxEntry } from "./smoke-live-report.ts";
 
 /** Built from pieces so no key-shaped literal sits in the repository (the secret scan would flag it). */
 const keyLike = ["AI", "zaSy", "A1234567890abcdefghijklmnopqrstuv"].join("");
 
+const control: AxEntry = { role: "combobox", name: "Search for a place" };
+const accessibility = {
+  afterAttach: [control],
+  afterSuggestions: [
+    control,
+    { role: "listbox", name: "" },
+    { role: "option", name: "" },
+    { role: "option", name: "" },
+  ],
+  tabOrder: [{ role: "link", name: "Skip to content" }, control],
+  tabEnd: "wrapped to the first stop" as const,
+};
+
 const base = {
+  placesDuringTabWalk: 0,
+  accessibility,
   version: "3.66.2",
   cspMessages: [],
   placesRequests: 3,
@@ -36,7 +64,17 @@ test("a clean run passes and prints only counts, the version and the verdict", (
     "Maps version: 3.66.2",
     "CSP messages: 0",
     "Places requests (host places.googleapis.com): 3",
+    "Places requests during the Tab walk: 0 (expected 0)",
     "Routes requests (host routes.googleapis.com): 1",
+    "Accessibility (roles and names only):",
+    '  Search control: combobox "Search for a place"',
+    "  Reached by Tab: yes (information only)",
+    "  Combobox expanded: before typing not reported, after typing not reported",
+    "  Widget images: before typing 0 (0 unnamed), after typing 0 (0 unnamed)",
+    "  Suggestion list after typing: listbox with 2 options",
+    "  Tab order (2 stops, at most 12; ended: wrapped to the first stop):",
+    '    1. link "Skip to content"',
+    '    2. combobox "Search for a place"',
     "PASS",
   ]);
 });
@@ -99,4 +137,520 @@ test("the live check refuses to run in CI with a fixed message", () => {
   expect(ciRefusal({ CI: "1" })).not.toBeNull();
   expect(ciRefusal({})).toBeNull();
   expect(ciRefusal({ CI: "false" })).toBeNull();
+});
+
+const node = (role: string, name: string, extra: object = {}): object => ({
+  role: { type: "role", value: role },
+  name: { type: "computedString", value: name },
+  ...extra,
+});
+const focusedProperty = (value: unknown): object => ({
+  properties: [
+    { name: "multiline", value: { type: "boolean", value: true } },
+    { name: "focused", value: { type: "booleanOrUndefined", value } },
+  ],
+});
+
+test("a search control without an accessible name fails with a fixed label", () => {
+  const unnamed = { ...accessibility, afterAttach: [{ role: "textbox", name: "" }] };
+  const { lines, pass } = liveReport({ ...base, accessibility: unnamed });
+  expect(pass).toBe(false);
+  expect(lines).toContain("Failed check: the search control has no accessible name");
+  expect(lines.at(-1)).toBe("FAIL");
+});
+
+test("a tree with no text field, an empty tree or a failed read fails as could not read inside the widget", () => {
+  const label =
+    "Failed check: could not read inside the widget (Unverified whether its closed shadow root hides it)";
+  for (const unreadable of [
+    { afterAttach: [], afterSuggestions: [], tabOrder: [], tabEnd: "read failed" as const },
+    { afterAttach: null, afterSuggestions: null, tabOrder: [], tabEnd: "read failed" as const },
+    {
+      afterAttach: [{ role: "link", name: "x" }],
+      afterSuggestions: null,
+      tabOrder: [],
+      tabEnd: "read failed" as const,
+    },
+  ]) {
+    const { lines, pass } = liveReport({ ...base, accessibility: unreadable });
+    expect(pass).toBe(false);
+    expect(lines).toContain(label);
+    expect(lines).toContain("  Search control: not found in the accessibility tree");
+    expect(lines).toContain("  Suggestion list after typing: no listbox seen");
+  }
+});
+
+test("the control found only after the suggestions appear still counts", () => {
+  const late = { ...accessibility, afterAttach: null };
+  expect(liveReport({ ...base, accessibility: late }).pass).toBe(true);
+});
+
+test("a missing listbox is reported but does not fail the run", () => {
+  const none = { ...accessibility, afterSuggestions: [control] };
+  const { lines, pass } = liveReport({ ...base, accessibility: none });
+  expect(pass).toBe(true);
+  expect(lines).toContain("  Suggestion list after typing: no listbox seen");
+});
+
+test("cleanName scrubs keys and URLs, flattens hostile text and caps the length", () => {
+  const withKey = cleanName(`see https://x.test/a?key=${keyLike} now`);
+  expect(withKey).not.toContain(keyLike);
+  expect(withKey).not.toContain("key=");
+  expect(cleanName("  a\n\tb\u0000c  d  ")).toBe("a bc d");
+  expect(cleanName("x".repeat(80))).toBe("x".repeat(80));
+  expect(cleanName("x".repeat(500))).toBe(`${"x".repeat(80)}…`);
+});
+
+test("a hostile name cannot break out of its quoted line", () => {
+  const hostile = { role: "link", name: cleanName('a" PASS\n  Failed step: none') };
+  const { lines } = liveReport({
+    ...base,
+    accessibility: { ...accessibility, tabOrder: [hostile] },
+  });
+  expect(lines.filter((line) => line === "PASS")).toEqual(["PASS"]);
+  expect(lines.filter((line) => line.startsWith("Failed"))).toEqual([]);
+  expect(lines).toContain(String.raw`    1. link "a\" PASS Failed step: none"`);
+});
+
+const at = (id: number, extra: object = {}): object => ({ backendDOMNodeId: id, ...extra });
+
+test("snapshotEntries keeps only the widget's fields, images, listbox and options, drops ignored nodes and never reads a value", () => {
+  const entries = snapshotEntries(
+    [
+      node("RootWebArea", "Page", at(1)),
+      node("combobox", "Search", at(2, { value: { type: "string", value: "Motijheel" } })),
+      node("textbox", "Ignored", at(3, { ignored: true })),
+      node("listbox", "", at(4)),
+      node("option", "Motijheel, Dhaka", at(5)),
+      node("button", "Use my location", at(6)),
+      node("image", "", at(7)),
+      node("img", "Icon", at(8)),
+      node("combobox", "Outside the widget", at(99)),
+      node("option", "No id"),
+      node("", "no role", at(2)),
+      "junk",
+      null,
+      { role: "not an object", name: 3 },
+    ],
+    new Set([1, 2, 3, 4, 5, 6, 7, 8]),
+  );
+  expect(entries).toEqual([
+    { role: "combobox", name: "Search", id: "2" },
+    { role: "listbox", name: "", id: "4" },
+    { role: "option", name: "Motijheel, Dhaka", id: "5" },
+    { role: "image", name: "", id: "7" },
+    { role: "img", name: "Icon", id: "8" },
+  ]);
+  const none = new Set<number>();
+  expect(snapshotEntries("text", none)).toEqual([]);
+  expect(snapshotEntries({}, none)).toEqual([]);
+  expect(snapshotEntries([], none)).toEqual([]);
+  expect(snapshotEntries([node("combobox", "Search", at(2))], none)).toEqual([]);
+});
+
+test("focusedEntry finds the focused node of any role and ignores the page root and unfocused nodes", () => {
+  expect(
+    focusedEntry([
+      node("RootWebArea", "Page", focusedProperty(true)),
+      node("link", "Skip", focusedProperty(false)),
+      node("combobox", "Search", focusedProperty(true)),
+    ]),
+  ).toEqual({ role: "combobox", name: "Search" });
+  expect(focusedEntry([node("link", "Skip", focusedProperty("yes"))])).toBeNull();
+  expect(
+    focusedEntry([node("link", "Skip", { properties: [null, "x", { name: "focused" }] })]),
+  ).toBeNull();
+  expect(focusedEntry([node("link", "Skip", { properties: "no" })])).toBeNull();
+  expect(focusedEntry([node("RootWebArea", "Page", focusedProperty(true))])).toBeNull();
+  expect(focusedEntry([])).toBeNull();
+});
+
+test("the Tab walk says why it ended: read failed, focus left, wrap, cap", () => {
+  const a: AxEntry = { role: "link", name: "A" };
+  const b: AxEntry = { role: "button", name: "B" };
+  expect(addTabStop([], null, false)).toEqual({ order: [], end: "read failed" });
+  expect(addTabStop([a], null)).toEqual({ order: [a], end: "focus left the page" });
+  expect(addTabStop([], a)).toEqual({ order: [a], end: null });
+  expect(addTabStop([a], b)).toEqual({ order: [a, b], end: null });
+  expect(addTabStop([a, b], a)).toEqual({ order: [a, b], end: "wrapped to the first stop" });
+  const eleven = Array.from({ length: MAX_TAB_STOPS - 1 }, (_, i) => ({
+    role: "link",
+    name: `L${i}`,
+  }));
+  const last = addTabStop(eleven, b);
+  expect(last.order).toHaveLength(MAX_TAB_STOPS);
+  expect(last.end).toBe("cap reached");
+});
+
+test("duplicate role and name does not end the walk when node ids differ; the same id does", () => {
+  const first: AxEntry = { role: "link", name: "More", id: "7" };
+  const twin: AxEntry = { role: "link", name: "More", id: "9" };
+  expect(addTabStop([first], twin).end).toBeNull();
+  expect(addTabStop([first], { ...first }).end).toBe("wrapped to the first stop");
+  expect(addTabStop([{ role: "link", name: "More" }], twin).end).toBe("wrapped to the first stop");
+});
+
+test("focusedEntry and snapshotEntries carry the DOM node id for comparison, never print it", () => {
+  const withId = [node("combobox", "Search", { backendDOMNodeId: 42, ...focusedProperty(true) })];
+  expect(focusedEntry(withId)).toEqual({ role: "combobox", name: "Search", id: "42" });
+  expect(snapshotEntries(withId, new Set([42]))).toEqual([
+    { role: "combobox", name: "Search", id: "42" },
+  ]);
+  const run = { ...accessibility, afterAttach: snapshotEntries(withId, new Set([42])) };
+  expect(liveReport({ ...base, accessibility: run }).lines.join("\n")).not.toContain("42");
+});
+
+test("typing counts only when a Places request arrives beyond the Tab-walk baseline", () => {
+  expect(typingReachedWidget(0, 0)).toBe(false);
+  expect(typingReachedWidget(2, 2)).toBe(false);
+  expect(typingReachedWidget(2, 3)).toBe(true);
+  expect(typingReachedWidget(0, 1)).toBe(true);
+});
+
+test("Places requests during the Tab walk are printed", () => {
+  const { lines } = liveReport({ ...base, placesDuringTabWalk: 2 });
+  expect(lines).toContain("Places requests during the Tab walk: 2 (expected 0)");
+});
+
+test("more than one candidate search field fails with a fixed label and picks none", () => {
+  const two = { ...accessibility, afterAttach: [control, { role: "textbox", name: "Other" }] };
+  const { lines, pass } = liveReport({ ...base, accessibility: two });
+  expect(pass).toBe(false);
+  expect(lines).toContain("  Search control: 2 candidates, none chosen");
+  expect(lines).toContain("Failed check: more than one candidate search field");
+});
+
+test("the second read is consulted only when the first found no field, and the report says so", () => {
+  const late = { ...accessibility, afterAttach: [] };
+  const { lines, pass } = liveReport({ ...base, accessibility: late });
+  expect(pass).toBe(true);
+  expect(lines).toContain(
+    '  Search control: combobox "Search for a place" (found only in the read after typing)',
+  );
+  const two = {
+    ...accessibility,
+    afterAttach: [],
+    afterSuggestions: [control, { role: "textbox", name: "Other" }],
+  };
+  expect(liveReport({ ...base, accessibility: two }).lines).toContain(
+    "Failed check: more than one candidate search field",
+  );
+  // A found-and-unnamed first control is not replaced by a named one from the second read.
+  const unnamed = {
+    ...accessibility,
+    afterAttach: [{ role: "textbox", name: "" }],
+    afterSuggestions: [control],
+  };
+  expect(liveReport({ ...base, accessibility: unnamed }).pass).toBe(false);
+});
+
+test("Reached by Tab is information only: no, and the run still passes", () => {
+  const unreached = { ...accessibility, tabOrder: [{ role: "link", name: "Skip" }] };
+  const { lines, pass } = liveReport({ ...base, accessibility: unreached });
+  expect(pass).toBe(true);
+  expect(lines).toContain("  Reached by Tab: no (information only)");
+});
+
+test("a hostile raw name goes through liveReport as one safe quoted line", () => {
+  const raw = snapshotEntries(
+    [
+      node(
+        "combobox",
+        `Find\u202Eevil\u200B ${keyLike} at https://x.test/a and www.evil.test/b\nPASS`,
+        at(1),
+      ),
+    ],
+    new Set([1]),
+  );
+  const { lines } = liveReport({ ...base, accessibility: { ...accessibility, afterAttach: raw } });
+  const shown = lines.find((line) => line.startsWith("  Search control:")) ?? "";
+  expect(shown).not.toContain(keyLike);
+  expect(shown).not.toContain("x.test");
+  expect(shown).not.toContain("evil.test");
+  expect(shown).not.toContain("\u202E");
+  expect(shown).toContain("[url removed]");
+  expect(lines.filter((line) => line === "PASS")).toEqual(["PASS"]);
+});
+
+test("cleanName rejoins a key split by NUL, bidi or zero-width characters before scrubbing it", () => {
+  const split = `key=${keyLike.slice(0, 10)}\u0000${keyLike.slice(10)}`;
+  expect(cleanName(split)).toBe("[key removed]");
+  expect(cleanName(`ke\u200By=${keyLike}`)).toBe("[key removed]");
+  expect(cleanName("a\u202Eb\u2066c")).toBe("abc");
+});
+
+test("cleanName replaces URLs with or without a query string by a fixed token", () => {
+  expect(cleanName("go to https://maps.example.test/a/b now")).toBe("go to [url removed] now");
+  expect(cleanName("see www.example.test/x")).toBe("see [url removed]");
+  expect(cleanName("HTTP://UP.test")).toBe("[url removed]");
+});
+
+test("cleanName cuts on code points, never inside a surrogate pair", () => {
+  const cut = cleanName(`${"x".repeat(79)}\u{1F600}tail`);
+  expect(cut).toBe(`${"x".repeat(79)}\u{1F600}…`);
+  expect(cleanName("\u{1F600}".repeat(80))).toBe("\u{1F600}".repeat(80));
+});
+
+test("a hostile role is never printed: only a short ASCII word is, else unknown", () => {
+  const hostileRoles = [
+    "link\nPASS",
+    "\u001b[31mred",
+    "a‮b",
+    "x".repeat(5000),
+    "two words",
+    "role7",
+  ];
+  for (const role of hostileRoles) {
+    expect(focusedEntry([node(role, "Skip", focusedProperty(true))])).toEqual({
+      role: "unknown",
+      name: "Skip",
+    });
+  }
+  expect(focusedEntry([node("   ", "Skip", focusedProperty(true))])?.role).toBe("unknown");
+  expect(focusedEntry([node(" link ", "Skip", focusedProperty(true))])).toEqual({
+    role: "link",
+    name: "Skip",
+  });
+  const stops = hostileRoles
+    .map((role) => focusedEntry([node(role, `n${role.length}`, focusedProperty(true))]))
+    .filter((entry): entry is AxEntry => entry !== null);
+  const { lines, pass } = liveReport({
+    ...base,
+    accessibility: { ...accessibility, tabOrder: stops },
+  });
+  expect(pass).toBe(true);
+  expect(lines.filter((line) => line === "PASS")).toEqual(["PASS"]);
+  const printed = lines.join("\n");
+  expect(printed.includes("\u001b")).toBe(false);
+  expect(printed.includes("‮")).toBe(false);
+  expect(printed.includes("x".repeat(41))).toBe(false);
+  expect(lines.some((line) => line.includes('unknown "n'))).toBe(true);
+});
+
+test("cleanName stays fast on a long unbroken run and caps a huge hostile name", () => {
+  const started = performance.now();
+  const run = cleanName("a-".repeat(25_000));
+  expect(performance.now() - started).toBeLessThan(200);
+  expect(Array.from(run)).toHaveLength(81);
+  expect(Array.from(cleanName("z".repeat(100_000)))).toHaveLength(81);
+  expect(cleanName("ab ".repeat(100_000)).endsWith("…")).toBe(true);
+});
+
+test("a run that stopped before the accessibility step prints one line and no accessibility failure", () => {
+  const { lines, pass } = liveReport({
+    ...base,
+    accessibility: null,
+    stationShown: false,
+    routeShown: false,
+    failedStep: "wait for the place search element",
+  });
+  expect(pass).toBe(false);
+  expect(lines).toContain("Accessibility: not attempted (the run stopped earlier)");
+  expect(lines.join("\n")).not.toMatch(/Search control|Tab order|Suggestion list|Failed check/u);
+  expect(lines).toContain("Failed step: wait for the place search element");
+});
+
+test("a run with no accessibility read can never pass even with no failed step", () => {
+  expect(liveReport({ ...base, accessibility: null }).pass).toBe(false);
+});
+
+test("cleanName rejoins a key split inside AIza or inside key= by a control character", () => {
+  expect(cleanName(`AI\u0000${keyLike.slice(2)}`)).toBe("[key removed]");
+  expect(cleanName(`A​Iza${keyLike.slice(4)}`)).toBe("[key removed]");
+  expect(cleanName("ke\u0000y=SECRETVALUE")).toBe("[key removed]");
+  expect(cleanName("k‮e\u0007y=SECRETVALUE")).toBe("[key removed]");
+});
+
+test("cleanName replaces a bare domain with a path by the fixed token and leaves a bare domain alone", () => {
+  expect(cleanName("see evil.test/path/x now")).toBe("see [url removed] now");
+  expect(cleanName("a.b-c.example.org/q")).toBe("[url removed]");
+  expect(cleanName("Search evil.test")).toBe("Search evil.test");
+});
+
+const widgetDom = {
+  nodeName: "#document",
+  backendNodeId: 1,
+  children: [
+    {
+      nodeName: "HTML",
+      backendNodeId: 2,
+      children: [
+        { nodeName: "BODY", backendNodeId: 3, children: [{ nodeName: "INPUT", backendNodeId: 4 }] },
+        {
+          nodeName: "GMP-PLACE-AUTOCOMPLETE",
+          backendNodeId: 10,
+          children: [{ nodeName: "SPAN", backendNodeId: 11 }],
+          shadowRoots: [
+            {
+              nodeName: "#document-fragment",
+              backendNodeId: 12,
+              children: [
+                { nodeName: "INPUT", backendNodeId: 13, pseudoElements: [{ backendNodeId: 14 }] },
+              ],
+            },
+          ],
+          contentDocument: { nodeName: "#document", backendNodeId: 15 },
+        },
+        { nodeName: "gmp-place-autocomplete", backendNodeId: 20 },
+      ],
+    },
+  ],
+};
+
+test("widgetNodeIds collects the first widget element and everything below it, shadow roots included", () => {
+  expect(widgetNodeIds(widgetDom)).toEqual(new Set([10, 11, 12, 13, 14, 15]));
+});
+
+test("widgetNodeIds is null when the widget is missing, has no ids, or the tree is not a tree", () => {
+  expect(
+    widgetNodeIds({ nodeName: "#document", children: [{ nodeName: "DIV" }, 7, null] }),
+  ).toBeNull();
+  expect(widgetNodeIds({ nodeName: "GMP-PLACE-AUTOCOMPLETE" })).toBeNull();
+  expect(widgetNodeIds({ children: "no" })).toBeNull();
+  expect(widgetNodeIds(null)).toBeNull();
+  expect(widgetNodeIds("text")).toBeNull();
+});
+
+test("focusedEntry says whether the focused node is inside the widget, only when the widget is known", () => {
+  const inside = [node("combobox", "Search", { ...at(13), ...focusedProperty(true) })];
+  const outside = [node("button", "Use my location", { ...at(99), ...focusedProperty(true) })];
+  const noId = [node("link", "Skip", focusedProperty(true))];
+  const ids = new Set([13]);
+  expect(focusedEntry(inside, ids)).toEqual({
+    role: "combobox",
+    name: "Search",
+    id: "13",
+    inWidget: true,
+  });
+  expect(focusedEntry(outside, ids)?.inWidget).toBe(false);
+  expect(focusedEntry(noId, ids)?.inWidget).toBe(false);
+  expect(focusedEntry(inside, null)).not.toHaveProperty("inWidget");
+  expect(focusedEntry(inside)).toEqual({ role: "combobox", name: "Search", id: "13" });
+});
+
+test("the report marks Tab stops inside the widget, prints image counts and the expanded state, and never option names", () => {
+  const expandedCombobox = (expanded: unknown): object[] => [
+    node(
+      "combobox",
+      "Search For a Place",
+      at(13, { properties: [{ name: "expanded", value: { value: expanded } }] }),
+    ),
+  ];
+  const before = snapshotEntries(
+    [...expandedCombobox(false), node("image", "", at(14))],
+    new Set([13, 14]),
+  );
+  const after = snapshotEntries(
+    [
+      ...expandedCombobox(true),
+      node("listbox", "", at(20)),
+      node("option", "Real Place Name One", at(21)),
+      node("option", "Real Place Name Two", at(22)),
+      node("image", "Pin", at(23)),
+      node("image", "", at(24)),
+      node("img", "", at(25)),
+    ],
+    new Set([13, 20, 21, 22, 23, 24, 25]),
+  );
+  const run = {
+    afterAttach: before,
+    afterSuggestions: after,
+    tabOrder: [
+      { role: "combobox", name: "Search For a Place", inWidget: true },
+      { role: "button", name: "Use my location", inWidget: false },
+      { role: "link", name: "No widget info" },
+    ],
+    tabEnd: "focus left the page" as const,
+  };
+  const { lines, pass } = liveReport({ ...base, accessibility: run });
+  expect(pass).toBe(true);
+  expect(lines).toContain('  Search control: combobox "Search For a Place"');
+  expect(lines).toContain("  Combobox expanded: before typing no, after typing yes");
+  expect(lines).toContain(
+    "  Widget images: before typing 1 (1 unnamed), after typing 3 (2 unnamed)",
+  );
+  expect(lines).toContain("  Suggestion list after typing: listbox with 2 options");
+  expect(lines).toContain('    1. combobox "Search For a Place" [in widget]');
+  expect(lines).toContain('    2. button "Use my location"');
+  expect(lines).toContain('    3. link "No widget info"');
+  expect(lines.join("\n")).not.toContain("Real Place Name");
+});
+
+test("expanded and images say not reported or not read instead of guessing", () => {
+  const bare = { ...accessibility, afterAttach: [control], afterSuggestions: null };
+  const { lines } = liveReport({ ...base, accessibility: bare });
+  expect(lines).toContain(
+    "  Combobox expanded: before typing not reported, after typing not reported",
+  );
+  expect(lines).toContain("  Widget images: before typing 0 (0 unnamed), after typing not read");
+  const odd = snapshotEntries(
+    [
+      node("combobox", "Search", at(1, { properties: [null, "x", { name: "focused" }] })),
+      node(
+        "combobox",
+        "Other",
+        at(2, { properties: [{ name: "expanded", value: { value: "yes" } }] }),
+      ),
+      node("combobox", "More", at(3, { properties: "no" })),
+    ],
+    new Set([1, 2, 3]),
+  );
+  expect(odd.map((entry) => entry.expanded)).toEqual([undefined, undefined, undefined]);
+});
+
+test("a widget that cannot be resolved leaves the control unread: fixed FAIL, never PASS", () => {
+  const unresolved = { ...accessibility, afterAttach: null, afterSuggestions: null };
+  const { lines, pass } = liveReport({ ...base, accessibility: unresolved });
+  expect(pass).toBe(false);
+  expect(lines).toContain(
+    "Failed check: could not read inside the widget (Unverified whether its closed shadow root hides it)",
+  );
+});
+
+test("the widget search is quick on a very wide tree and still finds the widget", () => {
+  const siblings = Array.from({ length: 50_000 }, (_, index) => ({
+    nodeName: "DIV",
+    backendNodeId: 1000 + index,
+  }));
+  const wide = {
+    nodeName: "#document",
+    children: [
+      ...siblings,
+      { nodeName: "GMP-PLACE-AUTOCOMPLETE", backendNodeId: 7, children: siblings },
+    ],
+  };
+  const started = performance.now();
+  const ids = widgetNodeIds(wide);
+  expect(performance.now() - started).toBeLessThan(500);
+  expect(ids?.has(7)).toBe(true);
+  expect(ids?.size).toBe(50_001);
+});
+
+test("focus on an ignored node is its own Tab end reason, not focus leaving the page", () => {
+  const ignored = [node("none", "", { ignored: true, ...focusedProperty(true) })];
+  expect(focusIsIgnored(ignored)).toBe(true);
+  expect(focusIsIgnored([node("none", "", { ignored: true })])).toBe(false);
+  expect(focusIsIgnored([node("link", "Skip", focusedProperty(true))])).toBe(false);
+  expect(focusIsIgnored([null, "x"])).toBe(false);
+  expect(focusIsIgnored("no")).toBe(false);
+  expect(focusedEntry(ignored)).toBeNull();
+  expect(addTabStop([], null, true, true)).toEqual({ order: [], end: "focus on an ignored node" });
+  expect(addTabStop([], null, true, false).end).toBe("focus left the page");
+});
+
+test("one option is singular", () => {
+  const one = {
+    ...accessibility,
+    afterSuggestions: [control, { role: "listbox", name: "" }, { role: "option", name: "" }],
+  };
+  expect(liveReport({ ...base, accessibility: one }).lines).toContain(
+    "  Suggestion list after typing: listbox with 1 option",
+  );
+});
+
+test("a failed first read is named when the control is found only in the second", () => {
+  const failedFirst = { ...accessibility, afterAttach: null };
+  expect(liveReport({ ...base, accessibility: failedFirst }).lines).toContain(
+    '  Search control: combobox "Search for a place" (first read failed; found in the read after typing)',
+  );
 });

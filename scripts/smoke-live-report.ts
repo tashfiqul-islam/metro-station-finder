@@ -1,10 +1,21 @@
 /**
  * Pure parts of the owner-run live check (`bun run smoke:live`, METRO-88): what may be printed. The run uses
  * the owner's real Google key, so nothing here may ever show it: console text is scrubbed, URLs lose their
- * query string, and the report holds counts, the Maps version, CSP messages and a verdict only.
+ * query string, and the report holds counts, the Maps version, CSP messages, accessibility roles and names,
+ * and a verdict only (METRO-100).
  */
 
 const PINNED_VERSION_PREFIX = "3.66";
+/** Longest accessible name printed, in code points; a longer one ends in an ellipsis. */
+const MAX_NAME_LENGTH = 80;
+/** Most Tab presses the live check makes, and so the most stops it reports. */
+export const MAX_TAB_STOPS = 12;
+
+/** Fixed FAIL labels, so a failure reads the same every time. */
+const UNREADABLE =
+  "could not read inside the widget (Unverified whether its closed shadow root hides it)";
+const UNNAMED = "the search control has no accessible name";
+const AMBIGUOUS = "more than one candidate search field";
 
 /**
  * Removes any key, any URL query string and any Google-style key token from a console message. Case does
@@ -28,23 +39,400 @@ export function ciRefusal(env: Readonly<Record<string, string | undefined>>): st
     : null;
 }
 
+/**
+ * One accessibility-tree node reduced to what may be printed: a role and a scrubbed, capped name. `id` is the
+ * DOM node id when the tree gives one; it is only compared, never printed.
+ */
+export interface AxEntry {
+  readonly role: string;
+  readonly name: string;
+  readonly id?: string;
+  /** Tab stops only: whether the node sits inside the widget's subtree (absent when that was not resolved). */
+  readonly inWidget?: boolean;
+  /** Comboboxes only: the `expanded` state when the tree reports one. */
+  readonly expanded?: boolean;
+}
+
+/** Why the Tab walk ended. */
+export type TabEnd =
+  | "cap reached"
+  | "wrapped to the first stop"
+  | "focus left the page"
+  | "focus on an ignored node"
+  | "read failed";
+
+/** What the tree showed, read twice and then walked with Tab. A null read means the DevTools call failed. */
+export interface AccessibilityRun {
+  readonly afterAttach: readonly AxEntry[] | null;
+  readonly afterSuggestions: readonly AxEntry[] | null;
+  readonly tabOrder: readonly AxEntry[];
+  readonly tabEnd: TabEnd;
+}
+
+const FIELD_ROLES = new Set(["textbox", "combobox", "searchbox"]);
+/** Chrome reports icons as `image`; `img` is the HTML name and is accepted too. */
+const IMAGE_ROLES = new Set(["image", "img"]);
+const SNAPSHOT_ROLES = new Set([...FIELD_ROLES, ...IMAGE_ROLES, "listbox", "option"]);
+
+/** Raw names are cut to this many code points before any regex runs, so a hostile name cannot make the scrub slow. */
+const MAX_RAW_NAME_LENGTH = 1000;
+/** A role is printed only if it looks like one; anything else (newline, escape codes, bidi, a huge string) prints as this. */
+const UNKNOWN_ROLE = "unknown";
+
+/** Roles are short ASCII words (`textbox`, `RootWebArea`). Anything else is untrusted text and is never printed. */
+function cleanRole(role: string): string {
+  const trimmed = role.trim();
+  return /^[A-Za-z]{1,40}$/u.test(trimmed) ? trimmed : UNKNOWN_ROLE;
+}
+
+/**
+ * Makes an accessible name safe to print. Order matters: cut the raw text to a generous length (the scrub
+ * has a quadratic pattern), whitespace becomes one space, control and format characters (NUL, bidi
+ * overrides, zero-width) are deleted so they cannot split a key past the scrub, URL-like text (a scheme or
+ * `www.` form, or a bare domain followed by a path) becomes a fixed token, the scrub runs, and the final
+ * cut to 80 is made on code points. A bare domain with no path (`evil.test`) is left: it is not a link.
+ */
+export function cleanName(name: string): string {
+  const flat = Array.from(name)
+    .slice(0, MAX_RAW_NAME_LENGTH)
+    .join("")
+    .replaceAll(/\s+/gu, " ")
+    .replaceAll(/[\p{Cc}\p{Cf}]/gu, "")
+    .trim()
+    .replaceAll(/(?:https?:\/\/|www\.)\S*|\b(?:[a-z0-9-]+\.)+[a-z]{2,}\/\S*/giu, "[url removed]");
+  const points = Array.from(scrub(flat));
+  return points.length > MAX_NAME_LENGTH
+    ? `${points.slice(0, MAX_NAME_LENGTH).join("")}…`
+    : points.join("");
+}
+
+interface ParsedNode extends AxEntry {
+  readonly focused: boolean;
+  readonly domId: number | undefined;
+}
+
+function propertyOf(object: object, key: string): unknown {
+  return Reflect.get(object, key);
+}
+
+function valueOf(field: unknown): unknown {
+  return typeof field === "object" && field !== null && "value" in field ? field.value : undefined;
+}
+
+function textOf(field: unknown): string {
+  const value = valueOf(field);
+  return typeof value === "string" ? value : "";
+}
+
+function isFocused(properties: unknown): boolean {
+  return (
+    Array.isArray(properties) &&
+    (properties as unknown[]).some(
+      (property) =>
+        typeof property === "object" &&
+        property !== null &&
+        "name" in property &&
+        property.name === "focused" &&
+        "value" in property &&
+        valueOf(property.value) === true,
+    )
+  );
+}
+
+function isExpanded(properties: unknown): boolean | undefined {
+  if (!Array.isArray(properties)) return undefined;
+  for (const property of properties as unknown[]) {
+    if (typeof property !== "object" || property === null) continue;
+    if (propertyOf(property, "name") !== "expanded") continue;
+    const value = valueOf(propertyOf(property, "value"));
+    return typeof value === "boolean" ? value : undefined;
+  }
+  return undefined;
+}
+
+/** Keeps the nodes a screen reader reaches (not `ignored`), reading only role, name, focus and node id; a value is never read. */
+function parseNodes(nodes: unknown): ParsedNode[] {
+  if (!Array.isArray(nodes)) return [];
+  const parsed: ParsedNode[] = [];
+  for (const node of nodes as unknown[]) {
+    if (typeof node !== "object" || node === null) continue;
+    const rawRole = textOf(propertyOf(node, "role"));
+    if (propertyOf(node, "ignored") === true || rawRole === "") continue;
+    const roleText = cleanRole(rawRole);
+    const rawId = propertyOf(node, "backendDOMNodeId");
+    const domId = typeof rawId === "number" ? rawId : undefined;
+    const properties = propertyOf(node, "properties");
+    const expanded = roleText === "combobox" ? isExpanded(properties) : undefined;
+    parsed.push({
+      role: roleText,
+      name: cleanName(textOf(propertyOf(node, "name"))),
+      focused: isFocused(properties),
+      domId,
+      ...(domId === undefined ? {} : { id: String(domId) }),
+      ...(expanded === undefined ? {} : { expanded }),
+    });
+  }
+  return parsed;
+}
+
+function entryOf({ role, name, id, expanded }: ParsedNode): AxEntry {
+  return {
+    role,
+    name,
+    ...(id === undefined ? {} : { id }),
+    ...(expanded === undefined ? {} : { expanded }),
+  };
+}
+
+/**
+ * The text fields, images, listbox and options of one `Accessibility.getFullAXTree` result that sit inside
+ * the widget (their DOM node id is in `widgetIds`), as roles and names only. Nodes with no id are dropped.
+ */
+export function snapshotEntries(nodes: unknown, widgetIds: ReadonlySet<number>): AxEntry[] {
+  return parseNodes(nodes)
+    .filter(
+      (node) =>
+        SNAPSHOT_ROLES.has(node.role) && node.domId !== undefined && widgetIds.has(node.domId),
+    )
+    .map(entryOf);
+}
+
+/**
+ * The element that has focus, whatever its role, or null when none (or only the page itself) does. With
+ * `widgetIds` the entry says whether the focused node is inside the widget.
+ */
+export function focusedEntry(
+  nodes: unknown,
+  widgetIds: ReadonlySet<number> | null = null,
+): AxEntry | null {
+  const node = parseNodes(nodes).find(
+    (candidate) => candidate.focused && candidate.role !== "RootWebArea",
+  );
+  if (node === undefined) return null;
+  return widgetIds === null
+    ? entryOf(node)
+    : {
+        ...entryOf(node),
+        inWidget: node.domId !== undefined && widgetIds.has(node.domId),
+      };
+}
+
+const isWidget = (node: object): boolean =>
+  String(propertyOf(node, "nodeName")).toLowerCase() === "gmp-place-autocomplete";
+const childrenOf = (node: object): object[] =>
+  ["children", "shadowRoots", "pseudoElements"].flatMap((key) => {
+    const list = propertyOf(node, key);
+    return Array.isArray(list)
+      ? (list as unknown[]).filter(
+          (item): item is object => typeof item === "object" && item !== null,
+        )
+      : [];
+  });
+const contentOf = (node: object): object[] => {
+  const content = propertyOf(node, "contentDocument");
+  return typeof content === "object" && content !== null ? [content] : [];
+};
+const below = (node: object): object[] => [...childrenOf(node), ...contentOf(node)];
+
+/**
+ * The DOM node ids of the widget element (`gmp-place-autocomplete`, the first in document order) and
+ * everything below it, shadow roots included, from a `DOM.getDocument` tree read with `pierce: true`. Null
+ * when the element is not in the tree, so the caller reports that nothing could be read inside the widget.
+ */
+/** Pushes in reverse so a stack pops them in order; a loop, because a spread of a huge list can throw. */
+function pushReversed(stack: object[], items: readonly object[]): void {
+  for (let index = items.length - 1; index >= 0; index -= 1) {
+    const item = items[index];
+    if (item !== undefined) stack.push(item);
+  }
+}
+
+export function widgetNodeIds(root: unknown): Set<number> | null {
+  // Document order: depth first, so the first widget found is the first on the page.
+  const stack: object[] = typeof root === "object" && root !== null ? [root] : [];
+  let widget: object | null = null;
+  while (widget === null) {
+    const node = stack.pop();
+    if (node === undefined) return null;
+    if (isWidget(node)) widget = node;
+    else pushReversed(stack, below(node));
+  }
+  const ids = new Set<number>();
+  const pending: object[] = [widget];
+  for (let node = pending.pop(); node !== undefined; node = pending.pop()) {
+    const id = propertyOf(node, "backendNodeId");
+    if (typeof id === "number") ids.add(id);
+    pushReversed(pending, below(node));
+  }
+  return ids.size === 0 ? null : ids;
+}
+
+/** Same node by id when both have one; when only one has an id, or neither, by role and name. */
+function sameStop(a: AxEntry, b: AxEntry): boolean {
+  return a.id !== undefined && b.id !== undefined
+    ? a.id === b.id
+    : a.role === b.role && a.name === b.name;
+}
+
+/**
+ * True when a focused node is in the tree but is `ignored` (not exposed to a screen reader): focus has not
+ * left the page, it is somewhere the report cannot name.
+ */
+export function focusIsIgnored(nodes: unknown): boolean {
+  return (
+    Array.isArray(nodes) &&
+    (nodes as unknown[]).some(
+      (node) =>
+        typeof node === "object" &&
+        node !== null &&
+        propertyOf(node, "ignored") === true &&
+        isFocused(propertyOf(node, "properties")),
+    )
+  );
+}
+
+/**
+ * Adds one Tab stop. `readOk` is false when the tree could not be read; `ignoredFocus` is true when `next`
+ * is null only because the focused node is ignored. Done when the read failed, nothing
+ * has focus, focus wrapped to the first stop (by node id when both have one, else by role and name), or the
+ * cap is reached.
+ */
+export function addTabStop(
+  order: readonly AxEntry[],
+  next: AxEntry | null,
+  readOk = true,
+  ignoredFocus = false,
+): { order: readonly AxEntry[]; end: TabEnd | null } {
+  if (!readOk) return { order, end: "read failed" };
+  if (next === null) {
+    return { order, end: ignoredFocus ? "focus on an ignored node" : "focus left the page" };
+  }
+  const first = order[0];
+  if (first !== undefined && sameStop(first, next)) {
+    return { order, end: "wrapped to the first stop" };
+  }
+  const grown = [...order, next];
+  return { order: grown, end: grown.length >= MAX_TAB_STOPS ? "cap reached" : null };
+}
+
+/** True once a Places request beyond the count seen before typing has arrived, so focus alone cannot pass for typing. */
+export function typingReachedWidget(baseline: number, current: number): boolean {
+  return current > baseline;
+}
+
+type Control =
+  | { readonly kind: "none" }
+  | { readonly kind: "many"; readonly count: number }
+  | { readonly kind: "one"; readonly entry: AxEntry; readonly note: string };
+
+/**
+ * Exactly one text field must exist in the first read. Only when that read found none is the read after
+ * typing consulted (it could carry typed state), and the report says so.
+ */
+function findControl(run: AccessibilityRun): Control {
+  const first = (run.afterAttach ?? []).filter((entry) => FIELD_ROLES.has(entry.role));
+  const late = first.length === 0;
+  const note = !late
+    ? ""
+    : run.afterAttach === null
+      ? " (first read failed; found in the read after typing)"
+      : " (found only in the read after typing)";
+  const fields = late
+    ? (run.afterSuggestions ?? []).filter((entry) => FIELD_ROLES.has(entry.role))
+    : first;
+  const [only] = fields;
+  if (only === undefined) return { kind: "none" };
+  return fields.length > 1
+    ? { kind: "many", count: fields.length }
+    : { kind: "one", entry: only, note };
+}
+
+const describe = (entry: AxEntry): string => `${entry.role} ${JSON.stringify(entry.name)}`;
+
+function reachedByTab(control: AxEntry, order: readonly AxEntry[]): boolean {
+  return order.some((stop) => sameStop(control, stop));
+}
+
+/** `yes`, `no`, or `not reported` when the tree gave no `expanded` state (Unverified, never guessed). */
+function expandedText(entries: readonly AxEntry[] | null): string {
+  const state = entries?.find((entry) => entry.role === "combobox")?.expanded;
+  if (state === undefined) return "not reported";
+  return state ? "yes" : "no";
+}
+
+/** Counts only: icon names are not needed. */
+function imageText(entries: readonly AxEntry[] | null): string {
+  if (entries === null) return "not read";
+  const images = entries.filter((entry) => IMAGE_ROLES.has(entry.role));
+  return `${images.length} (${images.filter((entry) => entry.name === "").length} unnamed)`;
+}
+
+function accessibilityLines(run: AccessibilityRun | null): {
+  lines: string[];
+  failure: string | null;
+} {
+  if (run === null) {
+    return { lines: ["Accessibility: not attempted (the run stopped earlier)"], failure: null };
+  }
+  const control = findControl(run);
+  const entries = run.afterSuggestions ?? [];
+  const options = entries.filter((entry) => entry.role === "option").length;
+  const lines = ["Accessibility (roles and names only):"];
+  let failure: string | null = null;
+  if (control.kind === "none") {
+    lines.push("  Search control: not found in the accessibility tree");
+    failure = UNREADABLE;
+  } else if (control.kind === "many") {
+    lines.push(`  Search control: ${control.count} candidates, none chosen`);
+    failure = AMBIGUOUS;
+  } else {
+    lines.push(
+      `  Search control: ${describe(control.entry)}${control.note}`,
+      `  Reached by Tab: ${reachedByTab(control.entry, run.tabOrder) ? "yes" : "no"} (information only)`,
+    );
+    failure = control.entry.name === "" ? UNNAMED : null;
+  }
+  lines.push(
+    `  Combobox expanded: before typing ${expandedText(run.afterAttach)}, after typing ${expandedText(run.afterSuggestions)}`,
+    `  Widget images: before typing ${imageText(run.afterAttach)}, after typing ${imageText(run.afterSuggestions)}`,
+  );
+  lines.push(
+    entries.some((entry) => entry.role === "listbox")
+      ? `  Suggestion list after typing: listbox with ${options} ${options === 1 ? "option" : "options"}`
+      : "  Suggestion list after typing: no listbox seen",
+    `  Tab order (${run.tabOrder.length} stops, at most ${MAX_TAB_STOPS}; ended: ${run.tabEnd}):`,
+    ...run.tabOrder.map(
+      (entry, index) =>
+        `    ${index + 1}. ${describe(entry)}${entry.inWidget === true ? " [in widget]" : ""}`,
+    ),
+  );
+  return { lines, failure };
+}
+
 export interface LiveRun {
   /** `google.maps.version` read from the page, or null when it could not be read. */
   readonly version: string | null;
   /** Console messages that name the Content Security Policy. */
   readonly cspMessages: readonly string[];
   readonly placesRequests: number;
+  /** Places requests already seen when the Tab walk finished, before any click or typing (expected 0). */
+  readonly placesDuringTabWalk: number;
   readonly routesRequests: number;
   readonly stationShown: boolean;
   readonly routeShown: boolean;
   /** Name of the step that threw, or null. */
   readonly failedStep: string | null;
+  /** Null when the run stopped before the accessibility step, so nothing was read. */
+  readonly accessibility: AccessibilityRun | null;
 }
 
 export function liveReport(run: LiveRun): { lines: string[]; pass: boolean } {
   const messages = [...new Set(run.cspMessages.map(scrub))];
   const versionOk = run.version?.startsWith(PINNED_VERSION_PREFIX) ?? false;
+  const accessibility = accessibilityLines(run.accessibility);
   const pass =
+    run.accessibility !== null &&
+    accessibility.failure === null &&
     messages.length === 0 &&
     versionOk &&
     run.stationShown &&
@@ -55,8 +443,11 @@ export function liveReport(run: LiveRun): { lines: string[]; pass: boolean } {
     `CSP messages: ${messages.length}`,
     ...messages.map((message) => `  CSP: ${message}`),
     `Places requests (host places.googleapis.com): ${run.placesRequests}`,
+    `Places requests during the Tab walk: ${run.placesDuringTabWalk} (expected 0)`,
     `Routes requests (host routes.googleapis.com): ${run.routesRequests}`,
+    ...accessibility.lines,
   ];
+  if (accessibility.failure !== null) lines.push(`Failed check: ${accessibility.failure}`);
   if (run.failedStep !== null) lines.push(`Failed step: ${run.failedStep}`);
   lines.push(pass ? "PASS" : "FAIL");
   return { lines, pass };

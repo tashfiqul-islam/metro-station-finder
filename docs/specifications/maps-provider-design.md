@@ -43,7 +43,7 @@ Place IDs may be stored. No other Google content is stored (ADR).
 
 - Dev key `metro-station-key-dev` stays referrer-restricted and API-restricted (read-only check by the coordinator, 2026-11-05). It is not the deleted legacy key.
 - Production key: referrers `https://metro-station-finder.com/*` and `https://www.metro-station-finder.com/*`; APIs Maps JavaScript, Places (New), Routes only. A real map ID for production.
-- Daily quota caps, owner-adjustable, derived in the ADR: Routes 160, map loads 300, Place Details 300, Autocomplete requests 330. Budget alerts at 50, 90 and 100 percent.
+- Daily quota caps, owner-adjustable, derived in the ADR: Routes 160, map loads 300, Place Details 300, Autocomplete requests 330. Budget alerts at 50, 90 and 100 percent. (Caps superseded 2026-11-08: see the amendment in ADR-0009.)
 - The slice reads the key from public build configuration; a key value never enters the repository.
 
 ## Slice MAP-1: first map slice (future, not authorized here)
