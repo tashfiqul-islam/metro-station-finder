@@ -1,11 +1,13 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const origin = "http://127.0.0.1:4173";
+// The lab web-vitals spec runs on Chromium only (METRO-44 part C): see docs/evidence/metro-44c.md.
+const chromiumOnly = "**/web-vitals-lab.e2e.ts";
 const projects = [
   { name: "chromium", use: { ...devices["Desktop Chrome"] } },
-  { name: "firefox", use: { ...devices["Desktop Firefox"] } },
-  { name: "webkit", use: { ...devices["Desktop Safari"] } },
-  { name: "mobile-chrome", use: { ...devices["Pixel 7"] } },
+  { name: "firefox", testIgnore: chromiumOnly, use: { ...devices["Desktop Firefox"] } },
+  { name: "webkit", testIgnore: chromiumOnly, use: { ...devices["Desktop Safari"] } },
+  { name: "mobile-chrome", testIgnore: chromiumOnly, use: { ...devices["Pixel 7"] } },
 ];
 
 // Locally `bun run smoke` exercises Chromium; CI sets CI=true and runs every project.
