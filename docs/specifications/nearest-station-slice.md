@@ -155,3 +155,28 @@ Settled by the owner run of 2026-11-08 (e5a2e04): autocomplete requests (10 for 
 - The element sets its own autocomplete request rate; the minimum-character and debounce control asked for in the orchestrator's brief (the Plane ticket does not mention it) is not available on `PlaceAutocompleteElement` (see Free-tier plan).
 - The harness rebuilds the web app with the fake key inside `bun run smoke` (see Library decision), because the key is compiled in and CI builds without one.
 - Origin of the fare is the nearest station and is not changeable in this slice; the destination is chosen.
+
+## Accessible name of the place search (METRO-101, 2026-11-08)
+
+Observed (owner probe 2026-11-08, relayed, not re-run by an agent): the real `PlaceAutocompleteElement` exposes `combobox "Search For a Place"`, then `button "Use my location"`. Our visible label was "Search for a place in Dhaka".
+
+Research (2026-11-08):
+
+- No DOCUMENTED property, attribute, slot or part sets the input's accessible name or ARIA label. The element's documented properties include `description`, `placeholder` and `name` (a form field name), and no `ariaLabel`, `label` or labelled-by option (Repo-verified in `@types/google.maps` 3.66.9; Context7-verified against the places-widget reference; Web-verified on the official reference and the place-autocomplete guide, which says only "Enhanced accessibility, including support for screen readers and keyboard interaction").
+- `description` is documented as "detected by screen readers when the input element is focused" and links `aria-describedby`: a description, not a name (Repo-, Context7- and Web-verified).
+- Whether an `aria-label` or `aria-labelledby` set on the host reaches the inner combobox: Unverified. The documentation is silent, the host sits outside the shadow root, and ARIA on a role-less custom element is not a documented route. Not used.
+- The `placeholder` option (typed `placeholder?: string | null` in `@types/google.maps` 3.66.9) is UNTESTED as a possible lever. Hypothesis: Google's name "Search For a Place" may come from its default placeholder. Not set now. Follow-up: try it in a future owner-run `smoke:live` and read the accessible name.
+- Whether the real element shows its own placeholder text, which would be a second visible label that must also be contained in the name: Unverified.
+
+Decision: WCAG 2.5.3 Label in Name needs the visible label text to be contained in the accessible name, compared case-insensitively. No documented property sets Google's name, so the visible label is now exactly "Search for a place", which "Search For a Place" contains. The "Dhaka" meaning moves to a separate visible hint, "Suggestions favor places in Dhaka.", passed to the element as `description` (the one supported accessibility hook). The group (`fieldset` with `aria-labelledby` the visible label) is kept. No custom combobox, no CSP change, no host ARIA.
+
+Limits, stated plainly:
+
+- (a) WCAG 2.5.3 is claimed only on the strength of the relayed owner probe that the real name is "Search For a Place". No agent has seen the real tree.
+- (b) Our visible text is a paragraph that names the fieldset through `aria-labelledby`. It is not a `<label for>` of the combobox, so the combobox's accessible name is entirely Google's, and the group and the combobox announce nearly the same words twice. That is redundant, not a failure.
+- (c) If the widget ignores the `description` option, the visible hint paragraph is the fallback for sighted users and for screen-reader users browsing the page.
+- (d) Whether the real element shows its own placeholder is Unverified (see above).
+
+What the stubs show: the e2e fake copies the measured name (one shared constant, `MEASURED_GOOGLE_NAME`) and the `description` option. The unit copy guard only checks that our visible label stays contained in that name. The adapter unit test asserts `description` is passed. The e2e asserts the wiring we control (visible hint, `description` option, `aria-describedby`), axe, and the unchanged Tab order (search, then Use my location). None of this proves the real widget's tree.
+
+Unverified until the owner runs `bun run smoke:live` (METRO-100): the real widget's accessibility tree. Expect `combobox "Search For a Place"` (or a name that contains "search for a place", ignoring case), its description reading "Suggestions favor places in Dhaka." if Google wires `description` as documented, one Tab stop for the search, then `button "Use my location"`, and no axe violation. If the name differs, or the description is absent, record it on METRO-101.
