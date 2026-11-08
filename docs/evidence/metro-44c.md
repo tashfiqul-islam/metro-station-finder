@@ -55,4 +55,4 @@ Local (Windows 11, Playwright 1.64.1 Chromium, Desktop Chrome, `--workers=1 --re
 
 Controls (one run each, local): delayed script LCP 3088 ms; inserted block CLS 0.3152.
 
-Hosted-measured: see the section below.
+Hosted-measured (GitHub-hosted `ubuntu-24.04`, run 42486347140, job `Build and smoke`, Chromium, PR #106 as first pushed; read from the job log): the real check logged `web-vitals-lab LCP=128ms CLS=0.0037` (limits 2500 ms and 0.1). Controls in the same run: delayed script `LCP=3096ms`, inserted block `CLS=0.3129`. One hosted run only; it shows the margin (about 20 times under the LCP limit and 27 times under the CLS limit), not a distribution. The same job reported 46 passed and 1 skipped; the skip is not in the new spec.
