@@ -40,6 +40,7 @@ jobs:
         with:
           version: 2026.10.25
           install_args: node
+          cache_key_prefix: mise-m97-measure
       - name: Classify the changed files
         id: docs
         env:
