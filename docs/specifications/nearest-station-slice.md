@@ -187,10 +187,15 @@ Measured (owner runs 2026-11-08, relayed, not re-run by an agent): the combobox 
 
 Change: the adapter takes a `placeholder` option, passed to `PlaceAutocompleteElement` and set from `copy.searchLabel` ("Search for a place") in the slice. The e2e fake stores it and reflects it as the input placeholder, so tests assert the wiring; they do not show that the real widget honors it. `smoke:live` additionally prints the combobox description status and the unnamed images grouped by parent role (see the [runbook](../agents/maps-live-check-runbook.md) and [METRO-102 evidence](../evidence/metro-102.md)).
 
-Decision rule, applied after the owner's next run:
+Decision rule, applied after the owner's next run (one rule, exact case):
 
-- If the measured accessible name becomes the placeholder text ("Search for a place"), KEEP the option: the visible label and the accessible name then match exactly (record as Measured).
-- If the name does NOT change, REMOVE the option in a second small PR, unless a documented reason to keep it exists. A placeholder that duplicates the visible label is noise; the default is remove.
-- If the name becomes something else, record it and decide on the ticket; the default stays remove.
+| Outcome                             | `Search control` name printed                                           | Decision                                                                                                                                                                                                                                                       |
+| ----------------------------------- | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| (a) changed to the placeholder text | exactly `Search for a place`                                            | KEEP only if the owner also confirms by eye and with a screen reader that no duplicate placeholder is visible or announced twice (WCAG 3.3.2: a placeholder is not a label; its contrast is Google's). Otherwise REMOVE. If kept, record the name as Measured. |
+| (b) unchanged                       | `Search For a Place`                                                    | REMOVE in a second small PR, including when a placeholder is visible.                                                                                                                                                                                          |
+| (c) something else                  | any other name                                                          | Record it, default REMOVE, decide on the ticket.                                                                                                                                                                                                               |
+| (d) description                     | `matches the hint`, `present but different`, `absent` or `not reported` | Independent of the placeholder decision.                                                                                                                                                                                                                       |
+
+Compare the printed name EXACTLY, case-sensitive, with `Search for a place`; `Search For a Place` (capital F and P) means unchanged. The integration branch carries the experiment only until the owner's run; the default is REMOVE.
 
 Unverified until that run: whether the real widget honors `placeholder`, whether it then shows a visible placeholder (a second visible label that must also be contained in the name), whether Google wired `description` to the combobox, and what the unnamed images are.

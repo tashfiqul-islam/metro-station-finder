@@ -119,43 +119,94 @@ export function cleanName(name: string): string {
     : points.join("");
 }
 
-/** Most parent-role groups printed for unnamed images; the rest are summed as "other". */
+/** Most parent-role groups printed for unnamed images; the rest are summed as "more groups". */
 const MAX_PARENT_GROUPS = 6;
-/** Longest description length printed; a longer one prints as this cap. */
+/** A description longer than this prints as `1000+`; counting stops one past it. */
 const MAX_DESCRIPTION_LENGTH = 1000;
 const NO_PARENT = "parent not reported";
+/** Most steps up the tree when looking for an image's meaningful parent. */
+const MAX_PARENT_DEPTH = 12;
+/**
+ * Wrapper roles skipped when looking for an image's parent: a screen reader does not announce them, so the
+ * question "what holds this icon" is answered by the nearest ancestor that is none of these (and not
+ * `ignored`). A hostile or cyclic tree ends the walk with "parent not reported".
+ */
+const WRAPPER_ROLES = new Set(["generic", "none", "StaticText", "InlineTextBox", "LineBreak"]);
 
 /** Hint and description are compared after collapsing whitespace, trimming and case-folding. */
 function fold(text: string): string {
   return text.replaceAll(/\s+/gu, " ").trim().toLowerCase();
 }
 
+/** Code points in `text`, counting no further than `limit`: only the first 2 * limit UTF-16 units are copied. */
+function codePointsUpTo(text: string, limit: number): number {
+  return Math.min(Array.from(text.slice(0, limit * 2)).length, limit);
+}
+
 /**
  * CDP `AXNode.description` is an optional `AXValue` (Inferred from the protocol's typed definition; Chrome
  * is understood to leave the field out when there is no description, so "not reported" cannot tell "none"
- * from "not exposed"). No field is `undefined` ("not reported"); a field with an empty value is "absent".
+ * from "not exposed"). No field, or a value that is not a string, is `undefined` ("not reported"); a string
+ * that is empty after trimming is "absent". Equality with the hint is exact after folding; anything else
+ * (extra text included) is "different".
  */
 function describeState(node: object, hint: string): DescriptionState | undefined {
   if (!("description" in node)) return undefined;
-  const text = textOf(propertyOf(node, "description"));
-  if (text.trim() === "") return { kind: "absent" };
-  if (hint.trim() !== "" && fold(text) === fold(hint)) return { kind: "matches" };
-  return {
-    kind: "different",
-    length: Math.min(Array.from(text.trim()).length, MAX_DESCRIPTION_LENGTH),
-  };
+  const value = valueOf(propertyOf(node, "description"));
+  if (typeof value !== "string") return undefined;
+  const text = value.trim();
+  if (text === "") return { kind: "absent" };
+  if (text.length <= MAX_RAW_NAME_LENGTH && hint.trim() !== "" && fold(text) === fold(hint)) {
+    return { kind: "matches" };
+  }
+  return { kind: "different", length: codePointsUpTo(text, MAX_DESCRIPTION_LENGTH + 1) };
 }
 
-/** Node id to cleaned role for every node (ignored ones too: an ignored wrapper is still a parent). */
-function rolesById(nodes: readonly unknown[]): Map<string, string> {
-  const roles = new Map<string, string>();
+interface TreeEntry {
+  readonly role: string;
+  readonly parentId: string | undefined;
+  readonly wrapper: boolean;
+}
+
+/** Every node by id (ignored ones too), with its cleaned role, parent id and whether it is a skipped wrapper. */
+function treeById(nodes: readonly unknown[]): Map<string, TreeEntry> {
+  const tree = new Map<string, TreeEntry>();
   for (const node of nodes) {
     if (typeof node !== "object" || node === null) continue;
     const id = propertyOf(node, "nodeId");
-    const role = textOf(propertyOf(node, "role"));
-    if (typeof id === "string" && role !== "") roles.set(id, cleanRole(role));
+    const rawRole = textOf(propertyOf(node, "role"));
+    if (typeof id !== "string" || rawRole === "") continue;
+    const role = cleanRole(rawRole);
+    const parentId = propertyOf(node, "parentId");
+    tree.set(id, {
+      role,
+      parentId: typeof parentId === "string" ? parentId : undefined,
+      wrapper: propertyOf(node, "ignored") === true || WRAPPER_ROLES.has(role),
+    });
   }
-  return roles;
+  return tree;
+}
+
+/**
+ * The role of the nearest ancestor that is not a wrapper, or undefined (printed "parent not reported") on a
+ * missing parent, a cycle, a self-parent or after MAX_PARENT_DEPTH steps.
+ */
+function meaningfulParentRole(
+  tree: ReadonlyMap<string, TreeEntry>,
+  ownId: unknown,
+  firstParent: unknown,
+): string | undefined {
+  const seen = new Set<string>(typeof ownId === "string" ? [ownId] : []);
+  let id = firstParent;
+  for (let depth = 0; depth < MAX_PARENT_DEPTH && typeof id === "string"; depth += 1) {
+    if (seen.has(id)) return undefined;
+    seen.add(id);
+    const entry = tree.get(id);
+    if (entry === undefined) return undefined;
+    if (!entry.wrapper) return entry.role;
+    id = entry.parentId;
+  }
+  return undefined;
 }
 
 interface ParsedNode extends AxEntry {
@@ -205,7 +256,7 @@ function isExpanded(properties: unknown): boolean | undefined {
 /** Keeps the nodes a screen reader reaches (not `ignored`), reading only role, name, focus and node id; a value is never read. */
 function parseNodes(nodes: unknown, hint = ""): ParsedNode[] {
   if (!Array.isArray(nodes)) return [];
-  const roles = rolesById(nodes as unknown[]);
+  const tree = treeById(nodes as unknown[]);
   const parsed: ParsedNode[] = [];
   for (const node of nodes as unknown[]) {
     if (typeof node !== "object" || node === null) continue;
@@ -216,8 +267,9 @@ function parseNodes(nodes: unknown, hint = ""): ParsedNode[] {
     const domId = typeof rawId === "number" ? rawId : undefined;
     const properties = propertyOf(node, "properties");
     const expanded = roleText === "combobox" ? isExpanded(properties) : undefined;
-    const parentId = propertyOf(node, "parentId");
-    const parentRole = typeof parentId === "string" ? roles.get(parentId) : undefined;
+    const parentRole = IMAGE_ROLES.has(roleText)
+      ? meaningfulParentRole(tree, propertyOf(node, "nodeId"), propertyOf(node, "parentId"))
+      : undefined;
     const description = roleText === "combobox" ? describeState(node, hint) : undefined;
     parsed.push({
       role: roleText,
@@ -227,7 +279,7 @@ function parseNodes(nodes: unknown, hint = ""): ParsedNode[] {
       ...(domId === undefined ? {} : { id: String(domId) }),
       ...(expanded === undefined ? {} : { expanded }),
       ...(description === undefined ? {} : { description }),
-      ...(IMAGE_ROLES.has(roleText) && parentRole !== undefined ? { parentRole } : {}),
+      ...(parentRole === undefined ? {} : { parentRole }),
     });
   }
   return parsed;
@@ -438,7 +490,10 @@ function descriptionText(entries: readonly AxEntry[] | null): string {
   const state = entries.find((entry) => entry.role === "combobox")?.description;
   if (state === undefined) return "not reported";
   if (state.kind === "matches") return "matches the hint";
-  return state.kind === "absent" ? "absent" : `present but different (length ${state.length})`;
+  if (state.kind === "absent") return "absent";
+  const length =
+    state.length > MAX_DESCRIPTION_LENGTH ? `${MAX_DESCRIPTION_LENGTH}+` : state.length;
+  return `present but different (length ${length})`;
 }
 
 /** Unnamed images counted by the role of their parent, largest group first, at most MAX_PARENT_GROUPS groups. */
@@ -450,24 +505,20 @@ function unnamedByParent(entries: readonly AxEntry[] | null): string {
     const parent = entry.parentRole ?? NO_PARENT;
     counts.set(parent, (counts.get(parent) ?? 0) + 1);
   }
-  if (counts.size === 0) return "none";
+  if (counts.size === 0) return "no unnamed images";
   // Largest first, ties by role. Picked one at a time: the lib has no toSorted and the lint bans sort.
   const remaining = new Map(counts);
   const shown: string[] = [];
-  for (let pick = 0; pick < MAX_PARENT_GROUPS && remaining.size > 0; pick += 1) {
-    let best: [string, number] | null = null;
-    for (const group of remaining) {
-      if (best === null || group[1] > best[1] || (group[1] === best[1] && group[0] < best[0])) {
-        best = group;
-      }
-    }
-    if (best === null) break;
+  while (shown.length < MAX_PARENT_GROUPS && remaining.size > 0) {
+    const best = [...remaining].reduce((top, group) =>
+      group[1] > top[1] || (group[1] === top[1] && group[0] < top[0]) ? group : top,
+    );
     remaining.delete(best[0]);
     shown.push(`${best[0]} ${best[1]}`);
   }
   let rest = 0;
   for (const count of remaining.values()) rest += count;
-  return (rest === 0 ? shown : [...shown, `other ${rest}`]).join(", ");
+  return (rest === 0 ? shown : [...shown, `more groups ${rest}`]).join(", ");
 }
 
 function namedImages(entries: readonly AxEntry[] | null): string {

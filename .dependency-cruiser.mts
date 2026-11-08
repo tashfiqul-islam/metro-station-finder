@@ -1,3 +1,6 @@
+// Note (METRO-102): scripts/ is not a layer here. The one script-to-app import, scripts/smoke-live.ts reading
+// apps/web/src/features/nearest-station/copy.ts (no imports of its own), is pinned by an allowlist test in
+// scripts/script-imports.test.ts so the hint text lives once. No rule below was changed for it.
 export default {
   forbidden: [
     { name: "no-cycles", severity: "error", from: {}, to: { circular: true } },

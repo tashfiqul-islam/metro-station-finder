@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "@playwright/test";
 import type { Browser, CDPSession, ConsoleMessage, Page, Request } from "@playwright/test";
 
+// The one reviewed script-to-app import (pinned by script-imports.test.ts): copy.ts has no imports.
 import { copy } from "../apps/web/src/features/nearest-station/copy.ts";
 import {
   MAX_TAB_STOPS,
