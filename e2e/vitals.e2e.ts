@@ -35,10 +35,23 @@ test.describe("real-user web vitals beacon (METRO-44)", () => {
     });
     await installMapsStub(page);
     // A query string on the page URL must not travel to the beacon, in the URL, the body or anywhere.
+    // web-vitals is a lazy chunk loaded once the page is idle (METRO-104): wait for it, then two frames for
+    // the observers to register, before the input and the simulated hide. A page already hidden when the
+    // library starts would drop every earlier entry, which no real visit does.
+    const chunk = page.waitForResponse((response) =>
+      /\/assets\/web-vitals-[\w-]+\.js$/u.test(new URL(response.url()).pathname),
+    );
     await page.goto("/?q=uttara&ref=SECRETREF");
     await expect(
       page.getByRole("heading", { level: 1, name: "Nearest Metro station" }),
     ).toBeVisible();
+    expect((await chunk).status()).toBe(200);
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) => {
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+        }),
+    );
     // LCP is final at the first input and CLS when the page is hidden. Click once, then hide the page on
     // every poll until the beacons have arrived (CLS is Chromium-only: Firefox and WebKit do not implement layout-shift) (a later hide adds no duplicate).
     await page.mouse.click(5, 5);
