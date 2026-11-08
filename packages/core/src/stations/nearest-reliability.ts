@@ -49,7 +49,10 @@ export function assessNearestReliability(
   const checked = parseCoordinate(origin.lat, origin.lng);
   const ranked = checked.ok ? rankNearest(stations, checked.coordinate) : undefined;
   if (ranked === undefined) return { kind: "uncertain", reason: "no-nearest" };
-  if (accuracyMeters <= GOOD_FIX_METERS) return { kind: "reliable" };
+  // No runner-up (one station): nothing to confuse it with, whatever the radius. Also avoids Infinity > Infinity.
+  if (accuracyMeters <= GOOD_FIX_METERS || ranked.runnerUpDistance === Infinity) {
+    return { kind: "reliable" };
+  }
   return (ranked.runnerUpDistance - ranked.distance) * 1000 > 2 * accuracyMeters
     ? { kind: "reliable" }
     : { kind: "uncertain", reason: "ambiguous" };

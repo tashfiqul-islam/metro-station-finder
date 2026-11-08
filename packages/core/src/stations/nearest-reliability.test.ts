@@ -81,6 +81,18 @@ describe("assessNearestReliability", () => {
     expect(assessNearestReliability([west], origin).kind).toBe("uncertain");
   });
 
+  test("one station is reliable at any known radius, even the largest finite number", () => {
+    expect(assessNearestReliability([west], origin, 25_000)).toEqual(reliable);
+    expect(assessNearestReliability([west], origin, Number.MAX_VALUE)).toEqual(reliable);
+    expect(assessNearestReliability([west], origin, Infinity)).toMatchObject({
+      reason: "accuracy-unknown",
+    });
+  });
+
+  test("two stations stay ambiguous at the largest finite radius", () => {
+    expect(assessNearestReliability([west, east], origin, Number.MAX_VALUE)).toEqual(ambiguous);
+  });
+
   test("the order of the stations does not matter", () => {
     const far = station("far", 0, 1);
     expect(assessNearestReliability([far, east, west], origin, 150)).toEqual(reliable);

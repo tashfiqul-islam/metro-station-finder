@@ -112,12 +112,13 @@ function Slice({ maps }: SliceProps) {
   const engage = (): void => {
     engagedWithSearch.current = true;
   };
-  /** Stable, so focus moves when the heading mounts (a new origin re-keys it) and not on every render. */
-  /** Whether the geolocation alert may take focus when it mounts; the outline comes from `focus.css`. */
+  /** Whether the geolocation alert may take focus when it mounts; false when a late result lands while the user types. */
   const focusAlertNext = useRef(true);
+  /** Stable, so the alert takes focus only when it mounts; the outline comes from `focus.css` (`[tabindex="-1"]`). */
   const focusAlert = useCallback((node: HTMLElement | null): void => {
     if (node !== null && focusAlertNext.current) node.focus();
   }, []);
+  /** Stable, so focus moves when the heading mounts (a new origin re-keys it) and not on every render. */
   const focusResult = useCallback((node: HTMLElement | null): void => {
     if (node !== null && focusNext.current) node.focus();
   }, []);
@@ -174,7 +175,8 @@ function Slice({ maps }: SliceProps) {
     const outcome = await locate();
     if (mine !== latestAction.current) return;
     if (outcome.kind !== "position") {
-      focusAlertNext.current = true;
+      // Same rule as a rough fix: a late denial never pulls focus out of the search box (still announced).
+      focusAlertNext.current = !engagedWithSearch.current;
       setRough(null);
       setLocating(outcome.kind);
     } else if (

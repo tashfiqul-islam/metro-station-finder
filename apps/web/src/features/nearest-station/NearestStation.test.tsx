@@ -656,3 +656,26 @@ test("METRO-103 an earlier in-flight route can never appear after a rough fix cl
   expect(screen.queryByRole("heading", { name: copy.resultHeading })).toBeNull();
   expect(walk).toHaveBeenCalledTimes(1);
 });
+
+test("METRO-103 a late denial while the user types does not take focus but is announced", async () => {
+  const fixCallbacks: PositionErrorCallback[] = [];
+  geolocation((_success, failure) => {
+    fixCallbacks.push(failure);
+  });
+  render(<NearestStation maps={fakeMaps} />);
+  fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
+  const input = screen.getByLabelText("fake search box");
+  act(() => input.focus());
+  act(() => fixCallbacks[0]?.(denied));
+  expect((await screen.findByRole("alert")).textContent).toBe(copy.denied);
+  expect(document.activeElement).toBe(input);
+});
+
+test("METRO-103 a late unavailable result without typing takes focus", async () => {
+  geolocation((_success, failure) => failure(timeout));
+  render(<NearestStation maps={fakeMaps} />);
+  fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
+  const alert = await screen.findByRole("alert");
+  expect(alert.textContent).toBe(copy.unavailable);
+  expect(document.activeElement).toBe(alert);
+});
