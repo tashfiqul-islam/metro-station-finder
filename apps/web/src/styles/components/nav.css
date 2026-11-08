@@ -1,5 +1,7 @@
 /* nav.css: Section navigation: bottom tab bar below 768px, segmented bar in the sidebar above. Colours only via var(--…). Breakpoint 768px. */
 
+@import "../tokens-parts.css";
+
 /* ════════════ Navigation: tab bar (< 768) / panel tabs (≥ 768) ════════════ */
 .tabs {
   position: absolute;

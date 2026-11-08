@@ -15,7 +15,9 @@ import {
 import type { PairRow } from "./design-contrast.ts";
 
 const css = readFileSync("apps/web/src/styles/tokens.css", "utf8");
-const tokens = extractTokens(css);
+const partsCss = readFileSync("apps/web/src/styles/tokens-parts.css", "utf8");
+const mapCss = readFileSync("apps/web/src/styles/tokens-map.css", "utf8");
+const tokens = extractTokens(css, partsCss, mapCss);
 
 test("parseColor reads six-digit hex, rgb() and rgb() with alpha, and rejects anything else", () => {
   expect(parseColor("#0B7A84")).toEqual([11, 122, 132, 1]);
@@ -47,6 +49,24 @@ test("tokens.css defines both themes with the same token names, and the OS fallb
   expect(tokens.fallbackOverrides).toEqual(tokens.darkOverrides);
   expect(tokens.dark["--color-bg"]?.toLowerCase()).toBe("#060a0a");
   expect(tokens.light["--color-bg"]?.toLowerCase()).toBe("#f2f6f6");
+});
+
+test("the feedback and map token files hold their own colours, none of them also in tokens.css", () => {
+  const core = extractTokens(css);
+  for (const [file, source] of [
+    ["tokens-parts.css", partsCss],
+    ["tokens-map.css", mapCss],
+  ] as const) {
+    const part = extractTokens(source);
+    expect(Object.keys(part.light).length, file).toBeGreaterThan(5);
+    expect(part.fallbackOverrides, file).toEqual(part.darkOverrides);
+    for (const name of Object.keys(part.light))
+      expect(core.light[name], `${file} ${name}`).toBeUndefined();
+  }
+  // The shell paints the map background, so that one colour stays in the entry file.
+  expect(core.light["--color-map-bg"]).toBeDefined();
+  expect(core.light["--color-map-plane-1"]).toBeUndefined();
+  expect(core.light["--color-warn"]).toBeUndefined();
 });
 
 test("extractTokens finds nothing in a stylesheet without the three blocks", () => {
@@ -93,6 +113,24 @@ for (const theme of ["light", "dark"] as const) {
       expect(row?.ratio, name).toBe(Math.min(...candidates.map((c) => contrastRatio(fg, c))));
       expect(row?.exact, name).toBe(false);
     }
+  });
+}
+
+/** The header brand (METRO-105): not in the handoff table, so checked here with the same rules. */
+const BRAND_PAIRS: readonly PairRow[] = [
+  ["non-text", "Mark ink on the tile gradient start", "brand-tile-ink", "brand-tile-a", 3, 0, 0],
+  ["non-text", "Mark ink on the tile gradient end", "brand-tile-ink", "brand-tile-b", 3, 0, 0],
+  ["text", "Wordmark on the phone brand pill", "fg", "glass-thick", 4.5, 0, 0],
+  ["text", "Second word of the wordmark in the header", "muted-fg", "glass-thick", 4.5, 0, 0],
+];
+
+for (const theme of ["light", "dark"] as const) {
+  test(`the ${theme} header brand meets its ratios: mark ink on the tile, wordmark on the pill`, () => {
+    const results = evaluatePairs(tokens[theme], BRAND_PAIRS);
+    expect(results).toHaveLength(4);
+    expect(
+      results.filter((result) => !result.pass).map((r) => `${r.use} ${r.ratio.toFixed(2)}`),
+    ).toEqual([]);
   });
 }
 

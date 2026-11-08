@@ -46,6 +46,34 @@ function pointer(
   });
 }
 
+test("METRO-105 the header holds the brand as the one Home link, by default and replaceable", () => {
+  render(<AppShell>x</AppShell>);
+  expect(screen.getAllByRole("link", { name: "Metro Station Finder, home" })).toHaveLength(1);
+  expect(screen.getByRole("banner").contains(screen.getByRole("link", { name: /home$/u }))).toBe(
+    true,
+  );
+  cleanup();
+  render(<AppShell brand={<span>own logo</span>}>x</AppShell>);
+  expect(screen.queryByRole("link", { name: /home$/u })).toBeNull();
+  expect(screen.getByText("own logo")).toBeTruthy();
+});
+
+test("METRO-105 the sheet leaves room for the tab bar only when a section nav is drawn", () => {
+  const { container } = render(<AppShell>x</AppShell>);
+  expect(app(container).classList.contains("app--plain")).toBe(true);
+  expect(must(container.querySelector("main")).className).toBe("panel panel--plain");
+  cleanup();
+  const withNav = render(
+    <AppShell
+      nav={<SectionNav items={[{ href: "/", label: "Nearby", icon: locate, current: true }]} />}
+    >
+      x
+    </AppShell>,
+  );
+  expect(app(withNav.container).className).toBe("app");
+  expect(must(withNav.container.querySelector("main")).className).toBe("panel");
+});
+
 test("METRO-105 landmarks: one banner, one main, a notifications region, in header-nav-main order", () => {
   const { container } = render(
     <AppShell
@@ -163,8 +191,8 @@ test("METRO-105 dragging writes --sheet-h through the CSSOM, marks the panel and
   pointer("pointermove", { clientY: 400 }); // 100px up from 490 = 590
   expect(panel.hasAttribute("data-dragging")).toBe(true);
   expect(app(container).style.getPropertyValue("--sheet-h")).toBe("590px");
-  pointer("pointermove", { clientY: -900 }); // clamped to full (696)
-  expect(app(container).style.getPropertyValue("--sheet-h")).toBe("696px");
+  pointer("pointermove", { clientY: -900 }); // clamped to full: 844 - 64 - 8 with no nav drawn
+  expect(app(container).style.getPropertyValue("--sheet-h")).toBe("772px");
   pointer("pointerup", { clientY: -900 });
   expect(app(container).getAttribute("data-snap")).toBe("full");
   expect(app(container).style.getPropertyValue("--sheet-h")).toBe("");

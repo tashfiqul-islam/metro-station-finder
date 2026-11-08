@@ -172,9 +172,15 @@ test("a hex-like id inside url() is not a colour, and tokens.css stays exempt fr
   expect(
     checkStylesheet("apps/web/src/styles/components/x.css", ".a { fill: url(#fade); }"),
   ).toEqual([]);
+  for (const name of ["tokens.css", "tokens-parts.css", "tokens-map.css"]) {
+    expect(
+      checkStylesheet(`apps/web/src/styles/${name}`, ".a { color: white; background: #fff; }"),
+    ).toEqual([]);
+  }
+  // Only the token files are exempt: a component file that merely starts with "tokens" is not.
   expect(
-    checkStylesheet("apps/web/src/styles/tokens.css", ".a { color: white; background: #fff; }"),
-  ).toEqual([]);
+    checkStylesheet("apps/web/src/styles/components/tokens-x.css", ".a { color: white; }"),
+  ).toHaveLength(1);
 });
 
 test("the new style-writing routes are findings in source", () => {

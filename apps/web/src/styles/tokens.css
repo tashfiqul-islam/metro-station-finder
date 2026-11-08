@@ -68,18 +68,17 @@
   --color-brand-tile-a: #0e8590;
   --color-brand-tile-b: #1b66ae;
   --color-brand-tile-ink: #ffffff;
-  --color-preview-light-bg: #f2f6f6;
-  --color-preview-dark-bg: #060a0a;
-  --color-preview-light-pane: #ffffff;
-  --color-preview-dark-pane: #1a1d21;
-  --mask-ink: #000000;
   --shadow-brand-tile: inset 0 1px 0 rgb(255 255 255 / 0.25), 0 6px 14px -6px #0e8590;
   --side-w: 360px;
   --header-h: 56px;
   --tabbar-h: 64px;
   --sheet-peek: 196px;
   --sheet-half: 58dvh;
-  --sheet-full: calc(100dvh - 148px - env(safe-area-inset-bottom));
+  /* The sheet's top edge at full height sits --sheet-top below the screen top. The space under the sheet,
+     --sheet-reserve, is the tab bar and its gap; `.app--plain` (no nav drawn) shrinks it. Full height is
+     computed in shell.css on `.app`, where the reserve can be overridden (a root custom property would not). */
+  --sheet-top: 64px;
+  --sheet-reserve: calc(var(--tabbar-h) + 20px);
   --sheet-h: var(--sheet-half);
   --color-bg: #f2f6f6;
   --color-fg: #0d0f12;
@@ -93,7 +92,6 @@
   --color-muted-2: rgb(11 122 132 / 0.11);
   --color-hair: rgb(13 15 18 / 0.08);
   --color-ctl-line: #80868e;
-  --color-thumb: #ffffff;
   --color-accent: #0b7a84;
   --color-accent-hover: #08626a;
   --color-accent-2: #1d6fb8;
@@ -101,47 +99,11 @@
   --color-accent-soft: rgb(11 122 132 / 0.1);
   --color-on-soft: #075760;
   --color-focus: #0b7a84;
-  --color-ok: #15803d;
-  --color-ok-fg: #ffffff;
-  --color-ok-ink: #116932;
-  --color-ok-soft: #eaf4ee;
-  --color-ok-line: #b9d9c5;
-  --color-warn: #a15f00;
-  --color-warn-fg: #ffffff;
-  --color-warn-ink: #8a5100;
-  --color-warn-soft: #f7f1e8;
-  --color-warn-line: #e3cfb3;
-  --color-bad: #c42b28;
-  --color-bad-fg: #ffffff;
-  --color-bad-ink: #a8201d;
-  --color-bad-soft: #faecec;
-  --color-bad-line: #edbfbf;
-  --color-info: #0b7a84;
-  --color-info-fg: #ffffff;
-  --color-info-ink: #075760;
-  --color-info-soft: #e9f3f4;
-  --color-info-line: #b6d7da;
-  --color-inverse: #0d0f12;
-  --color-on-inverse: #f2f3f5;
-  --color-on-inverse-2: #b8bdc3;
-  --color-accent-inverse: #3fd5c8;
-  --color-scrim: rgb(0 0 0 / 0.4);
-  --color-on-accent-veil: rgb(255 255 255 / 0.16);
   --color-selection: rgb(11 122 132 / 0.18);
   --color-mark-a: #0b7a84;
   --color-mark-b: #1d6fb8;
   --color-mark-station: #0d0f12;
   --color-map-bg: #e8efef;
-  --color-map-plane-1: #d4e4e5;
-  --color-map-plane-2: #dce7ec;
-  --color-map-dot: rgb(13 15 18 / 0.09);
-  --color-map-casing: #ffffff;
-  --color-map-shadow: rgb(13 15 18 / 0.06);
-  --color-map-pin: #ffffff;
-  --color-map-pin-ring: #0b7a84;
-  --color-map-label: #0d0f12;
-  --color-map-halo: #e8efef;
-  --color-map-walk: #0d0f12;
   --shadow-1: 0 1px 1px rgb(13 15 18 / 0.04), 0 2px 6px -2px rgb(13 15 18 / 0.08);
   --shadow-2: 0 1px 2px rgb(13 15 18 / 0.05), 0 12px 32px -12px rgb(13 15 18 / 0.18);
   --shadow-3: 0 2px 4px rgb(13 15 18 / 0.05), 0 24px 60px -18px rgb(13 15 18 / 0.28);
@@ -149,11 +111,7 @@
     inset 0 1px 0 rgb(255 255 255 / 0.22), 0 1px 2px rgb(13 15 18 / 0.12),
     0 8px 20px -8px rgb(11 122 132 / 0.7);
   --shadow-rim: inset 0 1px 0 rgb(255 255 255 / 0.9), inset 0 0 0 1px rgb(255 255 255 / 0.5);
-  --shadow-toast: 0 1px 2px rgb(0 0 0 / 0.18), 0 18px 40px -12px rgb(0 0 0 / 0.45);
-  --shadow-ticket: drop-shadow(0 1px 1px rgb(13 15 18 / 0.06))
-    drop-shadow(0 14px 24px rgb(13 15 18 / 0.1));
   --gradient-line: linear-gradient(135deg, var(--color-accent), var(--color-accent-2));
-  --shadow-tab-active: inset 0 1px 0 rgb(255 255 255 / 0.3), 0 6px 16px -6px rgb(11 122 132 / 0.7);
 }
 @media (min-width: 1024px) {
   :root {
@@ -175,7 +133,6 @@
   --color-muted-2: rgb(120 220 210 / 0.12);
   --color-hair: rgb(255 255 255 / 0.075);
   --color-ctl-line: #6e767e;
-  --color-thumb: rgb(255 255 255 / 0.11);
   --color-accent: #3fd5c8;
   --color-accent-hover: #7be4da;
   --color-accent-2: #8cc8ff;
@@ -183,47 +140,11 @@
   --color-accent-soft: rgb(63 213 200 / 0.14);
   --color-on-soft: #bdf3ee;
   --color-focus: #3fd5c8;
-  --color-ok: #4ade80;
-  --color-ok-fg: #04140d;
-  --color-ok-ink: #86efac;
-  --color-ok-soft: #1b3026;
-  --color-ok-line: #245238;
-  --color-warn: #f5b54a;
-  --color-warn-fg: #1f1300;
-  --color-warn-ink: #fcd38d;
-  --color-warn-soft: #312b1f;
-  --color-warn-line: #584628;
-  --color-bad: #ff7a6e;
-  --color-bad-fg: #2a0705;
-  --color-bad-ink: #ffb4ab;
-  --color-bad-soft: #332324;
-  --color-bad-line: #5b3433;
-  --color-info: #3fd5c8;
-  --color-info-fg: #021412;
-  --color-info-ink: #bdf3ee;
-  --color-info-soft: #1a2f30;
-  --color-info-line: #214f4e;
-  --color-inverse: #f2f3f5;
-  --color-on-inverse: #0d0f12;
-  --color-on-inverse-2: #4a5058;
-  --color-accent-inverse: #08626a;
-  --color-scrim: rgb(0 0 0 / 0.55);
-  --color-on-accent-veil: rgb(2 20 18 / 0.1);
   --color-selection: rgb(63 213 200 / 0.24);
   --color-mark-a: #3fd5c8;
   --color-mark-b: #8cc8ff;
   --color-mark-station: #f2f3f5;
   --color-map-bg: #090e0e;
-  --color-map-plane-1: #0c1817;
-  --color-map-plane-2: #0e1518;
-  --color-map-dot: rgb(255 255 255 / 0.06);
-  --color-map-casing: #141619;
-  --color-map-shadow: rgb(0 0 0 / 0.55);
-  --color-map-pin: #141619;
-  --color-map-pin-ring: #3fd5c8;
-  --color-map-label: #f2f3f5;
-  --color-map-halo: #090e0e;
-  --color-map-walk: #f2f3f5;
   --shadow-1: 0 1px 2px rgb(0 0 0 / 0.4);
   --shadow-2: 0 1px 2px rgb(0 0 0 / 0.4), 0 16px 40px -12px rgb(0 0 0 / 0.6);
   --shadow-3: 0 2px 4px rgb(0 0 0 / 0.4), 0 28px 64px -16px rgb(0 0 0 / 0.72);
@@ -231,10 +152,6 @@
     inset 0 1px 0 rgb(255 255 255 / 0.35), 0 0 0 1px rgb(63 213 200 / 0.5),
     0 8px 28px -6px rgb(63 213 200 / 0.55);
   --shadow-rim: inset 0 1px 0 rgb(255 255 255 / 0.07), inset 0 0 0 1px rgb(255 255 255 / 0.035);
-  --shadow-toast: 0 1px 2px rgb(0 0 0 / 0.3), 0 18px 40px -12px rgb(0 0 0 / 0.65);
-  --shadow-ticket: drop-shadow(0 1px 1px rgb(0 0 0 / 0.5))
-    drop-shadow(0 16px 32px rgb(0 0 0 / 0.55));
-  --shadow-tab-active: inset 0 1px 0 rgb(255 255 255 / 0.35), 0 6px 16px -6px rgb(63 213 200 / 0.6);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
@@ -251,7 +168,6 @@
     --color-muted-2: rgb(120 220 210 / 0.12);
     --color-hair: rgb(255 255 255 / 0.075);
     --color-ctl-line: #6e767e;
-    --color-thumb: rgb(255 255 255 / 0.11);
     --color-accent: #3fd5c8;
     --color-accent-hover: #7be4da;
     --color-accent-2: #8cc8ff;
@@ -259,47 +175,11 @@
     --color-accent-soft: rgb(63 213 200 / 0.14);
     --color-on-soft: #bdf3ee;
     --color-focus: #3fd5c8;
-    --color-ok: #4ade80;
-    --color-ok-fg: #04140d;
-    --color-ok-ink: #86efac;
-    --color-ok-soft: #1b3026;
-    --color-ok-line: #245238;
-    --color-warn: #f5b54a;
-    --color-warn-fg: #1f1300;
-    --color-warn-ink: #fcd38d;
-    --color-warn-soft: #312b1f;
-    --color-warn-line: #584628;
-    --color-bad: #ff7a6e;
-    --color-bad-fg: #2a0705;
-    --color-bad-ink: #ffb4ab;
-    --color-bad-soft: #332324;
-    --color-bad-line: #5b3433;
-    --color-info: #3fd5c8;
-    --color-info-fg: #021412;
-    --color-info-ink: #bdf3ee;
-    --color-info-soft: #1a2f30;
-    --color-info-line: #214f4e;
-    --color-inverse: #f2f3f5;
-    --color-on-inverse: #0d0f12;
-    --color-on-inverse-2: #4a5058;
-    --color-accent-inverse: #08626a;
-    --color-scrim: rgb(0 0 0 / 0.55);
-    --color-on-accent-veil: rgb(2 20 18 / 0.1);
     --color-selection: rgb(63 213 200 / 0.24);
     --color-mark-a: #3fd5c8;
     --color-mark-b: #8cc8ff;
     --color-mark-station: #f2f3f5;
     --color-map-bg: #090e0e;
-    --color-map-plane-1: #0c1817;
-    --color-map-plane-2: #0e1518;
-    --color-map-dot: rgb(255 255 255 / 0.06);
-    --color-map-casing: #141619;
-    --color-map-shadow: rgb(0 0 0 / 0.55);
-    --color-map-pin: #141619;
-    --color-map-pin-ring: #3fd5c8;
-    --color-map-label: #f2f3f5;
-    --color-map-halo: #090e0e;
-    --color-map-walk: #f2f3f5;
     --shadow-1: 0 1px 2px rgb(0 0 0 / 0.4);
     --shadow-2: 0 1px 2px rgb(0 0 0 / 0.4), 0 16px 40px -12px rgb(0 0 0 / 0.6);
     --shadow-3: 0 2px 4px rgb(0 0 0 / 0.4), 0 28px 64px -16px rgb(0 0 0 / 0.72);
@@ -307,11 +187,6 @@
       inset 0 1px 0 rgb(255 255 255 / 0.35), 0 0 0 1px rgb(63 213 200 / 0.5),
       0 8px 28px -6px rgb(63 213 200 / 0.55);
     --shadow-rim: inset 0 1px 0 rgb(255 255 255 / 0.07), inset 0 0 0 1px rgb(255 255 255 / 0.035);
-    --shadow-toast: 0 1px 2px rgb(0 0 0 / 0.3), 0 18px 40px -12px rgb(0 0 0 / 0.65);
-    --shadow-ticket: drop-shadow(0 1px 1px rgb(0 0 0 / 0.5))
-      drop-shadow(0 16px 32px rgb(0 0 0 / 0.55));
-    --shadow-tab-active:
-      inset 0 1px 0 rgb(255 255 255 / 0.35), 0 6px 16px -6px rgb(63 213 200 / 0.6);
   }
 }
 /* Reduced transparency: glass becomes solid, no backdrop blur. Last in the file, and one selector for every theme

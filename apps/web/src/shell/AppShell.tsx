@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState } from 
 import type { PointerEvent, ReactElement, ReactNode } from "react";
 
 import { ThemeToggle } from "../theme/ThemeToggle";
+import { Brand } from "./Brand";
 import { shellCopy } from "./copy";
 import {
   DRAG_THRESHOLD_PX,
@@ -36,7 +37,7 @@ interface AppShellProps {
   readonly children: ReactNode;
   /** Accessible name of the `main` landmark (the screen name). */
   readonly label?: string;
-  /** Logo slot at the start of the header. */
+  /** Replaces the default logo and Home link at the start of the header. */
   readonly brand?: ReactNode;
   /** Slot before the theme button, for the search / command-palette trigger. */
   readonly actions?: ReactNode;
@@ -71,12 +72,12 @@ export function AppShell({
 
   return (
     <SheetContext value={sheet}>
-      <div className="app" data-snap={snap} ref={app}>
+      <div className={nav === undefined ? "app app--plain" : "app"} data-snap={snap} ref={app}>
         <div className="app__map">
           {map === undefined ? null : <div className="app__map-frame">{map}</div>}
         </div>
         <header className="app-header">
-          {brand}
+          {brand ?? <Brand />}
           <span className="app-header__spacer" />
           {actions}
           <ThemeToggle />
@@ -88,7 +89,13 @@ export function AppShell({
           ref={panel}
           {...(label === undefined ? {} : { "aria-label": label })}
         >
-          <PanelHandle snap={snap} setSnap={setSnap} app={app} panel={panel} />
+          <PanelHandle
+            snap={snap}
+            setSnap={setSnap}
+            app={app}
+            panel={panel}
+            hasNav={nav !== undefined}
+          />
           {/* Slice-agnostic rule: keyboard focus entering the content of a peeking sheet opens it to half, so a
               keyboard user never sits in a clipped control. Typing, a result, "show on map" and the like are
               slice rules (METRO-15) that call `useSheet().setSnap`. */}
@@ -115,6 +122,8 @@ interface HandleProps {
   readonly setSnap: (snap: Snap) => void;
   readonly app: { readonly current: HTMLElement | null };
   readonly panel: { readonly current: HTMLElement | null };
+  /** A section nav is drawn, so the sheet leaves room for the tab bar under it. */
+  readonly hasNav: boolean;
 }
 
 /** A ref to an element of this shell; handlers only run while it is mounted. */
@@ -147,7 +156,7 @@ interface Drag {
  * ArrowDown on the grip, or the two text buttons that show on focus, change the snap without a pointer.
  * Each snap change is announced politely through the status text.
  */
-function PanelHandle({ snap, setSnap, app, panel }: HandleProps): ReactElement {
+function PanelHandle({ snap, setSnap, app, panel, hasNav }: HandleProps): ReactElement {
   const drag = useRef<Drag | null>(null);
   /** A drag ends with a click on the grip; it must not also cycle the snap. */
   const dragged = useRef(false);
@@ -168,7 +177,7 @@ function PanelHandle({ snap, setSnap, app, panel }: HandleProps): ReactElement {
     clearDrag(mounted(app), mounted(panel));
     if (current.moved) {
       dragged.current = true;
-      if (commit) setSnap(nearestSnap(current.height, window.innerHeight));
+      if (commit) setSnap(nearestSnap(current.height, window.innerHeight, hasNav));
     }
   }
 
@@ -196,7 +205,7 @@ function PanelHandle({ snap, setSnap, app, panel }: HandleProps): ReactElement {
       current.moved = true;
       mounted(panel).setAttribute("data-dragging", "");
     }
-    current.height = clampHeight(current.startHeight + delta, window.innerHeight);
+    current.height = clampHeight(current.startHeight + delta, window.innerHeight, hasNav);
     mounted(app).style.setProperty("--sheet-h", `${current.height}px`);
   }
 

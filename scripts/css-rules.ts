@@ -110,7 +110,7 @@ function namedColours(file: string, css: string): Finding[] {
 /** Rules for one stylesheet. `tokens.css` is where colour literals live, so it is exempt from them. */
 export function checkStylesheet(file: string, text: string): Finding[] {
   const css = colourText(text);
-  if (file.endsWith("/tokens.css")) return [];
+  if (/\/styles\/tokens(?:-[a-z]+)?\.css$/u.test(file)) return [];
   return [
     ...scan(file, css, [
       ["colour-literal", COLOUR_FUNCTION],

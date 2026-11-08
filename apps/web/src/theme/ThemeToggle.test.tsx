@@ -52,6 +52,52 @@ test("METRO-105 each press cycles System, Light, Dark, System, saving and applyi
   expect(screen.getByRole("button", { name: "Theme: System. Switch to Light" })).toBeTruthy();
 });
 
+test("METRO-105 where View Transitions exist the change runs inside one, loaded on first use", async () => {
+  const animate = vi.fn();
+  Reflect.set(document.documentElement, "animate", animate);
+  const startViewTransition = vi.fn((update: () => void) => {
+    update();
+    return { ready: Promise.resolve(), finished: Promise.resolve() };
+  });
+  Object.defineProperty(document, "startViewTransition", {
+    configurable: true,
+    value: startViewTransition,
+  });
+  try {
+    render(<ThemeToggle />);
+    fireEvent.click(screen.getByRole("button", { name: "Theme: System. Switch to Light" }));
+    await vi.waitFor(() => {
+      expect(screen.getByRole("button", { name: "Theme: Light. Switch to Dark" })).toBeTruthy();
+    });
+    expect(startViewTransition).toHaveBeenCalledTimes(1);
+    expect(animate).toHaveBeenCalledTimes(1);
+    expect(document.documentElement.getAttribute("data-theme")).toBe("light");
+    expect(localStorage.getItem(THEME_KEY)).toBe("light");
+  } finally {
+    Reflect.deleteProperty(document, "startViewTransition");
+    Reflect.deleteProperty(document.documentElement, "animate");
+  }
+});
+
+test("METRO-105 under reduced motion the change is immediate even where View Transitions exist", async () => {
+  vi.stubGlobal("matchMedia", () => ({ matches: true }));
+  const startViewTransition = vi.fn();
+  Object.defineProperty(document, "startViewTransition", {
+    configurable: true,
+    value: startViewTransition,
+  });
+  try {
+    render(<ThemeToggle />);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Theme: System. Switch to Light" }));
+    });
+    expect(document.documentElement.getAttribute("data-theme")).toBe("light");
+    expect(startViewTransition).not.toHaveBeenCalled();
+  } finally {
+    Reflect.deleteProperty(document, "startViewTransition");
+  }
+});
+
 test("METRO-105 the icon is decorative and the button has no inline style", () => {
   const { container } = render(<ThemeToggle />);
   expect(container.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");

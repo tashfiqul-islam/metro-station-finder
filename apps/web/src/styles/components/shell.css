@@ -18,7 +18,11 @@
   top: 104px;
   right: 64px;
   left: 12px;
-  bottom: calc(var(--sheet-h) + 92px);
+  bottom: calc(var(--sheet-h) + var(--sheet-reserve) + 8px);
+}
+/* No section nav drawn (no router yet): nothing sits under the sheet, so it keeps only the side gap. */
+.app--plain {
+  --sheet-reserve: var(--space-2);
 }
 @media (min-width: 768px) {
   .app__map-frame {
@@ -112,7 +116,7 @@
   z-index: var(--z-sheet);
   left: var(--space-2);
   right: var(--space-2);
-  bottom: calc(var(--tabbar-h) + 20px + env(safe-area-inset-bottom));
+  bottom: calc(var(--sheet-reserve) + env(safe-area-inset-bottom));
   height: var(--sheet-h);
   display: flex;
   flex-direction: column;
@@ -134,7 +138,7 @@
   --sheet-h: var(--sheet-half);
 }
 .app[data-snap="full"] {
-  --sheet-h: var(--sheet-full);
+  --sheet-h: calc(100dvh - var(--sheet-top) - var(--sheet-reserve) - env(safe-area-inset-bottom));
 }
 .panel[data-dragging] {
   transition: none;

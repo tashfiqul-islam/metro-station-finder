@@ -320,6 +320,80 @@ test.describe("user preferences", () => {
     });
   }
 
+  for (const [width, height, wide] of [
+    [390, 844, false],
+    [1280, 800, true],
+  ] as const) {
+    test(`METRO-105 the header shows the mark and wordmark as the one Home link at ${width} px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height });
+      await open(page);
+      const home = page
+        .getByRole("banner")
+        .getByRole("link", { name: "Metro Station Finder, home" });
+      await expect(home).toHaveCount(1);
+      await expect(home).toBeVisible();
+      expect(await home.getAttribute("href")).toBe("/");
+      expect((await home.boundingBox())?.height).toBe(44);
+      const mark = await home.locator("svg.mark").boundingBox();
+      expect(Math.round(mark?.width ?? 0)).toBe(24);
+      await expect(home.locator(".brand__name-a")).toBeVisible();
+      // The full name shows from 768 px; on phones only "Metro" (the link's name always holds the full name).
+      if (wide) await expect(home.locator(".brand__name-b")).toBeVisible();
+      else await expect(home.locator(".brand__name-b")).toBeHidden();
+      expect(await page.evaluate(() => document.querySelectorAll("a[href='/']").length)).toBe(1);
+    });
+  }
+
+  for (const theme of ["light", "dark"] as const) {
+    test(`METRO-105 the header brand passes axe and keeps its accessible name in ${theme}`, async ({
+      page,
+    }) => {
+      await open(page, theme);
+      const results = await axeBuilder(page).include("header").analyze();
+      expect(results.violations.map((violation) => violation.id)).toEqual([]);
+      await expect(page.getByRole("link", { name: "Metro Station Finder, home" })).toBeVisible();
+    });
+  }
+
+  test("METRO-105 the mark animates on load with the handoff timings", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await open(page);
+    const timing = (selector: string) =>
+      page
+        .locator(selector)
+        .first()
+        .evaluate((node) => {
+          const style = getComputedStyle(node);
+          return [style.animationName, style.animationDuration, style.animationDelay];
+        });
+    expect(await timing(".mark-anim-line")).toEqual(["mark-draw", "0.56s", "0.12s"]);
+    expect(await timing(".mark-anim-station")).toEqual(["mark-pop", "0.44s", "0.42s"]);
+    expect(await timing(".mark-anim-ping")).toEqual(["mark-ping-in", "0.56s", "0.68s"]);
+  });
+
+  test("METRO-105 under reduced motion the mark is still, fully drawn", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await open(page);
+    for (const selector of [".mark-anim-line", ".mark-anim-station", ".mark-anim-ping"]) {
+      const style = await page
+        .locator(selector)
+        .first()
+        .evaluate((node) => {
+          const computed = getComputedStyle(node);
+          return {
+            name: computed.animationName,
+            opacity: computed.opacity,
+            dashoffset: computed.strokeDashoffset,
+          };
+        });
+      expect(style.name, selector).toBe("none");
+      expect(style.opacity, selector).toBe("1");
+      if (selector === ".mark-anim-line") expect(style.dashoffset).toBe("0px");
+    }
+  });
+
   test("METRO-105 at 1280 px the panel is a sidebar and the sheet handle is not in the page", async ({
     page,
   }) => {
@@ -333,6 +407,31 @@ test.describe("user preferences", () => {
 
   test.describe("below 768 px", () => {
     test.use({ viewport: { width: 390, height: 844 }, hasTouch: true });
+
+    test("METRO-105 with no section nav the sheet sits at the bottom edge; a drawn nav reserves its room", async ({
+      page,
+    }) => {
+      await open(page);
+      const bottomEdge = async (): Promise<number> => {
+        const box = await page.locator(".panel").boundingBox();
+        return Math.round((box?.y ?? 0) + (box?.height ?? 0));
+      };
+      // No safe-area inset in this emulation: the sheet keeps only the 8 px side gap under it.
+      expect(await bottomEdge()).toBe(844 - 8);
+      await expect(page.locator(".app")).toHaveClass("app app--plain");
+      // What AppShell does when a SectionNav is rendered: the class is absent and the 84 px is reserved.
+      await page.locator(".app").evaluate((node) => node.classList.remove("app--plain"));
+      await expect.poll(bottomEdge).toBe(844 - 84);
+      // Full height keeps the top edge 64 px below the screen top in both cases.
+      await page.locator(".app").evaluate((node) => node.setAttribute("data-snap", "full"));
+      await expect
+        .poll(async () => Math.round((await page.locator(".panel").boundingBox())?.y ?? 0))
+        .toBe(64);
+      await page.locator(".app").evaluate((node) => node.classList.add("app--plain"));
+      await expect
+        .poll(async () => Math.round((await page.locator(".panel").boundingBox())?.y ?? 0))
+        .toBe(64);
+    });
 
     test("METRO-105 the sheet is a bottom sheet at half height with a 44 px handle row", async ({
       page,

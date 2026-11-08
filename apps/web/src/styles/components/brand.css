@@ -1,4 +1,4 @@
-/* brand.css: Header brand slot and the logo mark with its intro animation. Import from the logo component. Colours only via var(--…). Breakpoint 768px. */
+/* brand.css: Header brand slot and the logo mark with its intro animation. Imported by the `Brand` component. Colours only via var(--…). Breakpoint 768px. */
 
 .brand {
   display: flex;
@@ -104,11 +104,6 @@
   transform-origin: 12px 12px;
   animation: mark-ping-in 560ms var(--ease-out) 680ms both;
 }
-.mark--searching .mark__ping {
-  transform-box: view-box;
-  transform-origin: 12px 12px;
-  animation: mark-ping-loop 1800ms cubic-bezier(0.2, 0.7, 0.3, 1) infinite;
-}
 @keyframes mark-draw {
   to {
     stroke-dashoffset: 0;
@@ -134,31 +129,13 @@
     opacity: 1;
   }
 }
-@keyframes mark-ping-loop {
-  0% {
-    transform: scale(0.55);
-    opacity: 0;
-  }
-  25% {
-    opacity: 1;
-  }
-  65% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(1.28);
-    opacity: 0;
-  }
-}
 @media (prefers-reduced-motion: reduce) {
   .mark-anim-line {
     stroke-dashoffset: 0;
     animation: none;
   }
   .mark-anim-station,
-  .mark-anim-ping,
-  .mark--searching .mark__ping {
+  .mark-anim-ping {
     animation: none;
     opacity: 1;
     transform: none;

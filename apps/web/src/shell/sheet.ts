@@ -2,10 +2,15 @@
 const SNAPS = ["peek", "half", "full"] as const;
 export type Snap = (typeof SNAPS)[number];
 
-/** CSS values: `--sheet-peek` 196px, `--sheet-half` 58dvh, `--sheet-full` 100dvh - 148px - safe-area-bottom. */
+/**
+ * CSS values: `--sheet-peek` 196px, `--sheet-half` 58dvh, and full = 100dvh - `--sheet-top` (64px) -
+ * `--sheet-reserve` - safe-area-bottom. The reserve is the tab bar and its gap (84px) when a section nav is
+ * drawn and the 8px side gap when it is not, so the full-height inset is 148px with a nav and 72px without.
+ */
 const PEEK_PX = 196;
 const HALF_RATIO = 0.58;
-const FULL_INSET_PX = 148;
+const FULL_INSET_WITH_NAV_PX = 64 + 84;
+const FULL_INSET_PLAIN_PX = 64 + 8;
 /** Lowest height a drag may reach. */
 const MIN_PX = 120;
 /** Movement beyond this (px) turns a press on the grip into a drag; less is a tap. */
@@ -16,21 +21,22 @@ export const DRAG_THRESHOLD_PX = 4;
  * known here, so `full` can be up to the inset (about 34 px on an iPhone) too tall until release, when the
  * CSS `data-snap` value takes over exactly.
  */
-export function snapHeights(viewportHeight: number): Record<Snap, number> {
+export function snapHeights(viewportHeight: number, hasNav = true): Record<Snap, number> {
+  const inset = hasNav ? FULL_INSET_WITH_NAV_PX : FULL_INSET_PLAIN_PX;
   return {
     peek: PEEK_PX,
     half: Math.round(viewportHeight * HALF_RATIO),
-    full: Math.max(PEEK_PX, viewportHeight - FULL_INSET_PX),
+    full: Math.max(PEEK_PX, viewportHeight - inset),
   };
 }
 
-export function clampHeight(height: number, viewportHeight: number): number {
-  return Math.min(Math.max(height, MIN_PX), snapHeights(viewportHeight).full);
+export function clampHeight(height: number, viewportHeight: number, hasNav = true): number {
+  return Math.min(Math.max(height, MIN_PX), snapHeights(viewportHeight, hasNav).full);
 }
 
 /** The snap whose height is closest to `height`. */
-export function nearestSnap(height: number, viewportHeight: number): Snap {
-  const heights = snapHeights(viewportHeight);
+export function nearestSnap(height: number, viewportHeight: number, hasNav = true): Snap {
+  const heights = snapHeights(viewportHeight, hasNav);
   let best: Snap = "peek";
   for (const snap of SNAPS) {
     if (Math.abs(heights[snap] - height) < Math.abs(heights[best] - height)) best = snap;

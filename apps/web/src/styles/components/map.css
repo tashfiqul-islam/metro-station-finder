@@ -1,5 +1,7 @@
 /* map.css: Schematic SVG map. Colours only via var(--…). Breakpoint 768px. */
 
+@import "../tokens-map.css";
+
 /* ════════════ Map (schematic SVG) ════════════ */
 .map {
   display: block;

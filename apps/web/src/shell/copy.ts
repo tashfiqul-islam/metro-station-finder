@@ -3,6 +3,8 @@ import type { Snap } from "./sheet";
 
 /** All fixed text of the layout shell (English only). Slices keep their own copy in their feature `copy.ts`. */
 export const shellCopy = {
+  home: "Metro Station Finder, home",
+  brandName: ["Metro", "Station Finder"] as const,
   navLabel: "Sections",
   toastRegion: "Notifications",
   themeName: { system: "System", light: "Light", dark: "Dark" } as const satisfies Record<

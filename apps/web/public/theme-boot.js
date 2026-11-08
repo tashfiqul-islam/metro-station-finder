@@ -1,5 +1,4 @@
-// Applies the saved theme before first paint (classic same-origin script in <head>; ADR-0021).
-// Key = THEME_KEY in src/theme/theme.ts. light/dark set data-theme; anything else removes it.
+// Applies the saved theme before first paint (ADR-0021); key = THEME_KEY in src/theme/theme.ts.
 (() => {
   const root = document.documentElement;
   try {

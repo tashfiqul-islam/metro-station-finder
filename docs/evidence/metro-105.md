@@ -4,21 +4,25 @@ Date: 2026-11-08. Base: `b3d748e` (`feature/metro-rebuild`, merge of METRO-104).
 
 ## First-visit budget (Repo-verified, `bun run build` then `bun run bundle:check`)
 
-| Build                                                    | First visit raw / gzip | Limit            | Headroom            |
-| -------------------------------------------------------- | ---------------------- | ---------------- | ------------------- |
-| Base (METRO-104)                                         | 242,839 / 77,186       | 250,000 / 80,000 | 7,161 / 2,814       |
-| Foundation, slice in the entry (tried, not shipped)      | 277,620 / 86,488       | 250,000 / 80,000 | over 27,620 / 6,488 |
-| Foundation, slice lazy (shipped, after the review fixes) | 248,950 / 77,721       | 250,000 / 80,000 | 1,050 / 2,279       |
+| Build                                                        | First visit raw / gzip | Limit            | Headroom            |
+| ------------------------------------------------------------ | ---------------------- | ---------------- | ------------------- |
+| Base (METRO-104)                                             | 242,839 / 77,186       | 250,000 / 80,000 | 7,161 / 2,814       |
+| Foundation, slice in the entry (tried, not shipped)          | 277,620 / 86,488       | 250,000 / 80,000 | over 27,620 / 6,488 |
+| Foundation, slice lazy, before the review fixes              | 248,109 / 77,397       | 250,000 / 80,000 | 1,891 / 2,603       |
+| After the review fixes (drag, focus, status text)            | 248,950 / 77,721       | 250,000 / 80,000 | 1,050 / 2,279       |
+| With the header brand, tokens and reveal moved out (shipped) | 249,088 / 77,906       | 250,000 / 80,000 | 912 / 2,094         |
 
-Files of the shipped build (raw / gzip): entry JS 232,786 / 73,199 (React, shell, theme code, 3 icons); entry CSS 15,668 / 4,219 (fonts, tokens, base, shell); `theme-boot.js` 496 / 303 (counted as first-visit by `scripts/bundle-budget.ts`); lazy: slice JS 11,428 / 4,490, slice CSS 11,306 / 2,514 (common, nearest-station), Maps adapter 5,137 / 2,601 (5,183 in the smoke build, which compiles in a fake key), core 3,428 / 1,592, web-vitals 7,962 / 3,058. All files 288,211 / 91,976 against the 400,000 / 125,000 ceiling. No limit was changed. The handoff `components.css` (67,780 bytes source) is split into 12 files; the entry loads one of them (`shell.css`).
+Files of the shipped build (raw / gzip): entry JS 234,545 / 73,678 (React, shell, brand, theme code, 3 icons); entry CSS 14,141 / 3,975 (fonts, tokens, base, shell, brand); `theme-boot.js` 402 / 253 (counted as first-visit by `scripts/bundle-budget.ts`); lazy: slice JS 11,428 / 4,491, slice CSS 13,473 / 3,144 (common with the notice, toast and inverse tokens, the mono font face, nearest-station), Maps adapter 5,137 / 2,601, core 3,428 / 1,595, theme reveal 656 / 431, web-vitals 7,962 / 3,058. All files 292,063 / 93,398 against the 400,000 / 125,000 ceiling. No limit was changed. The handoff `components.css` (67,780 bytes source) is split into 13 files; the entry loads two of them (`shell.css`, `brand.css`).
 
-The 277,620 / 86,488 row is a separate build with the slice imported statically; it is not the sum of the shipped files. It is lower than the shipped all-files sum (288,211) because a lazy split adds chunk and preload-helper overhead and a second copy of shared helpers. It is the figure that shows the slice does not fit in the entry. Before the review fixes the shipped first visit was 248,109 / 77,397 (headroom 1,891 / 2,603); the drag, focus and status changes to the shell added 841 raw bytes.
+Adding the header brand cost 4,671 raw bytes against 1,050 of headroom (the first build was 253,621, over the budget). Room came from moving what the first view does not paint out of the entry, not from a limit: the notice, toast, inverse and map colours (`tokens-parts.css`, `tokens-map.css`; 2,535 raw bytes of entry CSS), the JetBrains Mono font face and four gallery-only tokens (463), the ticket, tab, toast-shadow, scrim, thumb and veil values (891), the View Transitions reveal (676 of entry JS, now a lazy chunk of 656), and the comment in `theme-boot.js` (94). Setting the mark as a constant SVG string instead of JSX saved nothing measurable.
 
-What the gate does not count: the Hanken Grotesk file (34,704 bytes, preloaded, fetched on every first visit) and the lazy chunks a visit loads right after the entry (slice JS, slice CSS, adapter and core, 31,299 bytes raw in this build). Levers if the 1,050 raw bytes run out: drop the duplicated OS-dark token block (about 2.5 KB raw, changes what System means; needs a decision), then unused tokens.
+The 277,620 / 86,488 row is a separate build with the slice imported statically; it is not the sum of the shipped files. It is lower than the shipped all-files sum (292,063) because a lazy split adds chunk and preload-helper overhead and a second copy of shared helpers. It is the figure that shows the slice does not fit in the entry.
+
+What the gate does not count: the Hanken Grotesk file (34,704 bytes, preloaded, fetched on every first visit) and the lazy chunks a visit loads right after the entry (slice JS, slice CSS, adapter, core and, on the first theme press, the reveal: 34,122 raw bytes in this build). Levers if the 912 raw bytes run out: drop the duplicated OS-dark token block (about 2.5 KB raw, changes what System means; needs a decision), then more first-view-only token splitting.
 
 ## Lab web vitals (Repo-verified, `e2e/web-vitals-lab.e2e.ts`, Chromium, three runs)
 
-LCP 416 and 412 ms standalone (392 to 428 ms before the review fixes) and 560 ms inside the four-browser run on ten workers (limit 2,500); CLS 0.0004 in each run (limit 0.1). The LCP control (main script delayed 3 s) measured 3,380 to 3,412 ms and the CLS control 0.1324, both reported as failures as intended. Base (METRO-104) is recorded in [METRO-104 evidence](metro-104.md). Real-user LCP with the lazy slice is Unverified.
+With the header brand: LCP 416 and 412 ms standalone and 848 ms inside the four-browser run on ten workers (limit 2,500); CLS 0.0000 to 0.0004 (limit 0.1). Before the brand it was 392 to 428 ms standalone. The LCP control (main script delayed 3 s) measured 3,380 to 3,412 ms and the CLS control 0.1324, both reported as failures as intended. Base (METRO-104) is recorded in [METRO-104 evidence](metro-104.md). Real-user LCP with the lazy slice is Unverified.
 
 ## Fonts (Repo-verified)
 
@@ -32,13 +36,15 @@ The 53 pairs of the handoff table, in light and dark, are computed from `tokens.
 
 - `mise install --locked`, `mise exec -- bun run bootstrap`, `mise exec -- hk install --mise` (with an empty `MISE_GLOBAL_CONFIG_FILE`): passed.
 - `bun run format`, `bun run lint`, `bun run typecheck`, `bun run unused`, `bun run imports:check`: passed.
-- `bun test --parallel=4`: 1,359 tests passed, per-file 100 percent lines and functions.
-- `bun run test:vitest`: 233 tests passed, per-file thresholds met.
+- `bun test --parallel=4`: 1,362 tests passed, per-file 100 percent lines and functions.
+- `bun run test:vitest`: 240 tests passed, per-file thresholds met.
 - `bun run build`, `bun run bundle:check`, `bun run smoke` (Chromium): passed; the new journeys are `e2e/design-foundation.e2e.ts`.
-- `CI=true bun run smoke` (Chromium, Firefox, WebKit, Pixel 7 Chromium): 278 passed, 19 skipped (browser-specific skips), after the review fixes. One earlier run had a transient Chromium `net::ERR_NO_BUFFER_SPACE` console error in one nearest-station test under 10 parallel workers on Windows; it did not repeat in two later full runs. A Firefox-only failure of the keyboard test led to `tabindex="-1"` on the panel scroller (Firefox made it a Tab stop once the result made it scrollable).
+- `CI=true bun run smoke` (Chromium, Firefox, WebKit, Pixel 7 Chromium): 306 passed, 19 skipped (browser-specific skips), with the header brand and the sheet room. One earlier run had a transient Chromium `net::ERR_NO_BUFFER_SPACE` console error in one nearest-station test under 10 parallel workers on Windows; it did not repeat in two later full runs. A Firefox-only failure of the keyboard test led to `tabindex="-1"` on the panel scroller (Firefox made it a Tab stop once the result made it scrollable).
 - Not run here: the hosted `Quality gates`; the owner's view of light and dark at 390 and 1280 px.
 
 ## Limits and what was not verified
+
+- Open decision (owner deferred it to METRO-15): when Places search is unavailable the "Search for a place" label and hint show with no field under them. Either hide the label and hint, or show a disabled field.
 
 - Reduced transparency: Playwright 1.64.1 cannot emulate it, so Chromium is driven through DevTools `Emulation.setEmulatedMedia` in four cases (OS dark, OS light, saved dark under OS light, saved light under OS dark); in Chromium a build that does not report the preference fails the test, and the other browsers skip. The first version of the override (a bare `:root`) lost to the dark selectors; with it restored in the test run the two dark cases failed, and the shipped override names all three theme selectors. `scripts/design-contrast.test.ts` also asserts the three selectors, that the rule is last in the file, and that every pair passes with the glass solid.
 - Forced colours: Chromium emulation only; WebKit is skipped.

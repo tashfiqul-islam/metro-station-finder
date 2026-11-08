@@ -54,3 +54,14 @@ test("METRO-105 ArrowUp enlarges, ArrowDown shrinks, other keys do nothing", () 
   expect(keySnap("Enter", "half")).toBeNull();
   expect(keySnap("ArrowLeft", "half")).toBeNull();
 });
+
+test("METRO-105 without a section nav the full sheet is taller by the reserve of the bar", () => {
+  expect(snapHeights(844, true).full).toBe(696);
+  expect(snapHeights(844, false).full).toBe(772);
+  expect(snapHeights(844, false).half).toBe(490);
+  expect(clampHeight(5000, 844, false)).toBe(772);
+  expect(clampHeight(5000, 844, true)).toBe(696);
+  expect(nearestSnap(750, 844, false)).toBe("full");
+  expect(nearestSnap(630, 844, false)).toBe("half");
+  expect(nearestSnap(630, 844, true)).toBe("full");
+});

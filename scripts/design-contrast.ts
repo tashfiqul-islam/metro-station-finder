@@ -87,14 +87,33 @@ export interface ThemeTokens {
   readonly fallbackOverrides: Tokens;
 }
 
-export function extractTokens(css: string): ThemeTokens {
+/** The three theme blocks of one token file. */
+function extractOne(css: string): Omit<ThemeTokens, "dark"> {
   const light = declarations(ruleBody(css, ":root {"));
   const darkOverrides = declarations(ruleBody(css, ':root[data-theme="dark"]'));
   const media = ruleBody(css, "@media (prefers-color-scheme: dark)");
   const fallbackOverrides = declarations(
     media === null ? null : ruleBody(media, ":root:not([data-theme])"),
   );
-  return { light, dark: { ...light, ...darkOverrides }, darkOverrides, fallbackOverrides };
+  return { light, darkOverrides, fallbackOverrides };
+}
+
+/**
+ * The tokens of one or more token files (`tokens.css` and the files that hold the feedback and map colours),
+ * merged: each file has the same three theme blocks.
+ */
+export function extractTokens(css: string, ...more: readonly string[]): ThemeTokens {
+  const parts = [css, ...more].map(extractOne);
+  const merge = (pick: (part: Omit<ThemeTokens, "dark">) => Tokens): Tokens =>
+    Object.fromEntries(parts.flatMap((part) => Object.entries(pick(part))));
+  const light = merge((part) => part.light);
+  const darkOverrides = merge((part) => part.darkOverrides);
+  return {
+    light,
+    dark: { ...light, ...darkOverrides },
+    darkOverrides,
+    fallbackOverrides: merge((part) => part.fallbackOverrides),
+  };
 }
 
 export interface ReducedTransparency {

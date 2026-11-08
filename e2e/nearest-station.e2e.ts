@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 
 import { expect, test } from "./fixtures";
-import { expectTabReachesEveryControl } from "./keyboard";
+import { expectTabReachesEveryControl, linksAreTabbable } from "./keyboard";
 import {
   MEASURED_GOOGLE_NAME,
   expectNoCoordinateInApi,
@@ -21,10 +21,14 @@ async function openSlice(page: Page, options: StubOptions = {}) {
   return stub;
 }
 
-/** Controls the layout shell adds before the slice: the theme button, and the sheet handle's three below 768 px. */
+/**
+ * Controls the layout shell adds before the slice: the Home link (where this browser Tabs to links), the theme
+ * button, and the sheet handle's three below 768 px.
+ */
 async function shellControls(page: Page): Promise<number> {
   const width = await page.evaluate(() => window.innerWidth);
-  return width < 768 ? 4 : 1;
+  const home = (await linksAreTabbable(page)) ? 1 : 0;
+  return home + (width < 768 ? 4 : 1);
 }
 
 async function searchFor(page: Page, text: string) {
@@ -235,7 +239,7 @@ test.describe("nearest station from a searched place (METRO-88)", () => {
       page.getByRole("textbox", { name: MEASURED_GOOGLE_NAME, exact: true }),
     ).toBeVisible();
     // Search input and the location button (the destination select appears with the first result), after the
-    // shell's controls: the theme button, plus the three sheet-handle controls where the sheet is drawn.
+    // shell's controls: the Home link, the theme button, plus the three sheet-handle controls where the sheet is drawn.
     const shell = await shellControls(page);
     await expectTabReachesEveryControl(page, { expected: shell + 2 });
     await searchFor(page, "motijheel");

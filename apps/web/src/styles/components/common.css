@@ -1,4 +1,7 @@
-/* common.css: Shared parts: type blocks, buttons, roundel, notice, empty state, status, skeleton, toast, lazy section. First-visit set. Colours only via var(--…). Breakpoint 768px. */
+/* common.css: Shared parts: type blocks, buttons, roundel, notice, empty state, status, skeleton, toast, lazy section. Loaded with the slice. Colours only via var(--…). Breakpoint 768px. */
+
+@import "../fonts-mono.css";
+@import "../tokens-parts.css";
 
 /* ════════════ Typography blocks ════════════ */
 .eyebrow {
@@ -459,7 +462,7 @@
   position: absolute;
   z-index: var(--z-toast);
   left: 50%;
-  bottom: calc(var(--sheet-h) + 104px);
+  bottom: calc(var(--sheet-h) + var(--sheet-reserve) + 20px);
   transform: translateX(-50%);
   width: max-content;
   max-width: calc(100% - 24px);

@@ -1,5 +1,7 @@
 /* palette.css: Command palette. Colours only via var(--…). Breakpoint 768px. */
 
+@import "../tokens-parts.css";
+
 /* ════════════ Command palette ════════════ */
 .palette {
   position: fixed;

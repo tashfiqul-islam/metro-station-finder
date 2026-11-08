@@ -1,0 +1,105 @@
+/* tokens-parts.css: colours and shadows that only lazily loaded parts use: notice, toast and inverse tones, scrim,
+   ticket and tab shadows, thumb, veil. Imported by the component files that use them (common, palette, nav, route,
+   line, nearby). Same three theme blocks as tokens.css (light, dark, OS dark). */
+:root {
+  --color-ok: #15803d;
+  --color-ok-fg: #ffffff;
+  --color-ok-ink: #116932;
+  --color-ok-soft: #eaf4ee;
+  --color-ok-line: #b9d9c5;
+  --color-warn: #a15f00;
+  --color-warn-fg: #ffffff;
+  --color-warn-ink: #8a5100;
+  --color-warn-soft: #f7f1e8;
+  --color-warn-line: #e3cfb3;
+  --color-bad: #c42b28;
+  --color-bad-fg: #ffffff;
+  --color-bad-ink: #a8201d;
+  --color-bad-soft: #faecec;
+  --color-bad-line: #edbfbf;
+  --color-info: #0b7a84;
+  --color-info-fg: #ffffff;
+  --color-info-ink: #075760;
+  --color-info-soft: #e9f3f4;
+  --color-info-line: #b6d7da;
+  --color-inverse: #0d0f12;
+  --color-on-inverse: #f2f3f5;
+  --color-on-inverse-2: #b8bdc3;
+  --color-accent-inverse: #3fd5c8;
+  --color-thumb: #ffffff;
+  --color-scrim: rgb(0 0 0 / 0.4);
+  --color-on-accent-veil: rgb(255 255 255 / 0.16);
+  --shadow-toast: 0 1px 2px rgb(0 0 0 / 0.18), 0 18px 40px -12px rgb(0 0 0 / 0.45);
+  --shadow-ticket: drop-shadow(0 1px 1px rgb(13 15 18 / 0.06))
+    drop-shadow(0 14px 24px rgb(13 15 18 / 0.1));
+  --shadow-tab-active: inset 0 1px 0 rgb(255 255 255 / 0.3), 0 6px 16px -6px rgb(11 122 132 / 0.7);
+}
+:root[data-theme="dark"] {
+  --color-ok: #4ade80;
+  --color-ok-fg: #04140d;
+  --color-ok-ink: #86efac;
+  --color-ok-soft: #1b3026;
+  --color-ok-line: #245238;
+  --color-warn: #f5b54a;
+  --color-warn-fg: #1f1300;
+  --color-warn-ink: #fcd38d;
+  --color-warn-soft: #312b1f;
+  --color-warn-line: #584628;
+  --color-bad: #ff7a6e;
+  --color-bad-fg: #2a0705;
+  --color-bad-ink: #ffb4ab;
+  --color-bad-soft: #332324;
+  --color-bad-line: #5b3433;
+  --color-info: #3fd5c8;
+  --color-info-fg: #021412;
+  --color-info-ink: #bdf3ee;
+  --color-info-soft: #1a2f30;
+  --color-info-line: #214f4e;
+  --color-inverse: #f2f3f5;
+  --color-on-inverse: #0d0f12;
+  --color-on-inverse-2: #4a5058;
+  --color-accent-inverse: #08626a;
+  --color-thumb: rgb(255 255 255 / 0.11);
+  --color-scrim: rgb(0 0 0 / 0.55);
+  --color-on-accent-veil: rgb(2 20 18 / 0.1);
+  --shadow-toast: 0 1px 2px rgb(0 0 0 / 0.3), 0 18px 40px -12px rgb(0 0 0 / 0.65);
+  --shadow-ticket: drop-shadow(0 1px 1px rgb(0 0 0 / 0.5))
+    drop-shadow(0 16px 32px rgb(0 0 0 / 0.55));
+  --shadow-tab-active: inset 0 1px 0 rgb(255 255 255 / 0.35), 0 6px 16px -6px rgb(63 213 200 / 0.6);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --color-ok: #4ade80;
+    --color-ok-fg: #04140d;
+    --color-ok-ink: #86efac;
+    --color-ok-soft: #1b3026;
+    --color-ok-line: #245238;
+    --color-warn: #f5b54a;
+    --color-warn-fg: #1f1300;
+    --color-warn-ink: #fcd38d;
+    --color-warn-soft: #312b1f;
+    --color-warn-line: #584628;
+    --color-bad: #ff7a6e;
+    --color-bad-fg: #2a0705;
+    --color-bad-ink: #ffb4ab;
+    --color-bad-soft: #332324;
+    --color-bad-line: #5b3433;
+    --color-info: #3fd5c8;
+    --color-info-fg: #021412;
+    --color-info-ink: #bdf3ee;
+    --color-info-soft: #1a2f30;
+    --color-info-line: #214f4e;
+    --color-inverse: #f2f3f5;
+    --color-on-inverse: #0d0f12;
+    --color-on-inverse-2: #4a5058;
+    --color-accent-inverse: #08626a;
+    --color-thumb: rgb(255 255 255 / 0.11);
+    --color-scrim: rgb(0 0 0 / 0.55);
+    --color-on-accent-veil: rgb(2 20 18 / 0.1);
+    --shadow-toast: 0 1px 2px rgb(0 0 0 / 0.3), 0 18px 40px -12px rgb(0 0 0 / 0.65);
+    --shadow-ticket: drop-shadow(0 1px 1px rgb(0 0 0 / 0.5))
+      drop-shadow(0 16px 32px rgb(0 0 0 / 0.55));
+    --shadow-tab-active:
+      inset 0 1px 0 rgb(255 255 255 / 0.35), 0 6px 16px -6px rgb(63 213 200 / 0.6);
+  }
+}
