@@ -41,15 +41,21 @@ test("METRO-24 the job is approval-gated and grants only contents: write", () =>
 test("METRO-24 the Plane key is set only on the draft step; inputs reach the script only through env", () => {
   const { steps } = draftJob();
   expect(workflow.match(/PLANE_API_KEY:/gu)).toHaveLength(1);
-  const [checkout = {}, tools = {}, draft = {}] = steps;
-  expect(steps).toHaveLength(3);
+  // METRO-99: checkout, two mise attempts with a pause between them, then the draft step.
+  const [checkout = {}, tools = {}, , retry = {}] = steps;
+  const draft = steps.at(-1) ?? {};
+  expect(steps).toHaveLength(5);
   expect(record(checkout["with"], "checkout.with")["persist-credentials"]).toBe(false);
-  expect(record(tools["with"], "tools.with")["cache"]).toBe(false);
+  for (const attempt of [tools, retry]) {
+    expect(record(attempt["with"], "tools.with")["cache"]).toBe(false);
+    expect(attempt["env"]).toBeUndefined();
+  }
   expect(draft["run"]).toBe("node scripts/release-draft.ts");
   expect(new Set(Object.keys(record(draft["env"], "draft.env")))).toEqual(
     new Set(["GITHUB_TOKEN", "PLANE_API_KEY", "PLANE_WORKSPACE", "RELEASE_TAG", "RELEASE_TARGET"]),
   );
   expect(workflow.split("\n").filter((line) => line.includes("run:"))).toEqual([
+    "        run: sleep 30",
     "        run: node scripts/release-draft.ts",
   ]);
   for (const step of steps)

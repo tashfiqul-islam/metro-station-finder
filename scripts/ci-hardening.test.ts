@@ -8,6 +8,7 @@ import {
   concurrencyViolations,
   conjunction,
   credentialedCacheViolations,
+  credentialedMiseRetryViolations,
   isCredentialed,
   PULL_REQUEST_EVENT_TERM,
   SAME_REPOSITORY_TERM,
@@ -297,4 +298,139 @@ test("METRO-59 the preview job and the cleanup job keep cancel-in-progress exact
   expect(find("preview-cleanup.yml").jobs["cleanup"]?.["concurrency"]).toMatchObject({
     "cancel-in-progress": false,
   });
+});
+
+// METRO-99: the METRO-97 retry rule holds for every credentialed job that installs mise, in every workflow.
+const RETRY_JOBS: readonly (readonly [string, string, number])[] = [
+  ["quality.yml", "preview", 3],
+  ["production-deploy.yml", "deploy", 3],
+  ["preview-cleanup.yml", "cleanup", 2],
+  ["cloudflare-token-check.yml", "check", 2],
+  ["release-sync.yml", "sync", 2],
+  ["release-draft.yml", "draft", 2],
+];
+
+function miseOf(steps: Record<string, unknown>[]) {
+  return steps.filter(
+    (step) => typeof step["uses"] === "string" && step["uses"].startsWith("jdx/mise-action"),
+  );
+}
+
+function stepList(workflow: ReturnType<typeof find>, id: string): Record<string, unknown>[] {
+  const steps = workflow.jobs[id]?.["steps"];
+  if (!Array.isArray(steps)) return [];
+  return (steps as unknown[]).filter(isRecord);
+}
+
+/** Applies `change` to a deep copy of one real workflow and returns the retry violations of that copy. */
+function mutated(file: string, id: string, change: (steps: Record<string, unknown>[]) => void) {
+  const copy = structuredClone(find(file));
+  const steps = stepList(copy, id);
+  change(steps);
+  const job = copy.jobs[id];
+  if (job !== undefined) job["steps"] = steps;
+  return credentialedMiseRetryViolations([copy]);
+}
+
+function pick(steps: Record<string, unknown>[], name: string): Record<string, unknown> {
+  const step = steps.find((candidate) => candidate["name"] === name);
+  if (step === undefined) throw new Error(name);
+  return step;
+}
+
+test("METRO-99 every credentialed job that installs mise is found, retried, cache-free and SHA pinned", () => {
+  const found: string[] = [];
+  for (const workflow of real)
+    for (const [id, job] of Object.entries(workflow.jobs))
+      if (isCredentialed(workflow, job) && miseOf(stepList(workflow, id)).length > 0)
+        found.push(`${workflow.file}/${id}`);
+  const expected = RETRY_JOBS.map(([file, id]) => `${file}/${id}`);
+  expect(found).toHaveLength(expected.length);
+  expect(new Set(found)).toEqual(new Set(expected));
+  expect(credentialedMiseRetryViolations(real)).toEqual([]);
+  expect(credentialedCacheViolations(real, readAction)).toEqual([]);
+  for (const [file, id, count] of RETRY_JOBS) {
+    const attempts = miseOf(stepList(find(file), id));
+    expect(attempts, `${file} ${id}`).toHaveLength(count);
+    for (const step of attempts) {
+      expect(String(step["uses"])).toMatch(/^jdx\/mise-action@[0-9a-f]{40}$/u);
+      expect(step["timeout-minutes"]).toBe(4);
+      expect(isRecord(step["with"]) ? step["with"]["cache"] : undefined).toBe(false);
+    }
+  }
+});
+
+test("METRO-99 each weakening of the chain is reported for every credentialed workflow", () => {
+  const first = "Install pinned tools with mise";
+  const second = "Install pinned tools with mise (second attempt)";
+  const wait = "Wait before the second tool install";
+  for (const [file, id, count] of RETRY_JOBS) {
+    const at = `${file} job ${id} step `;
+    const last = count === 3 ? "Install pinned tools with mise (third attempt)" : second;
+    const gate = `${at}${second}: must run only when steps.mise1.outcome == 'failure'`;
+    expect(
+      mutated(file, id, (s) => delete pick(s, first)["continue-on-error"]),
+      file,
+    ).toEqual([`${at}${first}: an earlier attempt must set continue-on-error: true`]);
+    expect(
+      mutated(file, id, (s) => (pick(s, last)["continue-on-error"] = true)),
+      file,
+    ).toEqual([`${at}${last}: the last attempt must not continue on error`]);
+    expect(
+      mutated(file, id, (s) => delete pick(s, second)["timeout-minutes"]),
+      file,
+    ).toEqual([`${at}${second}: needs timeout-minutes between 1 and 5`]);
+    expect(
+      mutated(file, id, (s) => (pick(s, second)["if"] = "${{ always() }}")),
+      file,
+    ).toEqual([gate]);
+    for (const extra of ["|| true", "&& always()"])
+      expect(
+        mutated(
+          file,
+          id,
+          (s) => (pick(s, second)["if"] = `\${{ steps.mise1.outcome == 'failure' ${extra} }}`),
+        ),
+        file,
+      ).toEqual([gate]);
+    expect(
+      mutated(file, id, (s) => (pick(s, wait)["run"] = "sleep 600")),
+      file,
+    ).toEqual([`${at}${second}: needs a "sleep N" step (N <= 120) directly before it`]);
+    expect(
+      mutated(file, id, (s) => (pick(s, first)["if"] = "${{ always() }}")),
+      file,
+    ).toEqual([`${file} job ${id}: the first mise attempt must not have an if`]);
+    expect(
+      mutated(file, id, (s) => (pick(s, second)["uses"] = "jdx/mise-action@v5")),
+      file,
+    ).toEqual([`${at}${second}: differs from the first attempt in uses or with`]);
+    expect(
+      mutated(file, id, (s) => {
+        for (let i = s.length - 1; i >= 0; i--) {
+          const name = String(s[i]?.["name"]);
+          if (name.startsWith("Wait before") || name.includes("attempt)")) s.splice(i, 1);
+        }
+        delete pick(s, first)["continue-on-error"];
+      }),
+      file,
+    ).toEqual([`${file} job ${id}: mise install has no retry attempt`]);
+  }
+});
+
+test("METRO-99 each credentialed job's timeout-minutes covers its retry budget", () => {
+  for (const [file, id, count] of RETRY_JOBS) {
+    const limit = find(file).jobs[id]?.["timeout-minutes"];
+    const chain = count * 4 * 60 + (count === 3 ? 90 : 30);
+    expect(typeof limit === "number" && limit * 60 > chain + 180, `${file} ${id}`).toBe(true);
+    for (const value of [Math.ceil((chain + 180) / 60) - 1, undefined]) {
+      const copy = structuredClone(find(file));
+      const target = copy.jobs[id] ?? {};
+      if (value === undefined) delete target["timeout-minutes"];
+      else target["timeout-minutes"] = value;
+      expect(credentialedMiseRetryViolations([copy]), `${file} ${id} ${String(value)}`).toEqual([
+        `${file} job ${id}: retry chain ${chain} s plus 180 s margin does not fit in timeout-minutes ${JSON.stringify(value) ?? "undefined"}`,
+      ]);
+    }
+  }
 });
