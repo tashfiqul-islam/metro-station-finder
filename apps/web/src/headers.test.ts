@@ -83,7 +83,14 @@ test("METRO-88 the CSP allows exactly the justified Google hosts and nothing bro
   expect(csp).toEqual({
     "default-src": ["'self'"],
     "script-src": ["'self'", "https://maps.googleapis.com", "https://maps.gstatic.com"],
-    "style-src": ["'self'"],
+    "style-src": [
+      "'self'",
+      "https://fonts.googleapis.com",
+      // The two inline styles the real widget applied in the first live run (METRO-96, ADR-0011 amendment).
+      "'sha256-6THUUcZnIM+50QUKRA2tjLYNFvBVYjT3//X9aTSTJWc='",
+      "'sha256-5wjeBWXQ+uhb+jIpjvGSs73Ok5HO26+ZJJAPeEXZDT8='",
+    ],
+    "font-src": ["'self'", "https://fonts.gstatic.com"],
     "img-src": ["'self'", "data:", "https://maps.gstatic.com", "https://maps.googleapis.com"],
     "connect-src": [
       "'self'",
@@ -102,6 +109,12 @@ test("METRO-88 the CSP allows exactly the justified Google hosts and nothing bro
     expect(text.split(" ")).not.toContain(banned);
   }
   expect(text).not.toContain("*.");
+  // Hashes are the only non-host sources allowed beyond 'self' and 'none' (no nonce, no unsafe-hashes).
+  const keywords = text.split(" ").filter((source) => source.startsWith("'"));
+  for (const keyword of keywords) {
+    expect(keyword).toMatch(/^'(?:self|none|sha256-[A-Za-z0-9+/]{43}=)'$/u);
+  }
+  expect(text).not.toContain("'unsafe-hashes'");
 });
 
 test("METRO-31 only hashed /assets/* is immutable; pages never set Cache-Control", () => {
