@@ -31,6 +31,7 @@ First cell is a path: a trailing `/` covers a directory, otherwise it is one fil
 | `docs/agents/github-settings.md`         | runbook   | owner-run GitHub security settings check and owner steps                    |
 | `docs/agents/maintenance-runbook.md`     | runbook   | token rotation, expiry alarm and the wrangler types re-test                 |
 | `docs/agents/maps-live-check-runbook.md` | runbook   | owner-run `smoke:live` against real Google, key restrictions and quota caps |
+| `docs/agents/uptime-runbook.md`          | runbook   | uptime probe setup, SLO and triage by x-request-id                          |
 | `docs/agents/skills.lock.json`           | data      | pinned skill hashes, checked by the preparation scripts and tests           |
 | `docs/adr/`                              | decision  | MADR, numbered `NNNN-title.md`; `0000-template.md` is the form              |
 | `docs/adr/0000-template.md`              | template  | the ADR form                                                                |

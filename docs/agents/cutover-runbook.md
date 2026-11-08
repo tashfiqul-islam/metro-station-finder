@@ -92,6 +92,8 @@ Then, in order:
    gh run list --repo $R --workflow cloudflare-token-check.yml --limit 1
    ```
 
+   The uptime probe schedule (`uptime-probe.yml`, every 30 minutes) is live from this switch too. Until the `PRODUCTION_URL` variable exists (deploy runbook section 5, before step 4.1) every scheduled run is Skipped and nothing watches production; this is expected, see the [uptime runbook](uptime-runbook.md). The gate is in the Soak section.
+
 3. Renovate: confirm the Dependency Dashboard issue appears and a first pull request targets `main` (if the Renovate app is installed; Unverified today).
 4. Check the repository's security settings page shows alerts for `main` (Dependabot alerts follow the default branch).
 5. Unpublish the legacy Pages site only after step 4.1 (production live) succeeded:
@@ -132,6 +134,14 @@ Then, in order:
 ## 5. Soak
 
 Keep `master` for at least 24 hours and until the first scheduled `cloudflare-token-check` run (Mondays 06:17 UTC) has succeeded on `main`; at most 14 days. Watch: Quality gates on `main`, production health, Renovate, the dashboard.
+
+Uptime gate, before the soak ends (the probe goes quiet, not red, if any part is missing):
+
+```powershell
+gh variable list --repo $R | Select-String PRODUCTION_URL                     # the variable is set
+gh workflow run uptime-probe.yml --repo $R --ref main                          # then watch it: it must finish green
+gh run list --repo $R --workflow uptime-probe.yml --event schedule --limit 1 --json conclusion,createdAt   # success, under 2 hours old, not skipped
+```
 
 ## 6. Delete master and retire the integration branch (separate owner go)
 
