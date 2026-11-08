@@ -103,13 +103,23 @@ export async function expectTabReachesEveryControl(
       }
     });
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+    // Put the sequential focus starting point at the top of the document, whatever was clicked or focused
+    // before (a focused control, or the map, leaves it elsewhere): focus a probe that is first in the DOM.
+    const probe = document.createElement("span");
+    probe.tabIndex = -1;
+    document.body.prepend(probe);
+    probe.focus();
+    probe.blur();
+    probe.remove();
   });
   for (let position = 0; position < count; position += 1) {
     await page.keyboard.press("Tab");
     const measure = () =>
       page.evaluate((keys): FocusReport | null => {
         const element = document.activeElement;
-        if (!(element instanceof HTMLElement) || !element.hasAttribute("data-tab-index")) {
+        // An SVG element can be a tab stop too (the line map, METRO-111); `tabIndex` and focus work the same.
+        const focusable = element instanceof HTMLElement || element instanceof SVGElement;
+        if (!focusable || !element.hasAttribute("data-tab-index")) {
           return null;
         }
         const rect = element.getBoundingClientRect();

@@ -52,8 +52,8 @@ interface AppShellProps {
 
 /**
  * The layout shell (METRO-105, ADR-0021): header, optional section nav, one `main` panel that is a bottom sheet
- * below 768 px and a sidebar above, a map slot and a toast region. DOM order is header, nav, main, which is
- * also the focus order. It holds mechanism only; screens and their copy belong to the slices.
+ * below 768 px and a sidebar above, a map slot and a toast region. DOM order is header, nav, main, then the map slot and the toast region,
+ * which is also the focus order. It holds mechanism only; screens and their copy belong to the slices.
  */
 export function AppShell({
   children,
@@ -73,9 +73,6 @@ export function AppShell({
   return (
     <SheetContext value={sheet}>
       <div className={nav === undefined ? "app app--plain" : "app"} data-snap={snap} ref={app}>
-        <div className="app__map">
-          {map === undefined ? null : <div className="app__map-frame">{map}</div>}
-        </div>
         <header className="app-header">
           {brand ?? <Brand />}
           <span className="app-header__spacer" />
@@ -109,6 +106,12 @@ export function AppShell({
             <div className="panel__body">{children}</div>
           </div>
         </main>
+        {/* After the panel in the DOM, so the focus order is header, nav, panel, map (handoff). The painted
+            stack does not depend on DOM order: the map is z-map (0), the panel z-sheet or z-panel, the header
+            z-header, so it stays behind them. */}
+        <div className="app__map">
+          {map === undefined ? null : <div className="app__map-frame">{map}</div>}
+        </div>
         <section className="toast-region" aria-label={shellCopy.toastRegion}>
           {toasts}
         </section>

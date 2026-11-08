@@ -23,11 +23,22 @@
 .map__dot {
   fill: var(--color-map-dot);
 }
+.line-map {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
 .map__shadow {
   stroke: var(--color-map-shadow);
 }
 .map__casing {
   stroke: var(--color-map-casing);
+}
+.map__line {
+  stroke: url(#map-line);
+}
+.map__line--dim {
+  opacity: 0.35;
 }
 .map__stop-a {
   stop-color: var(--color-mark-a);
@@ -104,6 +115,10 @@
 }
 
 .map-controls {
+  /* A fieldset (the group landmark of its buttons): clear its default border, margin and min width. */
+  margin: 0;
+  min-inline-size: 0;
+  border: 0;
   position: absolute;
   z-index: calc(var(--z-panel) - 1);
   right: var(--space-3);
@@ -181,4 +196,19 @@
 }
 .map__pill--term + .map__pill-text {
   fill: var(--color-fg);
+}
+
+/* The controls sit in the shell's map frame, which is inset from the screen edge to leave them room
+   (shell.css: top 104px and right 64px on phones, top 84px and right 76px from 768px). These offsets put them where
+   the handoff draws them, relative to the screen. The coupling is deliberate (custom properties in shell.css would
+   cost entry bytes); e2e/line-map.e2e.ts measures the result and fails if shell.css moves the frame. */
+.line-map .map-controls {
+  top: -38px;
+  right: calc(var(--space-3) - 64px);
+}
+@media (min-width: 768px) {
+  .line-map .map-controls {
+    top: 0;
+    right: calc(var(--space-4) - 76px);
+  }
 }

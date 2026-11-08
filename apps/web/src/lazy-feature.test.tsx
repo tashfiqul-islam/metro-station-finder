@@ -83,6 +83,38 @@ test("METRO-104 while the chunk is pending a fixed polite status shows, then the
   expect(container.textContent).toBe("Loaded late");
 });
 
+test("METRO-111 a silent pending shows no status while loading, and a failure still shows the reload region", async () => {
+  const gate = { release: (_module: { default: typeof Feature }): void => {} };
+  const Lazy = lazyFeature(
+    () =>
+      new Promise<{ default: typeof Feature }>((resolve) => {
+        gate.release = resolve;
+      }),
+    undefined,
+    null,
+  );
+  await act(async () => {
+    root.render(<Lazy name="quiet" />);
+  });
+  expect(status()).toBeNull();
+  expect(container.textContent).toBe("");
+  await act(async () => {
+    gate.release({ default: Feature });
+  });
+  expect(container.textContent).toBe("Loaded quiet");
+
+  const SilentFailure = lazyFeature<{ name: string }>(
+    () => Promise.reject(new TypeError(LEAK)),
+    undefined,
+    null,
+  );
+  await act(async () => {
+    root.render(<SilentFailure name="x" />);
+  });
+  await settle();
+  expect(failure()?.textContent).toContain(lazyCopy.failed);
+});
+
 const LEAKS = ["example.test", "lat=", "23.81", "Failed to fetch"];
 
 test("METRO-104 a rejected import shows the fixed failure copy and never the error text", async () => {

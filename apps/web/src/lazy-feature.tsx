@@ -18,6 +18,8 @@ interface Props<P extends object> {
   readonly Feature: ComponentType<P>;
   readonly featureProps: P;
   readonly reload: Reload;
+  /** What shows while the chunk loads. */
+  readonly pending: ReactNode;
 }
 interface State {
   readonly failed: boolean;
@@ -79,9 +81,9 @@ class FeatureBoundary<P extends object> extends Component<Props<P>, State> {
         </section>
       );
     }
-    const { Feature, featureProps } = this.props;
+    const { Feature, featureProps, pending } = this.props;
     return (
-      <Suspense fallback={<Pending />}>
+      <Suspense fallback={pending}>
         <Feature {...featureProps} />
       </Suspense>
     );
@@ -93,11 +95,14 @@ class FeatureBoundary<P extends object> extends Component<Props<P>, State> {
  * component that loads its chunk on first render, shows the fixed pending status meanwhile, and shows the
  * fixed failure message with a Reload button when the chunk cannot be fetched. The chunk stays out of the
  * first-visit bundle budget because Vite lists a dynamic import under `dynamicImports`, not `imports`.
- * `reload` is injectable for tests.
+ * `reload` is injectable for tests. `pending` replaces the status text while loading: a feature that is not
+ * the page's main content (the line map beside the screen, METRO-111) passes `null` so one load does not
+ * announce two statuses; the failure region and its Reload button are the same either way.
  */
 export function lazyFeature<P extends object>(
   load: FeatureLoader<P>,
   reload: Reload = reloadPage,
+  pending: ReactNode = <Pending />,
 ): ComponentType<P> {
   const Feature = lazy(async () => {
     try {
@@ -109,6 +114,8 @@ export function lazyFeature<P extends object>(
     }
   });
   return function LazyFeature(props: P): ReactNode {
-    return <FeatureBoundary Feature={Feature} featureProps={props} reload={reload} />;
+    return (
+      <FeatureBoundary Feature={Feature} featureProps={props} reload={reload} pending={pending} />
+    );
   };
 }

@@ -351,3 +351,22 @@ test("METRO-105 a key press after a drag that ended off the grip is not swallowe
   fireEvent.click(grip()); // the click a keyboard Enter or Space produces
   expect(app(container).getAttribute("data-snap")).toBe("full");
 });
+
+test("METRO-111 the map slot comes after the panel in the DOM, so the header and panel are reached first", () => {
+  const { container } = render(
+    <AppShell map={<button type="button">map control</button>} toasts={<p>note</p>}>
+      <button type="button">panel control</button>
+    </AppShell>,
+  );
+  const order = [...container.querySelectorAll("header, main, .app__map, .toast-region")].map(
+    (node) => node.tagName.toLowerCase() + (node.className === "" ? "" : `.${node.className}`),
+  );
+  expect(order).toEqual([
+    "header.app-header",
+    "main.panel panel--plain",
+    "div.app__map",
+    "section.toast-region",
+  ]);
+  const buttons = [...container.querySelectorAll("button")].map((button) => button.textContent);
+  expect(buttons.indexOf("panel control")).toBeLessThan(buttons.indexOf("map control"));
+});
