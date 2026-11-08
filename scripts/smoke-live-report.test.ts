@@ -3,6 +3,7 @@ import {
   addTabStop,
   ciRefusal,
   cleanName,
+  focusIsIgnored,
   focusedEntry,
   liveReport,
   scrub,
@@ -603,5 +604,53 @@ test("a widget that cannot be resolved leaves the control unread: fixed FAIL, ne
   expect(pass).toBe(false);
   expect(lines).toContain(
     "Failed check: could not read inside the widget (Unverified whether its closed shadow root hides it)",
+  );
+});
+
+test("the widget search is quick on a very wide tree and still finds the widget", () => {
+  const siblings = Array.from({ length: 50_000 }, (_, index) => ({
+    nodeName: "DIV",
+    backendNodeId: 1000 + index,
+  }));
+  const wide = {
+    nodeName: "#document",
+    children: [
+      ...siblings,
+      { nodeName: "GMP-PLACE-AUTOCOMPLETE", backendNodeId: 7, children: siblings },
+    ],
+  };
+  const started = performance.now();
+  const ids = widgetNodeIds(wide);
+  expect(performance.now() - started).toBeLessThan(500);
+  expect(ids?.has(7)).toBe(true);
+  expect(ids?.size).toBe(50_001);
+});
+
+test("focus on an ignored node is its own Tab end reason, not focus leaving the page", () => {
+  const ignored = [node("none", "", { ignored: true, ...focusedProperty(true) })];
+  expect(focusIsIgnored(ignored)).toBe(true);
+  expect(focusIsIgnored([node("none", "", { ignored: true })])).toBe(false);
+  expect(focusIsIgnored([node("link", "Skip", focusedProperty(true))])).toBe(false);
+  expect(focusIsIgnored([null, "x"])).toBe(false);
+  expect(focusIsIgnored("no")).toBe(false);
+  expect(focusedEntry(ignored)).toBeNull();
+  expect(addTabStop([], null, true, true)).toEqual({ order: [], end: "focus on an ignored node" });
+  expect(addTabStop([], null, true, false).end).toBe("focus left the page");
+});
+
+test("one option is singular", () => {
+  const one = {
+    ...accessibility,
+    afterSuggestions: [control, { role: "listbox", name: "" }, { role: "option", name: "" }],
+  };
+  expect(liveReport({ ...base, accessibility: one }).lines).toContain(
+    "  Suggestion list after typing: listbox with 1 option",
+  );
+});
+
+test("a failed first read is named when the control is found only in the second", () => {
+  const failedFirst = { ...accessibility, afterAttach: null };
+  expect(liveReport({ ...base, accessibility: failedFirst }).lines).toContain(
+    '  Search control: combobox "Search for a place" (first read failed; found in the read after typing)',
   );
 });

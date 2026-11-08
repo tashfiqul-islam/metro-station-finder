@@ -8,6 +8,7 @@ import {
   MAX_TAB_STOPS,
   addTabStop,
   ciRefusal,
+  focusIsIgnored,
   focusedEntry,
   liveReport,
   snapshotEntries,
@@ -60,11 +61,15 @@ async function bounded<T>(work: Promise<T>): Promise<T> {
   }
 }
 
-/** The page's accessibility nodes, or null when there is no session or the call fails or times out (the report then says so). */
+/**
+ * The page's accessibility nodes, or null when there is no session, the call fails or times out, or the
+ * answer has no `nodes` list (the report then says the read failed).
+ */
 async function readTree(cdp: CDPSession | null): Promise<unknown> {
   if (cdp === null) return null;
   try {
-    return (await bounded(cdp.send("Accessibility.getFullAXTree"))).nodes;
+    const { nodes } = await bounded(cdp.send("Accessibility.getFullAXTree"));
+    return Array.isArray(nodes) ? nodes : null;
   } catch {
     return null;
   }
@@ -96,7 +101,13 @@ async function walkTab(
     await page.keyboard.press("Tab");
     await page.waitForTimeout(100);
     const tree = await readTree(cdp);
-    const step = addTabStop(order, focusedEntry(tree, widgetIds), tree !== null);
+    const focused = focusedEntry(tree, widgetIds);
+    const step = addTabStop(
+      order,
+      focused,
+      tree !== null,
+      focused === null && focusIsIgnored(tree),
+    );
     order = step.order;
     if (step.end !== null) return { order: [...order], end: step.end };
   }

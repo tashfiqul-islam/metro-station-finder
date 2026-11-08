@@ -58,6 +58,7 @@ export type TabEnd =
   | "cap reached"
   | "wrapped to the first stop"
   | "focus left the page"
+  | "focus on an ignored node"
   | "read failed";
 
 /** What the tree showed, read twice and then walked with Tab. A null read means the DevTools call failed. */
@@ -238,22 +239,30 @@ const below = (node: object): object[] => [...childrenOf(node), ...contentOf(nod
  * everything below it, shadow roots included, from a `DOM.getDocument` tree read with `pierce: true`. Null
  * when the element is not in the tree, so the caller reports that nothing could be read inside the widget.
  */
+/** Pushes in reverse so a stack pops them in order; a loop, because a spread of a huge list can throw. */
+function pushReversed(stack: object[], items: readonly object[]): void {
+  for (let index = items.length - 1; index >= 0; index -= 1) {
+    const item = items[index];
+    if (item !== undefined) stack.push(item);
+  }
+}
+
 export function widgetNodeIds(root: unknown): Set<number> | null {
   // Document order: depth first, so the first widget found is the first on the page.
   const stack: object[] = typeof root === "object" && root !== null ? [root] : [];
   let widget: object | null = null;
   while (widget === null) {
-    const node = stack.shift();
+    const node = stack.pop();
     if (node === undefined) return null;
     if (isWidget(node)) widget = node;
-    else stack.unshift(...below(node));
+    else pushReversed(stack, below(node));
   }
   const ids = new Set<number>();
   const pending: object[] = [widget];
   for (let node = pending.pop(); node !== undefined; node = pending.pop()) {
     const id = propertyOf(node, "backendNodeId");
     if (typeof id === "number") ids.add(id);
-    pending.push(...below(node));
+    pushReversed(pending, below(node));
   }
   return ids.size === 0 ? null : ids;
 }
@@ -266,7 +275,25 @@ function sameStop(a: AxEntry, b: AxEntry): boolean {
 }
 
 /**
- * Adds one Tab stop. `readOk` is false when the tree could not be read. Done when the read failed, nothing
+ * True when a focused node is in the tree but is `ignored` (not exposed to a screen reader): focus has not
+ * left the page, it is somewhere the report cannot name.
+ */
+export function focusIsIgnored(nodes: unknown): boolean {
+  return (
+    Array.isArray(nodes) &&
+    (nodes as unknown[]).some(
+      (node) =>
+        typeof node === "object" &&
+        node !== null &&
+        propertyOf(node, "ignored") === true &&
+        isFocused(propertyOf(node, "properties")),
+    )
+  );
+}
+
+/**
+ * Adds one Tab stop. `readOk` is false when the tree could not be read; `ignoredFocus` is true when `next`
+ * is null only because the focused node is ignored. Done when the read failed, nothing
  * has focus, focus wrapped to the first stop (by node id when both have one, else by role and name), or the
  * cap is reached.
  */
@@ -274,9 +301,12 @@ export function addTabStop(
   order: readonly AxEntry[],
   next: AxEntry | null,
   readOk = true,
+  ignoredFocus = false,
 ): { order: readonly AxEntry[]; end: TabEnd | null } {
   if (!readOk) return { order, end: "read failed" };
-  if (next === null) return { order, end: "focus left the page" };
+  if (next === null) {
+    return { order, end: ignoredFocus ? "focus on an ignored node" : "focus left the page" };
+  }
   const first = order[0];
   if (first !== undefined && sameStop(first, next)) {
     return { order, end: "wrapped to the first stop" };
@@ -293,7 +323,7 @@ export function typingReachedWidget(baseline: number, current: number): boolean 
 type Control =
   | { readonly kind: "none" }
   | { readonly kind: "many"; readonly count: number }
-  | { readonly kind: "one"; readonly entry: AxEntry; readonly late: boolean };
+  | { readonly kind: "one"; readonly entry: AxEntry; readonly note: string };
 
 /**
  * Exactly one text field must exist in the first read. Only when that read found none is the read after
@@ -302,6 +332,11 @@ type Control =
 function findControl(run: AccessibilityRun): Control {
   const first = (run.afterAttach ?? []).filter((entry) => FIELD_ROLES.has(entry.role));
   const late = first.length === 0;
+  const note = !late
+    ? ""
+    : run.afterAttach === null
+      ? " (first read failed; found in the read after typing)"
+      : " (found only in the read after typing)";
   const fields = late
     ? (run.afterSuggestions ?? []).filter((entry) => FIELD_ROLES.has(entry.role))
     : first;
@@ -309,7 +344,7 @@ function findControl(run: AccessibilityRun): Control {
   if (only === undefined) return { kind: "none" };
   return fields.length > 1
     ? { kind: "many", count: fields.length }
-    : { kind: "one", entry: only, late };
+    : { kind: "one", entry: only, note };
 }
 
 const describe = (entry: AxEntry): string => `${entry.role} ${JSON.stringify(entry.name)}`;
@@ -352,7 +387,7 @@ function accessibilityLines(run: AccessibilityRun | null): {
     failure = AMBIGUOUS;
   } else {
     lines.push(
-      `  Search control: ${describe(control.entry)}${control.late ? " (found only in the read after typing)" : ""}`,
+      `  Search control: ${describe(control.entry)}${control.note}`,
       `  Reached by Tab: ${reachedByTab(control.entry, run.tabOrder) ? "yes" : "no"} (information only)`,
     );
     failure = control.entry.name === "" ? UNNAMED : null;
@@ -363,7 +398,7 @@ function accessibilityLines(run: AccessibilityRun | null): {
   );
   lines.push(
     entries.some((entry) => entry.role === "listbox")
-      ? `  Suggestion list after typing: listbox with ${options} options`
+      ? `  Suggestion list after typing: listbox with ${options} ${options === 1 ? "option" : "options"}`
       : "  Suggestion list after typing: no listbox seen",
     `  Tab order (${run.tabOrder.length} stops, at most ${MAX_TAB_STOPS}; ended: ${run.tabEnd}):`,
     ...run.tabOrder.map(
