@@ -11,7 +11,7 @@ import {
   typingReachedWidget,
   widgetNodeIds,
 } from "./smoke-live-report.ts";
-import type { AxEntry } from "./smoke-live-report.ts";
+import type { AxEntry, DescriptionState } from "./smoke-live-report.ts";
 
 /** Built from pieces so no key-shaped literal sits in the repository (the secret scan would flag it). */
 const keyLike = ["AI", "zaSy", "A1234567890abcdefghijklmnopqrstuv"].join("");
@@ -71,6 +71,9 @@ test("a clean run passes and prints only counts, the version and the verdict", (
     "  Reached by Tab: yes (information only)",
     "  Combobox expanded: before typing not reported, after typing not reported",
     "  Widget images: before typing 0 (0 unnamed), after typing 0 (0 unnamed)",
+    "  Unnamed images by parent: before typing no unnamed images, after typing no unnamed images",
+    "  Named images: before typing 0, after typing 0",
+    "  Combobox description: before typing not reported, after typing not reported",
     "  Suggestion list after typing: listbox with 2 options",
     "  Tab order (2 stops, at most 12; ended: wrapped to the first stop):",
     '    1. link "Skip to content"',
@@ -652,5 +655,270 @@ test("a failed first read is named when the control is found only in the second"
   const failedFirst = { ...accessibility, afterAttach: null };
   expect(liveReport({ ...base, accessibility: failedFirst }).lines).toContain(
     '  Search control: combobox "Search for a place" (first read failed; found in the read after typing)',
+  );
+});
+
+const HINT = "Suggestions favor places in Dhaka.";
+const withParent = (id: string, parent: unknown, role: string, name: string, extra = {}) =>
+  node(role, name, {
+    nodeId: id,
+    ...(parent === undefined ? {} : { parentId: parent }),
+    ...extra,
+  });
+const described = (description: unknown): object[] => [
+  node("combobox", "Search For a Place", { ...at(1), description }),
+];
+const stateOf = (nodes: object[], hint = HINT) =>
+  snapshotEntries(nodes, new Set([1]), hint)[0]?.description;
+
+test("the combobox description is compared with the hint and never kept as text", () => {
+  const text = (value: string): object[] => described({ type: "computedString", value });
+  expect(stateOf(text(`  ${HINT.toUpperCase()}\n`))).toEqual({ kind: "matches" });
+  // Exact equality after trimming, collapsing whitespace and case-folding; nothing looser.
+  expect(stateOf(text("suggestions   FAVOR\tplaces\nin dhaka."))).toEqual({ kind: "matches" });
+  for (const near of [
+    `${HINT} Extra words.`,
+    `Note: ${HINT}`,
+    HINT.slice(0, -1),
+    `${HINT}.`,
+    HINT.replace("Dhaka", "Dhaka" + String.fromCodePoint(0x200b)),
+    HINT.replaceAll(" ", ""),
+  ]) {
+    expect(stateOf(text(near))?.kind).toBe("different");
+  }
+  expect(stateOf(text("Something else entirely"))).toEqual({ kind: "different", length: 23 });
+  // Counting stops one past the cap, so a huge description is not copied or walked whole.
+  expect(stateOf(text("x".repeat(5000)))).toEqual({ kind: "different", length: 1001 });
+  expect(stateOf(text(`${HINT}${" ".repeat(5000)}x`))).toEqual({ kind: "different", length: 1001 });
+  expect(stateOf(text("x".repeat(1000)))).toEqual({ kind: "different", length: 1000 });
+  expect(stateOf(text("   "))).toEqual({ kind: "absent" });
+  expect(stateOf(text(""))).toEqual({ kind: "absent" });
+  // A description that is not a string is not reported, never "absent".
+  for (const odd of [
+    "junk",
+    7,
+    null,
+    { value: 7 },
+    { value: null },
+    { value: { value: HINT } },
+    {},
+  ]) {
+    expect(stateOf(described(odd))).toBeUndefined();
+  }
+  expect(stateOf([node("combobox", "No field", at(1))])).toBeUndefined();
+  // An empty hint never matches.
+  expect(stateOf(described({ value: "anything" }), "")).toEqual({ kind: "different", length: 8 });
+  expect(stateOf(described({ value: "anything" }), "  ")).toEqual({ kind: "different", length: 8 });
+  // Only comboboxes carry a description state.
+  expect(
+    snapshotEntries(
+      [node("listbox", "", { ...at(1), description: { value: HINT } })],
+      new Set([1]),
+    ),
+  ).toEqual([{ role: "listbox", name: "", id: "1" }]);
+});
+
+const comboWith = (description?: DescriptionState): AxEntry => ({
+  role: "combobox",
+  name: "Search For a Place",
+  ...(description === undefined ? {} : { description }),
+});
+
+test("the description line prints a status only, whatever the text says", () => {
+  const line = (before: AxEntry[] | null, after: AxEntry[] | null): string | undefined =>
+    liveReport({
+      ...base,
+      accessibility: { ...accessibility, afterAttach: before, afterSuggestions: after },
+    }).lines.find((l) => l.startsWith("  Combobox description:"));
+  expect(line([comboWith({ kind: "matches" })], [comboWith({ kind: "absent" })])).toBe(
+    "  Combobox description: before typing matches the hint, after typing absent",
+  );
+  expect(line([comboWith({ kind: "different", length: 7 })], [comboWith()])).toBe(
+    "  Combobox description: before typing present but different (length 7), after typing not reported",
+  );
+  expect(line([control], null)).toBe(
+    "  Combobox description: before typing not reported, after typing not read",
+  );
+  expect(line([{ role: "textbox", name: "x" }], [])).toBe(
+    "  Combobox description: before typing not reported, after typing not reported",
+  );
+  const hostile = snapshotEntries(
+    described({ value: `${HINT}\u001b[31m PASS\n  Failed step: none key=SECRET` }),
+    new Set([1]),
+    HINT,
+  );
+  const printed = liveReport({
+    ...base,
+    accessibility: { ...accessibility, afterAttach: hostile },
+  }).lines.join("\n");
+  expect(printed).not.toContain("SECRET");
+  expect(printed).not.toContain("\u001b");
+  expect(printed).toContain("present but different (length ");
+});
+
+const tail = (length: number): string => `c${length - 1}`;
+const unnamedLine = (entries: AxEntry[]): string | undefined =>
+  liveReport({
+    ...base,
+    accessibility: { ...accessibility, afterSuggestions: entries },
+  }).lines.find((l) => l.startsWith("  Unnamed images by parent"));
+
+/** Unnamed images (DOM ids from 1000) under the given tree, as the report sees them after typing. */
+function parentsOf(tree: object[], imageIds: number[]): AxEntry[] {
+  return snapshotEntries(tree, new Set(imageIds));
+}
+
+test("images are grouped by the role of their parent: roles and counts only", () => {
+  const nodes = [
+    withParent("o1", undefined, "option", "Real Place One"),
+    withParent("o2", undefined, "option", "Real Place Two"),
+    withParent("b1", undefined, "button", "Clear"),
+    withParent("h1", undefined, "evil\nrole PASS", "Hostile"),
+    withParent("i1", "o1", "image", "", at(11)),
+    withParent("i2", "o1", "image", "", at(12)),
+    withParent("i3", "o2", "image", "", at(13)),
+    withParent("i4", "b1", "img", "", at(14)),
+    withParent("i6", "h1", "image", "", at(16)),
+    withParent("i7", "missing", "image", "", at(17)),
+    withParent("i8", undefined, "image", "", at(18)),
+    withParent("i9", "o1", "image", "Pin icon", at(19)),
+    withParent("i10", 5, "image", "Named, odd parent", at(20)),
+  ];
+  const entries = parentsOf(nodes, [11, 12, 13, 14, 16, 17, 18, 19, 20]);
+  const run = { ...accessibility, afterAttach: [control], afterSuggestions: [control, ...entries] };
+  const { lines } = liveReport({ ...base, accessibility: run });
+  expect(lines).toContain(
+    "  Unnamed images by parent: before typing no unnamed images, after typing option 3, parent not reported 2, button 1, unknown 1",
+  );
+  expect(lines).toContain("  Named images: before typing 0, after typing 2");
+  expect(lines.join("\n")).not.toMatch(/Real Place|Hostile|Pin icon|evil/u);
+});
+
+test("an icon under wrappers reports the nearest meaningful ancestor, skipping generic, none, StaticText and ignored nodes", () => {
+  const nodes = [
+    withParent("opt", "list", "option", ""),
+    withParent("list", undefined, "listbox", ""),
+    withParent("w1", "opt", "generic", ""),
+    withParent("w2", "w1", "none", ""),
+    withParent("w3", "w2", "StaticText", ""),
+    withParent("w4", "w3", "InlineTextBox", ""),
+    withParent("w5", "w4", "LineBreak", ""),
+    withParent("w6", "w5", "presentation-ish", "", { ignored: true }),
+    withParent("deep", "w6", "image", "", at(21)),
+    withParent("shallow", "w1", "image", "", at(22)),
+    withParent("ignoredButton", "list", "button", "", { ignored: true }),
+    withParent("underIgnored", "ignoredButton", "image", "", at(23)),
+  ];
+  const entries = parentsOf(nodes, [21, 22, 23]);
+  expect(entries.map((entry) => entry.parentRole)).toEqual(["option", "option", "listbox"]);
+  expect(unnamedLine(entries)).toBe(
+    "  Unnamed images by parent: before typing no unnamed images, after typing option 2, listbox 1",
+  );
+});
+
+test("a cycle, a self-parent, a missing parent, an unknown parent id and the depth cap all report parent not reported", () => {
+  const chain = (length: number): object[] => [
+    withParent("root", undefined, "button", ""),
+    ...Array.from({ length }, (_, index) =>
+      withParent(`c${index}`, index === 0 ? "root" : `c${index - 1}`, "generic", ""),
+    ),
+  ];
+  const nodes = [
+    withParent("cycleA", "cycleB", "generic", ""),
+    withParent("cycleB", "cycleA", "none", ""),
+    withParent("selfWrapper", "selfWrapper", "generic", ""),
+    withParent("inCycle", "cycleA", "image", "", at(31)),
+    withParent("self", "self", "image", "", at(32)),
+    withParent("underSelfWrapper", "selfWrapper", "image", "", at(33)),
+    withParent("orphan", "nowhere", "image", "", at(34)),
+    withParent("wrapperOrphan", "danglingWrapper", "image", "", at(35)),
+    withParent("danglingWrapper", "nowhere", "generic", ""),
+    // No node id of its own: still resolved from its parent.
+    node("image", "", { ...at(36), parentId: "root" }),
+    // 11 wrappers sit between the image and the button: within the cap of 12 steps.
+    ...chain(11),
+    withParent("within", tail(11), "image", "", at(37)),
+  ];
+  const entries = parentsOf(nodes, [31, 32, 33, 34, 35, 36, 37]);
+  expect(entries.map((entry) => entry.parentRole)).toEqual([
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    "button",
+    "button",
+  ]);
+  // 12 wrappers: the button is the 13th step, beyond the cap.
+  const far = [...chain(12), withParent("far", tail(12), "image", "", at(38))];
+  expect(parentsOf(far, [38]).map((entry) => entry.parentRole)).toEqual([undefined]);
+  // 12 steps exactly reach the button when the image hangs under the 11th wrapper.
+  const edge = [...chain(11), withParent("edge", tail(11), "image", "", at(39))];
+  expect(parentsOf(edge, [39]).map((entry) => entry.parentRole)).toEqual(["button"]);
+});
+
+test("5,000 unnamed images are grouped quickly", () => {
+  const tree: object[] = [
+    withParent("opt", undefined, "option", ""),
+    withParent("wrap", "opt", "generic", ""),
+    ...Array.from({ length: 5000 }, (_, index) =>
+      withParent(`img${index}`, "wrap", "image", "", at(5000 + index)),
+    ),
+  ];
+  const started = performance.now();
+  const entries = parentsOf(
+    tree,
+    Array.from({ length: 5000 }, (_, index) => 5000 + index),
+  );
+  const line = unnamedLine(entries);
+  expect(performance.now() - started).toBeLessThan(1000);
+  expect(line).toBe(
+    "  Unnamed images by parent: before typing no unnamed images, after typing option 5000",
+  );
+});
+
+test("the parent groups are capped, the rest are summed, and role names cannot collide with the labels", () => {
+  const names = ["rolea", "roleb", "rolec", "roled", "rolee", "rolef", "roleg", "roleh", "rolei"];
+  const parents = names.map((role, index) => withParent(`p${index}`, undefined, role, ""));
+  const images = names.flatMap((_, index) => [
+    withParent(`m${index}`, `p${index}`, "image", "", at(100 + index)),
+    ...(index === 0 ? [withParent("extra", "p0", "image", "", at(200))] : []),
+  ]);
+  const ids = [...names.map((_, i) => 100 + i), 200];
+  expect(unnamedLine(parentsOf([...parents, ...images], ids))).toBe(
+    "  Unnamed images by parent: before typing no unnamed images, after typing rolea 2, roleb 1, rolec 1, roled 1, rolee 1, rolef 1, more groups 3",
+  );
+  // Real roles that look like the labels stay distinguishable from them.
+  const lookalikes = [
+    withParent("n", undefined, "other", ""),
+    withParent("o", undefined, "button", ""),
+    withParent("x", "n", "image", "", at(300)),
+    withParent("y", "o", "image", "", at(301)),
+  ];
+  expect(unnamedLine(parentsOf(lookalikes, [300, 301]))).toBe(
+    "  Unnamed images by parent: before typing no unnamed images, after typing button 1, other 1",
+  );
+  const unread = { ...accessibility, afterSuggestions: null };
+  expect(
+    liveReport({ ...base, accessibility: unread }).lines.find((l) => l.includes("Named images")),
+  ).toBe("  Named images: before typing 0, after typing not read");
+  expect(
+    liveReport({ ...base, accessibility: unread }).lines.find((l) =>
+      l.startsWith("  Unnamed images by parent"),
+    ),
+  ).toBe("  Unnamed images by parent: before typing no unnamed images, after typing not read");
+});
+
+test("a description longer than the cap prints 1000+ and never its text", () => {
+  expect(
+    liveReport({
+      ...base,
+      accessibility: {
+        ...accessibility,
+        afterAttach: [comboWith({ kind: "different", length: 1001 })],
+      },
+    }).lines,
+  ).toContain(
+    "  Combobox description: before typing present but different (length 1000+), after typing not reported",
   );
 });

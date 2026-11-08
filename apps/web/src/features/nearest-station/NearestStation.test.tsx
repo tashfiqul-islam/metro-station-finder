@@ -102,6 +102,8 @@ test("METRO-88 idle: search, the location button and the consent line, and no re
   // METRO-101: the hint is visible and is the description handed to the widget.
   expect(screen.getByText(copy.searchHint)).toBeTruthy();
   expect(world.searchProps?.description).toBe(copy.searchHint);
+  // METRO-102: the placeholder experiment hands the visible label text to the widget.
+  expect(world.searchProps?.placeholder).toBe(copy.searchLabel);
   expect(world.searchProps?.labelId).toBe("place-label");
   const button = screen.getByRole("button", { name: copy.locateButton });
   expect(button.getAttribute("aria-describedby")).toBe("consent");

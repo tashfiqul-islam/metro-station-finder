@@ -238,6 +238,8 @@ test.describe("nearest station from a searched place (METRO-88)", () => {
     // The visible hint is handed to the widget as its description (stub of the documented option).
     await expect(page.locator("#place-hint")).toHaveText("Suggestions favor places in Dhaka.");
     await expect(search).toHaveAccessibleDescription("Suggestions favor places in Dhaka.");
+    // METRO-102: the placeholder option reaches the element (stub reflects it as the input placeholder).
+    await expect(search).toHaveAttribute("placeholder", "Search for a place");
     // The group around the widget carries the visible label; keyboard order is unchanged (see A6).
     await expect(
       page.getByRole("group", { name: "Search for a place", exact: true }),

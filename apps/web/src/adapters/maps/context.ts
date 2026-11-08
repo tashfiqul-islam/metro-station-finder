@@ -14,6 +14,11 @@ export interface PlaceSearchProps {
    * Google's own name instead (METRO-101).
    */
   readonly description: string;
+  /**
+   * Placeholder text for the widget's input. An experiment (METRO-102): the hypothesis is that it sets the
+   * widget's accessible name; remove it if the owner-run live check shows the name unchanged.
+   */
+  readonly placeholder: string;
   /** Soft bias for suggestions; a hint, not a restriction. */
   readonly bias: { readonly center: Coordinate; readonly radiusMeters: number };
   readonly onPlace: (location: Coordinate) => void;
@@ -57,6 +62,7 @@ export function useMaps(): MapsState {
 export interface PlacesApi {
   readonly PlaceAutocompleteElement: new (options: {
     description: string;
+    placeholder: string;
     includedRegionCodes: string[];
     locationBias: { center: { lat: number; lng: number }; radius: number };
   }) => HTMLElement;

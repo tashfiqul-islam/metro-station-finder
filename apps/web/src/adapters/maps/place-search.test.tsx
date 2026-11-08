@@ -69,6 +69,7 @@ function mount() {
     <Wrapped
       labelId="label"
       description="a hint"
+      placeholder="a placeholder"
       bias={bias}
       onPlace={onPlace}
       onFailure={onFailure}
@@ -110,6 +111,7 @@ test("METRO-88 creates one Dhaka-biased element restricted to Bangladesh", () =>
   expect(library.made).toHaveLength(1);
   expect(Reflect.get(made(), "options")).toEqual({
     description: "a hint",
+    placeholder: "a placeholder",
     includedRegionCodes: ["bd"],
     locationBias: { center: { lat: 23.8, lng: 90.4 }, radius: 25_000 },
   });
@@ -248,6 +250,7 @@ test("METRO-88 StrictMode leaves exactly one element in the DOM", () => {
       <Wrapped
         labelId="label"
         description="a hint"
+        placeholder="a placeholder"
         bias={bias}
         onPlace={vi.fn()}
         onFailure={vi.fn()}
