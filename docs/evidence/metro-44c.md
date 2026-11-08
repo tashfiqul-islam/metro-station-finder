@@ -35,7 +35,8 @@ The log line `web-vitals-lab LCP=<ms> (limit 2500ms) CLS=<score> (limit 0.1)` is
 | ----------------------------- | -------------------------------------------------------------- |
 | Totals (unchanged)            | 250000 raw / 80000 gzip                                        |
 | Entry budget (new)            | 247500 raw / 78500 gzip                                        |
-| Entry on this branch's base   | 238537 raw / 75555 gzip (Repo-verified, build of `1aeef64`)    |
+| Entry on `1aeef64`            | 238537 raw / 75555 gzip (Repo-verified)                        |
+| Entry on `eefd080` (merged)   | 240264 raw / 76109 gzip (Repo-verified)                        |
 | Entry with part B, per ticket | 243513 raw / 77335 gzip (relayed in the task, not re-measured) |
 
 The new budget is about 1.6 percent (raw) and 1.5 percent (gzip) above the relayed part B figure and 3.7 percent above this base. A new dependency of several kilobytes fails the entry check first.
