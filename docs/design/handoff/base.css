@@ -1,0 +1,68 @@
+/* base.css — reset, typography, focus, selection, scrollbar, user-preference rules.
+   Load order: fonts.css → tokens.css → base.css → components.css */
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  font-size: var(--fs-14);
+  line-height: 1.45;
+  letter-spacing: var(--track-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  -webkit-tap-highlight-color: transparent;
+}
+h1, h2, h3, h4, p, ol, ul, dl, dd, figure, fieldset { margin: 0; }
+ol, ul { padding: 0; list-style: none; }
+fieldset { padding: 0; border: 0; min-width: 0; }
+legend { padding: 0; }
+img, svg { display: block; }
+button, input { font: inherit; color: inherit; letter-spacing: inherit; }
+button { border: 0; background: none; padding: 0; cursor: pointer; -webkit-appearance: none; appearance: none; }
+button:disabled { cursor: default; }
+input { border: 0; background: none; outline: none; min-width: 0; }
+input::placeholder { color: var(--color-muted-fg); opacity: 1; }
+a { color: var(--color-accent); text-underline-offset: 0.18em; }
+h1, h2, h3 { text-wrap: balance; }
+p { text-wrap: pretty; }
+kbd { font-family: var(--font-mono); }
+
+/* Focus: one visible 2px ring everywhere (WCAG 2.4.7 / 2.4.13). */
+:focus { outline: none; }
+:focus-visible { outline: var(--focus-width) solid var(--color-focus); outline-offset: var(--focus-offset); }
+
+::selection { background: var(--color-selection); }
+
+html { scrollbar-width: thin; scrollbar-color: var(--color-muted-2) transparent; }
+::-webkit-scrollbar { width: 12px; height: 12px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-muted-2); border-radius: var(--radius-pill); border: 4px solid transparent; background-clip: content-box; }
+
+.visually-hidden {
+  position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+
+/* Reduced motion: every keyframe and transition stops; final states show immediately. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
+}
+
+/* Forced colours (Windows High Contrast): let the system palette win, keep shapes legible. */
+@media (forced-colors: active) {
+  :focus-visible { outline-color: Highlight; }
+  button, .btn, .combo, .place-slot, .notice, .toast, .card-like { border: 1px solid CanvasText; }
+  .icon { forced-color-adjust: auto; }
+  svg.mark, svg.map { forced-color-adjust: auto; }
+}

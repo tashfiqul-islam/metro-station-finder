@@ -3,3 +3,5 @@
 *.jpg binary
 *.ico binary
 apps/api/worker-configuration.d.ts linguist-generated=true
+docs/design/handoff/** -text
+docs/design/handoff/**/*.woff2 binary
