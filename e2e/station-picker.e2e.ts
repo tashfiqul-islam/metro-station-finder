@@ -262,6 +262,8 @@ test.describe("station picker", () => {
       expect(await page.evaluate(() => document.documentElement.dataset["theme"])).toBe(theme);
       await combo(page).fill("mir");
       await expect(popup(page).getByRole("option")).toHaveCount(2);
+      // The popup rises in (opacity); axe must not measure colours halfway through it.
+      await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)));
       expect((await axeBuilder(page).analyze()).violations.map((v) => v.id)).toEqual([]);
       await combo(page).fill("Sadarghat");
       await expect(page.getByText("No station matches that name.")).toBeVisible();

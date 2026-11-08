@@ -118,8 +118,11 @@ export function StationCombobox({
         return;
       }
       case "Home":
-      case "End": {
-        // The caret moves (the browser's own behaviour); the list no longer has an active option.
+      case "End":
+      case "ArrowLeft":
+      case "ArrowRight": {
+        // The caret moves (the browser's own behaviour); the list no longer has an active option (the APG
+        // listbox popup returns visual focus to the textbox on these keys).
         setActive(-1);
         return;
       }

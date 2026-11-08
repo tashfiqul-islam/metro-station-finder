@@ -191,6 +191,19 @@ test("METRO-112 Escape closes the list first, then clears the text, then does no
   expect(last.defaultPrevented).toBe(false);
 });
 
+test("METRO-112 ArrowLeft and ArrowRight return visual focus to the text without closing the list", () => {
+  setup();
+  type("mir");
+  for (const name of ["ArrowLeft", "ArrowRight"]) {
+    key("ArrowDown");
+    expect(active()).not.toBeNull();
+    const event = new KeyboardEvent("keydown", { key: name, bubbles: true, cancelable: true });
+    expect(send(box(), event)).toBe(true);
+    expect(box().hasAttribute("aria-activedescendant")).toBe(false);
+    expect(box().getAttribute("aria-expanded")).toBe("true");
+  }
+});
+
 test("METRO-112 other keys are left alone", () => {
   setup();
   type("mir");
