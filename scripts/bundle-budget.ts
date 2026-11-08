@@ -138,7 +138,8 @@ export function evaluateBundle(
   if (files === null || [...files].some((file) => !onDisk.has(file)))
     return { lines: [], problems: [MANIFEST_FAILURE] };
 
-  const sorted = assets.toSorted((a, b) => b.raw - a.raw || a.path.localeCompare(b.path));
+  const sorted = [...assets];
+  sorted.sort((a, b) => b.raw - a.raw || a.path.localeCompare(b.path));
   const lines = ["Production JS/CSS files, largest first (raw / gzip bytes):"];
   for (const { path, raw, gzip } of sorted)
     lines.push(`  ${path}: ${raw} raw; ${gzip} gzip; ${files.has(path) ? "first-visit" : "lazy"}`);
