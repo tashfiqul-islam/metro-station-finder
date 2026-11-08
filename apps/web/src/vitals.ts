@@ -1,5 +1,5 @@
 import type { WebVitalPayload } from "@metro/contracts";
-import type { Metric } from "web-vitals";
+import { onCLS, onINP, onLCP, type Metric } from "web-vitals";
 
 /**
  * Real-user Core Web Vitals (LCP, INP, CLS; METRO-44, ADR-0019). Each metric becomes a five-field payload
@@ -35,66 +35,39 @@ export function toPayload(metric: Metric): WebVitalPayload | undefined {
 
 export type Send = (payload: WebVitalPayload) => void;
 
-/** sendBeacon survives page unload; if the browser refuses it, fall back to a keepalive fetch. */
+/**
+ * A keepalive fetch survives page unload like sendBeacon, and unlike sendBeacon it can drop the Referer:
+ * a same-origin request would otherwise carry the full page URL, query string included, to the Worker
+ * (measured in Chromium, METRO-44 e2e). The failure is not reported anywhere: a lost sample is
+ * acceptable and nothing may be logged.
+ */
 export const sendVital: Send = (payload) => {
-  const body = JSON.stringify(payload);
-  const beacon = new Blob([body], { type: "application/json" });
-  if (typeof navigator.sendBeacon === "function" && navigator.sendBeacon(VITALS_PATH, beacon)) {
-    return;
-  }
-  // The failure is not reported anywhere: a lost sample is acceptable and nothing may be logged.
   fetch(VITALS_PATH, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body,
+    body: JSON.stringify(payload),
     keepalive: true,
     credentials: "omit",
+    referrerPolicy: "no-referrer",
   }).catch(() => null);
 };
 
 type Report = (metric: Metric) => void;
-export interface Library {
-  onCLS: (report: Report) => void;
-  onINP: (report: Report) => void;
-  onLCP: (report: Report) => void;
-}
-
-/** Runs `task` once the page has loaded, so the library never competes with first paint. */
-export function afterLoad(task: () => void): void {
-  if (document.readyState === "complete") task();
-  else window.addEventListener("load", task, { once: true });
-}
+export type Observer = (report: Report) => void;
 
 /**
- * Registers the three observers after the page loads, with web-vitals fetched by a dynamic import (a
- * separate chunk: this is for load speed, the bundle budget still counts every file). Off unless
- * `enabled` (production builds only), so unit tests and the dev server send nothing; tests inject the
- * rest.
+ * Registers the three observers. Off unless `enabled` (production builds only), so unit tests and the
+ * dev server send nothing; tests inject the observers and the sender.
  */
 export function startVitals(
   enabled: boolean = import.meta.env.PROD,
-  load: () => Promise<Library> = () => import("web-vitals"),
+  observers: readonly Observer[] = [onCLS, onINP, onLCP],
   send: Send = sendVital,
-  schedule: (task: () => void) => void = afterLoad,
 ): void {
   if (!enabled) return;
   const report: Report = (metric) => {
     const payload = toPayload(metric);
     if (payload !== undefined) send(payload);
   };
-  const register = async (): Promise<boolean> => {
-    try {
-      const library = await load();
-      library.onCLS(report);
-      library.onINP(report);
-      library.onLCP(report);
-      return true;
-    } catch {
-      // A failed chunk load costs only the sample; nothing is rendered or logged.
-      return false;
-    }
-  };
-  schedule(() => {
-    void register();
-  });
+  for (const observe of observers) observe(report);
 }

@@ -1,0 +1,51 @@
+# ADR-0019: Real-user web vitals through a same-origin telemetry endpoint
+
+- Status: Accepted
+- Date: 2026-11-08
+- Ticket and specification: METRO-44 part B (Plane); no separate specification, the ticket's 2026-11-08 update is the contract. The owner delegated approval of the contracts change, the first API route and the new `web-vitals` dependency in that update.
+
+## Context
+
+The bundle budget is a proxy for load speed, not a measurement. The ticket asks for real-user Core Web Vitals at p75: LCP at most 2.5 s, INP at most 200 ms, CLS at most 0.1 (web.dev). The product has no analytics, no third-party scripts apart from Google Maps, and no storage; the CSP is enforced with exact hosts ([ADR-0011](0011-security-headers.md)), and the user's position goes to Google only ([ADR-0009](0009-maps-provider-design.md)).
+
+- Repo-verified: the API had no routes after METRO-93; `createApp(log, register)` and the exact-match `LOGGED_ROUTES` set in `apps/api/src/app.ts` are the seams. Workers Logs collects the one JSON line per request ([observability guide](../agents/observability.md)).
+- Web-verified (npm registry, 2026-11-08): `web-vitals` 6.2.3, published 2026-10-05. Its `Metric` object also carries `navigationURL`, `entries` and `delta`; the first can hold a URL with a query string, so the client copies five fields by name instead of forwarding the object.
+- Measured (Chromium 156 via Playwright, 2026-11-08): a same-origin request carries the full page URL, query string included, in `Referer` under the repository's `strict-origin-when-cross-origin` policy, and `navigator.sendBeacon` has no option to change that. `fetch` with `keepalive: true` survives page unload like a beacon and accepts `referrerPolicy: "no-referrer"`. So the client uses fetch, not `sendBeacon`; this departs from the ticket's wording and keeps its criterion that no query string is sent. `sendBeacon` would also send `text/plain` for a string body (Web-verified), which the endpoint refuses.
+- Repo-verified (measured with `node scripts/bundle.ts`): thresholds are 250,000 bytes raw and 80,000 gzip. Before this change the build was 242,007 / 76,714 (on the earlier base) and 240,335 / 76,195 (on the base with METRO-103). `web-vitals` with all five metrics plus valibot in the browser gave 254,031 / 80,628 on the earlier base and failed both. On the final base, three metrics with a lazy dynamic import gave 251,435 / 80,397 (the extra chunk and Vite's preload helper cost about 1.2 KB raw) and failed both; with `build.modulePreload: false` it gave 250,901 / 80,163 and still failed. Three metrics imported statically, no valibot in the browser, gave 249,042 / 79,239 and pass; replacing `sendBeacon` and its fallback with the single `fetch` gives the final 248,941 / 79,213: 1,059 raw and 787 gzip bytes of headroom.
+
+## Decision
+
+We will measure real-user LCP, INP and CLS with `web-vitals` 6.2.3 (exact pin) and report each metric to our own Worker at the fixed path `POST /api/vitals`.
+
+- Metric set: LCP, INP and CLS only, the three metrics with a threshold in the ticket. FCP and TTFB were dropped from the client and the contract, because the five-metric set did not fit the bundle budget and the ticket's acceptance criteria never named them. Adding one back needs a budget decision.
+- Contract: `webVitalPayloadSchema` in `@metro/contracts` is a strict object with `name`, `value` (finite, bounded), `rating`, `navigationType` and `id` (`^[A-Za-z0-9_-]{1,64}$`) and nothing else. No URL, path, query string, referrer, user agent, position or free text can be expressed, and an unknown key is rejected.
+- Client (`apps/web/src/vitals.ts`): registers `web-vitals` observers at startup through a static import (a lazy dynamic import was tried and cost 1.2 KB more, which breaks the budget; see Context). It copies the five fields, sends the JSON with `fetch` (`keepalive`, no credentials, `referrerPolicy: "no-referrer"`). It runs in production builds only and imports the contract as a type, so valibot stays out of the browser. It never reads `window.location`, `document.referrer` or a position. A failed send is dropped silently.
+- Server (`apps/api/src/vitals.ts`): only `application/json` is accepted (not `text/plain`, so a cross-site simple form post cannot reach it). The size cap of 1,024 bytes is enforced before parsing, by declared length and by a counting stream, so an oversized or chunked body is never held or parsed. The body is validated with the contract. Success is 204 with no body. Every rejection uses the fixed error envelope and never echoes input or `error.message`. Another method gets 405 with `Allow: POST`.
+- Logging: an accepted beacon adds one optional `vital` object (`name`, `value`, `rating`, `navigationType`) to the request line that is already written, so it costs no extra line. The logged `path` is `/api/vitals` for this exact route only; every other request still logs `/api/*`. `id` is validated and discarded: it is unique per page load, so logging it adds cardinality and no way to aggregate. No IP, user agent or header is logged, and the request carries no `Referer` at all.
+- Volume: there is no rate limit and no new storage. The 1 KB cap bounds memory and the strict schema bounds what can be logged. A client sends at most one report per metric per page load.
+
+Reading the data: in Workers Logs filter `event = request`, `path = /api/vitals`, `status = 204`, and group or percentile on `vital.name` over `vital.value`. Retention is as in the observability guide (3 or 7 days), so this is a diagnosis aid, not a long-term record.
+
+## Consequences
+
+- Easier: p75 LCP, INP and CLS from real users, with no third-party script, no CSP change (`connect-src 'self'` covers the path), no cookie and no new service or cost.
+- Residual risk, stated plainly: anyone can post valid beacons. The data can be polluted, so treat it as indicative. Each beacon is a Worker request and a Workers Logs line, so a flood adds to the request count (the same quota every other URL shares) and to log ingestion; the ingestion note in the observability guide (lower `head_sampling_rate` if monthly ingestion nears 50 GB) applies. A Cloudflare rate-limiting rule would address it but is outside this change. Revisit if the beacon share of traffic or log volume becomes visible.
+- Privacy: the payload and the log hold no URL, query, position or identifier that survives the page. The browser still sends its normal `User-Agent` header, which the Worker does not read or log; `Referer` is suppressed by the client. This is unverified against Workers Logs platform fields, which stay off (`invocation_logs: false`, `redact_query_string: true`).
+- Harder: the bundle has 1,059 raw and 787 gzip bytes of headroom, so any other client growth hits the budget. The browser does not validate the payload at runtime (the Worker does); tests check the built payload against the contract.
+- Revisit when traffic makes percentiles meaningful, when dashboards or a longer-lived store are wanted, or when the budget is raised.
+
+## Alternatives considered
+
+- Cloudflare Web Analytics: a third-party beacon script, needs a CSP change and a new host, adds a processor of visitor data. Rejected.
+- No real-user measurement until there is traffic: leaves the ticket's LCP, INP and CLS targets unmeasured. Rejected; the lab check in part C covers synthetic load only.
+- A KV or D1 store for the beacons: new storage, cost and retention policy for a handful of numbers. Rejected; Workers Logs already exists.
+- All five metrics and runtime validation in the browser: measured at 254,031 / 80,628 bytes, over both thresholds. Rejected.
+- Accepting `text/plain` so a bare string beacon works: widens the endpoint to cross-site simple posts for no gain, since the client sets the type itself. Rejected.
+
+## Confirmation
+
+- `packages/contracts/src/contracts.test.ts`: the payload accepts exactly the five fields and rejects extra keys, `lat`, `lng`, URL and query-like keys, bad values and ids.
+- `apps/api/src/vitals.test.ts`: status per case, the size cap before parsing, the logged fields (no `id`), no input in a rejection, and 404 for every other path.
+- `apps/web/src/vitals.test.ts`: a payload built from a metric holds only the five keys and no `lat`, `lng`, query string or URL; nothing runs unless enabled.
+- `e2e/vitals.e2e.ts`: the built app sends contract-valid beacons the Worker answers with 204, and no `/api` request carries a coordinate.
+- `scripts/bundle.ts` (`bun run bundle:check`): the budget that bounds the client.

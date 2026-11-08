@@ -2,10 +2,32 @@ import type { ErrorEnvelope } from "@metro/contracts";
 import { Hono } from "hono";
 import { secureHeaders } from "hono/secure-headers";
 
-import type { ApiApp, Logger } from "./types";
-import { registerVitals } from "./vitals";
+import { vitalsRoutes, type LoggedVital } from "./vitals";
 
-export type { ApiApp, Logger, LogLine } from "./types";
+/**
+ * One structured log line. Only these fields exist, so nothing else (query string, headers, bodies,
+ * error messages) can be logged by accident. See docs/specifications/cloudflare-preview.md.
+ */
+export type LogLine =
+  | {
+      level: "info";
+      event: "request";
+      requestId: string;
+      method: string;
+      path: string;
+      status: number;
+      durationMs: number;
+      /** Present only on an accepted `POST /api/vitals`. */
+      vital?: LoggedVital;
+    }
+  | { level: "error"; event: "error"; requestId: string; errorName: string };
+
+export type Logger = (line: LogLine) => void;
+
+export type ApiApp = Hono<{
+  Bindings: Env;
+  Variables: { requestId: string; vital?: LoggedVital };
+}>;
 
 /** Workers Observability collects console output; one JSON object per line is the contract. */
 const consoleLogger: Logger = (line) => {
@@ -84,7 +106,7 @@ export function createApp(log: Logger = consoleLogger, register: (app: ApiApp) =
     });
   });
 
-  registerVitals(app);
+  app.route("/", vitalsRoutes);
   register(app);
   // Worker-first for /assets/* (see wrangler.jsonc). With run_worker_first patterns Cloudflare answers a
   // missing file with the SPA's index.html (200), and _headers would mark that immutable. Only a real

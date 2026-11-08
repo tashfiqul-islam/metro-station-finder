@@ -7,7 +7,13 @@ test.describe("real-user web vitals beacon (METRO-44)", () => {
     page,
   }) => {
     const apiRequests = trackApiRequests(page);
-    const beacons: { method: string; type: string; body: string; url: string }[] = [];
+    const beacons: {
+      method: string;
+      type: string;
+      body: string;
+      url: string;
+      referer: string | undefined;
+    }[] = [];
     const statuses: number[] = [];
     page.on("request", (request) => {
       if (new URL(request.url()).pathname === "/api/vitals") {
@@ -16,6 +22,7 @@ test.describe("real-user web vitals beacon (METRO-44)", () => {
           type: request.headers()["content-type"] ?? "",
           body: request.postData() ?? "",
           url: request.url(),
+          referer: request.headers()["referer"],
         });
       }
     });
@@ -24,12 +31,13 @@ test.describe("real-user web vitals beacon (METRO-44)", () => {
     });
     await installMapsStub(page);
     // A query string on the page URL must not travel to the beacon, in the URL, the body or anywhere.
-    await page.goto("/?lat=23.87&lng=90.367&q=uttara");
+    await page.goto("/?q=uttara&ref=SECRETREF");
     await expect(
       page.getByRole("heading", { level: 1, name: "Nearest Metro station" }),
     ).toBeVisible();
-    // web-vitals loads after the load event, and LCP and CLS report when the page is hidden. Hide the
-    // page on every poll until both beacons have arrived (a later hide adds no duplicate).
+    // LCP is final at the first input and CLS when the page is hidden. Click once, then hide the page on
+    // every poll until both beacons have arrived (a later hide adds no duplicate).
+    await page.mouse.click(5, 5);
     await expect
       .poll(
         async () => {
@@ -53,6 +61,8 @@ test.describe("real-user web vitals beacon (METRO-44)", () => {
     for (const beacon of beacons) {
       expect(beacon.method).toBe("POST");
       expect(new URL(beacon.url).search).toBe("");
+      // The page URL (with its query string) must not travel in the Referer header either.
+      expect(beacon.referer).toBeUndefined();
       expect(beacon.type).toContain("application/json");
       const parsed = parseWebVitalPayload(JSON.parse(beacon.body));
       expect(Object.keys(parsed).toSorted()).toEqual([
@@ -62,7 +72,7 @@ test.describe("real-user web vitals beacon (METRO-44)", () => {
         "rating",
         "value",
       ]);
-      for (const fragment of ["lat", "lng", "23.87", "90.367", "uttara", "?", "http"]) {
+      for (const fragment of ["lat", "lng", "uttara", "SECRETREF", "?", "http"]) {
         expect(beacon.body, fragment).not.toContain(fragment);
       }
     }

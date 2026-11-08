@@ -1,6 +1,8 @@
-import { isWebVitalPayload, type ErrorEnvelope } from "@metro/contracts";
+import { isWebVitalPayload, type ErrorEnvelope, type WebVitalPayload } from "@metro/contracts";
+import { Hono } from "hono";
 
-import type { ApiApp } from "./types";
+/** The validated beacon fields that may be logged. `id` is deliberately absent (ADR-0019). */
+export type LoggedVital = Pick<WebVitalPayload, "name" | "value" | "rating" | "navigationType">;
 
 /** A valid beacon is about 130 bytes; 1 KB leaves room and refuses anything that is not one. */
 export const MAX_VITAL_BYTES = 1024;
@@ -36,9 +38,11 @@ async function readCapped(request: Request, max: number): Promise<Uint8Array | u
 /**
  * `POST /api/vitals` (METRO-44, ADR-0019). Same-origin beacon: JSON only, size cap before parsing,
  * strict contract, 204 with no body. Every rejection is a fixed envelope that never echoes input.
+ * Mounted by `createApp` after the shared middleware; it hands the accepted fields to the request log
+ * through the `vital` context variable.
  */
-export function registerVitals(app: ApiApp): void {
-  app.post("/api/vitals", async (context) => {
+export const vitalsRoutes = new Hono<{ Variables: { vital?: LoggedVital } }>()
+  .post("/api/vitals", async (context) => {
     const type = (context.req.header("content-type") ?? "").split(";")[0]?.trim().toLowerCase();
     if (type !== "application/json") {
       return context.json(envelope("unsupported_media_type", "Send application/json"), 415);
@@ -59,9 +63,8 @@ export function registerVitals(app: ApiApp): void {
     const { name, value, rating, navigationType } = body;
     context.set("vital", { name, value, rating, navigationType });
     return context.body(null, 204);
-  });
-  app.all("/api/vitals", (context) => {
+  })
+  .all("/api/vitals", (context) => {
     context.header("Allow", "POST");
     return context.json(envelope("method_not_allowed", "Use POST"), 405);
   });
-}

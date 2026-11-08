@@ -2,7 +2,7 @@ import { isWebVitalPayload, type WebVitalPayload } from "@metro/contracts";
 import { afterEach, expect, test, vi } from "vitest";
 import type { Metric } from "web-vitals";
 
-import { afterLoad, sendVital, startVitals, toPayload, VITALS_PATH, type Library } from "./vitals";
+import { sendVital, startVitals, toPayload, VITALS_PATH, type Observer } from "./vitals";
 
 // Synthetic metric. The library fields that carry a URL or a position (navigationURL, entries) are
 // filled with coordinate- and query-like values to prove none of them can reach a payload.
@@ -66,102 +66,43 @@ test("METRO-44 a metric the contract does not carry produces no payload", () => 
   expect(toPayload(metric({ name: "TTFB" }))).toBeUndefined();
 });
 
-test("METRO-44 startVitals loads the library after the schedule fires and sends each reported metric", async () => {
+test("METRO-44 startVitals registers every observer and sends each reported metric", () => {
   const sent: WebVitalPayload[] = [];
   const reporters: ((metric: Metric) => void)[] = [];
-  const library: Library = {
-    onCLS: (report) => reporters.push(report),
-    onINP: (report) => reporters.push(report),
-    onLCP: (report) => reporters.push(report),
-  };
-  const load = vi.fn(() => Promise.resolve(library));
-  let task: (() => void) | undefined;
-  startVitals(
-    true,
-    load,
-    (payload) => sent.push(payload),
-    (given) => {
-      task = given;
-    },
-  );
-  expect(load).not.toHaveBeenCalled(); // nothing loads before the page is ready
-  task?.();
-  await vi.waitFor(() => expect(reporters).toHaveLength(3));
+  const observer: Observer = (report) => reporters.push(report);
+  startVitals(true, [observer, observer, observer], (payload) => sent.push(payload));
+  expect(reporters).toHaveLength(3);
   reporters[0]?.(metric());
   reporters[1]?.(metric({ navigationType: "soft-navigation" }));
   expect(sent).toHaveLength(1);
   expect(sent[0]?.name).toBe("LCP");
 });
 
-test("METRO-44 a failed library load is swallowed and sends nothing", async () => {
-  const error = vi.spyOn(console, "error");
-  const send = vi.fn();
-  const load = vi.fn(() => Promise.reject(new Error("lat=23.81")));
-  startVitals(true, load, send, (task) => task());
-  await vi.waitFor(() => expect(load).toHaveBeenCalledTimes(1));
-  await Promise.resolve();
-  expect(send).not.toHaveBeenCalled();
-  expect(error).not.toHaveBeenCalled();
-});
-
-test("METRO-44 startVitals is off by default under test: nothing is scheduled, loaded or sent", () => {
-  const load = vi.fn();
-  const schedule = vi.fn();
-  startVitals(undefined, load, vi.fn(), schedule);
-  expect(schedule).not.toHaveBeenCalled();
-  expect(load).not.toHaveBeenCalled();
+test("METRO-44 startVitals is off by default under test: nothing is registered or sent", () => {
+  const observer = vi.fn();
+  startVitals(undefined, [observer], vi.fn());
+  expect(observer).not.toHaveBeenCalled();
   expect(import.meta.env.PROD).toBe(false);
 });
 
-test("METRO-44 afterLoad runs at once when the page is loaded and on the load event otherwise", () => {
-  const task = vi.fn();
-  vi.spyOn(document, "readyState", "get").mockReturnValue("complete");
-  afterLoad(task);
-  expect(task).toHaveBeenCalledTimes(1);
-  const later = vi.fn();
-  vi.spyOn(document, "readyState", "get").mockReturnValue("loading");
-  afterLoad(later);
-  expect(later).not.toHaveBeenCalled();
-  window.dispatchEvent(new Event("load"));
-  expect(later).toHaveBeenCalledTimes(1);
-});
-
-test("METRO-44 sendVital sends a JSON blob with sendBeacon to the fixed path", async () => {
-  const beacon = vi.fn((_url: string, _data: Blob) => true);
-  const fetcher = vi.fn();
-  vi.stubGlobal("navigator", { sendBeacon: beacon });
+test("METRO-44 sendVital posts the payload as JSON to the fixed path with keepalive, no credentials and no referrer", () => {
+  const fetcher = vi.fn(() => Promise.resolve(new Response(null, { status: 204 })));
   vi.stubGlobal("fetch", fetcher);
   const payload = expectPayload(metric());
   sendVital(payload);
-  expect(beacon).toHaveBeenCalledTimes(1);
-  const call = beacon.mock.calls[0];
-  expect(call?.[0]).toBe(VITALS_PATH);
   expect(VITALS_PATH).toBe("/api/vitals");
-  expect(call?.[1].type).toBe("application/json");
-  expect(JSON.parse((await call?.[1].text()) ?? "")).toEqual(payload);
-  expect(fetcher).not.toHaveBeenCalled();
+  expect(fetcher).toHaveBeenCalledWith(VITALS_PATH, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(payload),
+    keepalive: true,
+    credentials: "omit",
+    referrerPolicy: "no-referrer",
+  });
 });
 
-test("METRO-44 sendVital falls back to a keepalive fetch when sendBeacon refuses or is missing", () => {
-  const payload = expectPayload(metric());
-  for (const nav of [{ sendBeacon: () => false }, {}]) {
-    const fetcher = vi.fn(() => Promise.resolve(new Response(null, { status: 204 })));
-    vi.stubGlobal("navigator", nav);
-    vi.stubGlobal("fetch", fetcher);
-    sendVital(payload);
-    expect(fetcher).toHaveBeenCalledWith(VITALS_PATH, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(payload),
-      keepalive: true,
-      credentials: "omit",
-    });
-  }
-});
-
-test("METRO-44 a failed fallback fetch is swallowed and reports nothing", async () => {
+test("METRO-44 a failed send is swallowed and reports nothing", async () => {
   const error = vi.spyOn(console, "error");
-  vi.stubGlobal("navigator", {});
   vi.stubGlobal("fetch", () => Promise.reject(new Error("lat=23.81")));
   sendVital(expectPayload(metric()));
   await Promise.resolve();
