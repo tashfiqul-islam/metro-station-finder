@@ -4,6 +4,7 @@ import { isRecord } from "./guards";
 import {
   browserInstallTimeoutViolations,
   credentialedCacheViolations,
+  credentialedMiseRetryViolations,
   installBudgetSeconds,
   installBudgetViolations,
   isCredentialed,
@@ -11,6 +12,7 @@ import {
   setupDriftViolations,
   smokeProjectViolations,
   toParsedWorkflow,
+  uncredentialedMiseCacheViolations,
   type DriftOptions,
   type ParsedWorkflow,
 } from "./workflow-policy";
@@ -391,3 +393,159 @@ test("METRO-90 a composite action in the preview job is read and its cache is fl
     "quality.yml job preview step Setup (action ./.github/actions/setup) step Cache: restores a cache",
   ]);
 });
+
+const isMise = (step: Record<string, unknown>) =>
+  textOf(step["uses"]).startsWith("jdx/mise-action");
+
+function previewSteps(workflow: ParsedWorkflow): Record<string, unknown>[] {
+  return stepsOf(job(workflow, "preview"));
+}
+
+test("METRO-97 the uncredentialed jobs keep mise-action's cache on and the rule rejects cache: false", () => {
+  expect(uncredentialedMiseCacheViolations([quality])).toEqual([]);
+  for (const id of ["changes", "checks", "build", "smoke", "security", "quality"])
+    expect(stepsOf(job(quality, id)).filter(isMise), id).toHaveLength(1);
+  for (const value of [false, "false"]) {
+    const copy = cloneQuality();
+    const mise = stepsOf(job(copy, "changes")).find(isMise);
+    if (mise === undefined || !isRecord(mise["with"])) throw new Error("no mise step");
+    mise["with"]["cache"] = value;
+    expect(uncredentialedMiseCacheViolations([copy])).toEqual([
+      "quality.yml job changes step Install pinned tools with mise: mise-action disables its cache",
+    ]);
+  }
+  // The credentialed preview job is not this rule's business (it must disable the cache).
+  const extra = withExtraStep("preview", { uses: "jdx/mise-action@x" });
+  expect(uncredentialedMiseCacheViolations([extra])).toEqual([]);
+});
+
+test("METRO-97 the preview job installs mise without a cache but with a bounded retry chain", () => {
+  expect(credentialedMiseRetryViolations([quality])).toEqual([]);
+  const attempts = previewSteps(quality).filter(isMise);
+  expect(attempts).toHaveLength(3);
+  for (const step of attempts)
+    expect(isRecord(step["with"]) ? step["with"]["cache"] : undefined).toBe(false);
+  expect(credentialedCacheViolations([quality])).toEqual([]);
+  // Every mise-action step in every job pins the same commit.
+  const pins = new Set(
+    Object.values(quality.jobs).flatMap((entry) =>
+      stepsOf(entry)
+        .filter(isMise)
+        .map((step) => step["uses"]),
+    ),
+  );
+  expect(pins.size).toBe(1);
+});
+
+const FIRST = "Install pinned tools with mise";
+const SECOND = "Install pinned tools with mise (second attempt)";
+const THIRD = "Install pinned tools with mise (third attempt)";
+const WAIT_2 = "Wait before the second tool install";
+const WAIT_3 = "Wait before the third tool install";
+
+function named(steps: Record<string, unknown>[], name: string): Record<string, unknown> {
+  const found = steps.find((step) => step["name"] === name);
+  if (found === undefined) throw new Error(name);
+  return found;
+}
+
+function mutatePreview(change: (steps: Record<string, unknown>[]) => void): string[] {
+  const copy = cloneQuality();
+  const steps = previewSteps(copy);
+  change(steps);
+  job(copy, "preview")["steps"] = steps;
+  return credentialedMiseRetryViolations([copy]);
+}
+
+test("METRO-97 the retry rule fails a preview job whose chain is weakened", () => {
+  const where = "quality.yml job preview step ";
+  const single = mutatePreview((steps) => {
+    for (const name of [SECOND, THIRD, WAIT_2, WAIT_3])
+      steps.splice(steps.indexOf(named(steps, name)), 1);
+    named(steps, FIRST)["continue-on-error"] = false;
+  });
+  expect(single).toEqual(["quality.yml job preview: mise install has no retry attempt"]);
+  expect(mutatePreview((steps) => delete named(steps, FIRST)["continue-on-error"])).toEqual([
+    `${where}${FIRST}: an earlier attempt must set continue-on-error: true`,
+  ]);
+  expect(mutatePreview((steps) => (named(steps, THIRD)["continue-on-error"] = true))).toEqual([
+    `${where}${THIRD}: the last attempt must not continue on error`,
+  ]);
+  expect(mutatePreview((steps) => delete named(steps, SECOND)["timeout-minutes"])).toEqual([
+    `${where}${SECOND}: needs timeout-minutes between 1 and 5`,
+  ]);
+  expect(mutatePreview((steps) => (named(steps, THIRD)["timeout-minutes"] = 6))).toEqual([
+    `${where}${THIRD}: needs timeout-minutes between 1 and 5`,
+  ]);
+  expect(mutatePreview((steps) => (named(steps, SECOND)["if"] = "${{ always() }}"))).toEqual([
+    `${where}${SECOND}: must run only when steps.mise1.outcome == 'failure'`,
+  ]);
+  expect(mutatePreview((steps) => delete named(steps, FIRST)["id"])).toEqual([
+    `${where}${SECOND}: must run only when steps.undefined.outcome == 'failure'`,
+    `${where}${SECOND}: its sleep step must run only when steps.undefined.outcome == 'failure'`,
+  ]);
+  expect(mutatePreview((steps) => (named(steps, WAIT_2)["run"] = "sleep 600"))).toEqual([
+    `${where}${SECOND}: needs a "sleep N" step (N <= 120) directly before it`,
+  ]);
+  expect(mutatePreview((steps) => (named(steps, WAIT_3)["run"] = "echo hi"))).toEqual([
+    `${where}${THIRD}: needs a "sleep N" step (N <= 120) directly before it`,
+  ]);
+});
+
+test("METRO-97 the retry gates must be exactly the previous attempt's failure, with unique ids and a fitting budget", () => {
+  const where = "quality.yml job preview step ";
+  for (const extra of ["|| always()", "|| true", "&& always()"])
+    expect(
+      mutatePreview(
+        (steps) =>
+          (named(steps, SECOND)["if"] = `\${{ steps.mise1.outcome == 'failure' ${extra} }}`),
+      ),
+    ).toEqual([`${where}${SECOND}: must run only when steps.mise1.outcome == 'failure'`]);
+  expect(mutatePreview((steps) => (named(steps, WAIT_2)["if"] = "${{ always() }}"))).toEqual([
+    `${where}${SECOND}: its sleep step must run only when steps.mise1.outcome == 'failure'`,
+  ]);
+  expect(mutatePreview((steps) => delete named(steps, WAIT_3)["if"])).toEqual([
+    `${where}${THIRD}: its sleep step must run only when steps.mise2.outcome == 'failure'`,
+  ]);
+  // The third attempt gated on the first attempt, not the one before it.
+  expect(
+    mutatePreview(
+      (steps) => (named(steps, THIRD)["if"] = "${{ steps.mise1.outcome == 'failure' }}"),
+    ),
+  ).toEqual([`${where}${THIRD}: must run only when steps.mise2.outcome == 'failure'`]);
+  // Duplicate ids: the second attempt reuses the first id, so the third attempt's gates also break.
+  expect(mutatePreview((steps) => (named(steps, SECOND)["id"] = "mise1"))).toEqual([
+    `${where}${THIRD}: must run only when steps.mise1.outcome == 'failure'`,
+    `${where}${THIRD}: its sleep step must run only when steps.mise1.outcome == 'failure'`,
+    "quality.yml job preview: mise attempt ids are not unique",
+  ]);
+  const withJobLimit = (limit: unknown) => {
+    const copy = cloneQuality();
+    job(copy, "preview")["timeout-minutes"] = limit;
+    return credentialedMiseRetryViolations([copy]);
+  };
+  expect(job(quality, "preview")["timeout-minutes"]).toBe(20);
+  expect(withJobLimit(15)).toEqual([
+    "quality.yml job preview: retry chain 810 s plus 180 s margin does not fit in timeout-minutes 15",
+  ]);
+  expect(withJobLimit(null)).toEqual([
+    "quality.yml job preview: retry chain 810 s plus 180 s margin does not fit in timeout-minutes null",
+  ]);
+  expect(withJobLimit(17)).toEqual([]);
+});
+
+test("METRO-97 the retry rule ignores uncredentialed jobs and credentialed jobs without mise", () => {
+  expect(credentialedMiseRetryViolations([dropPreview(cloneQuality())])).toEqual([]);
+  const bare = toParsedWorkflow(
+    "fixture.yml",
+    Bun.YAML.parse(
+      "on: pull_request\njobs:\n  one:\n    environment: x\n    steps:\n      - run: echo\n",
+    ),
+  );
+  expect(credentialedMiseRetryViolations([bare])).toEqual([]);
+});
+
+function dropPreview(workflow: ParsedWorkflow): ParsedWorkflow {
+  const { preview: _removed, ...rest } = workflow.jobs;
+  return { ...workflow, jobs: rest };
+}

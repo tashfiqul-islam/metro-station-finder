@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 
 import { isRecord } from "./guards";
+import { toParsedWorkflow, uncredentialedMiseCacheViolations } from "./workflow-policy";
 
 const text = readFileSync(".github/workflows/reviewer-record.yml", "utf8");
 
@@ -51,14 +52,15 @@ test("METRO-36 permissions are empty at the top and contents read only on the jo
   expect(job["permissions"]).toEqual({ contents: "read" });
 });
 
-test("METRO-36 no secrets, no cache, no persisted credentials, no write access", () => {
+test("METRO-36 no secrets, no actions/cache step, no persisted credentials, no write access", () => {
   const { steps } = parsed();
   const [checkout = {}, tools = {}] = steps;
   expect(String(checkout["uses"])).toStartWith("actions/checkout@");
   expect(record(checkout["with"], "checkout.with")["persist-credentials"]).toBe(false);
   expect(record(checkout["with"], "checkout.with")["fetch-depth"]).toBe(0);
   expect(String(tools["uses"])).toStartWith("jdx/mise-action@");
-  expect(record(tools["with"], "tools.with")["cache"]).toBe(false);
+  // METRO-97: the job holds no credential, so mise-action's own cache stays on and a warm run downloads nothing.
+  expect(record(tools["with"], "tools.with")["cache"]).toBeUndefined();
   expect(text).not.toMatch(/secrets\.|actions\/cache|write|GITHUB_TOKEN|github\.token/u);
 });
 
@@ -109,4 +111,30 @@ test("METRO-36 the Quality workflow no longer carries the reviewer job or the ed
   const needs = quality.match(/needs: \[changes, checks, build, smoke, security\]\n {4}runs-on/u);
   expect(needs).not.toBeNull();
   expect(readFileSync("scripts/ci-results.ts", "utf8")).not.toContain('"review"');
+});
+
+function realWorkflow() {
+  return toParsedWorkflow("reviewer-record.yml", Bun.YAML.parse(text));
+}
+
+function toolsStep(workflow: ReturnType<typeof realWorkflow>): Record<string, unknown> {
+  const steps = workflow.jobs["review"]?.["steps"];
+  if (!Array.isArray(steps)) throw new Error("steps is not a list");
+  return record(steps[1], "tools step");
+}
+
+test('METRO-97 the real workflow keeps mise-action\'s cache on and the rule flags cache: false or "false"', () => {
+  expect(uncredentialedMiseCacheViolations([realWorkflow()])).toEqual([]);
+  for (const value of [false, "false"]) {
+    const copy = realWorkflow();
+    const step = toolsStep(copy);
+    step["with"] = { ...record(step["with"], "tools.with"), cache: value };
+    expect(uncredentialedMiseCacheViolations([copy])).toEqual([
+      "reviewer-record.yml job review step Install pinned tools with mise: mise-action disables its cache",
+    ]);
+  }
+  const explicit = realWorkflow();
+  const step = toolsStep(explicit);
+  step["with"] = { ...record(step["with"], "tools.with"), cache: true };
+  expect(uncredentialedMiseCacheViolations([explicit])).toEqual([]);
 });

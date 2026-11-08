@@ -128,6 +128,112 @@ export function credentialedCacheViolations(
   return found;
 }
 
+function stringOf(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+function miseSteps(job: Record<string, unknown>): Record<string, unknown>[] {
+  return stepsOf(job).filter(
+    (step) => typeof step["uses"] === "string" && step["uses"].startsWith("jdx/mise-action"),
+  );
+}
+
+/**
+ * An uncredentialed job must leave mise-action's own cache on (METRO-97). The action restores the mise binary
+ * and the installed tools from GitHub's cache and saves them once after a miss, before any later step runs;
+ * a warm job then never downloads from github.com releases, which answered HTTP 504 in hosted runs.
+ * `cache: false` made Changes and Reviewer record download on every run.
+ */
+export function uncredentialedMiseCacheViolations(workflows: ParsedWorkflow[]): string[] {
+  const found: string[] = [];
+  for (const workflow of workflows)
+    for (const [id, job] of Object.entries(workflow.jobs)) {
+      if (isCredentialed(workflow, job)) continue;
+      for (const step of miseSteps(job)) {
+        const inputs = isRecord(step["with"]) ? step["with"] : {};
+        if (inputs["cache"] === false || inputs["cache"] === "false")
+          found.push(
+            `${workflow.file} job ${id} step ${String(step["name"])}: mise-action disables its cache`,
+          );
+      }
+    }
+  return found;
+}
+
+/** The longest a pause between install attempts, and an attempt itself, may take in a credentialed job. */
+export const MISE_RETRY_MAX_SLEEP_SECONDS = 120;
+export const MISE_RETRY_MAX_ATTEMPT_MINUTES = 5;
+/** Time the rest of the job (bootstrap, build, deploy, smoke) keeps after the longest possible retry chain. */
+export const MISE_RETRY_JOB_MARGIN_SECONDS = 180;
+
+/**
+ * A credentialed job installs mise without a cache, so a GitHub release 504 would fail it. Its mise-action steps
+ * are therefore a bounded retry chain (METRO-97): at least two attempts, each with a step `timeout-minutes` of
+ * at most MISE_RETRY_MAX_ATTEMPT_MINUTES, every attempt but the last `continue-on-error: true`, the last one
+ * not (it fails the job), every later attempt gated on `steps.<previous id>.outcome == 'failure'`, and a
+ * `sleep N` run step (N at most MISE_RETRY_MAX_SLEEP_SECONDS) directly before each later attempt, gated the same
+ * way. Gates must be exactly that expression (no `||`, no added term), attempt ids unique, and the attempt limits
+ * plus the pauses plus MISE_RETRY_JOB_MARGIN_SECONDS must fit inside the job's `timeout-minutes`.
+ * No cache or artifact step is involved, so the credentialed cache rule still holds.
+ */
+export function credentialedMiseRetryViolations(workflows: ParsedWorkflow[]): string[] {
+  const found: string[] = [];
+  for (const workflow of workflows)
+    for (const [id, job] of Object.entries(workflow.jobs)) {
+      if (!isCredentialed(workflow, job)) continue;
+      const steps = stepsOf(job);
+      const attempts = miseSteps(job);
+      if (attempts.length === 0) continue;
+      const where = `${workflow.file} job ${id}`;
+      if (attempts.length < 2) found.push(`${where}: mise install has no retry attempt`);
+      let attemptSeconds = 0;
+      let pauses = 0;
+      attempts.forEach((step, index) => {
+        const here = `${where} step ${String(step["name"])}`;
+        const limit = step["timeout-minutes"];
+        if (typeof limit === "number") attemptSeconds += limit * 60;
+        if (typeof limit !== "number" || !(limit > 0) || limit > MISE_RETRY_MAX_ATTEMPT_MINUTES)
+          found.push(
+            `${here}: needs timeout-minutes between 1 and ${MISE_RETRY_MAX_ATTEMPT_MINUTES}`,
+          );
+        const last = index === attempts.length - 1;
+        if (last === (step["continue-on-error"] === true))
+          found.push(
+            last
+              ? `${here}: the last attempt must not continue on error`
+              : `${here}: an earlier attempt must set continue-on-error: true`,
+          );
+        if (index === 0) return;
+        const previous = attempts[index - 1];
+        const gate = `steps.${String(previous?.["id"])}.outcome == 'failure'`;
+        // Exactly the gate: conjunction() rejects any `||`, and equality rejects an added `&&` term.
+        const gated = (candidate: Record<string, unknown> | undefined) =>
+          typeof previous?.["id"] === "string" &&
+          JSON.stringify(conjunction(candidate?.["if"])) === JSON.stringify([gate]);
+        if (!gated(step)) found.push(`${here}: must run only when ${gate}`);
+        const before = steps[steps.indexOf(step) - 1];
+        const sleep = /^\s*sleep (\d+)\s*$/u.exec(stringOf(before?.["run"]));
+        if (sleep === null || Number(sleep[1]) > MISE_RETRY_MAX_SLEEP_SECONDS)
+          found.push(
+            `${here}: needs a "sleep N" step (N <= ${MISE_RETRY_MAX_SLEEP_SECONDS}) directly before it`,
+          );
+        else {
+          pauses += Number(sleep[1]);
+          if (!gated(before)) found.push(`${here}: its sleep step must run only when ${gate}`);
+        }
+      });
+      const ids = attempts.map((step) => step["id"]);
+      if (new Set(ids).size !== ids.length) found.push(`${where}: mise attempt ids are not unique`);
+      const budget = attemptSeconds + pauses + MISE_RETRY_JOB_MARGIN_SECONDS;
+      const jobLimit = job["timeout-minutes"];
+      if (typeof jobLimit !== "number" || budget >= jobLimit * 60)
+        found.push(
+          `${where}: retry chain ${attemptSeconds + pauses} s plus ${MISE_RETRY_JOB_MARGIN_SECONDS} s margin does not fit in timeout-minutes ${JSON.stringify(jobLimit)}`,
+        );
+    }
+  return found;
+}
+
 /** Splits an `if` into its top-level AND terms, or undefined when it contains `||` (any OR can bypass a term). */
 export function conjunction(condition: unknown): string[] | undefined {
   if (typeof condition !== "string") return undefined;
