@@ -1,10 +1,14 @@
 /** Test doubles for the browser Geolocation API, shared by this feature's tests. Synthetic values only. */
 
-export function fakePosition(latitude: number, longitude: number): GeolocationPosition {
+export function fakePosition(
+  latitude: number,
+  longitude: number,
+  accuracy = 10,
+): GeolocationPosition {
   const coords: GeolocationCoordinates = {
     latitude,
     longitude,
-    accuracy: 10,
+    accuracy,
     altitude: null,
     altitudeAccuracy: null,
     heading: null,

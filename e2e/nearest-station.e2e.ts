@@ -116,6 +116,43 @@ test.describe("nearest station from a searched place (METRO-88)", () => {
     expect((await stub.calls()).fetchFields).toEqual([]);
   });
 
+  test.describe("a rough device location (METRO-103)", () => {
+    test("METRO-103 a coarse fix shows fixed copy, no station and no walking-route request", async ({
+      page,
+    }) => {
+      await stubGeolocation(page, { lat: 23.87, lng: 90.367, accuracy: 25_000 });
+      const stub = await openSlice(page);
+      const apiRequests = trackApiRequests(page);
+      await page.getByRole("button", { name: "Use my location" }).click();
+      const alert = page.getByRole("alert");
+      await expect(alert).toHaveText(
+        "Your device found your position only roughly, within about 25 km. The nearest station could be wrong, so none is shown. Search for a place instead.",
+      );
+      await expect(alert).toBeFocused();
+      await expect(page.getByRole("heading", { name: /Nearest station/u })).toHaveCount(0);
+      await expect(page.getByRole("combobox", { name: "Destination station" })).toHaveCount(0);
+      await expect(page.getByText("Straight-line distance")).toHaveCount(0);
+      await expectNoCoordinateInApi(page, apiRequests);
+      expect((await stub.calls()).routes).toEqual([]);
+      // The place search keeps working and replaces the warning with a result.
+      await searchFor(page, "motijheel");
+      await expect(page.getByText("1.23 km, 15 min")).toBeVisible();
+      await expect(page.getByRole("alert")).toHaveCount(0);
+    });
+
+    test("METRO-103 a precise fix of about 20 m gives the usual station and route", async ({
+      page,
+    }) => {
+      await stubGeolocation(page, { lat: 23.87, lng: 90.367, accuracy: 20 });
+      const stub = await openSlice(page);
+      await page.getByRole("button", { name: "Use my location" }).click();
+      await expect(page.getByText("Uttara North", { exact: true }).first()).toBeVisible();
+      await expect(page.getByText("1.23 km, 15 min")).toBeVisible();
+      await expect(page.getByRole("alert")).toHaveCount(0);
+      expect((await stub.calls()).routes).toHaveLength(1);
+    });
+  });
+
   test.describe("when the place fetch fails", () => {
     test("METRO-88 A8 fixed copy shows and the location path still gives station and fare", async ({
       page,

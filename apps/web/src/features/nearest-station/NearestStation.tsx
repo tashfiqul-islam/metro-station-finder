@@ -1,4 +1,10 @@
-import { baselineDataset, datasetProvenance, findFare, findNearestStation } from "@metro/core";
+import {
+  assessNearestReliability,
+  baselineDataset,
+  datasetProvenance,
+  findFare,
+  findNearestStation,
+} from "@metro/core";
 import type { Coordinate, Station } from "@metro/core";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -10,7 +16,13 @@ import type {
   WalkingRoute,
 } from "../../adapters/maps/context";
 import { copy } from "./copy";
-import { formatIsoDate, formatKm, formatMinutes, formatWalkingDistance } from "./format";
+import {
+  formatAccuracy,
+  formatIsoDate,
+  formatKm,
+  formatMinutes,
+  formatWalkingDistance,
+} from "./format";
 import { locate } from "./geolocate";
 
 const stations = baselineDataset.stations;
@@ -88,6 +100,8 @@ function Slice({ maps }: SliceProps) {
   const { status, routes: service } = useMaps();
   const [origin, setOrigin] = useState<Coordinate | null>(null);
   const [locating, setLocating] = useState<Locating>("idle");
+  /** A device fix too rough to name a station (METRO-103): its radius in metres, or null when unknown. */
+  const [rough, setRough] = useState<{ readonly meters: number | null } | null>(null);
   const [searchFailed, setSearchFailed] = useState(false);
   const [destinationId, setDestinationId] = useState("");
   /** Counts user actions; a slower earlier action (a position fix, say) must not overwrite a later one. */
@@ -130,7 +144,18 @@ function Slice({ maps }: SliceProps) {
     }
     setSearchFailed(false);
     setLocating("idle");
+    setRough(null);
     setOrigin(location);
+  }
+
+  /** The nearest station could be wrong: show no result, and request no route. The position is dropped. */
+  function applyRoughFix(accuracyMeters: number | undefined): void {
+    focusNext.current = true;
+    setDestinationId("");
+    setSearchFailed(false);
+    setLocating("idle");
+    setOrigin(null);
+    setRough({ meters: accuracyMeters ?? null });
   }
 
   function choosePlace(location: Coordinate): void {
@@ -142,16 +167,34 @@ function Slice({ maps }: SliceProps) {
     latestAction.current += 1;
     const mine = latestAction.current;
     engagedWithSearch.current = false;
+    setRough(null);
     setLocating("locating");
     const outcome = await locate();
     if (mine !== latestAction.current) return;
-    if (outcome.kind === "position") applyLocation(outcome.coordinate, true);
-    else setLocating(outcome.kind);
+    if (outcome.kind !== "position") {
+      setRough(null);
+      setLocating(outcome.kind);
+    } else if (
+      assessNearestReliability(stations, outcome.coordinate, outcome.accuracyMeters).kind ===
+      "reliable"
+    ) {
+      applyLocation(outcome.coordinate, true);
+    } else {
+      applyRoughFix(outcome.accuracyMeters);
+    }
   }
 
   const searchAlert = status === "unavailable" || searchFailed ? copy.searchUnavailable : null;
   const geoAlert =
-    locating === "denied" ? copy.denied : locating === "unavailable" ? copy.unavailable : null;
+    locating === "denied"
+      ? copy.denied
+      : locating === "unavailable"
+        ? copy.unavailable
+        : rough !== null
+          ? rough.meters === null
+            ? copy.roughUnknown
+            : copy.roughKnown(formatAccuracy(rough.meters))
+          : null;
 
   return (
     <main>

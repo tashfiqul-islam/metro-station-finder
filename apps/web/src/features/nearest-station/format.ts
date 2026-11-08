@@ -12,6 +12,14 @@ export function formatWalkingDistance(meters: number): string {
   return whole < 1000 ? `${whole} m` : formatKm(meters / 1000);
 }
 
+/** An accuracy radius: whole metres below 1 km, else km with at most one decimal ("25 km", "1.5 km"). */
+export function formatAccuracy(meters: number): string {
+  const whole = Math.round(meters);
+  if (whole < 1000) return `${whole} m`;
+  const km = Math.round(meters / 100) / 10;
+  return `${Number.isInteger(km) ? km : km.toFixed(1)} km`;
+}
+
 /** Whole minutes, at least 1. */
 export function formatMinutes(seconds: number): string {
   return `${Math.max(1, Math.round(seconds / 60))} min`;

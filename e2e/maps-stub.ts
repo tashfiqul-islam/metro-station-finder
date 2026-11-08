@@ -185,7 +185,7 @@ export async function expectNoCoordinateInApi(
 /** Replaces the browser geolocation with a deterministic answer (permission denied, or a fixed fix). */
 export async function stubGeolocation(
   page: Page,
-  answer: "denied" | { readonly lat: number; readonly lng: number },
+  answer: "denied" | { readonly lat: number; readonly lng: number; readonly accuracy?: number },
 ): Promise<void> {
   await page.addInitScript((given) => {
     const geolocation = {
@@ -196,7 +196,10 @@ export async function stubGeolocation(
         if (given === "denied") {
           failure({ code: 1, PERMISSION_DENIED: 1, POSITION_UNAVAILABLE: 2, TIMEOUT: 3 });
         } else {
-          success({ coords: { latitude: given.lat, longitude: given.lng } });
+          // Default 20 m: a precise fix. Pass accuracy: 25_000 for the coarse desktop case (METRO-103).
+          success({
+            coords: { latitude: given.lat, longitude: given.lng, accuracy: given.accuracy ?? 20 },
+          });
         }
       },
     };

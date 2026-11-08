@@ -523,3 +523,76 @@ test("METRO-88 typing in the search box after the click still wins over a late f
   ).toBeTruthy();
   expect(document.activeElement).toBe(box);
 });
+
+function fixWithAccuracy(accuracy: number): void {
+  geolocation((success) => success(fakePosition(23.87, 90.367, accuracy)));
+}
+
+test("METRO-103 a coarse fix shows the rough-location copy, no station and no route request", async () => {
+  const walk = vi.fn<RouteService["walk"]>(() => Promise.resolve(route(1234, 900)));
+  world.service = routeService(walk);
+  fixWithAccuracy(25_000);
+  render(<NearestStation maps={fakeMaps} />);
+  fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
+  const alert = await screen.findByRole("alert");
+  expect(alert.textContent).toBe(copy.roughKnown("25 km"));
+  expect(alert.textContent).toContain("within about 25 km");
+  expect(document.activeElement).toBe(alert);
+  expect(screen.queryByRole("heading", { name: copy.resultHeading })).toBeNull();
+  expect(screen.queryByRole("combobox")).toBeNull();
+  expect(walk).not.toHaveBeenCalled();
+  // The consent line and the place search stay.
+  expect(screen.getByText(copy.consent)).toBeTruthy();
+  expect(world.searchProps).not.toBeNull();
+});
+
+test("METRO-103 a fix with unknown accuracy is treated as rough, with copy that states no size", async () => {
+  for (const unknown of [Number.NaN, Infinity, -5]) {
+    cleanup();
+    fixWithAccuracy(unknown);
+    render(<NearestStation maps={fakeMaps} />);
+    fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
+    expect((await screen.findByRole("alert")).textContent).toBe(copy.roughUnknown);
+    expect(screen.queryByRole("heading", { name: copy.resultHeading })).toBeNull();
+  }
+});
+
+test("METRO-103 a precise fix behaves as before: station, route and no alert", async () => {
+  const walk = vi.fn<RouteService["walk"]>(() => Promise.resolve(route(1234, 900)));
+  world.service = routeService(walk);
+  fixWithAccuracy(20);
+  render(<NearestStation maps={fakeMaps} />);
+  fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
+  expect(await screen.findByText("1.23 km, 15 min")).toBeTruthy();
+  expect(screen.getByText("Uttara North")).toBeTruthy();
+  expect(screen.queryByRole("alert")).toBeNull();
+  expect(walk).toHaveBeenCalledTimes(1);
+});
+
+test("METRO-103 a rough fix clears an earlier result, and a place chosen afterwards works", async () => {
+  fixWithAccuracy(25_000);
+  render(<NearestStation maps={fakeMaps} />);
+  pickPlace(NEAR_MOTIJHEEL);
+  fireEvent.change(screen.getByRole("combobox", { name: copy.destinationLabel }), {
+    target: { value: "uttara-north" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
+  expect((await screen.findByRole("alert")).textContent).toBe(copy.roughKnown("25 km"));
+  expect(screen.queryByRole("heading", { name: copy.resultHeading })).toBeNull();
+  pickPlace(NEAR_UTTARA_NORTH);
+  expect(screen.queryByRole("alert")).toBeNull();
+  expect(screen.getByText("Uttara North")).toBeTruthy();
+  expect(
+    screen.getByRole<HTMLSelectElement>("combobox", { name: copy.destinationLabel }).value,
+  ).toBe("");
+});
+
+test("METRO-103 a failed locate after a rough one drops the rough copy", async () => {
+  fixWithAccuracy(25_000);
+  render(<NearestStation maps={fakeMaps} />);
+  fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
+  await screen.findByText(copy.roughKnown("25 km"));
+  geolocation((_success, failure) => failure(denied));
+  fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
+  expect((await screen.findByRole("alert")).textContent).toBe(copy.denied);
+});
