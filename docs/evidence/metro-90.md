@@ -126,3 +126,7 @@ Not measured:
 ## Throwaway demonstrations
 
 Run on throwaway branches `throwaway/metro-90-exp`, `throwaway/metro-90-retry` and `throwaway/metro-90-mirror`, all deleted from the remote and locally. Runs: 42276010001, 42277020062, 42280163493 (cache and split experiments), 42280724531 (step timeout and process kill), 42283626854 (retry with and without apt cleanup), 42285234972 (mirror comparison), 42286982173 (the final retry loop, forced first-attempt kill, Canonical mirror, WebKit smoke passed).
+
+## Closeout METRO-95 (2026-11-08)
+
+Measurements in progress; this first commit only opens the pull request that the docs-only runs are timed on.
