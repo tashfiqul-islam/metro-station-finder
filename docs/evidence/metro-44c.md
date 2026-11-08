@@ -20,7 +20,9 @@ Proof it can fail (Repo-verified, same helper, same run): one control delays the
 ## Limits
 
 - Lab and synthetic: one machine class, one Chromium device profile (Desktop Chrome), a local static server, a stubbed Maps script, no network latency, no throttling. The numbers are a regression tripwire, not what users get. The wide margin below is the CI-noise tolerance.
-- No INP: it needs real user interactions, which this check deliberately has none of. INP and field LCP/CLS come from the real-user beacon of part B.
+- The Maps script is stubbed, so its real cost (download, parse, the widget it renders) is removed from LCP and CLS. A regression that lives in the real widget is not seen here.
+- A slow shift that arrives more than 500 ms after the last entry escapes the settle window, so late shifts (a slow image, a delayed fetch) can be missed; the real-user beacon of part B covers them.
+- INP is not measured here: it needs real interaction, and Part B's beacon reports it.
 - Chromium only. The Layout Instability API (`layout-shift`) is implemented by Chromium browsers; MDN labels it "Limited availability", and for Firefox and Safari support of both entry types the fetched page gave no versions (Unverified here). Firefox, WebKit and the mobile-chrome project therefore ignore the spec through `testIgnore` in `playwright.config.ts`; nothing in their projects was loosened.
 
 ## How to read a failure
@@ -31,15 +33,17 @@ The log line `web-vitals-lab LCP=<ms> (limit 2500ms) CLS=<score> (limit 0.1)` is
 
 `bun run bundle:check` prints every emitted JS/CSS asset (largest first, raw and gzip bytes), the unchanged totals line, and `Entry chunk <path>: <raw> bytes raw; <gzip> bytes gzip (budget <raw> / <gzip>)`. The entry chunk is the module script named by `index.html`; a build with none fails closed.
 
-| Number                        | Value                                                          |
-| ----------------------------- | -------------------------------------------------------------- |
-| Totals (unchanged)            | 250000 raw / 80000 gzip                                        |
-| Entry budget (new)            | 247500 raw / 78500 gzip                                        |
-| Entry on `1aeef64`            | 238537 raw / 75555 gzip (Repo-verified)                        |
-| Entry on `eefd080` (merged)   | 240264 raw / 76109 gzip (Repo-verified)                        |
-| Entry with part B, per ticket | 243513 raw / 77335 gzip (relayed in the task, not re-measured) |
+| Number                                                         | Value                                                           |
+| -------------------------------------------------------------- | --------------------------------------------------------------- |
+| Totals (unchanged)                                             | 250000 raw / 80000 gzip                                         |
+| Entry budget (new)                                             | 247500 raw / 78500 gzip                                         |
+| Entry on `eefd080` (tip of `feature/metro-rebuild`, the basis) | 240264 raw / 76109 gzip (Repo-verified, `bun run bundle:check`) |
+| Totals on `eefd080`                                            | 240335 raw / 76195 gzip (Repo-verified)                         |
+| Entry on `1aeef64` (older)                                     | 238537 raw / 75555 gzip (Repo-verified, superseded)             |
 
-The new budget is about 1.6 percent (raw) and 1.5 percent (gzip) above the relayed part B figure and 3.7 percent above this base. A new dependency of several kilobytes fails the entry check first.
+Basis: the measured entry on `eefd080` plus about 3 percent, giving 7236 raw and 2391 gzip bytes of headroom. The earlier relayed 243513 / 77335 figure came from a different build and is not used. Part B's entry size is Unverified; if its beacon lands in the entry chunk it needs to stay under those headroom numbers, otherwise the budget is the owner's call, not a guess here.
+
+What it protects today: while the build is a single chunk, the entry is 99.97 percent of the total (240264 of 240335 bytes), so the entry budget adds almost nothing beyond the totals. Its value starts when code is split: lazy chunks (Part B adds web-vitals as one) count toward the totals but not the entry budget, so the entry budget then keeps the first-load cost from growing unseen.
 
 ## Measured numbers
 
@@ -55,4 +59,4 @@ Local (Windows 11, Playwright 1.64.1 Chromium, Desktop Chrome, `--workers=1 --re
 
 Controls (one run each, local): delayed script LCP 3088 ms; inserted block CLS 0.3152.
 
-Hosted-measured (GitHub-hosted `ubuntu-24.04`, run 42486347140, job `Build and smoke`, Chromium, PR #106 as first pushed; read from the job log): the real check logged `web-vitals-lab LCP=128ms CLS=0.0037` (limits 2500 ms and 0.1). Controls in the same run: delayed script `LCP=3096ms`, inserted block `CLS=0.3129`. One hosted run only; it shows the margin (about 20 times under the LCP limit and 27 times under the CLS limit), not a distribution. The same job reported 46 passed and 1 skipped; the skip is not in the new spec.
+Hosted-measured (GitHub-hosted `ubuntu-24.04`, run 42486347140, job `Build and smoke`, Chromium, PR #106 as first pushed; read from the job log): the real check logged `web-vitals-lab LCP=128ms CLS=0.0037` (limits 2500 ms and 0.1). Controls in the same run: delayed script `LCP=3096ms`, inserted block `CLS=0.3129`. One hosted run only; it shows the margin (about 20 times under the LCP limit and 27 times under the CLS limit), not a distribution. That job runs Chromium only (METRO-90); the other three projects run in the smoke matrix jobs, counted in the table below.

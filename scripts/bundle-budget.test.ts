@@ -1,4 +1,3 @@
-import { randomBytes } from "node:crypto";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
@@ -39,6 +38,14 @@ test("entryScript returns the first module script without the leading slash", ()
   expect(
     entryScript('<script src="/a.js"></script><script type="module" src="b.js"></script>'),
   ).toBe("b.js");
+  expect(entryScript('<script type="module" src="./assets/a.js?v=2#x"></script>')).toBe(
+    "assets/a.js",
+  );
+  expect(entryScript("<script type='module' src='/assets/q.js'></script>")).toBe("assets/q.js");
+  // `data-src` is not `src`, and a non-module script is not the entry.
+  expect(entryScript('<script type="module" data-src="/assets/x.js"></script>')).toBeNull();
+  expect(entryScript('<script type="text/javascript" src="/assets/x.js"></script>')).toBeNull();
+  expect(entryScript('<script type="module" src=""></script>')).toBeNull();
   expect(entryScript('<script type="module">run()</script>')).toBeNull();
   expect(entryScript("<p>none</p>")).toBeNull();
 });
@@ -134,7 +141,8 @@ test("bundleMain exits 0 within budget and 1 over the entry budget (output is pa
     expect(lines.at(-1)).toMatch(
       /^Entry chunk assets\/index\.js: \d+ bytes raw; \d+ bytes gzip \(budget \d+ \/ \d+\)$/u,
     );
-    await writeFile(join(root, "assets", "index.js"), randomBytes(ENTRY_BUDGET.raw - 1));
+    // Highly compressible, so only the entry raw budget is exceeded: the totals stay within their limits.
+    await writeFile(join(root, "assets", "index.js"), "x".repeat(ENTRY_BUDGET.raw + 1));
     const error = console.error;
     const errors: string[] = [];
     console.error = (line: string) => void errors.push(line);
@@ -145,7 +153,9 @@ test("bundleMain exits 0 within budget and 1 over the entry budget (output is pa
       console.log = log;
       console.error = error;
     }
-    expect(errors.join("\n")).toContain("Entry chunk budget exceeded");
+    expect(errors).toEqual([
+      `Entry chunk budget exceeded: ${ENTRY_BUDGET.raw} raw / ${ENTRY_BUDGET.gzip} gzip bytes`,
+    ]);
   }));
 
 test("bundleMain fails closed when index.html is missing", () =>
