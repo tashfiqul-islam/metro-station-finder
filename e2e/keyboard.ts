@@ -109,7 +109,9 @@ export async function expectTabReachesEveryControl(
     const measure = () =>
       page.evaluate((keys): FocusReport | null => {
         const element = document.activeElement;
-        if (!(element instanceof HTMLElement) || !element.hasAttribute("data-tab-index")) {
+        // An SVG element can be a tab stop too (the line map, METRO-111); `tabIndex` and focus work the same.
+        const focusable = element instanceof HTMLElement || element instanceof SVGElement;
+        if (!focusable || !element.hasAttribute("data-tab-index")) {
           return null;
         }
         const rect = element.getBoundingClientRect();

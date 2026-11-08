@@ -23,11 +23,22 @@
 .map__dot {
   fill: var(--color-map-dot);
 }
+.line-map {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
 .map__shadow {
   stroke: var(--color-map-shadow);
 }
 .map__casing {
   stroke: var(--color-map-casing);
+}
+.map__line {
+  stroke: url(#map-line);
+}
+.map__line--dim {
+  opacity: 0.35;
 }
 .map__stop-a {
   stop-color: var(--color-mark-a);

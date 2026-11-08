@@ -9,6 +9,8 @@ export interface Station {
   readonly id: StationId;
   /** Proposed canonical display name. */
   readonly name: string;
+  /** Optional Bangla display name. Carried in the data for later use; no screen renders it yet (METRO-109). */
+  readonly bn?: string;
   readonly coordinate: Coordinate;
   /** Other exact, case-sensitive labels (legacy spellings) that resolve to this station. */
   readonly aliases: readonly string[];

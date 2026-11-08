@@ -91,11 +91,11 @@ test.describe("nearest station from a searched place (METRO-88)", () => {
       styleElements: document.querySelectorAll("style").length,
       styleAttributes: document.querySelectorAll("[style]").length,
     }));
-    // Only same-origin stylesheets, as linked files (exactly two: the entry's and the slice chunk's), allowed by
+    // Only same-origin stylesheets, as linked files (exactly three: the entry's, the slice chunk's and the line map chunk's, METRO-111), allowed by
     // `style-src 'self'`; nothing inline (METRO-58, METRO-105).
     expect(styling).toEqual({
-      stylesheets: 2,
-      linked: 2,
+      stylesheets: 3,
+      linked: 3,
       foreign: 0,
       styleElements: 0,
       styleAttributes: 0,
@@ -240,7 +240,8 @@ test.describe("nearest station from a searched place (METRO-88)", () => {
     ).toBeVisible();
     // Search input and the location button (the destination select appears with the first result), after the
     // shell's controls: the Home link, the theme button, plus the three sheet-handle controls where the sheet is drawn.
-    const shell = await shellControls(page);
+    // The line map adds one tab stop (METRO-111); it is first in the shell's DOM order.
+    const shell = (await shellControls(page)) + 1;
     await expectTabReachesEveryControl(page, { expected: shell + 2 });
     await searchFor(page, "motijheel");
     await expect(page.getByText("1.23 km, 15 min")).toBeVisible();

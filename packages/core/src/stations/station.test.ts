@@ -15,6 +15,14 @@ describe("StationId", () => {
     expect(() => stationId("Mirpur 11")).toThrow(RangeError);
   });
 
+  test("the Bangla name is optional", () => {
+    const base = { id: stationId("pallabi"), coordinate: { lat: 23.8, lng: 90.3 }, aliases: [] };
+    const without: Station = { ...base, name: "Pallabi" };
+    const withBn: Station = { ...base, name: "Pallabi", bn: "পল্লবী" };
+    expect(without.bn).toBeUndefined();
+    expect(withBn.bn).toBe("পল্লবী");
+  });
+
   test("a plain string is not assignable to StationId", () => {
     const station: Station = {
       id: stationId("pallabi"),
