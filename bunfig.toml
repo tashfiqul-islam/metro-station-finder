@@ -15,8 +15,8 @@ randomize = true
 # Files Vitest owns (ADR-0016 stages 1 and 2): the API tests run in workerd and the web tests in happy-dom,
 # both under vitest, never under Bun.
 pathIgnorePatterns = ["apps/api/**", "apps/web/**"]
-# Per-file gate (Bun enforces coverageThreshold file by file). No coveragePathIgnorePatterns on purpose.
+# Per-file gate, 100 percent lines and functions (METRO-94; Bun enforces coverageThreshold file by file). No coveragePathIgnorePatterns on purpose.
 coverage = true
 coverageReporter = ["text", "lcov"]
 coverageDir = "coverage"
-coverageThreshold = { lines = 0.9, functions = 0.9 }
+coverageThreshold = { lines = 1.0, functions = 1.0 }

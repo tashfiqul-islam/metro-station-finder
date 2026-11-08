@@ -114,7 +114,7 @@ Latitude exactly ±90 and longitude exactly ±180 are accepted; just beyond is r
 
 ### Check plan
 
-`mise exec -- bun run check` (format, type-aware lint, boundaries, import graph, Knip, tests with the per-file 90% coverage gate under randomized order, coverage scope, `tsc -b`). Each acceptance fails on the base commit: the domain, application and data modules do not exist there and the layering rule is absent.
+`mise exec -- bun run check` (format, type-aware lint, boundaries, import graph, Knip, tests with the per-file coverage gate under randomized order, coverage scope, `tsc -b`). Each acceptance fails on the base commit: the domain, application and data modules do not exist there and the layering rule is absent.
 
 ## Open decisions (HITL)
 
