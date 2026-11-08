@@ -60,3 +60,14 @@ Local (Windows 11, Playwright 1.64.1 Chromium, Desktop Chrome, `--workers=1 --re
 Controls (one run each, local): delayed script LCP 3088 ms; inserted block CLS 0.3152.
 
 Hosted-measured (GitHub-hosted `ubuntu-24.04`, run 42486347140, job `Build and smoke`, Chromium, PR #106 as first pushed; read from the job log): the real check logged `web-vitals-lab LCP=128ms CLS=0.0037` (limits 2500 ms and 0.1). Controls in the same run: delayed script `LCP=3096ms`, inserted block `CLS=0.3129`. One hosted run only; it shows the margin (about 20 times under the LCP limit and 27 times under the CLS limit), not a distribution. That job runs Chromium only (METRO-90); the other three projects run in the smoke matrix jobs, counted in the table below.
+
+Per-project test counts (Hosted-measured; read from the job logs). Before: Quality run 42485807913 on `feature/metro-rebuild` at `eefd080`. After: Quality run 42487132667 on this branch at `3fcdce2`.
+
+| Project       | Before passed / skipped (job) | After passed / skipped (job) | Difference                     |
+| ------------- | ----------------------------- | ---------------------------- | ------------------------------ |
+| chromium      | 43 / 1 (128747329035)         | 46 / 1 (128751379909)        | +3 passed: the three new tests |
+| firefox       | 41 / 3 (128747329178)         | 41 / 3 (128751379877)        | none                           |
+| webkit        | 42 / 2 (128747329001)         | 42 / 2 (128751379948)        | none                           |
+| mobile-chrome | 43 / 1 (128747329042)         | 43 / 1 (128751379963)        | none                           |
+
+`testIgnore` leaves the three other projects without the new spec: their counts are unchanged, and no test of theirs was skipped or removed. A spec ignored by `testIgnore` is not listed as skipped.
