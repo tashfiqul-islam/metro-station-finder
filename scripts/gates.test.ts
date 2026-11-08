@@ -163,6 +163,17 @@ test("bundle gate rejects an entry chunk over its own budget (the entry budget e
     expect(result.exitCode).not.toBe(0);
   }));
 
+test("bundle gate: a lazy chunk that pushes the total over the limit fails on the totals alone", () =>
+  fixture(async (root) => {
+    await writeFile(join(root, "entry.js"), "x".repeat(1000));
+    await writeFile(join(root, "lazy.js"), "y".repeat(250_000));
+    await writeFile(join(root, "index.html"), '<script type="module" src="/entry.js"></script>');
+    const result = Bun.spawnSync(["node", resolve("scripts/bundle.ts"), root]);
+    expect(result.stderr.toString()).toContain("Bundle budget exceeded");
+    expect(result.stderr.toString()).not.toContain("Entry chunk budget exceeded");
+    expect(result.exitCode).not.toBe(0);
+  }));
+
 test("bundle gate rejects a build whose index.html names no entry chunk", () =>
   fixture(async (root) => {
     await writeFile(join(root, "small.js"), "console.log(1);\n");

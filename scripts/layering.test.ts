@@ -499,6 +499,44 @@ for (const form of erased) {
     LONG,
   );
 }
+// More import shapes for the same rule. A bare side-effect import and a runtime re-export load the module.
+const webContractsShapes: Record<string, string> = {
+  "a bare side-effect import": 'import "@metro/contracts";\nexport const b = 1;\n',
+  "a runtime re-export (export { c } from)": 'export { c } from "@metro/contracts";\n',
+};
+for (const [shape, source] of Object.entries(webContractsShapes)) {
+  const id = scenario((at) => ({ [at("apps/web/src")]: source }));
+  test(
+    `METRO-44 web ${shape} of contracts is rejected`,
+    async () => {
+      expect((await verdict(id)).errorRules).toContain("web-imports-contracts-as-types-only");
+    },
+    LONG,
+  );
+}
+const webTypeReExport = scenario((at) => ({
+  [at("apps/web/src")]: 'export type { C } from "@metro/contracts";\n',
+}));
+test(
+  "METRO-44 web export type { C } from contracts is allowed",
+  async () => {
+    expect((await verdict(webTypeReExport)).violations).toEqual([]);
+  },
+  LONG,
+);
+const webTypeofImport = scenario((at) => ({
+  [at("apps/web/src")]: 'export type Contracts = typeof import("@metro/contracts");\n',
+}));
+test(
+  "METRO-44 web typeof import() type expression of contracts is rejected (observed: the cruiser does not mark it type-only; stricter, fails closed)",
+  async () => {
+    expect((await verdict(webTypeofImport)).errorRules).toContain(
+      "web-imports-contracts-as-types-only",
+    );
+  },
+  LONG,
+);
+
 for (const extension of [".test.ts", ".test.tsx"]) {
   const id = scenario((at) => ({
     [at("apps/web/src").replace(/\.ts$/u, extension)]: importSource(

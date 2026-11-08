@@ -213,6 +213,33 @@ test("METRO-44 a query string on the route is not logged and does not change the
   }
 });
 
+test("METRO-44 the stream cap with no content-length: exactly 512 bytes pass, 513 are refused", async () => {
+  const { app } = recorded();
+  const streamed = (text: string) => {
+    const bytes = new TextEncoder().encode(text);
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        // Two chunks, so the cap is counted across chunks.
+        controller.enqueue(bytes.slice(0, 100));
+        controller.enqueue(bytes.slice(100));
+        controller.close();
+      },
+    });
+    return app.request("/api/vitals", {
+      method: "POST",
+      body: stream,
+      headers: { "content-type": "application/json" },
+      // @ts-expect-error -- duplex is required for a streamed request body and is missing from the DOM types
+      duplex: "half",
+    });
+  };
+  expect((await streamed(padded(MAX_VITAL_BYTES))).status).toBe(204);
+  expect(await rejected(await streamed(padded(MAX_VITAL_BYTES + 1)))).toEqual({
+    status: 413,
+    code: "payload_too_large",
+  });
+});
+
 test("METRO-44 the content type must be exactly application/json, not a prefix or a variant", async () => {
   const { app } = recorded();
   for (const type of ["application/jsonp", "application/json-patch+json", "application/jsonx"]) {
