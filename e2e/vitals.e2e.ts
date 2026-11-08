@@ -2,6 +2,9 @@ import { parseErrorEnvelope, parseWebVitalPayload } from "../packages/contracts/
 import { expect, test } from "./fixtures";
 import { expectNoCoordinateInApi, installMapsStub, trackApiRequests } from "./maps-stub";
 
+/** What each engine reports for one click and a hide: WebKit has no LCP, Firefox and WebKit no CLS (layout-shift). */
+const EXPECTED = { chromium: ["LCP", "CLS"], firefox: ["LCP"], webkit: ["INP"] } as const;
+
 test.describe("real-user web vitals beacon (METRO-44)", () => {
   test("METRO-44 the built app sends contract-valid, position-free beacons to /api/vitals and the Worker accepts them", async ({
     page,
@@ -55,7 +58,7 @@ test.describe("real-user web vitals beacon (METRO-44)", () => {
         },
         { message: "the expected beacons" },
       )
-      .toEqual(expect.arrayContaining(browserName === "chromium" ? ["LCP", "CLS"] : ["LCP"]));
+      .toEqual(expect.arrayContaining([...EXPECTED[browserName]]));
     await expect.poll(() => statuses.length).toBe(beacons.length);
     expect(statuses.every((status) => status === 204)).toBe(true);
 
