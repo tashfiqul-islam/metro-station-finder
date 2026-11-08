@@ -40,7 +40,6 @@ jobs:
         with:
           version: 2026.10.25
           install_args: node
-          cache: false
       - name: Classify the changed files
         id: docs
         env:
@@ -388,7 +387,35 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # METRO-97: no cache here, so a GitHub release 504 on the mise download is retried a bounded number of
+      # times: three attempts of at most 4 minutes each, with pauses of 30 s and 60 s (the job limit still applies).
       - name: Install pinned tools with mise
+        id: mise1
+        continue-on-error: true
+        timeout-minutes: 4
+        uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          version: 2026.10.25
+          cache: false # this job holds the Cloudflare token; never restore a cache into it
+      - name: Wait before the second tool install
+        if: ${{ steps.mise1.outcome == 'failure' }}
+        run: sleep 30
+      - name: Install pinned tools with mise (second attempt)
+        id: mise2
+        if: ${{ steps.mise1.outcome == 'failure' }}
+        continue-on-error: true
+        timeout-minutes: 4
+        uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          version: 2026.10.25
+          cache: false # this job holds the Cloudflare token; never restore a cache into it
+      - name: Wait before the third tool install
+        if: ${{ steps.mise2.outcome == 'failure' }}
+        run: sleep 60
+      - name: Install pinned tools with mise (third attempt)
+        id: mise3
+        if: ${{ steps.mise2.outcome == 'failure' }}
+        timeout-minutes: 4
         uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
         with:
           version: 2026.10.25

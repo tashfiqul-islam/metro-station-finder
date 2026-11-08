@@ -51,14 +51,15 @@ test("METRO-36 permissions are empty at the top and contents read only on the jo
   expect(job["permissions"]).toEqual({ contents: "read" });
 });
 
-test("METRO-36 no secrets, no cache, no persisted credentials, no write access", () => {
+test("METRO-36 no secrets, no actions/cache step, no persisted credentials, no write access", () => {
   const { steps } = parsed();
   const [checkout = {}, tools = {}] = steps;
   expect(String(checkout["uses"])).toStartWith("actions/checkout@");
   expect(record(checkout["with"], "checkout.with")["persist-credentials"]).toBe(false);
   expect(record(checkout["with"], "checkout.with")["fetch-depth"]).toBe(0);
   expect(String(tools["uses"])).toStartWith("jdx/mise-action@");
-  expect(record(tools["with"], "tools.with")["cache"]).toBe(false);
+  // METRO-97: the job holds no credential, so mise-action's own cache stays on and a warm run downloads nothing.
+  expect(record(tools["with"], "tools.with")["cache"]).toBeUndefined();
   expect(text).not.toMatch(/secrets\.|actions\/cache|write|GITHUB_TOKEN|github\.token/u);
 });
 
