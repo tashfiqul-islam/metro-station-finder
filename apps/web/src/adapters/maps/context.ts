@@ -10,7 +10,7 @@ export interface PlaceSearchProps {
   readonly labelId: string;
   /**
    * Hint text that the widget exposes as the description of its input (screen readers read it on focus).
-   * Google offers no way to set the input's accessible name, so the visible label must be contained in
+   * Google documents no way to set the input's accessible name, so the visible label must be contained in
    * Google's own name instead (METRO-101).
    */
   readonly description: string;

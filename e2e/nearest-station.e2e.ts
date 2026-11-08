@@ -3,6 +3,7 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 import { expectTabReachesEveryControl } from "./keyboard";
 import {
+  MEASURED_GOOGLE_NAME,
   expectNoCoordinateInApi,
   installMapsStub,
   stubGeolocation,
@@ -21,7 +22,7 @@ async function openSlice(page: Page, options: StubOptions = {}) {
 }
 
 async function searchFor(page: Page, text: string) {
-  const search = page.getByRole("textbox", { name: "Search For a Place", exact: true });
+  const search = page.getByRole("textbox", { name: MEASURED_GOOGLE_NAME, exact: true });
   await search.fill(text);
   await search.press("Enter");
 }
@@ -176,7 +177,7 @@ test.describe("nearest station from a searched place (METRO-88)", () => {
   }) => {
     await openSlice(page);
     await expect(
-      page.getByRole("textbox", { name: "Search For a Place", exact: true }),
+      page.getByRole("textbox", { name: MEASURED_GOOGLE_NAME, exact: true }),
     ).toBeVisible();
     // Search input and the location button; the destination select appears with the first result.
     await expectTabReachesEveryControl(page, { expected: 2 });
@@ -187,12 +188,13 @@ test.describe("nearest station from a searched place (METRO-88)", () => {
     await expectTabReachesEveryControl(page, { expected: 3 });
   });
 
-  test("METRO-101 the visible label is contained in the input's name and the hint is its description", async ({
+  test("METRO-101 stub wiring: the hint, the description option and aria-describedby we control", async ({
     page,
   }) => {
     await openSlice(page);
-    const search = page.getByRole("textbox", { name: "Search For a Place", exact: true });
-    // WCAG 2.5.3 Label in Name, case-insensitive: the name Google exposes contains the visible text.
+    const search = page.getByRole("textbox", { name: MEASURED_GOOGLE_NAME, exact: true });
+    // The stub sets the measured name itself, so this proves our visible text is contained in that name,
+    // not that the real widget exposes it (only the owner-run smoke:live does).
     const visible = (await page.locator("#place-label").innerText()).toLowerCase();
     const name = ((await search.getAttribute("aria-label")) ?? "").toLowerCase();
     expect(name).toContain(visible);

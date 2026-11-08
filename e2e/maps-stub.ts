@@ -28,6 +28,13 @@ export interface StubCalls {
   readonly scriptUrls: string[];
 }
 
+/**
+ * The accessible name the real widget was measured to expose: owner probe 2026-11-08 (METRO-101), relayed and
+ * not re-run by an agent. It is not a Google guarantee. The stub and the e2e tests share this one constant;
+ * the unit test in `NearestStation.test.tsx` keeps its own copy (vitest does not import from `e2e/`).
+ */
+export const MEASURED_GOOGLE_NAME = "Search For a Place";
+
 /** Typing "motijheel" or "uttara" and pressing Enter selects a point near that station. */
 const STUB_SCRIPT = `
 (() => {
@@ -42,7 +49,7 @@ const STUB_SCRIPT = `
       if (this.querySelector("input")) return;
       const input = document.createElement("input");
       input.type = "text";
-      input.setAttribute("aria-label", "Search For a Place");
+      input.setAttribute("aria-label", ${JSON.stringify(MEASURED_GOOGLE_NAME)});
       if (this.options.description) {
         const hint = document.createElement("span");
         hint.id = "fake-autocomplete-description";

@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test";
 
 import { axeBuilder, expect, test } from "./fixtures";
 import { expectTabReachesEveryControl } from "./keyboard";
-import { installMapsStub } from "./maps-stub";
+import { MEASURED_GOOGLE_NAME, installMapsStub } from "./maps-stub";
 
 /** Browser-side script (a string, so no type gymnastics around overloads). Armed from the test. */
 const THROW_ON_DISTANCE_FORMAT = `
@@ -24,7 +24,7 @@ async function failTheSuccessRender(page: Page): Promise<void> {
     page.getByRole("heading", { level: 1, name: "Nearest Metro station" }),
   ).toBeVisible();
   await page.evaluate(() => Reflect.set(globalThis, "failDistanceFormat", true));
-  const search = page.getByRole("textbox", { name: "Search For a Place", exact: true });
+  const search = page.getByRole("textbox", { name: MEASURED_GOOGLE_NAME, exact: true });
   await search.fill("motijheel");
   await search.press("Enter");
 }

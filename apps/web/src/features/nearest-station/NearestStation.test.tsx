@@ -112,9 +112,16 @@ test("METRO-88 idle: search, the location button and the consent line, and no re
   expect(screen.queryByRole("heading", { name: copy.resultHeading })).toBeNull();
 });
 
-test("METRO-101 Google names the input 'Search For a Place': our visible label must be contained in it", () => {
-  // WCAG 2.5.3 Label in Name compares case-insensitively; the Dhaka wording lives in the hint, not the label.
-  expect("Search For a Place".toLowerCase()).toContain(copy.searchLabel.toLowerCase());
+/**
+ * The name the real widget was measured to expose: owner probe 2026-11-08 (METRO-101), relayed and not re-run
+ * by an agent; not a Google guarantee. e2e/maps-stub.ts holds the e2e copy (vitest does not import from e2e/).
+ */
+const MEASURED_GOOGLE_NAME = "Search For a Place";
+
+test("METRO-101 copy guard: our visible label stays contained in the name Google was measured to expose", () => {
+  // This checks our copy only, not the real widget. WCAG 2.5.3 compares case-insensitively; the Dhaka wording
+  // lives in the hint, not the label.
+  expect(MEASURED_GOOGLE_NAME.toLowerCase()).toContain(copy.searchLabel.toLowerCase());
   expect(copy.searchLabel).not.toContain("Dhaka");
 });
 

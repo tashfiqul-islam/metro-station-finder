@@ -29,7 +29,7 @@ function isSelection(event: Event): event is SelectEvent {
  * The Google place search control. `PlaceAutocompleteElement` keeps the autocomplete session itself: one
  * selection ends one session and `fetchFields` carries its token. We call `fetchFields` once per
  * selection; if the user picks again while one is in flight, the earlier result is ignored (latest wins). The element lives in a shadow root and
- * has no property for its accessible name (METRO-101), so a labelled group wraps it and `description` carries the hint. Nothing from Google leaves this file
+ * has no documented property for its accessible name (METRO-101), so a labelled group wraps it and `description` carries the hint. Nothing from Google leaves this file
  * except a plain coordinate.
  */
 export function PlaceSearch({ labelId, description, bias, onPlace, onFailure }: PlaceSearchProps) {
