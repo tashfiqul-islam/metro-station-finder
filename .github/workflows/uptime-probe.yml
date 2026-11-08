@@ -1,0 +1,50 @@
+name: Uptime probe
+on:
+  workflow_dispatch:
+    inputs:
+      base-url:
+        description: Bare https origin to probe. Empty uses the PRODUCTION_URL repository variable.
+        required: false
+        default: ""
+        type: string
+  # Inert until the default-branch switch: GitHub only runs schedules from the default branch.
+  # Until then, dispatch this workflow by hand (Actions, Uptime probe, Run workflow).
+  # Every 30 minutes (48 runs a day, about 1,440 a month of well under a minute each). The cadence is
+  # chosen against the SLO in docs/agents/uptime-runbook.md: it bounds how late an outage is seen.
+  schedule:
+    - cron: "7,37 * * * *"
+permissions: {}
+env:
+  # METRO-45: install tools only from mise.lock URLs and checksums.
+  MISE_LOCKED: "1"
+concurrency:
+  group: uptime-probe
+  cancel-in-progress: false
+jobs:
+  probe:
+    name: Probe the production site
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    # No secret, no environment: the target is a public URL taken from a repository variable.
+    # A failed run is announced by GitHub's workflow-failure notifications (docs/agents/uptime-runbook.md).
+    permissions:
+      contents: read
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # No credential here, so mise-action keeps its own cache (METRO-97): a warm job never downloads from github.com.
+      - name: Install pinned tools with mise
+        uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          version: 2026.10.25
+          install_args: bun
+      - name: Install workspace dependencies
+        run: bun install --frozen-lockfile
+      # An unset PRODUCTION_URL fails the run on purpose: a silent green run would look like a healthy site.
+      - name: Probe the site
+        run: bun scripts/uptime-probe.ts
+        timeout-minutes: 2 # two requests of at most 10 s each
+        env:
+          PROBE_BASE_URL: ${{ inputs.base-url || vars.PRODUCTION_URL }}

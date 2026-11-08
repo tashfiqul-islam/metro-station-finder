@@ -1,6 +1,6 @@
 import { appendFileSync, readFileSync } from "node:fs";
 
-import { parseErrorEnvelope } from "@metro/contracts";
+import { assertNotFoundEnvelope } from "./api-envelope.ts";
 
 /**
  * Helpers for the per-pull-request Cloudflare preview job (METRO-13, docs/specifications/cloudflare-preview.md).
@@ -70,10 +70,7 @@ async function smokeOnce(fetchFn: Fetch, base: string, sha: string | undefined):
 
   // The API has no routes, so an unknown route proves the Worker and its headers are live.
   const missing = await fetchFn(`${base}/api/does-not-exist`);
-  if (missing.status !== 404)
-    throw new Error(`Unknown API route returned ${missing.status}, not 404`);
-  parseErrorEnvelope(await missing.json());
-  if (!missing.headers.get("x-request-id")) throw new Error("API response has no x-request-id");
+  await assertNotFoundEnvelope(missing);
   if (sha !== undefined && missing.headers.get("x-preview-sha") !== sha)
     throw new Error(
       `x-preview-sha is "${missing.headers.get("x-preview-sha") ?? ""}", expected the checked commit ${sha}`,
