@@ -4,13 +4,13 @@ Recorded 2026-11-08 on branch `ticket/metro-104-first-visit-budget`, cut from `c
 
 ## Numbers (`bun run build` then `bun run bundle:check`, Repo-verified)
 
-| Commit    | State                                            | First-visit raw / gzip | All files raw / gzip | Notes                                                                   |
-| --------- | ------------------------------------------------ | ---------------------- | -------------------- | ----------------------------------------------------------------------- |
-| `c081baf` | before (old gate: one total, one chunk)          | 248,941 / 79,213       | 248,941 / 79,213     | entry `index-BI89DYpL.js` 248,870 / 79,127, CSS 71 / 86                 |
-| `45e152c` | manifest gate, build unchanged                   | 248,941 / 79,213       | 248,941 / 79,213     | same files, now marked `first-visit`                                    |
-| `f6a921f` | web-vitals lazy (unchanged by the later commits) | 242,809 / 77,175       | 250,771 / 80,233     | entry 242,738 / 77,089; `web-vitals-CMUBx256.js` 7,962 / 3,058 (`lazy`) |
+| Commit    | State                                            | First-visit raw / gzip | All files raw / gzip | Notes                                                                                       |
+| --------- | ------------------------------------------------ | ---------------------- | -------------------- | ------------------------------------------------------------------------------------------- |
+| `c081baf` | before (old gate: one total, one chunk)          | 248,941 / 79,213       | 248,941 / 79,213     | entry `index-BI89DYpL.js` 248,870 / 79,127, CSS 71 / 86                                     |
+| `45e152c` | manifest gate, build unchanged                   | 248,941 / 79,213       | 248,941 / 79,213     | same files, now marked `first-visit`                                                        |
+| `f6a921f` | web-vitals lazy (unchanged by the later commits) | 242,819 / 77,181       | 250,781 / 80,239     | entry `index-RolPBpSL.js` 242,748 / 77,095; `web-vitals-CMUBx256.js` 7,962 / 3,058 (`lazy`) |
 
-Limits: first visit 250,000 / 80,000 (unchanged), ceiling 400,000 / 125,000. First-visit headroom after: 7,191 raw / 2,825 gzip (before: 1,059 / 787). The first visit fell by 6,132 raw / 2,038 gzip, less than the ticket's "about 10 KB / 3.7 KB": the library is 7,962 / 3,058 as its own chunk, and the split adds overhead (separate module wrapper, the preload helper that stays in the entry). All files now exceed the old 250,000 / 80,000 total (250,771 / 80,233); that passes because the ceiling applies to them, which is the point of the redesign.
+Limits: first visit 250,000 / 80,000 (unchanged), ceiling 400,000 / 125,000. First-visit headroom after: 7,181 raw / 2,819 gzip (before: 1,059 / 787). The first visit fell by 6,122 raw / 2,032 gzip, less than the ticket's "about 10 KB / 3.7 KB": the library is 7,962 / 3,058 as its own chunk, and the split adds overhead (separate module wrapper, the preload helper that stays in the entry). All files now exceed the old 250,000 / 80,000 total (250,781 / 80,239); that passes because the ceiling applies to them, which is the point of the redesign.
 
 Ceiling choice: 400,000 / 125,000 is about 1.6 times the measured all-files size, the owner's recommendation. It leaves room for a few lazy features and trips on a runaway; it is a growth tripwire to revisit when half is used.
 
