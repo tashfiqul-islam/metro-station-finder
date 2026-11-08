@@ -180,3 +180,17 @@ Limits, stated plainly:
 What the stubs show: the e2e fake copies the measured name (one shared constant, `MEASURED_GOOGLE_NAME`) and the `description` option. The unit copy guard only checks that our visible label stays contained in that name. The adapter unit test asserts `description` is passed. The e2e asserts the wiring we control (visible hint, `description` option, `aria-describedby`), axe, and the unchanged Tab order (search, then Use my location). None of this proves the real widget's tree.
 
 Unverified until the owner runs `bun run smoke:live` (METRO-100): the real widget's accessibility tree. Expect `combobox "Search For a Place"` (or a name that contains "search for a place", ignoring case), its description reading "Suggestions favor places in Dhaka." if Google wires `description` as documented, one Tab stop for the search, then `button "Use my location"`, and no axe violation. If the name differs, or the description is absent, record it on METRO-101.
+
+## The placeholder experiment and the live unknowns (METRO-102, 2026-11-08)
+
+Measured (owner runs 2026-11-08, relayed, not re-run by an agent): the combobox name is still "Search For a Place"; `Combobox expanded` goes no to yes; a listbox with 5 options; Tab order combobox then "Use my location"; `Widget images: before typing 1 (1 unnamed), after typing 8 (7 unnamed)`.
+
+Change: the adapter takes a `placeholder` option, passed to `PlaceAutocompleteElement` and set from `copy.searchLabel` ("Search for a place") in the slice. The e2e fake stores it and reflects it as the input placeholder, so tests assert the wiring; they do not show that the real widget honors it. `smoke:live` additionally prints the combobox description status and the unnamed images grouped by parent role (see the [runbook](../agents/maps-live-check-runbook.md) and [METRO-102 evidence](../evidence/metro-102.md)).
+
+Decision rule, applied after the owner's next run:
+
+- If the measured accessible name becomes the placeholder text ("Search for a place"), KEEP the option: the visible label and the accessible name then match exactly (record as Measured).
+- If the name does NOT change, REMOVE the option in a second small PR, unless a documented reason to keep it exists. A placeholder that duplicates the visible label is noise; the default is remove.
+- If the name becomes something else, record it and decide on the ticket; the default stays remove.
+
+Unverified until that run: whether the real widget honors `placeholder`, whether it then shows a visible placeholder (a second visible label that must also be contained in the name), whether Google wired `description` to the combobox, and what the unnamed images are.

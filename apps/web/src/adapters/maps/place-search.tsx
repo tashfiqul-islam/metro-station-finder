@@ -32,7 +32,14 @@ function isSelection(event: Event): event is SelectEvent {
  * has no documented property for its accessible name (METRO-101), so a labelled group wraps it and `description` carries the hint. Nothing from Google leaves this file
  * except a plain coordinate.
  */
-export function PlaceSearch({ labelId, description, bias, onPlace, onFailure }: PlaceSearchProps) {
+export function PlaceSearch({
+  labelId,
+  description,
+  placeholder,
+  bias,
+  onPlace,
+  onFailure,
+}: PlaceSearchProps) {
   const places = usePlaces();
   const { lat, lng } = bias.center;
   const { radiusMeters } = bias;
@@ -45,6 +52,7 @@ export function PlaceSearch({ labelId, description, bias, onPlace, onFailure }: 
     if (places === null || container === null) return noop;
     const element = new places.PlaceAutocompleteElement({
       description,
+      placeholder,
       includedRegionCodes: REGION_CODES,
       locationBias: { center: { lat, lng }, radius: radiusMeters },
     });
@@ -82,7 +90,7 @@ export function PlaceSearch({ labelId, description, bias, onPlace, onFailure }: 
       element.removeEventListener("gmp-error", onError);
       element.remove();
     };
-  }, [places, description, lat, lng, radiusMeters]);
+  }, [places, description, placeholder, lat, lng, radiusMeters]);
 
   return <fieldset ref={host} aria-labelledby={labelId} />;
 }

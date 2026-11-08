@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "@playwright/test";
 import type { Browser, CDPSession, ConsoleMessage, Page, Request } from "@playwright/test";
 
+import { copy } from "../apps/web/src/features/nearest-station/copy.ts";
 import {
   MAX_TAB_STOPS,
   addTabStop,
@@ -183,7 +184,9 @@ async function main(): Promise<boolean> {
       reads = {
         ...reads,
         afterAttach:
-          attached === null || attachedIds === null ? null : snapshotEntries(attached, attachedIds),
+          attached === null || attachedIds === null
+            ? null
+            : snapshotEntries(attached, attachedIds, copy.searchHint),
         tabOrder: walk.order,
         tabEnd: walk.end,
       };
@@ -216,7 +219,7 @@ async function main(): Promise<boolean> {
         afterSuggestions:
           suggested === null || suggestedIds === null
             ? null
-            : snapshotEntries(suggested, suggestedIds),
+            : snapshotEntries(suggested, suggestedIds, copy.searchHint),
       };
       run.accessibility = reads;
       step = "choose the first suggestion (ArrowDown, Enter)";

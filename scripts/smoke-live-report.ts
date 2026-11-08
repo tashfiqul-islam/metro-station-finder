@@ -51,7 +51,20 @@ export interface AxEntry {
   readonly inWidget?: boolean;
   /** Comboboxes only: the `expanded` state when the tree reports one. */
   readonly expanded?: boolean;
+  /**
+   * Comboboxes only: how the accessible description compares with our hint (METRO-102). Absent when the node
+   * has no `description` field at all (printed as "not reported"). The text itself is never kept.
+   */
+  readonly description?: DescriptionState;
+  /** Images only: the cleaned role of the parent node, when the tree names a parent we can resolve. */
+  readonly parentRole?: string;
 }
+
+/** The accessible description of a node, reduced to a comparison with the hint. */
+export type DescriptionState =
+  | { readonly kind: "matches" }
+  | { readonly kind: "different"; readonly length: number }
+  | { readonly kind: "absent" };
 
 /** Why the Tab walk ended. */
 export type TabEnd =
@@ -106,6 +119,45 @@ export function cleanName(name: string): string {
     : points.join("");
 }
 
+/** Most parent-role groups printed for unnamed images; the rest are summed as "other". */
+const MAX_PARENT_GROUPS = 6;
+/** Longest description length printed; a longer one prints as this cap. */
+const MAX_DESCRIPTION_LENGTH = 1000;
+const NO_PARENT = "parent not reported";
+
+/** Hint and description are compared after collapsing whitespace, trimming and case-folding. */
+function fold(text: string): string {
+  return text.replaceAll(/\s+/gu, " ").trim().toLowerCase();
+}
+
+/**
+ * CDP `AXNode.description` is an optional `AXValue` (Inferred from the protocol's typed definition; Chrome
+ * is understood to leave the field out when there is no description, so "not reported" cannot tell "none"
+ * from "not exposed"). No field is `undefined` ("not reported"); a field with an empty value is "absent".
+ */
+function describeState(node: object, hint: string): DescriptionState | undefined {
+  if (!("description" in node)) return undefined;
+  const text = textOf(propertyOf(node, "description"));
+  if (text.trim() === "") return { kind: "absent" };
+  if (hint.trim() !== "" && fold(text) === fold(hint)) return { kind: "matches" };
+  return {
+    kind: "different",
+    length: Math.min(Array.from(text.trim()).length, MAX_DESCRIPTION_LENGTH),
+  };
+}
+
+/** Node id to cleaned role for every node (ignored ones too: an ignored wrapper is still a parent). */
+function rolesById(nodes: readonly unknown[]): Map<string, string> {
+  const roles = new Map<string, string>();
+  for (const node of nodes) {
+    if (typeof node !== "object" || node === null) continue;
+    const id = propertyOf(node, "nodeId");
+    const role = textOf(propertyOf(node, "role"));
+    if (typeof id === "string" && role !== "") roles.set(id, cleanRole(role));
+  }
+  return roles;
+}
+
 interface ParsedNode extends AxEntry {
   readonly focused: boolean;
   readonly domId: number | undefined;
@@ -151,8 +203,9 @@ function isExpanded(properties: unknown): boolean | undefined {
 }
 
 /** Keeps the nodes a screen reader reaches (not `ignored`), reading only role, name, focus and node id; a value is never read. */
-function parseNodes(nodes: unknown): ParsedNode[] {
+function parseNodes(nodes: unknown, hint = ""): ParsedNode[] {
   if (!Array.isArray(nodes)) return [];
+  const roles = rolesById(nodes as unknown[]);
   const parsed: ParsedNode[] = [];
   for (const node of nodes as unknown[]) {
     if (typeof node !== "object" || node === null) continue;
@@ -163,6 +216,9 @@ function parseNodes(nodes: unknown): ParsedNode[] {
     const domId = typeof rawId === "number" ? rawId : undefined;
     const properties = propertyOf(node, "properties");
     const expanded = roleText === "combobox" ? isExpanded(properties) : undefined;
+    const parentId = propertyOf(node, "parentId");
+    const parentRole = typeof parentId === "string" ? roles.get(parentId) : undefined;
+    const description = roleText === "combobox" ? describeState(node, hint) : undefined;
     parsed.push({
       role: roleText,
       name: cleanName(textOf(propertyOf(node, "name"))),
@@ -170,26 +226,35 @@ function parseNodes(nodes: unknown): ParsedNode[] {
       domId,
       ...(domId === undefined ? {} : { id: String(domId) }),
       ...(expanded === undefined ? {} : { expanded }),
+      ...(description === undefined ? {} : { description }),
+      ...(IMAGE_ROLES.has(roleText) && parentRole !== undefined ? { parentRole } : {}),
     });
   }
   return parsed;
 }
 
-function entryOf({ role, name, id, expanded }: ParsedNode): AxEntry {
+function entryOf({ role, name, id, expanded, description, parentRole }: ParsedNode): AxEntry {
   return {
     role,
     name,
     ...(id === undefined ? {} : { id }),
     ...(expanded === undefined ? {} : { expanded }),
+    ...(description === undefined ? {} : { description }),
+    ...(parentRole === undefined ? {} : { parentRole }),
   };
 }
 
 /**
  * The text fields, images, listbox and options of one `Accessibility.getFullAXTree` result that sit inside
  * the widget (their DOM node id is in `widgetIds`), as roles and names only. Nodes with no id are dropped.
+ * `hint` is our fixed hint text; a combobox description is reduced to a comparison with it (METRO-102).
  */
-export function snapshotEntries(nodes: unknown, widgetIds: ReadonlySet<number>): AxEntry[] {
-  return parseNodes(nodes)
+export function snapshotEntries(
+  nodes: unknown,
+  widgetIds: ReadonlySet<number>,
+  hint = "",
+): AxEntry[] {
+  return parseNodes(nodes, hint)
     .filter(
       (node) =>
         SNAPSHOT_ROLES.has(node.role) && node.domId !== undefined && widgetIds.has(node.domId),
@@ -367,6 +432,49 @@ function imageText(entries: readonly AxEntry[] | null): string {
   return `${images.length} (${images.filter((entry) => entry.name === "").length} unnamed)`;
 }
 
+/** How the first combobox's description compares with the hint; a status only, never the text. */
+function descriptionText(entries: readonly AxEntry[] | null): string {
+  if (entries === null) return "not read";
+  const state = entries.find((entry) => entry.role === "combobox")?.description;
+  if (state === undefined) return "not reported";
+  if (state.kind === "matches") return "matches the hint";
+  return state.kind === "absent" ? "absent" : `present but different (length ${state.length})`;
+}
+
+/** Unnamed images counted by the role of their parent, largest group first, at most MAX_PARENT_GROUPS groups. */
+function unnamedByParent(entries: readonly AxEntry[] | null): string {
+  if (entries === null) return "not read";
+  const counts = new Map<string, number>();
+  for (const entry of entries) {
+    if (!IMAGE_ROLES.has(entry.role) || entry.name !== "") continue;
+    const parent = entry.parentRole ?? NO_PARENT;
+    counts.set(parent, (counts.get(parent) ?? 0) + 1);
+  }
+  if (counts.size === 0) return "none";
+  // Largest first, ties by role. Picked one at a time: the lib has no toSorted and the lint bans sort.
+  const remaining = new Map(counts);
+  const shown: string[] = [];
+  for (let pick = 0; pick < MAX_PARENT_GROUPS && remaining.size > 0; pick += 1) {
+    let best: [string, number] | null = null;
+    for (const group of remaining) {
+      if (best === null || group[1] > best[1] || (group[1] === best[1] && group[0] < best[0])) {
+        best = group;
+      }
+    }
+    if (best === null) break;
+    remaining.delete(best[0]);
+    shown.push(`${best[0]} ${best[1]}`);
+  }
+  let rest = 0;
+  for (const count of remaining.values()) rest += count;
+  return (rest === 0 ? shown : [...shown, `other ${rest}`]).join(", ");
+}
+
+function namedImages(entries: readonly AxEntry[] | null): string {
+  if (entries === null) return "not read";
+  return String(entries.filter((entry) => IMAGE_ROLES.has(entry.role) && entry.name !== "").length);
+}
+
 function accessibilityLines(run: AccessibilityRun | null): {
   lines: string[];
   failure: string | null;
@@ -395,6 +503,9 @@ function accessibilityLines(run: AccessibilityRun | null): {
   lines.push(
     `  Combobox expanded: before typing ${expandedText(run.afterAttach)}, after typing ${expandedText(run.afterSuggestions)}`,
     `  Widget images: before typing ${imageText(run.afterAttach)}, after typing ${imageText(run.afterSuggestions)}`,
+    `  Unnamed images by parent: before typing ${unnamedByParent(run.afterAttach)}, after typing ${unnamedByParent(run.afterSuggestions)}`,
+    `  Named images: before typing ${namedImages(run.afterAttach)}, after typing ${namedImages(run.afterSuggestions)}`,
+    `  Combobox description: before typing ${descriptionText(run.afterAttach)}, after typing ${descriptionText(run.afterSuggestions)}`,
   );
   lines.push(
     entries.some((entry) => entry.role === "listbox")
