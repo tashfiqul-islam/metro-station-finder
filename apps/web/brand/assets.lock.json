@@ -1,0 +1,31 @@
+{
+  "sources": {
+    "app-icon-dark.svg": "02b2c034b37f34482ad7fc1582892caf8901956aa955db1e9405fbc17e63d12d",
+    "app-icon-maskable.svg": "674de01b0bfec80da643619aeb45e00a39df893f69165363a94104e1b747963c",
+    "app-icon-tinted.svg": "05531e5a495264616a12fcdd36ac445a05f2ced71831871920024f5a1fa8833d",
+    "app-icon.svg": "bd84f1e1b5a555c1d2f4f2b0b44a870adf9958404030a8f8c4f0237ef4cc14c9",
+    "apple-touch-icon.svg": "0e4a0409afbdfc6962491078087429a74fd43ff061d0af7183f2473820183517",
+    "favicon.svg": "99e7bc1e6961c24d669988dd653e80206be26012af2df2afa9ebec398d83eab6",
+    "icon-monochrome.svg": "03dab50cecac77a1862ee25f775176035f27bde811e23dabd48afe30bd52ed0e",
+    "lockup-horizontal-dark.svg": "830b91b4f75d82948f43bf53637f670cc7c923d2f906864abae0f8f4917a9b66",
+    "lockup-horizontal-mono.svg": "aeed3b535d62faf814d850be8010ad231abea0112f23db26301adb8096503850",
+    "lockup-horizontal-white.svg": "1de931fa373f41679b58bd10c8c8c844e202c5db9dfa9d1f3807369ba0fb266c",
+    "lockup-horizontal.svg": "3030bfd388985f949cf0e7521152b06c0dc99226b9855c0dd5ba0aaf201fbb10",
+    "lockup-stacked-dark.svg": "1c77fc874400f02b0ebb1a6a133e4e1147fc050fde27274f0c35372b1610325d",
+    "lockup-stacked.svg": "d6aa7353379ccbcbe04cacc919e4c04d00e72326b8477bad500fb4a8bba04a33",
+    "mark-dark.svg": "410901a5eeb737bfd12df9fce932b30f73ca71f97f34d4d2d7965596f1ffb6f3",
+    "mark-micro-dark.svg": "db7fe39e3e5a584992cb65f19cca66989010e2f9ee5b085139e1714e8925334e",
+    "mark-micro.svg": "05da1627250a3bd0a05961b2c3c06c7e2c4647e3a45b110b1f022b9065434a23",
+    "mark-mono.svg": "a1b601d329b5f09bb38c50b359e92edf866e40abbbf026c14bcd4c87aaf7543c",
+    "mark-small.svg": "cdd701de4033174cb0942d6c0644e680c5ae1e02b746007afd0371d3b4675119",
+    "mark-white.svg": "8465ead33e9b9796cdc8896bbdf57a9460436572965cbf29baa06123b4e89427",
+    "mark.svg": "4c710e5513c3b4c5b453803ffe2d6df50f355a2f982fd818b0ae7a63811c6830",
+    "wordmark-dark.svg": "8f01997586d7056748a6aed762076845486932b0de7fbfa7b68a49eb1cc11274",
+    "wordmark.svg": "c9389dc987a13bd22cb55a9191e9724eb58494e6473aea4572eb881e22df7949"
+  },
+  "outputs": {
+    "favicon.svg": "99e7bc1e6961c24d669988dd653e80206be26012af2df2afa9ebec398d83eab6",
+    "manifest.webmanifest": "db4ac5f2fdf9836194dfb19ea27fd4ac306e2a37fc518440759b2880bb121447",
+    "robots.txt": "cb53f00e57962c72cf5db661a15ffea857699a9a7dc4e191fae33f04cc3a6529"
+  }
+}
