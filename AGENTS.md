@@ -52,6 +52,7 @@ differ and cannot be linted, without copying root policy.
 | Shape that crosses the network | `packages/contracts/src/` (via `index.ts`) |
 | API route and headers          | `apps/api/src/app.ts`                      |
 | UI, feature                    | `apps/web/src/features/`                   |
+| Tokens, themes, shell, icons   | `apps/web/src/{styles,theme,shell,icons}/` |
 | Google Maps, Places, Routes    | `apps/web/src/adapters/maps/`              |
 | Journey, keyboard, axe         | `e2e/`                                     |
 | Repository gate                | `scripts/<gate>.ts` with `<gate>.test.ts`  |

@@ -1,0 +1,69 @@
+# ADR-0021: Style with plain CSS and design tokens, load the landing slice lazily
+
+- Status: Proposed (the owner accepts by merging; the lazy landing slice below amends ADR-0020 and needs that review)
+- Date: 2026-11-08
+- Ticket and specification: METRO-105 (Plane); the ticket description and the owner decisions of 2026-11-08 are the contract. The owner-approved design handoff (Lagoon palette, glass panels, light and dark) is the visual source of truth. It is an untracked folder and is never committed; what it contained is now in the repository files named below.
+
+## Context
+
+The design handoff delivers plain static files: `tokens.css`, `base.css`, `components.css` (67 KB), `fonts.css` with two Latin variable woff2 fonts, 31 Lucide icons, `theme-boot.js`, and screens in light and dark. Every product slice (METRO-15) builds on it, so the foundation must be settled once.
+
+- Repo-verified (ADR-0011, `apps/web/public/_headers`): the CSP is enforced with no inline style or script of our own: `script-src 'self'` plus two Google hosts, `style-src 'self'` plus Google's font host and two hashes. Dynamic values may only go through CSSOM `setProperty` or data attributes.
+- Repo-verified (ADR-0020): the first visit is limited to 250,000 raw / 80,000 gzip bytes of JS and CSS, measured from the Vite manifest. Before this change it was 242,839 / 77,186, headroom 7,161 / 2,814.
+- Context7-verified (Vite 8.3.5): CSS imported from JS is extracted and hashed; CSS imported in an async chunk becomes a chunk of its own and loads with it (`build.cssCodeSplit`); a font referenced by `url()` in CSS is a hashed asset (inlined only below `assetsInlineLimit`, 4 KB by default, far under these files); files in `public/` are copied as they are and referenced by a root path.
+- Repo-verified (this build): Vite leaves a classic `<script src>` in `index.html` alone and copies it from `public/`; it rewrites `<link rel="preload" href>` to the hashed asset; the CSS of the entry chunk is one linked stylesheet.
+- Web-verified (MDN, 2026-11-08): `document.startViewTransition` is Baseline 2025 (newly available); `prefers-reduced-transparency` has limited availability. Repo-verified: Playwright 1.64.1 `emulateMedia` has no reduced-transparency option.
+- Web-verified (Lucide LICENSE): ISC, with a few icons also under Feather's MIT licence; both texts and the two SIL OFL 1.1 font licences are in `apps/web/public/licenses.txt`.
+- Measured: the whole handoff, loaded as the entry's CSS together with the slice, takes the first visit to 277,620 / 86,488. The budget would be exceeded by 27,620 / 6,488 bytes.
+
+## Decision
+
+We will style with plain CSS and custom-property tokens, with no new dependency, in `apps/web/src/styles/`.
+
+- Order (the design's, enforced): fonts, then tokens, then base, then components. `styles/index.css` imports `fonts.css`, `tokens.css`, `base.css` and `components/shell.css`, and `main.tsx` imports it first, so it is the first rules in the one entry stylesheet. A screen or component imports the component files it uses (`components/common.css`, `fields.css`, `nearby.css`, `route.css`, `line.css`, `settings.css`, `station.css`, `palette.css`, `map.css`, `nav.css`, `brand.css`, `header-extras.css`), so they load with its chunk and stay out of the first visit. Colours, radii, shadows, motion, layers and layout sizes live only in `tokens.css`. Light is `:root`, dark is `:root[data-theme="dark"]` and, with no `data-theme`, a `prefers-color-scheme` block with the same values.
+- Themes: System, Light, Dark, saved as `localStorage["msf-theme"]` (`src/theme/theme.ts`, every access in `try`/`catch`). `public/theme-boot.js` applies it before first paint as a classic, same-origin script in `<head>` with no `defer`, so the CSP is unchanged. The header button (`ThemeToggle`) cycles the three values and reveals the change with a View Transition circle where the API exists (feature-detected, skipped under reduced motion, instant otherwise).
+- Fonts: Hanken Grotesk and JetBrains Mono, Latin variable woff2, `font-display: swap`, hashed under `/assets/` (immutable cache). Only Hanken Grotesk is preloaded; JetBrains Mono is fetched only when text uses it. The taka sign is not in the subset and falls back to a system font; the `Price` component hides the visible sign from screen readers and speaks "N taka".
+- Icons: `Icon` draws one of 31 named exports of `icons/icon-data.ts` (Lucide) as inline SVG with `currentColor`, `aria-hidden` by default, so a build bundles only the icons it imports.
+- Layout shell: `AppShell` renders header (brand slot, action slot, theme button), an optional section nav (`SectionNav`, links with `aria-current="page"`, never tabs), one `main` panel, a map slot and a notifications region, in that order. The panel is a bottom sheet below 768 px and a sidebar from 768 px. Drag writes `--sheet-h` with `style.setProperty` and sets `data-dragging`; release removes both, deletes the empty `style` attribute and sets `data-snap`. The handle row is 44 px (owner decision; the handoff drew 32 px). Slices set the snap through `useSheet()`.
+- The nearest-station slice adopts tokens and classes with its copy, roles, ARIA and keyboard order unchanged. The shell's own `main` replaces the slice's, so there is one landmark. The shell adds the theme button before the slice in tab order, and on phones the three handle controls.
+- Budget (amends ADR-0020, which kept the landing slice in the entry chunk): the landing slice and the Maps adapter load as one lazy chunk through `lazyFeature`. Entry CSS and JS hold the shell, tokens, base and theme code. Measured first visit: 248,109 / 77,397 including `theme-boot.js`. No limit was changed. `lazyFeature` now passes a loaded feature's own render error to the root error boundary instead of showing "could not be loaded" (only a rejected loader is a load failure).
+- Gate accounting: `scripts/bundle-budget.ts` counts the public head script `theme-boot.js` as first-visit and no longer reports it as an orphan; a build without it is unchanged. It adds bytes to the first-visit total and loosens nothing.
+- Lint: `import/no-unassigned-import` allows `**/*.css` only, the one side-effect import a Vite app needs.
+- Rules as tests: contrast of the handoff's 53 pairs in both themes; no inline style, no colour literal outside `tokens.css`, load order.
+
+### Deviations from the handoff
+
+- Handle row 44 px, not 32 px (owner decision).
+- `components.css` is split into the files above (same rules); the patterns-sheet and `.mock-only` rules are dropped as not part of the app.
+- `base.css` also keeps the programmatic-focus ring of the earlier `focus.css` (a 3 px ring on `[tabindex="-1"]:focus`, which the error fallback needs) and makes `select` inherit the font; the View Transition rules are in `base.css`.
+- `theme-boot.js` is rewritten with the same behaviour (arrow function, `const`, optional catch binding). A blocked store removes the attribute, as the handoff's does.
+- The command-palette trigger and shortcut hint are not built; the header has an `actions` slot for them. The map region is a slot; no map is drawn. The slice does not show the taka sign yet (its copy says "BDT"), so `Price` is provided and tested only.
+- The landing slice is lazy (above), which the handoff did not consider.
+- Drag clamps the sheet at `viewport height - 148 px` and ignores the safe-area inset until release, where CSS `data-snap` is exact.
+- Source CSS was reformatted by the repository formatter (expanded rules, lower-case hex); values are unchanged.
+
+## Consequences
+
+- Easier: one set of tokens drives light, dark, forced-colours and reduced-transparency; a slice adds a component file import, not new tooling. The reference slice at 390 and 1280 px in both themes is the visual check the owner makes.
+- The first visit has 1,891 raw and 2,603 gzip bytes of headroom left. Levers, in order: drop the duplicated `prefers-color-scheme` dark block by having `theme-boot.js` always set `data-theme` (about 2.5 KB raw, a change to System semantics, so it needs a decision), `light-dark()` (Baseline 2024, below the handoff's 2023 floor), unused tokens.
+- Cost of the lazy landing slice: the h1 now arrives with a second request. Lab LCP about 400 ms and CLS 0.0004 (limits 2,500 ms and 0.1, Chromium); real-user LCP is Unverified. The pending `<output>` can flash. The slice needs the entry chunk and then its own chunk, so a failed chunk shows the reload region.
+- The CLS control in `e2e/web-vitals-lab.e2e.ts` now prepends its block inside the panel, because the fixed shell no longer shifts with a block put in `<body>`.
+- Unverified: View Transition behaviour in Firefox and Safari (feature-detected, falls back to an instant switch); `prefers-reduced-transparency` in a real browser (the CSS is tested as text and by DevTools emulation where Chromium supports it). The new journeys passed locally on Chromium, Firefox, WebKit and the mobile Chromium project (`CI=true bun run smoke`); the hosted run is Unverified.
+- `theme-boot.js` is not hashed, so it revalidates on each visit (default `Cache-Control`); it is 0.4 KB.
+
+## Alternatives considered
+
+- Tailwind (or any utility framework): rejected, a new build dependency (ask-first) and a rewrite of the handoff's BEM classes, whose screens are the reference.
+- CSS-in-JS: rejected, it injects styles at run time, which the enforced CSP forbids without `'unsafe-inline'`, a nonce or hashes per rule.
+- CSS Modules (the ticket's earlier fallback): rejected, the handoff is global BEM with global tokens; renaming every class would break the one-to-one comparison with its screens.
+- An inline theme script, or a CSP hash for one: rejected, it needs a CSP change; the external file needs none. A `type="module"` script: rejected, it is deferred, so the first paint would flash.
+- Keeping the slice in the entry and raising the budget: rejected, the owner forbids raising it (ADR-0020).
+- Removing the handoff's dark `prefers-color-scheme` block now: kept as a lever, not taken, because it changes what System means.
+- One `components.css`: rejected, 67 KB in every visit.
+
+## Confirmation
+
+- `scripts/design-contrast.test.ts`: computes the 53 handoff pairs for light and dark from `tokens.css` (0 failing; opaque pairs match the published figures; translucent surfaces judged at their worst backdrop) and that the OS-dark block equals the dark block.
+- `scripts/css-rules.test.ts`: no inline style anywhere in `apps/web/index.html` and `apps/web/src`, no colour literal outside `tokens.css`, load order.
+- `apps/web/src/theme/*.test.ts(x)`, `apps/web/src/shell/*.test.ts(x)`, `apps/web/src/icons/Icon.test.tsx`, `apps/web/src/ui/Price.test.tsx`, `apps/web/src/lazy-feature.test.tsx` (Vitest).
+- `e2e/design-foundation.e2e.ts`: themes and axe in light and dark, no flash, blocked storage, reduced motion, forced colours, reduced transparency where supported, the boot script and fonts under the enforced CSP, the sheet. `e2e/web-vitals-lab.e2e.ts` and `bun run bundle:check`: lab LCP and CLS and the first-visit budget; `scripts/bundle-budget.test.ts` covers the head-script accounting.
