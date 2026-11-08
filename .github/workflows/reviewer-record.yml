@@ -32,7 +32,6 @@ jobs:
         with:
           version: 2026.10.25
           install_args: node
-          cache: false
       - name: Reject a body too large to pass safely
         # The body is passed to the next step as one environment string, which Linux limits to 128 KiB. A body
         # can be 65,536 characters of up to 4 bytes each, so more than 32,768 characters could fail with a
