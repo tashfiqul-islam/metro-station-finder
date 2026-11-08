@@ -6,8 +6,14 @@ import type { ComponentType, ReactNode } from "react";
 export type MapsStatus = "loading" | "ready" | "unavailable";
 
 export interface PlaceSearchProps {
-  /** Id of the visible label that names the search control. */
+  /** Id of the visible label that names the group around the search control. */
   readonly labelId: string;
+  /**
+   * Hint text that the widget exposes as the description of its input (screen readers read it on focus).
+   * Google offers no way to set the input's accessible name, so the visible label must be contained in
+   * Google's own name instead (METRO-101).
+   */
+  readonly description: string;
   /** Soft bias for suggestions; a hint, not a restriction. */
   readonly bias: { readonly center: Coordinate; readonly radiusMeters: number };
   readonly onPlace: (location: Coordinate) => void;
@@ -50,6 +56,7 @@ export function useMaps(): MapsState {
 /** What the search needs from the Maps `places` library, as we call it (and a fake can supply). */
 export interface PlacesApi {
   readonly PlaceAutocompleteElement: new (options: {
+    description: string;
     includedRegionCodes: string[];
     locationBias: { center: { lat: number; lng: number }; radius: number };
   }) => HTMLElement;

@@ -29,10 +29,10 @@ function isSelection(event: Event): event is SelectEvent {
  * The Google place search control. `PlaceAutocompleteElement` keeps the autocomplete session itself: one
  * selection ends one session and `fetchFields` carries its token. We call `fetchFields` once per
  * selection; if the user picks again while one is in flight, the earlier result is ignored (latest wins). The element lives in a shadow root and
- * cannot be labelled from outside, so a labelled group wraps it. Nothing from Google leaves this file
+ * has no property for its accessible name (METRO-101), so a labelled group wraps it and `description` carries the hint. Nothing from Google leaves this file
  * except a plain coordinate.
  */
-export function PlaceSearch({ labelId, bias, onPlace, onFailure }: PlaceSearchProps) {
+export function PlaceSearch({ labelId, description, bias, onPlace, onFailure }: PlaceSearchProps) {
   const places = usePlaces();
   const { lat, lng } = bias.center;
   const { radiusMeters } = bias;
@@ -44,6 +44,7 @@ export function PlaceSearch({ labelId, bias, onPlace, onFailure }: PlaceSearchPr
     const container = host.current;
     if (places === null || container === null) return noop;
     const element = new places.PlaceAutocompleteElement({
+      description,
       includedRegionCodes: REGION_CODES,
       locationBias: { center: { lat, lng }, radius: radiusMeters },
     });
@@ -81,7 +82,7 @@ export function PlaceSearch({ labelId, bias, onPlace, onFailure }: PlaceSearchPr
       element.removeEventListener("gmp-error", onError);
       element.remove();
     };
-  }, [places, lat, lng, radiusMeters]);
+  }, [places, description, lat, lng, radiusMeters]);
 
   return <fieldset ref={host} aria-labelledby={labelId} />;
 }

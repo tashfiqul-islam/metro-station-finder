@@ -153,3 +153,20 @@ Routes SKU of the JS call; autocomplete requests per keystroke; whether a Maps-l
 - The element sets its own autocomplete request rate; the minimum-character and debounce control asked for in the orchestrator's brief (the Plane ticket does not mention it) is not available on `PlaceAutocompleteElement` (see Free-tier plan).
 - The harness rebuilds the web app with the fake key inside `bun run smoke` (see Library decision), because the key is compiled in and CI builds without one.
 - Origin of the fare is the nearest station and is not changeable in this slice; the destination is chosen.
+
+## Accessible name of the place search (METRO-101, 2026-11-08)
+
+Observed (owner probe 2026-11-08, relayed, not re-run by an agent): the real `PlaceAutocompleteElement` exposes `combobox "Search For a Place"`, then `button "Use my location"`. Our visible label was "Search for a place in Dhaka".
+
+Research (2026-11-08):
+
+- No property, attribute, slot or part sets the input's accessible name or ARIA label. The element's documented properties include `description`, `placeholder` and `name` (a form field name), and no `ariaLabel`, `label` or labelled-by option (Repo-verified in `@types/google.maps` 3.66.9; Context7-verified against the places-widget reference; Web-verified on the official reference and the place-autocomplete guide, which says only "Enhanced accessibility, including support for screen readers and keyboard interaction").
+- `description` is documented as "detected by screen readers when the input element is focused" and links `aria-describedby`: a description, not a name (Repo-, Context7- and Web-verified).
+- Whether an `aria-label` or `aria-labelledby` set on the host reaches the inner combobox: Unverified. The documentation is silent, the host sits outside the shadow root, and ARIA on a role-less custom element is not a documented route. Not used.
+- Whether the name "Search For a Place" comes from Google's default `placeholder` text: Unverified (a hypothesis only).
+
+Decision: WCAG 2.5.3 Label in Name needs the visible label text to be contained in the accessible name, compared case-insensitively. Google's name is fixed, so the visible label is now exactly "Search for a place", which "Search For a Place" contains. The "Dhaka" meaning moves to a separate visible hint, "Suggestions favor places in Dhaka.", passed to the element as `description` (the one supported accessibility hook). The group (`fieldset` with `aria-labelledby` the visible label) is kept. No custom combobox, no CSP change, no host ARIA.
+
+Verified by stub only: the e2e fake copies the measured name and the `description` option; the unit tests assert the adapter passes `description`, and the e2e asserts label-in-name, the visible hint, the described-by wiring, axe, and the unchanged Tab order (search, then Use my location).
+
+Unverified until the owner runs `bun run smoke:live` (METRO-100): the real widget's accessibility tree. Expect `combobox "Search For a Place"` (or a name that contains "search for a place", ignoring case), its description reading "Suggestions favor places in Dhaka." if Google wires `description` as documented, one Tab stop for the search, then `button "Use my location"`, and no axe violation. If the name differs, or the description is absent, record it on METRO-101.

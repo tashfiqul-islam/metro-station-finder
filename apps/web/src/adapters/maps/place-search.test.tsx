@@ -66,7 +66,13 @@ function mount() {
   const onPlace = vi.fn();
   const onFailure = vi.fn();
   const view = render(
-    <Wrapped labelId="label" bias={bias} onPlace={onPlace} onFailure={onFailure} />,
+    <Wrapped
+      labelId="label"
+      description="a hint"
+      bias={bias}
+      onPlace={onPlace}
+      onFailure={onFailure}
+    />,
   );
   return { onPlace, onFailure, view };
 }
@@ -103,6 +109,7 @@ test("METRO-88 creates one Dhaka-biased element restricted to Bangladesh", () =>
   const { view } = mount();
   expect(library.made).toHaveLength(1);
   expect(Reflect.get(made(), "options")).toEqual({
+    description: "a hint",
     includedRegionCodes: ["bd"],
     locationBias: { center: { lat: 23.8, lng: 90.4 }, radius: 25_000 },
   });
@@ -238,7 +245,13 @@ test("METRO-88 StrictMode leaves exactly one element in the DOM", () => {
   enable();
   const view = render(
     <StrictMode>
-      <Wrapped labelId="label" bias={bias} onPlace={vi.fn()} onFailure={vi.fn()} />
+      <Wrapped
+        labelId="label"
+        description="a hint"
+        bias={bias}
+        onPlace={vi.fn()}
+        onFailure={vi.fn()}
+      />
     </StrictMode>,
   );
   expect(view.container.querySelectorAll("[data-fake-autocomplete]")).toHaveLength(1);

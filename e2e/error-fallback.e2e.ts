@@ -24,7 +24,7 @@ async function failTheSuccessRender(page: Page): Promise<void> {
     page.getByRole("heading", { level: 1, name: "Nearest Metro station" }),
   ).toBeVisible();
   await page.evaluate(() => Reflect.set(globalThis, "failDistanceFormat", true));
-  const search = page.getByRole("textbox", { name: "Search for a place in Dhaka" });
+  const search = page.getByRole("textbox", { name: "Search For a Place", exact: true });
   await search.fill("motijheel");
   await search.press("Enter");
 }

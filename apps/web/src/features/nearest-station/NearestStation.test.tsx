@@ -99,6 +99,10 @@ test("METRO-88 idle: search, the location button and the consent line, and no re
   render(<NearestStation maps={fakeMaps} />);
   expect(screen.getByRole("heading", { level: 1, name: copy.heading })).toBeTruthy();
   expect(screen.getByRole("group", { name: copy.searchLabel })).toBeTruthy();
+  // METRO-101: the hint is visible and is the description handed to the widget.
+  expect(screen.getByText(copy.searchHint)).toBeTruthy();
+  expect(world.searchProps?.description).toBe(copy.searchHint);
+  expect(world.searchProps?.labelId).toBe("place-label");
   const button = screen.getByRole("button", { name: copy.locateButton });
   expect(button.getAttribute("aria-describedby")).toBe("consent");
   const consent = document.getElementById("consent")?.textContent ?? "";
@@ -106,6 +110,12 @@ test("METRO-88 idle: search, the location button and the consent line, and no re
   expect(consent).toContain("goes to Google");
   expect(screen.queryByRole("alert")).toBeNull();
   expect(screen.queryByRole("heading", { name: copy.resultHeading })).toBeNull();
+});
+
+test("METRO-101 Google names the input 'Search For a Place': our visible label must be contained in it", () => {
+  // WCAG 2.5.3 Label in Name compares case-insensitively; the Dhaka wording lives in the hint, not the label.
+  expect("Search For a Place".toLowerCase()).toContain(copy.searchLabel.toLowerCase());
+  expect(copy.searchLabel).not.toContain("Dhaka");
 });
 
 test("METRO-88 the search gets a Dhaka bias derived from the dataset, not a hard-coded point", () => {
