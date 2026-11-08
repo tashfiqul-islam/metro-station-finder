@@ -174,7 +174,9 @@ export const MISE_RETRY_JOB_MARGIN_SECONDS = 180;
  * `sleep N` run step (N at most MISE_RETRY_MAX_SLEEP_SECONDS) directly before each later attempt, gated the same
  * way. Gates must be exactly that expression (no `||`, no added term), attempt ids unique, and the attempt limits
  * plus the pauses plus MISE_RETRY_JOB_MARGIN_SECONDS must fit inside the job's `timeout-minutes`.
- * No cache or artifact step is involved, so the credentialed cache rule still holds.
+ * No cache or artifact step is involved, so the credentialed cache rule still holds. The rule applies to every
+ * credentialed job in every workflow passed in (METRO-99: the release, cleanup, token-check and production
+ * workflows too); the first attempt has no `if`, and later attempts repeat its `uses` pin and `with` inputs.
  */
 export function credentialedMiseRetryViolations(workflows: ParsedWorkflow[]): string[] {
   const found: string[] = [];
@@ -222,6 +224,18 @@ export function credentialedMiseRetryViolations(workflows: ParsedWorkflow[]): st
           if (!gated(before)) found.push(`${here}: its sleep step must run only when ${gate}`);
         }
       });
+      // Attempts are copies: the same pinned action and inputs, and the first one always runs.
+      const [first] = attempts;
+      if (first?.["if"] !== undefined)
+        found.push(`${where}: the first mise attempt must not have an if`);
+      for (const step of attempts.slice(1))
+        if (
+          step["uses"] !== first?.["uses"] ||
+          JSON.stringify(step["with"]) !== JSON.stringify(first?.["with"])
+        )
+          found.push(
+            `${where} step ${String(step["name"])}: differs from the first attempt in uses or with`,
+          );
       const ids = attempts.map((step) => step["id"]);
       if (new Set(ids).size !== ids.length) found.push(`${where}: mise attempt ids are not unique`);
       const budget = attemptSeconds + pauses + MISE_RETRY_JOB_MARGIN_SECONDS;
