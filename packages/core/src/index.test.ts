@@ -1,7 +1,6 @@
 import * as core from "./index.ts";
 
-test("the package entry exposes the scaffold, domain, lookups and the baseline dataset", () => {
-  expect(core.getScaffoldStatus().ready).toBe(true);
+test("the package entry exposes the domain, lookups and the baseline dataset", () => {
   expect(core.baselineDataset.stations).toHaveLength(16);
   expect(
     core.findNearestStation(core.baselineDataset.stations, { lat: 23.73, lng: 90.4 }).kind,

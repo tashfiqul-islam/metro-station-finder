@@ -16,7 +16,7 @@ Before this change the web app and the Worker ran as separate servers (Vite on 5
 - One Worker serves static assets. `assets.not_found_handling` is `single-page-application` and `assets.run_worker_first` is `["/api/*"]`, so only API requests reach Worker code; every other unknown path returns the SPA shell.
 - The Worker package stays `apps/api`. Its `wrangler.jsonc` is referenced from `apps/web/vite.config.ts` through `configPath: "../api/wrangler.jsonc"`. The plugin supplies the asset directory (the client build output), so the config has no `assets.directory`.
 - Build output: `apps/web/dist/client` (assets) and `apps/web/dist/metro_scaffold` (Worker bundle and generated `wrangler.json`). The Wrangler dry run in `apps/api` targets that generated configuration. Dry-run result: 66.17 KiB / gzip 17.91 KiB total upload, nothing uploaded.
-- API contract: `GET /api/scaffold/status`; other methods on that path return 405 with `Allow: GET, HEAD`; unknown `/api/*` returns 404; unexpected failures return 500; all errors use the `{ error: { code, message } }` envelope and never echo the cause.
+- API contract (updated by METRO-93, which removed the only route: the API has no routes): unknown `/api/*` returns 404; non-GET/HEAD on `/assets/*` returns 405 with `Allow: GET, HEAD`; unexpected failures return 500; all errors use the `{ error: { code, message } }` envelope and never echo the cause.
 - `compatibility_date` is `2026-10-30`, the newest date the pinned workerd supports. `2026-11-02` made workerd refuse to start.
 - The bundle gate measures `apps/web/dist/client`, the same client JS/CSS it always measured. The Worker bundle is a separate artifact and is not counted against the client budget (250000 raw / 80000 gzip, unchanged).
 

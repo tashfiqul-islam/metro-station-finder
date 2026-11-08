@@ -41,55 +41,7 @@ test.describe("axe configuration (METRO-41)", () => {
   });
 });
 
-test.describe("accessibility tree of main (METRO-41)", () => {
-  test("METRO-41 success state", async ({ page }) => {
-    await page.goto("/");
-    await expect(page.getByRole("main")).toMatchAriaSnapshot(`
-      - main:
-        - /children: equal
-        - heading "Metro scaffold" [level=1]
-        - paragraph: Synthetic workspace check. No station or fare features.
-        - status "Scaffold status": /^\\{"kind":"synthetic-scaffold","ready":true\\}$/
-    `);
-  });
-
-  test.describe("when the status request fails", () => {
-    test.use({ allowedConsoleError: /Failed to load resource.*status of 500/u });
-
-    test("METRO-41 error state announces through role=alert", async ({ page }) => {
-      await page.route("**/api/scaffold/status", (route) =>
-        route.fulfill({
-          status: 500,
-          contentType: "application/json",
-          body: JSON.stringify({
-            error: { code: "internal_error", message: "Internal server error" },
-          }),
-        }),
-      );
-      await page.goto("/");
-      await expect(page.getByRole("main")).toMatchAriaSnapshot(`
-        - main:
-          - /children: equal
-          - heading "Metro scaffold" [level=1]
-          - paragraph: Synthetic workspace check. No station or fare features.
-          - alert: /^Scaffold status unavailable\\. Reload the page to try again\\.$/
-      `);
-      await expect(page.getByRole("alert")).toHaveCount(1);
-    });
-  });
-});
-
 test.describe("keyboard flow (METRO-41)", () => {
-  test("METRO-41 the scaffold pins zero interactive controls and Tab focuses nothing", async ({
-    page,
-  }) => {
-    await page.goto("/");
-    await expect(page.getByLabel("Scaffold status")).toBeVisible();
-    // If this fails because controls appeared: set `expected` to the new count and add ARIA snapshot
-    // and keyboard cases for them. The helper's failure message says the same.
-    await expectTabReachesEveryControl(page, { expected: 0 });
-  });
-
   test("METRO-41 a changed control count fails with instructions", async ({ page }) => {
     await page.setContent(CONTROLS_OK);
     await expect(expectTabReachesEveryControl(page, { expected: 0 })).rejects.toThrow(

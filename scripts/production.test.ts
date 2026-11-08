@@ -203,17 +203,11 @@ test("METRO-92 a healthy production passes the smoke with and without a version 
   const healthy = (url: string, init?: { headers?: Record<string, string> }) => {
     seen.push(init?.headers);
     const json = { headers: { "content-type": "application/json", "x-request-id": "r1" } };
-    if (url.endsWith("/api/scaffold/status"))
-      return Promise.resolve(
-        new Response(JSON.stringify({ kind: "synthetic-scaffold", ready: true }), {
-          headers: { ...json.headers, "x-preview-sha": SHA },
-        }),
-      );
     if (url.endsWith("/api/does-not-exist"))
       return Promise.resolve(
         new Response(JSON.stringify({ error: { code: "not_found", message: "x" } }), {
           status: 404,
-          ...json,
+          headers: { ...json.headers, "x-preview-sha": SHA },
         }),
       );
     return Promise.resolve(
@@ -224,10 +218,10 @@ test("METRO-92 a healthy production passes the smoke with and without a version 
   expect(await runProductionCli(["smoke", "https://metro.example.com", SHA], {}, options)).toBe(
     "Smoke passed for https://metro.example.com",
   );
-  expect(seen).toEqual([undefined, undefined, undefined]);
+  expect(seen).toEqual([undefined, undefined]);
   seen.length = 0;
   await runProductionCli(["smoke", "https://metro.example.com", "", NEW], {}, options);
-  expect(seen).toEqual(Array.from({ length: 3 }, () => versionOverrideHeader(NEW)));
+  expect(seen).toEqual(Array.from({ length: 2 }, () => versionOverrideHeader(NEW)));
 });
 
 test("METRO-92 the real gh runner returns gh's output and surfaces its failure", async () => {

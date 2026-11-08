@@ -80,6 +80,39 @@ export function neverCalled() {
   expect(result.output).toMatch(/subject.tss*|s*50.00s*|s*16.67/u);
 });
 
+// METRO-94: the Bun gate is 100 percent lines and functions per file. One missed function in a hundred (99 percent) must fail.
+const hundredFunctions = (called: number) => ({
+  "subject.ts": Array.from(
+    { length: 100 },
+    (_, index) => `export function f${index}() {
+  return ${index};
+}
+`,
+  ).join(""),
+  "subject.test.ts":
+    `import { ${Array.from({ length: called }, (_, index) => `f${index}`).join(", ")} } from "./subject";
+` +
+    `test("calls ${called}", () => {
+${Array.from(
+  { length: called },
+  (_, index) => `  expect(f${index}()).toBe(${index});
+`,
+).join("")}});
+`,
+});
+
+test("METRO-94 a file with 99 of 100 functions covered fails the 100 percent gate", async () => {
+  const result = await runFiles(hundredFunctions(99));
+  expect(result.code).not.toBe(0);
+  expect(result.output).toMatch(/subject\.ts\s*\|\s*99\.00\s*\|/u);
+  expect(result.output).toMatch(/\n\s*0 fail\n/u);
+});
+
+test("METRO-94 a file with 100 of 100 functions covered passes the gate", async () => {
+  const result = await runFiles(hundredFunctions(100));
+  expect(result.code).toBe(0);
+});
+
 // METRO-82: `check` runs `bun test --parallel=4`. The gate must hold with exactly those flags.
 test("METRO-82 the check script pins --parallel=4 and keeps isolation on", async () => {
   const flags = await checkFlags();
@@ -108,7 +141,7 @@ test("METRO-82 under the check flags the lcov report holds every file from every
 test("METRO-82 under the check flags an uncovered function in one worker's file still fails the gate", async () => {
   const result = await runFiles(twoFiles(true), await checkFlags());
   expect(result.code).not.toBe(0);
-  // Bun 1.4.4 prints no "threshold" sentence: the failure is the exit code plus the table row below 90 with no failed test.
+  // Bun 1.4.4 prints no "threshold" sentence: the failure is the exit code plus the table row below 100 with no failed test.
   expect(result.output).toMatch(/b\.ts\s*\|\s*50\.00\s*\|\s*16\.67/u);
   expect(result.output).toMatch(/\n\s*0 fail\n/u);
   expect(result.lcov).toMatch(/SF:b\.ts[\s\S]*?LF:6\r?\nLH:1\r?\n/u);
@@ -159,7 +192,7 @@ test("METRO-82 a source loaded by two workers keeps the union of what each cover
 test("METRO-82 a function that no worker covers still fails the gate with no failed test", async () => {
   const result = await runFiles(shared(false), await checkFlags());
   expect(result.code).not.toBe(0);
-  // No "threshold" sentence in Bun 1.4.4 output: the table row below 90 and zero failed tests show the cause.
+  // No "threshold" sentence in Bun 1.4.4 output: the table row below 100 and zero failed tests show the cause.
   expect(result.output).toMatch(/shared\.ts\s*\|\s*50\.00\s*\|\s*50\.00/u);
   expect(result.output).toMatch(/\n\s*0 fail\n/u);
   expect(result.lcov).toMatch(/SF:shared\.ts\r?\nFNF:2\r?\nFNH:1\r?\n/u);
@@ -167,7 +200,7 @@ test("METRO-82 a function that no worker covers still fails the gate with no fai
 
 // METRO-50 decision: the gate measures lines and functions only because Bun 1.4.4 emits no branch data. This is a
 // tripwire, not a gate: if a Bun upgrade starts writing BRF/BRH/BRDA, this test fails and the branch threshold
-// (90 percent per file, with a failing fixture) should be added instead of deleting the test.
+// (90 percent per file, matching the Vitest apps, with a failing fixture) should be added instead of deleting the test.
 test("METRO-50 Bun's lcov report carries no branch records, so no branch gate is possible", async () => {
   const root = await mkdtemp(join(tmpdir(), "metro-branches-"));
   try {

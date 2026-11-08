@@ -242,10 +242,11 @@ function Slice({ maps }: SliceProps) {
               </p>
               <output>
                 {fare === null && copy.fareChoose}
-                {fare?.kind === "fare" &&
+                {destination !== undefined &&
+                  fare?.kind === "fare" &&
                   copy.fareLine(
                     station.name,
-                    destination?.name ?? "",
+                    destination.name,
                     fare.fare.currency,
                     fare.fare.amount,
                   )}
