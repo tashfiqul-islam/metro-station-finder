@@ -482,6 +482,7 @@ test("METRO-97 the retry rule fails a preview job whose chain is weakened", () =
   ]);
   expect(mutatePreview((steps) => delete named(steps, FIRST)["id"])).toEqual([
     `${where}${SECOND}: must run only when steps.undefined.outcome == 'failure'`,
+    `${where}${SECOND}: its sleep step must run only when steps.undefined.outcome == 'failure'`,
   ]);
   expect(mutatePreview((steps) => (named(steps, WAIT_2)["run"] = "sleep 600"))).toEqual([
     `${where}${SECOND}: needs a "sleep N" step (N <= 120) directly before it`,
@@ -489,6 +490,48 @@ test("METRO-97 the retry rule fails a preview job whose chain is weakened", () =
   expect(mutatePreview((steps) => (named(steps, WAIT_3)["run"] = "echo hi"))).toEqual([
     `${where}${THIRD}: needs a "sleep N" step (N <= 120) directly before it`,
   ]);
+});
+
+test("METRO-97 the retry gates must be exactly the previous attempt's failure, with unique ids and a fitting budget", () => {
+  const where = "quality.yml job preview step ";
+  for (const extra of ["|| always()", "|| true", "&& always()"])
+    expect(
+      mutatePreview(
+        (steps) =>
+          (named(steps, SECOND)["if"] = `\${{ steps.mise1.outcome == 'failure' ${extra} }}`),
+      ),
+    ).toEqual([`${where}${SECOND}: must run only when steps.mise1.outcome == 'failure'`]);
+  expect(mutatePreview((steps) => (named(steps, WAIT_2)["if"] = "${{ always() }}"))).toEqual([
+    `${where}${SECOND}: its sleep step must run only when steps.mise1.outcome == 'failure'`,
+  ]);
+  expect(mutatePreview((steps) => delete named(steps, WAIT_3)["if"])).toEqual([
+    `${where}${THIRD}: its sleep step must run only when steps.mise2.outcome == 'failure'`,
+  ]);
+  // The third attempt gated on the first attempt, not the one before it.
+  expect(
+    mutatePreview(
+      (steps) => (named(steps, THIRD)["if"] = "${{ steps.mise1.outcome == 'failure' }}"),
+    ),
+  ).toEqual([`${where}${THIRD}: must run only when steps.mise2.outcome == 'failure'`]);
+  // Duplicate ids: the second attempt reuses the first id, so the third attempt's gates also break.
+  expect(mutatePreview((steps) => (named(steps, SECOND)["id"] = "mise1"))).toEqual([
+    `${where}${THIRD}: must run only when steps.mise1.outcome == 'failure'`,
+    `${where}${THIRD}: its sleep step must run only when steps.mise1.outcome == 'failure'`,
+    "quality.yml job preview: mise attempt ids are not unique",
+  ]);
+  const withJobLimit = (limit: unknown) => {
+    const copy = cloneQuality();
+    job(copy, "preview")["timeout-minutes"] = limit;
+    return credentialedMiseRetryViolations([copy]);
+  };
+  expect(job(quality, "preview")["timeout-minutes"]).toBe(20);
+  expect(withJobLimit(15)).toEqual([
+    "quality.yml job preview: retry chain 810 s plus 180 s margin does not fit in timeout-minutes 15",
+  ]);
+  expect(withJobLimit(null)).toEqual([
+    "quality.yml job preview: retry chain 810 s plus 180 s margin does not fit in timeout-minutes null",
+  ]);
+  expect(withJobLimit(17)).toEqual([]);
 });
 
 test("METRO-97 the retry rule ignores uncredentialed jobs and credentialed jobs without mise", () => {

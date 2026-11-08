@@ -369,7 +369,8 @@ jobs:
     if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && !endsWith(github.actor, '[bot]') && !endsWith(github.event.pull_request.user.login, '[bot]') && github.event.pull_request.user.type != 'Bot' && github.event.sender.type != 'Bot' && needs.changes.outputs.docs_only != 'true' }}
     needs: [changes, checks, build, smoke, security]
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    # 20 minutes: the mise install retry chain may use 13.5 (3 attempts of 4, pauses of 30 s and 60 s) and at least 6 remain for the rest of the job.
+    timeout-minutes: 20
     concurrency:
       group: preview-${{ github.event.pull_request.number }}
       cancel-in-progress: false
