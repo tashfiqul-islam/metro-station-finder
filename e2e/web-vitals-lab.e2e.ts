@@ -146,9 +146,10 @@ test.describe("lab web vitals (METRO-44 part C)", () => {
     expect(evaluateVitals(await measure(page)).problems).toEqual([]);
     await page.evaluate(() => {
       const block = document.createElement("div");
-      block.style.height = "2000px"; // taller than the 1280 px viewport width: the full shift distance counts
-      // The app is a fixed shell (METRO-105), so a block prepended to <body> shifts nothing: insert it where
-      // the visible content starts, at the top of the panel's scroll area.
+      // The app is a fixed full-viewport shell, so a block added to <body> would shift nothing. Put the block at
+      // the top of the panel's scroll content, which moves all of the visible panel. At 2,000 px it is taller than
+      // the longest viewport side (1,280 px), so the full shift distance counts and the score clears 0.1 with margin.
+      block.style.height = "2000px";
       document.querySelector(".panel__body")?.prepend(block);
     });
     const verdict = report(await measure(page));

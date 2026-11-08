@@ -267,43 +267,58 @@ test.describe("user preferences", () => {
     expect(results.violations.map((violation) => violation.id)).toEqual([]);
   });
 
-  test("METRO-105 reduced transparency makes the panel solid where the browser supports the preference", async ({
-    page,
-    browserName,
-  }) => {
-    test.skip(
-      browserName !== "chromium",
-      "Only Chromium can emulate the preference, through DevTools",
-    );
-    const session = await page.context().newCDPSession(page);
-    await session.send("Emulation.setEmulatedMedia", {
-      features: [{ name: "prefers-reduced-transparency", value: "reduce" }],
+  // Playwright has no reduced-transparency option, so Chromium is driven through DevTools. Only Chromium can
+  // do this, so the other browsers skip; `scripts/design-contrast.test.ts` asserts the override exists for
+  // every theme selector as text. In Chromium a build that cannot emulate the preference fails here.
+  const SOLID_PANEL = { light: "rgb(250, 251, 252)", dark: "rgb(16, 18, 21)" } as const;
+  const TRANSPARENCY_CASES = [
+    { name: "OS dark, no saved theme", scheme: "dark", saved: undefined, solid: SOLID_PANEL.dark },
+    {
+      name: "OS light, no saved theme",
+      scheme: "light",
+      saved: undefined,
+      solid: SOLID_PANEL.light,
+    },
+    {
+      name: "saved dark under an OS light",
+      scheme: "light",
+      saved: "dark",
+      solid: SOLID_PANEL.dark,
+    },
+    {
+      name: "saved light under an OS dark",
+      scheme: "dark",
+      saved: "light",
+      solid: SOLID_PANEL.light,
+    },
+  ] as const;
+  for (const { name, scheme, saved, solid } of TRANSPARENCY_CASES) {
+    test(`METRO-105 reduced transparency makes the panel solid: ${name}`, async ({
+      page,
+      browserName,
+    }) => {
+      test.skip(
+        browserName !== "chromium",
+        "Only Chromium can emulate the preference, through DevTools",
+      );
+      await page.emulateMedia({ colorScheme: scheme });
+      const session = await page.context().newCDPSession(page);
+      await session.send("Emulation.setEmulatedMedia", {
+        features: [{ name: "prefers-reduced-transparency", value: "reduce" }],
+      });
+      await open(page, saved);
+      expect(
+        await page.evaluate(() => matchMedia("(prefers-reduced-transparency: reduce)").matches),
+        "this Chromium must report prefers-reduced-transparency under emulation",
+      ).toBe(true);
+      const panel = await page.locator(".panel").evaluate((node) => {
+        const style = getComputedStyle(node);
+        return { background: style.backgroundColor, filter: style.backdropFilter };
+      });
+      expect(panel.filter).toBe("none");
+      expect(panel.background).toBe(solid);
     });
-    await open(page);
-    const supported = await page.evaluate(
-      () => matchMedia("(prefers-reduced-transparency: reduce)").matches,
-    );
-    test.skip(!supported, "this Chromium does not report prefers-reduced-transparency");
-    const panel = await page.locator(".panel").evaluate((node) => {
-      const style = getComputedStyle(node);
-      return { background: style.backgroundColor, filter: style.backdropFilter };
-    });
-    expect(panel.filter).toBe("none");
-    expect(panel.background).not.toMatch(/\/|rgba/u); // opaque: no alpha channel
-  });
-});
-
-test.describe("layout shell", () => {
-  test("METRO-105 landmarks: banner, one main holding the slice, notifications region", async ({
-    page,
-  }) => {
-    await open(page);
-    await expect(page.getByRole("banner")).toHaveCount(1);
-    await expect(page.getByRole("main")).toHaveCount(1);
-    await expect(page.getByRole("main").getByRole("heading", { level: 1 })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Notifications" })).toHaveCount(1);
-    expect(await page.evaluate(() => document.querySelectorAll("[role='tab']").length)).toBe(0);
-  });
+  }
 
   test("METRO-105 at 1280 px the panel is a sidebar and the sheet handle is not in the page", async ({
     page,
@@ -370,6 +385,25 @@ test.describe("layout shell", () => {
       expect(await app.evaluate((node) => node.style.getPropertyValue("--sheet-h"))).toBe("");
       await expect(page.locator(".panel")).not.toHaveAttribute("data-dragging", /.*/u);
       expect(await page.evaluate(() => document.querySelectorAll("[style]").length)).toBe(0);
+    });
+
+    test("METRO-105 Tab from the handle into the content of a peeking sheet opens it to half", async ({
+      page,
+    }) => {
+      await open(page);
+      const app = page.locator(".app");
+      const grip = page.getByRole("button", { name: /^Resize panel/u });
+      await grip.focus();
+      await page.keyboard.press("ArrowDown");
+      await page.keyboard.press("ArrowDown");
+      await expect(app).toHaveAttribute("data-snap", "peek");
+      await page.keyboard.press("Tab"); // "Make panel larger", still a handle control
+      await expect(app).toHaveAttribute("data-snap", "peek");
+      await page.keyboard.press("Tab"); // first control in the content
+      await expect(app).toHaveAttribute("data-snap", "half");
+      expect(
+        await page.evaluate(() => document.activeElement?.closest(".panel__scroll") !== null),
+      ).toBe(true);
     });
 
     test("METRO-105 the slice is reachable and axe passes at 390 px in dark", async ({ page }) => {

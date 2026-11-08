@@ -16,6 +16,7 @@ export const shellCopy = {
     full: "full height",
   } as const satisfies Record<Snap, string>,
   gripLabel: (snap: string): string => `Resize panel. Now ${snap}. Drag, or use the arrow keys.`,
+  snapStatus: (snap: string): string => `Panel ${snap}`,
   smaller: "Make panel smaller",
   larger: "Make panel larger",
 } as const;

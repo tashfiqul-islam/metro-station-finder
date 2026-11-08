@@ -14,7 +14,7 @@ interface PriceProps {
 export function Price({ amount }: PriceProps): ReactElement {
   return (
     <>
-      <span aria-hidden="true">৳{amount}</span>
+      <span aria-hidden="true">৳{amount}</span>{" "}
       <span className="visually-hidden">{amount} taka</span>
     </>
   );

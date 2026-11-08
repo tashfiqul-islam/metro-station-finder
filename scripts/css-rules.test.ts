@@ -3,15 +3,21 @@ import { join } from "node:path";
 
 import { checkLoadOrder, checkSource, checkStylesheet, checkTree } from "./css-rules.ts";
 
-/** Every file the rules govern: the web app's HTML and everything under src (public/ holds brand files). */
+/** Every file the rules govern: `index.html`, everything under src, and the scripts and styles in public/. */
 function webFiles(): Record<string, string> {
   const files: Record<string, string> = {
     "apps/web/index.html": readFileSync("apps/web/index.html", "utf8"),
   };
-  for (const entry of readdirSync("apps/web/src", { recursive: true, withFileTypes: true })) {
-    if (!entry.isFile() || !/\.(css|html|tsx?)$/u.test(entry.name)) continue;
-    const path = join(entry.parentPath, entry.name).replaceAll("\\", "/");
-    files[path.slice(path.indexOf("apps/web/"))] = readFileSync(path, "utf8");
+  const roots: readonly [string, RegExp][] = [
+    ["apps/web/src", /\.(css|html|tsx?)$/u],
+    ["apps/web/public", /\.(css|html|js)$/u],
+  ];
+  for (const [root, pattern] of roots) {
+    for (const entry of readdirSync(root, { recursive: true, withFileTypes: true })) {
+      if (!entry.isFile() || !pattern.test(entry.name)) continue;
+      const path = join(entry.parentPath, entry.name).replaceAll("\\", "/");
+      files[path.slice(path.indexOf("apps/web/"))] = readFileSync(path, "utf8");
+    }
   }
   return files;
 }
@@ -22,6 +28,7 @@ test("the web app has no inline style, no colour literal outside tokens.css and 
   expect(Object.keys(files).length).toBeGreaterThan(40);
   expect(Object.keys(files)).toContain("apps/web/src/styles/tokens.css");
   expect(Object.keys(files)).toContain("apps/web/src/styles/components/common.css");
+  expect(Object.keys(files)).toContain("apps/web/public/theme-boot.js");
   expect(checkTree(files)).toEqual([]);
 });
 
@@ -123,5 +130,81 @@ test("checkTree applies stylesheet, source and load-order rules by file kind", (
   });
   expect(new Set(found.map((finding) => finding.rule))).toEqual(
     new Set(["colour-literal", "inline-style-attribute", "load-order"]),
+  );
+});
+
+test("named colours are findings in a stylesheet, but not in selectors, strings, ids, names or allowed keywords", () => {
+  const css = [
+    ".white { color: white; }",
+    ".b { background: linear-gradient(135deg, var(--color-red), tan); }",
+    ".c { border: 1px solid Red; }",
+    ".d { content: 'white'; fill: url(#red); }",
+    ".e { white-space: nowrap; animation: ping-ring 2s; font-family: Menlo, sans-serif; }",
+    ".f { color: transparent; outline-color: CanvasText; fill: currentColor; color-scheme: light; }",
+    ".g { box-shadow:",
+    "    0 0 0 1px var(--color-hair),",
+    "    0 0 1px gold; }",
+    "@media (min-width: 768px) { .h { transition: background-color 1s; } }",
+  ].join(String.fromCharCode(10));
+  const found = checkStylesheet("apps/web/src/styles/components/x.css", css);
+  expect(found.map((finding) => [finding.line, finding.rule])).toEqual([
+    [1, "named-colour"],
+    [2, "named-colour"],
+    [3, "named-colour"],
+    [9, "named-colour"],
+  ]);
+  expect(found[3]?.text).toContain("gold");
+});
+
+test("color(), light-dark() and the other colour functions are findings; color-mix() and url(#id) are not", () => {
+  const css = [
+    ".a { color: color(display-p3 1 0 0); }",
+    ".b { color: light-dark(var(--x), var(--y)); }",
+    ".c { color: color-mix(in oklch, var(--a) 40%, transparent); }",
+    ".d { mask: url(#abc) center; background: url(#fade); }",
+    ".e { color: hwb(0 0% 0%); }",
+  ].join(String.fromCharCode(10));
+  const found = checkStylesheet("apps/web/src/styles/components/x.css", css);
+  expect(found.map((finding) => finding.line)).toEqual([1, 2, 5]);
+});
+
+test("a hex-like id inside url() is not a colour, and tokens.css stays exempt from named colours too", () => {
+  expect(
+    checkStylesheet("apps/web/src/styles/components/x.css", ".a { fill: url(#fade); }"),
+  ).toEqual([]);
+  expect(
+    checkStylesheet("apps/web/src/styles/tokens.css", ".a { color: white; background: #fff; }"),
+  ).toEqual([]);
+});
+
+test("the new style-writing routes are findings in source", () => {
+  const samples: Record<string, string> = {
+    "style-index-write": "el.style[name] = value;",
+    "style-object-assign": "Object.assign(el.style, { width: '3px' });",
+    "insert-rule": "sheet.insertRule('a{}');",
+    "adopted-style-sheets": "document.adoptedStyleSheets = [sheet];",
+  };
+  for (const [rule, line] of Object.entries(samples)) {
+    expect(
+      checkSource("apps/web/src/x.ts", line).map((finding) => finding.rule),
+      rule,
+    ).toContain(rule);
+    expect(
+      checkSource("apps/web/public/boot.js", line).map((finding) => finding.rule),
+      rule,
+    ).toContain(rule);
+  }
+  expect(checkSource("apps/web/src/x.ts", "Object.assign(event, { pointerId: 1 });")).toEqual([]);
+  expect(checkSource("apps/web/src/x.ts", "if (el.style[name] === '') return;")).toEqual([]);
+});
+
+test("a fixture tree with one of each violation fails, so the real-tree check above can go red", () => {
+  const found = checkTree({
+    "apps/web/src/a.css": ".a { color: red; }",
+    "apps/web/public/boot.js": "el.style.width = '1px';",
+    "apps/web/src/b.ts": "document.adoptedStyleSheets = [];",
+  });
+  expect(new Set(found.map((finding) => finding.rule))).toEqual(
+    new Set(["named-colour", "style-property-write", "adopted-style-sheets"]),
   );
 });

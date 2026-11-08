@@ -14,7 +14,7 @@ afterAll(() => {
 test("METRO-93 the app renders the nearest-station slice with the real adapter and no key", async () => {
   render(<AppRoutes />);
   // The slice is a lazy chunk (ADR-0021): a fixed pending status first, then the slice inside the shell.
-  expect(screen.getByRole("status").textContent).toBe("Loading this part of the page.");
+  expect(screen.getByText("Loading this part of the page.").tagName).toBe("OUTPUT");
   expect(
     await screen.findByRole("heading", { level: 1, name: "Nearest Metro station" }),
   ).toBeTruthy();

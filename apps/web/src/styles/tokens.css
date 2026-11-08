@@ -314,9 +314,13 @@
       inset 0 1px 0 rgb(255 255 255 / 0.35), 0 6px 16px -6px rgb(63 213 200 / 0.6);
   }
 }
-/* Reduced transparency: glass becomes solid, no backdrop blur. */
+/* Reduced transparency: glass becomes solid, no backdrop blur. Last in the file, and one selector for every theme
+   block above (light :root, dark [data-theme], and the OS-dark :not([data-theme]) block), because the dark
+   selectors are more specific than a bare :root and would otherwise win (METRO-105 review). */
 @media (prefers-reduced-transparency: reduce) {
-  :root {
+  :root,
+  :root[data-theme="dark"],
+  :root:not([data-theme]) {
     --color-glass: var(--color-glass-solid);
     --color-glass-thick: var(--color-glass-solid);
     --blur: none;

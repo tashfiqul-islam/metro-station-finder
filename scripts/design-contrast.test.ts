@@ -5,10 +5,12 @@ import {
   composite,
   contrastRatio,
   evaluatePairs,
+  extractReducedTransparency,
   extractTokens,
   luminance,
   parseColor,
   surfaces,
+  withReducedTransparency,
 } from "./design-contrast.ts";
 import type { PairRow } from "./design-contrast.ts";
 
@@ -112,4 +114,58 @@ test("a missing token is a loud error, not a skipped pair", () => {
   expect(() => evaluatePairs({}, [["text", "x", "fg", "bg", 4.5, 0, 0]])).toThrow(
     "missing token --color-fg",
   );
+});
+
+const reduced = extractReducedTransparency(css);
+
+test("reduced transparency overrides the glass tokens under every theme selector, after all of them", () => {
+  // The dark selectors are more specific than a bare :root, so each needs its own entry (METRO-105 review).
+  expect(reduced.selectors).toEqual([
+    ":root",
+    ':root[data-theme="dark"]',
+    ":root:not([data-theme])",
+  ]);
+  expect(reduced.overrides).toEqual({
+    "--color-glass": "var(--color-glass-solid)",
+    "--color-glass-thick": "var(--color-glass-solid)",
+    "--blur": "none",
+  });
+  expect(reduced.lastInFile).toBe(true);
+});
+
+test("extractReducedTransparency reports a missing rule, and a rule placed before the dark blocks", () => {
+  const none = extractReducedTransparency("body { color: red; }");
+  expect(none.selectors).toEqual([]);
+  expect(none.overrides).toEqual({});
+  const early = extractReducedTransparency(
+    [
+      "@media (prefers-reduced-transparency: reduce) { :root { --blur: none; } }",
+      ':root[data-theme="dark"] { --a: 1; }',
+    ].join(" "),
+  );
+  expect(early.selectors).toEqual([":root"]);
+  expect(early.lastInFile).toBe(false);
+  expect(
+    extractReducedTransparency("@media (prefers-reduced-transparency: reduce) { }").selectors,
+  ).toEqual([]);
+});
+
+for (const theme of ["light", "dark"] as const) {
+  test(`under reduced transparency the ${theme} glass is solid and every pair still passes`, () => {
+    const solid = withReducedTransparency(tokens[theme], reduced.overrides);
+    expect(solid["--color-glass"]).toBe(tokens[theme]["--color-glass-solid"]);
+    expect(solid["--color-glass-thick"]).toBe(tokens[theme]["--color-glass-solid"]);
+    expect(solid["--blur"]).toBe("none");
+    expect(surfaces(solid, "glass")).toHaveLength(1);
+    const failing = evaluatePairs(solid).filter((result) => !result.pass);
+    expect(failing.map((r) => `${r.use}: ${r.ratio.toFixed(2)} < ${r.need}`)).toEqual([]);
+  });
+}
+
+test("withReducedTransparency keeps a literal override and a reference to a missing token as written", () => {
+  const result = withReducedTransparency(
+    { "--a": "1" },
+    { "--b": "none", "--c": "var(--missing)" },
+  );
+  expect(result).toEqual({ "--a": "1", "--b": "none", "--c": "var(--missing)" });
 });

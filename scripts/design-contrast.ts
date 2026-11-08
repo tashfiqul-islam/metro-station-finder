@@ -97,6 +97,44 @@ export function extractTokens(css: string): ThemeTokens {
   return { light, dark: { ...light, ...darkOverrides }, darkOverrides, fallbackOverrides };
 }
 
+export interface ReducedTransparency {
+  /** The selectors of the `prefers-reduced-transparency` rule, trimmed. */
+  readonly selectors: readonly string[];
+  readonly overrides: Tokens;
+  /** The rule comes after every theme block, so equal specificity resolves in its favour. */
+  readonly lastInFile: boolean;
+}
+
+/** The `@media (prefers-reduced-transparency: reduce)` rule of `tokens.css`; empty when it is absent. */
+export function extractReducedTransparency(css: string): ReducedTransparency {
+  const marker = "@media (prefers-reduced-transparency: reduce)";
+  const media = ruleBody(css, marker);
+  const inner = media ?? "";
+  const open = inner.indexOf("{");
+  const selectorText = open === -1 ? "" : inner.slice(0, open);
+  // Text after the rule: no theme block may follow it (the rule's own selector list is inside `inner`).
+  const after = media === null ? "" : css.slice(css.indexOf(marker) + marker.length + inner.length);
+  const themeAfter =
+    after.includes(':root[data-theme="dark"]') || after.includes(":root:not([data-theme])");
+  return {
+    selectors: selectorText
+      .split(",")
+      .map((selector) => selector.trim())
+      .filter((selector) => selector !== ""),
+    overrides: declarations(open === -1 ? null : inner.slice(open + 1)),
+    lastInFile: media !== null && !themeAfter,
+  };
+}
+
+/** The tokens as the browser computes them under reduced transparency: `var(--x)` overrides are resolved. */
+export function withReducedTransparency(tokens: Tokens, overrides: Tokens): Tokens {
+  const resolved = Object.entries(overrides).map(([name, value]) => {
+    const reference = /^var\((--[\w-]+)\)$/u.exec(value)?.[1];
+    return [name, reference === undefined ? value : (tokens[reference] ?? value)] as const;
+  });
+  return { ...tokens, ...Object.fromEntries(resolved) };
+}
+
 const BACKDROPS = ["map-bg", "map-plane-1", "map-plane-2", "bg"] as const;
 const ON_PANEL = ["raised", "muted", "muted-2", "accent-soft"] as const;
 

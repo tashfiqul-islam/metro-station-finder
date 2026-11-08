@@ -181,6 +181,19 @@ test("METRO-105 a loaded feature that throws while rendering reaches the parent 
   for (const fragment of LEAKS) expect(shown).not.toContain(fragment);
 });
 
+test("METRO-105 a feature's render error is reported exactly once, by the root callback, as a safe class name", async () => {
+  const Lazy = lazyFeature<{ name: string }>(() => Promise.resolve({ default: Broken }));
+  await act(async () => {
+    root.render(
+      <ErrorBoundary>
+        <Lazy name="x" />
+      </ErrorBoundary>,
+    );
+  });
+  await settle();
+  expect(errorSpy.mock.calls).toEqual([["Render error: TypeError"]]);
+});
+
 test("METRO-105 a feature that throws a plain object that only looks like an Error also reaches the parent boundary", async () => {
   const Lazy = lazyFeature<{ name: string }>(() =>
     Promise.resolve({ default: BrokenWithLookalike }),

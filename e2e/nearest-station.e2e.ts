@@ -87,12 +87,11 @@ test.describe("nearest station from a searched place (METRO-88)", () => {
       styleElements: document.querySelectorAll("style").length,
       styleAttributes: document.querySelectorAll("[style]").length,
     }));
-    // Only same-origin stylesheets, as linked files (the entry's, then the slice chunk's), allowed by
+    // Only same-origin stylesheets, as linked files (exactly two: the entry's and the slice chunk's), allowed by
     // `style-src 'self'`; nothing inline (METRO-58, METRO-105).
-    expect(styling.stylesheets).toBeGreaterThanOrEqual(1);
     expect(styling).toEqual({
-      stylesheets: styling.linked,
-      linked: styling.linked,
+      stylesheets: 2,
+      linked: 2,
       foreign: 0,
       styleElements: 0,
       styleAttributes: 0,

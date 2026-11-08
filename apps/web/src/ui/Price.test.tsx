@@ -19,6 +19,8 @@ test("METRO-105 the price shows the taka sign and reads as taka to a screen read
   );
   const visible = container.querySelector('[aria-hidden="true"]');
   expect(visible?.textContent).toBe("৳50");
+  // A space separates the two spans, so the raw text does not run together.
+  expect(container.textContent).toBe("৳50 50 taka");
   const spoken = screen.getByText("50 taka");
   expect(spoken.className).toBe("visually-hidden");
   expect(spoken.getAttribute("aria-hidden")).toBeNull();

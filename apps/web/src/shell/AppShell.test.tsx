@@ -37,7 +37,7 @@ const grip = (): HTMLElement => screen.getByRole("button", { name: /^Resize pane
 
 function pointer(
   type: string,
-  init: { clientY: number; pointerType?: string; button?: number },
+  init: { clientY: number; pointerType?: string; button?: number; pointerId?: number },
 ): void {
   const event = new Event(type, { bubbles: true, cancelable: true });
   Object.assign(event, { pointerId: 1, pointerType: "touch", button: 0, ...init });
@@ -233,4 +233,93 @@ test("METRO-105 the toast region renders toasts and no element has a style attri
   const { container } = render(<AppShell toasts={<p>saved</p>}>x</AppShell>);
   expect(screen.getByRole("region", { name: "Notifications" }).textContent).toBe("saved");
   expect(container.querySelectorAll("[style]")).toHaveLength(0);
+});
+
+test("METRO-105 keyboard focus entering the content of a peeking sheet opens it to half", () => {
+  const { container } = render(
+    <AppShell initialSnap="peek">
+      <button type="button">first control</button>
+    </AppShell>,
+  );
+  expect(app(container).getAttribute("data-snap")).toBe("peek");
+  // The handle's own controls do not open it, so a keyboard user can still resize from the grip.
+  act(() => grip().focus());
+  act(() => screen.getByRole("button", { name: "Make panel larger" }).focus());
+  expect(app(container).getAttribute("data-snap")).toBe("peek");
+  act(() => screen.getByRole("button", { name: "first control" }).focus());
+  expect(app(container).getAttribute("data-snap")).toBe("half");
+});
+
+test("METRO-105 focus in the content leaves a half or full sheet where it is", () => {
+  for (const initial of ["half", "full"] as const) {
+    const { container } = render(
+      <AppShell initialSnap={initial}>
+        <button type="button">control</button>
+      </AppShell>,
+    );
+    act(() => screen.getByRole("button", { name: "control" }).focus());
+    expect(app(container).getAttribute("data-snap")).toBe(initial);
+    cleanup();
+  }
+});
+
+test("METRO-105 each snap change is announced politely as panel text", () => {
+  render(<AppShell>x</AppShell>);
+  const status = screen.getByRole("status");
+  expect(status.textContent).toBe("Panel half height");
+  expect(status.className).toBe("visually-hidden");
+  fireEvent.click(grip());
+  expect(status.textContent).toBe("Panel full height");
+});
+
+test("METRO-105 a lost pointer capture restores the sheet and changes no snap", () => {
+  const { container } = render(<AppShell>x</AppShell>);
+  pointer("pointerdown", { clientY: 500 });
+  pointer("pointermove", { clientY: 300 });
+  expect(app(container).style.getPropertyValue("--sheet-h")).not.toBe("");
+  pointer("lostpointercapture", { clientY: 300 });
+  expect(app(container).getAttribute("data-snap")).toBe("half");
+  expect(app(container).style.getPropertyValue("--sheet-h")).toBe("");
+  expect(container.querySelector("[style]")).toBeNull();
+  expect(must(container.querySelector("main")).hasAttribute("data-dragging")).toBe(false);
+});
+
+test("METRO-105 unmounting during a drag leaves no dragging marker or sheet height behind", () => {
+  const { container, unmount } = render(<AppShell>x</AppShell>);
+  const shell = app(container);
+  const panel = must(container.querySelector("main"));
+  pointer("pointerdown", { clientY: 500 });
+  pointer("pointermove", { clientY: 300 });
+  expect(panel.hasAttribute("data-dragging")).toBe(true);
+  unmount();
+  expect(panel.hasAttribute("data-dragging")).toBe(false);
+  expect(shell.style.getPropertyValue("--sheet-h")).toBe("");
+  expect(shell.hasAttribute("style")).toBe(false);
+});
+
+test("METRO-105 a second pointer during a drag is ignored and the first still finishes it", () => {
+  const { container } = render(<AppShell>x</AppShell>);
+  pointer("pointerdown", { clientY: 500, pointerId: 1 });
+  pointer("pointermove", { clientY: 400, pointerId: 1 });
+  expect(app(container).style.getPropertyValue("--sheet-h")).toBe("590px");
+  pointer("pointerdown", { clientY: 100, pointerId: 2 }); // must not restart the drag
+  pointer("pointermove", { clientY: -900, pointerId: 2 }); // must not move the sheet
+  pointer("pointerup", { clientY: -900, pointerId: 2 }); // must not end the drag
+  pointer("pointercancel", { clientY: 0, pointerId: 2 }); // nor cancel it
+  expect(app(container).style.getPropertyValue("--sheet-h")).toBe("590px");
+  expect(app(container).getAttribute("data-snap")).toBe("half");
+  pointer("pointermove", { clientY: 300, pointerId: 1 }); // 490 + 200 = 690, nearest to full
+  pointer("pointerup", { clientY: 300, pointerId: 1 });
+  expect(app(container).getAttribute("data-snap")).toBe("full");
+  expect(app(container).style.getPropertyValue("--sheet-h")).toBe("");
+});
+
+test("METRO-105 a key press after a drag that ended off the grip is not swallowed", () => {
+  const { container } = render(<AppShell>x</AppShell>);
+  pointer("pointerdown", { clientY: 500 });
+  pointer("pointermove", { clientY: 300 });
+  pointer("lostpointercapture", { clientY: 300 }); // the pointer left; no click follows
+  fireEvent.keyDown(grip(), { key: "Enter" });
+  fireEvent.click(grip()); // the click a keyboard Enter or Space produces
+  expect(app(container).getAttribute("data-snap")).toBe("full");
 });

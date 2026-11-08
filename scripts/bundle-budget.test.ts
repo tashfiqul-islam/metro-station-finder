@@ -5,6 +5,7 @@ import { gzipSync } from "node:zlib";
 import {
   ALL_FILES_CEILING,
   FIRST_VISIT_BUDGET,
+  HEAD_SCRIPT_MISSING,
   MANIFEST_FAILURE,
   MANIFEST_STALE,
   bundleMain,
@@ -427,3 +428,45 @@ test("METRO-105 the head script counts against the first-visit budget", () => {
     [FIRST_OVER],
   );
 });
+
+const HTML_WITH_BOOT = '<head><script src="/theme-boot.js"></script></head>';
+
+test("METRO-105 the gate fails closed when index.html loads theme-boot.js and the build lacks it", () => {
+  expect(evaluateBundle(split(100), SPLIT, HTML_WITH_BOOT).problems).toEqual([HEAD_SCRIPT_MISSING]);
+  expect(evaluateBundle(split(100), SPLIT, HTML_WITH_BOOT).lines).toEqual([]);
+});
+
+test("METRO-105 a present head script, or one index.html does not load, passes", () => {
+  const withBoot = [...split(100), asset("theme-boot.js", 400, 250)];
+  expect(evaluateBundle(withBoot, SPLIT, HTML_WITH_BOOT).problems).toEqual([]);
+  expect(evaluateBundle(split(100), SPLIT, "<head></head>").problems).toEqual([]);
+  expect(evaluateBundle(split(100), SPLIT, null).problems).toEqual([]);
+});
+
+test("METRO-105 bundleMain reads index.html: a loaded head script missing from the build exits 1", () =>
+  fixture(async (root) => {
+    await mkdir(join(root, ".vite"));
+    await writeFile(
+      join(root, ".vite", "manifest.json"),
+      manifest({ "index.html": { file: "assets/index.js", isEntry: true } }),
+    );
+    await writeFile(join(root, "assets", "index.js"), "console.log(1);\n");
+    await writeFile(join(root, "index.html"), HTML_WITH_BOOT);
+    const errors: string[] = [];
+    const error = console.error;
+    console.error = (line: string) => void errors.push(line);
+    try {
+      expect(await bundleMain([root])).toBe(1);
+    } finally {
+      console.error = error;
+    }
+    expect(errors).toEqual([HEAD_SCRIPT_MISSING]);
+    await writeFile(join(root, "theme-boot.js"), "void 0;\n");
+    const log = console.log;
+    console.log = (line: string) => void sunk.push(line);
+    try {
+      expect(await bundleMain([root])).toBe(0);
+    } finally {
+      console.log = log;
+    }
+  }));

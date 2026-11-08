@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent, ReactElement, ReactNode } from "react";
 
 import { ThemeToggle } from "../theme/ThemeToggle";
@@ -16,7 +16,10 @@ import type { Snap } from "./sheet";
 
 interface Sheet {
   readonly snap: Snap;
-  /** Slices apply the snap rules (typing in search: full; a result or error: half; "show on map": peek). */
+  /**
+   * Slices apply their own snap rules (typing in search: full; a result or error: half; "show on map": peek).
+   * The shell itself only opens a peeking sheet to half when focus enters its content.
+   */
   readonly setSnap: (snap: Snap) => void;
 }
 
@@ -86,7 +89,16 @@ export function AppShell({
           {...(label === undefined ? {} : { "aria-label": label })}
         >
           <PanelHandle snap={snap} setSnap={setSnap} app={app} panel={panel} />
-          <div className="panel__scroll" tabIndex={-1}>
+          {/* Slice-agnostic rule: keyboard focus entering the content of a peeking sheet opens it to half, so a
+              keyboard user never sits in a clipped control. Typing, a result, "show on map" and the like are
+              slice rules (METRO-15) that call `useSheet().setSnap`. */}
+          <div
+            className="panel__scroll"
+            tabIndex={-1}
+            onFocus={() => {
+              if (snap === "peek") setSnap("half");
+            }}
+          >
             <div className="panel__body">{children}</div>
           </div>
         </main>
@@ -111,7 +123,16 @@ function mounted(ref: { readonly current: HTMLElement | null }): HTMLElement {
   return ref.current;
 }
 
+/** Undoes a drag in the DOM: no `--sheet-h`, no empty style attribute, no `data-dragging`. */
+function clearDrag(shell: HTMLElement, panel: HTMLElement): void {
+  shell.style.removeProperty("--sheet-h");
+  // removeProperty leaves an empty style attribute behind; drop it so the page has none at rest.
+  if (shell.style.length === 0) shell.removeAttribute("style");
+  panel.removeAttribute("data-dragging");
+}
+
 interface Drag {
+  readonly pointerId: number;
   readonly startY: number;
   readonly startHeight: number;
   moved: boolean;
@@ -121,23 +142,30 @@ interface Drag {
 /**
  * The 44 px handle row. Drag writes `--sheet-h` on `.app` with `style.setProperty` (CSSOM, never a `style`
  * attribute, so the CSP holds) and sets `data-dragging` on the panel; release removes both and sets the
- * nearest snap. A tap on the grip cycles peek, half, full. ArrowUp/ArrowDown on the grip, or the two text
- * buttons that show on focus, change the snap without a pointer.
+ * nearest snap. One pointer drags at a time: a second finger is ignored. A cancelled or lost pointer, or an
+ * unmount, restores the sheet and changes no snap. A tap on the grip cycles peek, half, full. ArrowUp and
+ * ArrowDown on the grip, or the two text buttons that show on focus, change the snap without a pointer.
+ * Each snap change is announced politely through the status text.
  */
 function PanelHandle({ snap, setSnap, app, panel }: HandleProps): ReactElement {
   const drag = useRef<Drag | null>(null);
   /** A drag ends with a click on the grip; it must not also cycle the snap. */
   const dragged = useRef(false);
 
-  function finish(commit: boolean): void {
+  useEffect(() => {
+    const shell = app.current;
+    const panelElement = panel.current;
+    return () => {
+      if (shell !== null && panelElement !== null) clearDrag(shell, panelElement);
+    };
+  }, [app, panel]);
+
+  /** Ends the drag of `pointerId` (events of any other pointer are ignored). */
+  function finish(pointerId: number, commit: boolean): void {
     const current = drag.current;
+    if (current?.pointerId !== pointerId) return;
     drag.current = null;
-    if (current === null) return;
-    const shell = mounted(app);
-    shell.style.removeProperty("--sheet-h");
-    // removeProperty leaves an empty style attribute behind; drop it so the page has none at rest.
-    if (shell.style.length === 0) shell.removeAttribute("style");
-    mounted(panel).removeAttribute("data-dragging");
+    clearDrag(mounted(app), mounted(panel));
     if (current.moved) {
       dragged.current = true;
       if (commit) setSnap(nearestSnap(current.height, window.innerHeight));
@@ -145,16 +173,23 @@ function PanelHandle({ snap, setSnap, app, panel }: HandleProps): ReactElement {
   }
 
   function down(event: PointerEvent<HTMLElement>): void {
+    if (drag.current !== null) return;
     if (event.pointerType === "mouse" && event.button !== 0) return;
     dragged.current = false;
     event.currentTarget.setPointerCapture(event.pointerId);
     const height = mounted(panel).getBoundingClientRect().height;
-    drag.current = { startY: event.clientY, startHeight: height, moved: false, height };
+    drag.current = {
+      pointerId: event.pointerId,
+      startY: event.clientY,
+      startHeight: height,
+      moved: false,
+      height,
+    };
   }
 
   function move(event: PointerEvent<HTMLElement>): void {
     const current = drag.current;
-    if (current === null) return;
+    if (current?.pointerId !== event.pointerId) return;
     const delta = current.startY - event.clientY;
     if (!current.moved) {
       if (Math.abs(delta) <= DRAG_THRESHOLD_PX) return;
@@ -180,13 +215,16 @@ function PanelHandle({ snap, setSnap, app, panel }: HandleProps): ReactElement {
         aria-label={shellCopy.gripLabel(shellCopy.snapName[snap])}
         onPointerDown={down}
         onPointerMove={move}
-        onPointerUp={() => finish(true)}
-        onPointerCancel={() => finish(false)}
+        onPointerUp={(event) => finish(event.pointerId, true)}
+        onPointerCancel={(event) => finish(event.pointerId, false)}
+        onLostPointerCapture={(event) => finish(event.pointerId, false)}
         onClick={() => {
           if (dragged.current) dragged.current = false;
           else setSnap(cycleSnap(snap));
         }}
         onKeyDown={(event) => {
+          // A keyboard press after a drag that ended off the grip (so no click cleared the flag) still acts.
+          dragged.current = false;
           const next = keySnap(event.key, snap);
           if (next === null) return;
           event.preventDefault();
@@ -200,6 +238,7 @@ function PanelHandle({ snap, setSnap, app, panel }: HandleProps): ReactElement {
       >
         {shellCopy.larger}
       </button>
+      <output className="visually-hidden">{shellCopy.snapStatus(shellCopy.snapName[snap])}</output>
     </div>
   );
 }
