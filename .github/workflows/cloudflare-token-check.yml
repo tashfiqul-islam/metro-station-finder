@@ -51,6 +51,7 @@ jobs:
           install_args: node
           cache: false # this job holds the Cloudflare credential; never restore a cache into it
       - name: Verify the token is active and not expiring within 14 days
+        timeout-minutes: 3 # a few API calls take seconds; the job limit grew for the install retries (METRO-99)
         run: node scripts/cloudflare-token-check.ts
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
