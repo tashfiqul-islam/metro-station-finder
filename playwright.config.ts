@@ -2,7 +2,8 @@ import { defineConfig, devices } from "@playwright/test";
 
 const origin = "http://127.0.0.1:4173";
 // The lab web-vitals spec runs on Chromium only (METRO-44 part C): see docs/evidence/metro-44c.md.
-const chromiumOnly = "**/web-vitals-lab.e2e.ts";
+// The brand-asset regeneration check needs Chromium to rasterise (METRO-107).
+const chromiumOnly = ["**/web-vitals-lab.e2e.ts", "**/brand-assets.e2e.ts"];
 const projects = [
   { name: "chromium", use: { ...devices["Desktop Chrome"] } },
   { name: "firefox", testIgnore: chromiumOnly, use: { ...devices["Desktop Firefox"] } },
