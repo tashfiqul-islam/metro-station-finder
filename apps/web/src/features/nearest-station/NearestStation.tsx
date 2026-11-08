@@ -7,6 +7,7 @@ import {
 } from "@metro/core";
 import type { Coordinate, Station } from "@metro/core";
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 
 import { useMaps } from "../../adapters/maps/context";
 import type {
@@ -92,9 +93,11 @@ function noop(): void {}
 
 interface SliceProps {
   readonly maps: MapsAdapter;
+  /** Content for the screen that sits between the location controls and the result (the station picker, METRO-112). */
+  readonly after?: ReactNode;
 }
 
-function Slice({ maps }: SliceProps) {
+function Slice({ maps, after }: SliceProps) {
   const { status, routes: service } = useMaps();
   const [origin, setOrigin] = useState<Coordinate | null>(null);
   const [locating, setLocating] = useState<Locating>("idle");
@@ -259,6 +262,8 @@ function Slice({ maps }: SliceProps) {
         )}
       </section>
 
+      {after}
+
       {nearest !== null && (
         <section className="ns-section" aria-labelledby="result-heading">
           {/* A new result takes focus (keyed by the origin), so a screen reader announces the station. */}
@@ -343,10 +348,10 @@ function Slice({ maps }: SliceProps) {
 }
 
 /** The nearest-station slice. The adapter is injected, so tests never load Google. */
-export function NearestStation({ maps }: SliceProps) {
+export function NearestStation({ maps, after }: SliceProps) {
   return (
     <maps.Provider>
-      <Slice maps={maps} />
+      <Slice maps={maps} after={after} />
     </maps.Provider>
   );
 }

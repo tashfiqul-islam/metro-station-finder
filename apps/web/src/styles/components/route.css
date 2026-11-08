@@ -659,7 +659,7 @@
   font-weight: var(--fw-semibold);
 }
 
-/* Fare map: 16×16, cells banded by fare (sample data) */
+/* Fare map: 16×16, cells banded by fare */
 .fare-map {
   display: flex;
   flex-direction: column;

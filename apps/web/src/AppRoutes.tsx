@@ -1,39 +1,34 @@
+import { useState } from "react";
+import type { ReactNode } from "react";
+
 import { lazyFeature } from "./lazy-feature";
 import { AppShell } from "./shell/AppShell";
 
+interface NearbySlot {
+  readonly setMap: (map: ReactNode) => void;
+}
+
 /**
- * The nearest-station slice is the app, at every path (a deep link gets the SPA shell and the same slice).
- * There is no router yet; add one with the second screen. The slice and the Maps adapter load as one lazy
- * chunk (ADR-0021 moves them out of the first visit so the design foundation fits the budget); the shell,
- * tokens and base styles are in the entry. The Maps API loads only while the slice is on screen.
+ * The Nearby screen is the app, at every path (a deep link gets the SPA shell and the same screen). There is no
+ * router yet; add one with the second screen. One lazy boundary loads the whole screen: the nearest-station page,
+ * the Maps adapter, the schematic line map and the station picker (METRO-112, ADR-0022). The shell, tokens and
+ * base styles are in the entry; the shell's map slot is filled by the screen once it has loaded, through `setMap`.
+ * The Maps API loads only while the screen is on show.
  */
 const Landing = lazyFeature(async () => {
-  const [{ NearestStation }, { mapsAdapter }] = await Promise.all([
-    import("./features/nearest-station/NearestStation"),
+  const [{ Nearby }, { mapsAdapter }] = await Promise.all([
+    import("./features/nearby/Nearby"),
     import("./adapters/maps"),
   ]);
-  return { default: () => <NearestStation maps={mapsAdapter} /> };
+  return { default: ({ setMap }: NearbySlot) => <Nearby maps={mapsAdapter} setMap={setMap} /> };
 });
 
-/**
- * The schematic line map fills the shell's map slot (METRO-111). Pure SVG from the core dataset: no network and
- * no Google code, its own lazy chunk, so the first visit does not carry it. The Google JS map is untouched.
- */
-const LineMapSlot = lazyFeature(
-  async () => {
-    const { LineMap } = await import("./features/line-map/LineMap");
-    return { default: LineMap };
-  },
-  undefined,
-  // Silent while loading: the slice beside it already announces "Loading this part of the page."
-  null,
-);
-
-/** Wiring only: the shell around the slice. */
+/** Wiring only: the shell around the screen. */
 export function AppRoutes() {
+  const [map, setMap] = useState<ReactNode>(null);
   return (
-    <AppShell map={<LineMapSlot />}>
-      <Landing />
+    <AppShell map={map}>
+      <Landing setMap={setMap} />
     </AppShell>
   );
 }
