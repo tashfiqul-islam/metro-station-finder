@@ -157,6 +157,77 @@ export function checkLoadOrder(file: string, text: string): Finding[] {
       ];
 }
 
+/**
+ * Custom properties that are written at run time (CSSOM `setProperty`) or per state by data attributes, so no
+ * token file declares them as a value.
+ */
+const DYNAMIC_PROPERTIES: ReadonlySet<string> = new Set(["--sheet-h", "--pos", "--a", "--b"]);
+
+/** Stylesheets of the entry set: they load on every first visit, so they may use no lazily loaded token. */
+const ENTRY_STYLESHEETS = /\/styles\/(?:base|components\/shell|components\/brand)\.css$/u;
+
+const PARTS_FILE = /\/styles\/tokens-parts\.css$/u;
+const MAP_FILE = /\/styles\/tokens-map\.css$/u;
+const IS_TOKEN_FILE = /\/styles\/tokens(?:-[a-z]+)?\.css$/u;
+
+const declaredIn = (css: string): string[] =>
+  [...blank(css, /\/\*[\s\S]*?\*\//gu).matchAll(/(--[\w-]+)\s*:/gu)].map((match) => match[1] ?? "");
+
+const usesIn = (css: string): { name: string; line: number }[] => {
+  const text = blank(css, /\/\*[\s\S]*?\*\//gu);
+  return [...text.matchAll(/var\(\s*(--[\w-]+)/gu)].map((match) => ({
+    name: match[1] ?? "",
+    line: text.slice(0, match.index).split(String.fromCharCode(10)).length,
+  }));
+};
+
+const importsFile = (css: string, name: string): boolean =>
+  [...css.matchAll(/@import\s+(?:url\()?["']?([^"')]+)/gu)].some((match) =>
+    (match[1] ?? "").endsWith(`/${name}.css`),
+  );
+
+/**
+ * Every `var(--x)` in a stylesheet (and in non-test TypeScript) has a declaration somewhere under `apps/web/src`
+ * or is a run-time property. A component stylesheet that uses a token declared in `tokens-parts.css` or
+ * `tokens-map.css` imports that file itself, so it never depends on which other stylesheet loaded first; the
+ * entry stylesheets use neither file, since they load on every visit. Found in review: dropping five tokens as
+ * "unused" broke the ticket mask, because the use sat in another file.
+ */
+export function checkTokenUse(files: Readonly<Record<string, string>>): Finding[] {
+  const sources = Object.entries(files).filter(
+    ([file]) => file.endsWith(".css") || (/\.tsx?$/u.test(file) && !/\.test\.tsx?$/u.test(file)),
+  );
+  const declared = new Set<string>(DYNAMIC_PROPERTIES);
+  const parts = new Set<string>();
+  const map = new Set<string>();
+  for (const [file, text] of sources) {
+    if (!file.endsWith(".css")) continue;
+    for (const name of declaredIn(text)) {
+      declared.add(name);
+      if (PARTS_FILE.test(file)) parts.add(name);
+      if (MAP_FILE.test(file)) map.add(name);
+    }
+  }
+  const found: Finding[] = [];
+  for (const [file, text] of sources) {
+    const own = new Set(file.endsWith(".css") ? declaredIn(text) : []);
+    for (const { name, line } of usesIn(text)) {
+      const where = { file, line, text: `var(${name})` };
+      if (!declared.has(name)) found.push({ ...where, rule: "undefined-token" });
+      if (!file.endsWith(".css") || IS_TOKEN_FILE.test(file) || own.has(name)) continue;
+      for (const [set, id] of [
+        [parts, "tokens-parts"],
+        [map, "tokens-map"],
+      ] as const) {
+        if (!set.has(name)) continue;
+        if (ENTRY_STYLESHEETS.test(file)) found.push({ ...where, rule: "entry-uses-lazy-token" });
+        else if (!importsFile(text, id)) found.push({ ...where, rule: "token-import" });
+      }
+    }
+  }
+  return found;
+}
+
 /** All rules over a set of files (path with forward slashes, to its text). */
 export function checkTree(files: Readonly<Record<string, string>>): Finding[] {
   const found: Finding[] = [];
@@ -165,5 +236,7 @@ export function checkTree(files: Readonly<Record<string, string>>): Finding[] {
     else found.push(...checkSource(file, text));
     if (file.endsWith("/styles/index.css")) found.push(...checkLoadOrder(file, text));
   }
+  if (Object.keys(files).some((file) => file.endsWith("/styles/tokens.css")))
+    found.push(...checkTokenUse(files));
   return found;
 }

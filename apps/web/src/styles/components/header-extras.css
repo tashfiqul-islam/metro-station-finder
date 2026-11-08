@@ -1,5 +1,7 @@
 /* header-extras.css: Search / command-palette trigger, shortcut hint chip, divider and offline chip. Import with the component that renders them. Colours only via var(--…). Breakpoint 768px. */
 
+@import "../tokens-parts.css";
+
 .search-trigger {
   display: none;
 }

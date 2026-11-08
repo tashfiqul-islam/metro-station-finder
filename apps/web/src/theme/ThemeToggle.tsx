@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { ReactElement } from "react";
 
 import { Icon } from "../icons/Icon";
@@ -17,10 +17,6 @@ function applyTheme(next: ThemePreference, show: (preference: ThemePreference) =
   show(next);
 }
 
-/**
- * Header button: System, Light, Dark, System. The preference is read once from storage (the boot script has
- * already applied it to `<html>`), saved on change, and revealed with a View Transition where available (loaded on first use).
- */
 /** Loads the reveal module and runs the change inside it; a module that cannot load (offline) still changes the theme. */
 async function reveal(
   next: ThemePreference,
@@ -35,20 +31,29 @@ async function reveal(
   }
 }
 
+/**
+ * Header button: System, Light, Dark, System. The preference is read once from storage (the boot script has
+ * already applied it to `<html>`), saved on change, and revealed with a View Transition where available (loaded
+ * on first use). Each press cycles from the latest choice, kept in a ref: two quick presses before React
+ * re-renders (or while a reveal is still running) move two steps, not one.
+ */
 export function ThemeToggle(): ReactElement {
   const [preference, setPreference] = useState<ThemePreference>(() => readPreference());
+  const latest = useRef(preference);
   const next = nextPreference(preference);
 
   function change(event: { currentTarget: HTMLElement }): void {
+    const target = nextPreference(latest.current);
+    latest.current = target;
     // Without the API, or under reduced motion, the change is immediate and the reveal module is never fetched.
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (!("startViewTransition" in document) || reduced) {
-      applyTheme(next, setPreference);
+      applyTheme(target, setPreference);
       return;
     }
     const box = event.currentTarget.getBoundingClientRect();
     const origin = { x: box.left + box.width / 2, y: box.top + box.height / 2 };
-    void reveal(next, setPreference, origin);
+    void reveal(target, setPreference, origin);
   }
 
   return (

@@ -32,9 +32,31 @@ test("METRO-105 the mark is decorative inline SVG with the intro animation hooks
   expect(container.querySelectorAll(".mark-anim-line")).toHaveLength(1);
   expect(container.querySelectorAll(".mark-anim-station")).toHaveLength(1);
   expect(container.querySelectorAll(".mark-anim-ping")).toHaveLength(2);
-  expect(container.querySelector("#brand-mark-g")).not.toBeNull();
-  expect(container.querySelector("#brand-mark-k")).not.toBeNull();
+  expect(container.querySelector("linearGradient")).not.toBeNull();
+  expect(container.querySelector("mask")).not.toBeNull();
   expect(container.querySelectorAll("[style]")).toHaveLength(0);
   // Colours come from classes (tokens in brand.css), never from literals in the markup.
   expect(container.innerHTML).not.toMatch(/#[0-9a-f]{3,8}"|rgb\(/iu);
+});
+
+test("METRO-105 two brands on one page keep separate gradient and mask ids, each referenced by its own mark", () => {
+  const { container } = render(
+    <>
+      <Brand />
+      <Brand />
+    </>,
+  );
+  const marks = [...container.querySelectorAll("svg.mark")];
+  expect(marks).toHaveLength(2);
+  const ids = marks.map((mark) => [
+    mark.querySelector("linearGradient")?.id ?? "",
+    mark.querySelector("mask")?.id ?? "",
+  ]);
+  expect(new Set(ids.flat()).size).toBe(4);
+  for (const [mark, [gradient, mask]] of marks.map((m, i) => [m, ids[i] ?? []] as const)) {
+    expect(gradient).toMatch(/^\w+g$/u);
+    expect(mask).toMatch(/^\w+k$/u);
+    expect(mark.innerHTML).toContain(`url(#${gradient})`);
+    expect(mark.innerHTML).toContain(`url(#${mask})`);
+  }
 });

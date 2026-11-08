@@ -1,4 +1,6 @@
 /* nearest-station.css: the reference slice's own rules, on top of the shared parts in styles/. Tokens only. */
+
+@import "../../styles/tokens-parts.css";
 .ns-lede {
   font-size: var(--fs-15);
   line-height: 1.45;

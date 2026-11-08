@@ -98,6 +98,47 @@ test("METRO-105 under reduced motion the change is immediate even where View Tra
   }
 });
 
+test("METRO-105 two quick presses before React re-renders move two steps, not one", async () => {
+  render(<ThemeToggle />);
+  const button = screen.getByRole("button", { name: "Theme: System. Switch to Light" });
+  await act(async () => {
+    button.click();
+    button.click();
+  });
+  expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
+  expect(localStorage.getItem(THEME_KEY)).toBe("dark");
+  expect(screen.getByRole("button", { name: "Theme: Dark. Switch to System" })).toBeTruthy();
+});
+
+test("METRO-105 two quick presses while a reveal is running still cycle twice", async () => {
+  const animate = vi.fn();
+  Reflect.set(document.documentElement, "animate", animate);
+  const startViewTransition = vi.fn((update: () => void) => {
+    queueMicrotask(update);
+    return { ready: Promise.resolve(), finished: Promise.resolve() };
+  });
+  Object.defineProperty(document, "startViewTransition", {
+    configurable: true,
+    value: startViewTransition,
+  });
+  try {
+    render(<ThemeToggle />);
+    const button = screen.getByRole("button", { name: "Theme: System. Switch to Light" });
+    await act(async () => {
+      button.click();
+      button.click();
+    });
+    await vi.waitFor(() => {
+      expect(screen.getByRole("button", { name: "Theme: Dark. Switch to System" })).toBeTruthy();
+    });
+    expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
+    expect(localStorage.getItem(THEME_KEY)).toBe("dark");
+  } finally {
+    Reflect.deleteProperty(document, "startViewTransition");
+    Reflect.deleteProperty(document.documentElement, "animate");
+  }
+});
+
 test("METRO-105 the icon is decorative and the button has no inline style", () => {
   const { container } = render(<ThemeToggle />);
   expect(container.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");

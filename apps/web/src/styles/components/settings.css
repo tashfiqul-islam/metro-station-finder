@@ -1,5 +1,7 @@
 /* settings.css: Settings screen. Colours only via var(--…). Breakpoint 768px. */
 
+@import "../tokens-parts.css";
+
 /* ════════════ Settings ════════════ */
 .settings {
   display: flex;

@@ -1,7 +1,13 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
-import { checkLoadOrder, checkSource, checkStylesheet, checkTree } from "./css-rules.ts";
+import {
+  checkLoadOrder,
+  checkSource,
+  checkStylesheet,
+  checkTokenUse,
+  checkTree,
+} from "./css-rules.ts";
 
 /** Every file the rules govern: `index.html`, everything under src, and the scripts and styles in public/. */
 function webFiles(): Record<string, string> {
@@ -213,4 +219,102 @@ test("a fixture tree with one of each violation fails, so the real-tree check ab
   expect(new Set(found.map((finding) => finding.rule))).toEqual(
     new Set(["named-colour", "style-property-write", "adopted-style-sheets"]),
   );
+});
+
+const S = "apps/web/src/styles/";
+/** A small tree with the three token files and a component that uses tokens from each. */
+const tokenTree = (
+  component: string,
+  extra: Record<string, string> = {},
+): Record<string, string> => ({
+  [`${S}tokens.css`]: ":root { --color-fg: #000; --color-map-bg: #eee; }",
+  [`${S}tokens-parts.css`]: ":root { --color-warn: #a15f00; --mask-ink: #000; }",
+  [`${S}tokens-map.css`]: ":root { --color-map-pin: #fff; }",
+  [`${S}components/x.css`]: component,
+  ...extra,
+});
+
+test("a var() with no declaration anywhere is a finding, as the ticket mask was when its token was dropped", () => {
+  const found = checkTokenUse(
+    tokenTree(
+      '@import "../tokens-parts.css";\n.t { mask: radial-gradient(var(--mask-ink-gone)); }',
+    ),
+  );
+  expect(found.map((finding) => [finding.rule, finding.text])).toEqual([
+    ["undefined-token", "var(--mask-ink-gone)"],
+  ]);
+  expect(found[0]?.line).toBe(2);
+});
+
+test("run-time properties, a local declaration and a fallback are not findings", () => {
+  const css = [
+    ".a { height: var(--sheet-h); left: var(--pos); width: var(--a); top: var(--b); }",
+    ".b { --tone: var(--color-fg); color: var(--tone); }",
+    "/* var(--commented-out) */",
+  ].join(String.fromCharCode(10));
+  expect(checkTokenUse(tokenTree(css))).toEqual([]);
+});
+
+test("a component using a parts or map token must import that file itself", () => {
+  const missingParts = checkTokenUse(tokenTree(".a { color: var(--color-warn); }"));
+  expect(missingParts.map((finding) => finding.rule)).toEqual(["token-import"]);
+  const missingMap = checkTokenUse(tokenTree(".a { fill: var(--color-map-pin); }"));
+  expect(missingMap.map((finding) => finding.rule)).toEqual(["token-import"]);
+  // Another stylesheet importing the file does not help: each file loads it itself.
+  const other = { [`${S}components/common.css`]: '@import "../tokens-parts.css";' };
+  expect(
+    checkTokenUse(tokenTree(".a { color: var(--color-warn); }", other)).map((f) => f.rule),
+  ).toEqual(["token-import"]);
+  const ok = tokenTree(
+    '@import "../tokens-parts.css";\n@import "../tokens-map.css";\n.a { color: var(--color-warn); fill: var(--color-map-pin); }',
+  );
+  expect(checkTokenUse(ok)).toEqual([]);
+  // A slice outside styles/ imports it by its own relative path.
+  const slice = tokenTree("", {
+    "apps/web/src/features/f/f.css":
+      '@import "../../styles/tokens-parts.css";\n.a { color: var(--color-warn); }',
+  });
+  expect(checkTokenUse(slice)).toEqual([]);
+});
+
+test("an entry stylesheet may not use a lazily loaded token, and token files and tokens used by tokens.css are exempt", () => {
+  const entry = checkTokenUse(
+    tokenTree("", {
+      [`${S}components/shell.css`]:
+        '@import "../tokens-parts.css";\n.a { color: var(--color-warn); }',
+    }),
+  );
+  expect(entry.map((finding) => finding.rule)).toEqual(["entry-uses-lazy-token"]);
+  const base = checkTokenUse(
+    tokenTree("", { [`${S}base.css`]: "a { fill: var(--color-map-pin); }" }),
+  );
+  expect(base.map((finding) => finding.rule)).toEqual(["entry-uses-lazy-token"]);
+  // The map background lives in tokens.css, so the shell may use it.
+  expect(
+    checkTokenUse(
+      tokenTree("", { [`${S}components/shell.css`]: ".a { background: var(--color-map-bg); }" }),
+    ),
+  ).toEqual([]);
+  // A token file may refer to another token.
+  expect(
+    checkTokenUse(
+      tokenTree("", { [`${S}tokens-parts.css`]: ":root { --color-warn: var(--color-fg); }" }),
+    ),
+  ).toEqual([]);
+});
+
+test("TypeScript sources are checked for undefined tokens, tests are not", () => {
+  const tree = tokenTree("", {
+    "apps/web/src/a.tsx": 'const c = "var(--nope)";',
+    "apps/web/src/a.test.tsx": 'const c = "var(--also-nope)";',
+  });
+  expect(checkTokenUse(tree).map((finding) => finding.text)).toEqual(["var(--nope)"]);
+});
+
+test("checkTree runs the token-use rules only when the tree has a tokens.css", () => {
+  const bad = { [`${S}components/x.css`]: ".a { color: var(--nope); }" };
+  expect(checkTree(bad)).toEqual([]);
+  expect(
+    checkTree({ ...bad, [`${S}tokens.css`]: ":root { --color-fg: #000; }" }).map((f) => f.rule),
+  ).toEqual(["undefined-token"]);
 });
