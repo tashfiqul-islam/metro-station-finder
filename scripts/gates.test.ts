@@ -123,62 +123,81 @@ test("type gate rejects malformed existing domain data", () =>
     expect(result.exitCode).not.toBe(0);
   }));
 
-test("bundle gate rejects oversized production artifacts", () =>
+/** A Vite manifest naming `entry` as the index.html entry and every `lazy` file as a dynamic import. */
+async function writeManifest(root: string, entry: string, lazy: string[] = []) {
+  await mkdir(join(root, ".vite"), { recursive: true });
+  const chunks = Object.fromEntries(lazy.map((file) => [file, { file, isDynamicEntry: true }]));
+  await writeFile(
+    join(root, ".vite", "manifest.json"),
+    JSON.stringify({
+      "index.html": { file: entry, isEntry: true, dynamicImports: lazy },
+      ...chunks,
+    }),
+  );
+}
+const runBundle = (root: string) => Bun.spawnSync(["node", resolve("scripts/bundle.ts"), root]);
+
+test("bundle gate rejects a first visit over the raw budget", () =>
   fixture(async (root) => {
     await writeFile(join(root, "large.js"), "x".repeat(250_001));
-    await writeFile(join(root, "index.html"), '<script type="module" src="/large.js"></script>');
-    const result = Bun.spawnSync(["node", resolve("scripts/bundle.ts"), root]);
-    expect(result.stderr.toString()).toContain("Bundle budget exceeded");
-    expect(result.stderr.toString()).not.toContain("Entry chunk not found");
+    await writeManifest(root, "large.js");
+    const result = runBundle(root);
+    expect(result.stderr.toString()).toContain("Bundle budget exceeded for the first visit");
+    expect(result.stderr.toString()).not.toContain("First-visit set cannot be computed");
     expect(result.exitCode).not.toBe(0);
   }));
 
-test("bundle gate rejects artifacts that exceed only the gzip budget", () =>
+test("bundle gate rejects a first visit that exceeds only the gzip budget", () =>
   fixture(async (root) => {
     // Incompressible bytes: raw size stays under the raw cap while gzip exceeds its cap.
     await writeFile(join(root, "dense.js"), randomBytes(81_000));
-    await writeFile(join(root, "index.html"), '<script type="module" src="/dense.js"></script>');
-    const result = Bun.spawnSync(["node", resolve("scripts/bundle.ts"), root]);
-    expect(result.stderr.toString()).toContain("Bundle budget exceeded");
-    expect(result.stderr.toString()).not.toContain("Entry chunk not found");
+    await writeManifest(root, "dense.js");
+    const result = runBundle(root);
+    expect(result.stderr.toString()).toContain("Bundle budget exceeded for the first visit");
+    expect(result.stderr.toString()).not.toContain("First-visit set cannot be computed");
     expect(result.exitCode).not.toBe(0);
   }));
 
-test("bundle gate accepts artifacts within budget", () =>
+test("bundle gate accepts artifacts within budget and prints both totals", () =>
   fixture(async (root) => {
     await writeFile(join(root, "small.js"), "console.log(1);\n");
-    await writeFile(join(root, "index.html"), '<script type="module" src="/small.js"></script>');
-    const result = Bun.spawnSync(["node", resolve("scripts/bundle.ts"), root]);
-    expect(result.stdout.toString()).toContain("Entry chunk small.js:");
+    await writeManifest(root, "small.js");
+    const result = runBundle(root);
+    expect(result.stdout.toString()).toContain("small.js: 16 raw;");
+    expect(result.stdout.toString()).toContain("First-visit JS/CSS:");
+    expect(result.stdout.toString()).toContain("All JS/CSS:");
     expect(result.exitCode).toBe(0);
   }));
 
-test("bundle gate rejects an entry chunk over its own budget (the entry budget equals the totals while there is one chunk)", () =>
-  fixture(async (root) => {
-    await writeFile(join(root, "entry.js"), "x".repeat(250_001));
-    await writeFile(join(root, "index.html"), '<script type="module" src="/entry.js"></script>');
-    const result = Bun.spawnSync(["node", resolve("scripts/bundle.ts"), root]);
-    expect(result.stderr.toString()).toContain("Entry chunk budget exceeded");
-    expect(result.stderr.toString()).toContain("Bundle budget exceeded");
-    expect(result.exitCode).not.toBe(0);
-  }));
-
-test("bundle gate: a lazy chunk that pushes the total over the limit fails on the totals alone", () =>
+test("bundle gate: a lazy chunk over the old 250,000 total leaves the first visit unchanged and passes", () =>
   fixture(async (root) => {
     await writeFile(join(root, "entry.js"), "x".repeat(1000));
     await writeFile(join(root, "lazy.js"), "y".repeat(250_000));
-    await writeFile(join(root, "index.html"), '<script type="module" src="/entry.js"></script>');
-    const result = Bun.spawnSync(["node", resolve("scripts/bundle.ts"), root]);
-    expect(result.stderr.toString()).toContain("Bundle budget exceeded");
-    expect(result.stderr.toString()).not.toContain("Entry chunk budget exceeded");
+    await writeManifest(root, "entry.js", ["lazy.js"]);
+    const result = runBundle(root);
+    expect(result.stdout.toString()).toContain("lazy.js: 250000 raw;");
+    expect(result.stdout.toString()).toContain("; lazy");
+    expect(result.stdout.toString()).toContain("First-visit JS/CSS: 1000 bytes raw;");
+    expect(result.stderr.toString()).toBe("");
+    expect(result.exitCode).toBe(0);
+  }));
+
+test("bundle gate: lazy chunks beyond the all-files ceiling fail on the ceiling alone", () =>
+  fixture(async (root) => {
+    await writeFile(join(root, "entry.js"), "x".repeat(1000));
+    await writeFile(join(root, "lazy.js"), "y".repeat(400_000));
+    await writeManifest(root, "entry.js", ["lazy.js"]);
+    const result = runBundle(root);
+    expect(result.stderr.toString()).toContain("Bundle ceiling exceeded for all files");
+    expect(result.stderr.toString()).not.toContain("Bundle budget exceeded");
     expect(result.exitCode).not.toBe(0);
   }));
 
-test("bundle gate rejects a build whose index.html names no entry chunk", () =>
+test("bundle gate fails closed when the build has no manifest", () =>
   fixture(async (root) => {
     await writeFile(join(root, "small.js"), "console.log(1);\n");
-    const result = Bun.spawnSync(["node", resolve("scripts/bundle.ts"), root]);
-    expect(result.stderr.toString()).toContain("Entry chunk not found");
+    const result = runBundle(root);
+    expect(result.stderr.toString()).toContain("First-visit set cannot be computed");
     expect(result.exitCode).not.toBe(0);
   }));
 

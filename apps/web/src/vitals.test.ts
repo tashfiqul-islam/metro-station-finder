@@ -1,8 +1,17 @@
 import { isWebVitalPayload, type WebVitalPayload } from "@metro/contracts";
-import { afterEach, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import type { Metric } from "web-vitals";
 
-import { sendVital, startVitals, toPayload, VITALS_PATH, type Observer } from "./vitals";
+import {
+  afterIdle,
+  loadObservers,
+  sendVital,
+  startVitals,
+  toPayload,
+  VITALS_PATH,
+  type Observer,
+  type Schedule,
+} from "./vitals";
 
 // Synthetic metric. The library fields that carry a URL or a position (navigationURL, entries) are
 // filled with coordinate- and query-like values to prove none of them can reach a payload.
@@ -66,11 +75,24 @@ test("METRO-44 a metric the contract does not carry produces no payload", () => 
   expect(toPayload(metric({ name: "TTFB" }))).toBeUndefined();
 });
 
-test("METRO-44 startVitals registers every observer and sends each reported metric", () => {
+const now: Schedule = (task) => {
+  task();
+};
+const settle = async () => {
+  for (let turn = 0; turn < 5; turn += 1) await Promise.resolve();
+};
+
+test("METRO-44 startVitals registers every observer and sends each reported metric", async () => {
   const sent: WebVitalPayload[] = [];
   const reporters: ((metric: Metric) => void)[] = [];
   const observer: Observer = (report) => reporters.push(report);
-  startVitals(true, [observer, observer, observer], (payload) => sent.push(payload));
+  startVitals(
+    true,
+    () => Promise.resolve([observer, observer, observer]),
+    (payload) => sent.push(payload),
+    now,
+  );
+  await settle();
   expect(reporters).toHaveLength(3);
   reporters[0]?.(metric());
   reporters[1]?.(metric({ navigationType: "soft-navigation" }));
@@ -78,11 +100,124 @@ test("METRO-44 startVitals registers every observer and sends each reported metr
   expect(sent[0]?.name).toBe("LCP");
 });
 
-test("METRO-44 startVitals is off by default under test: nothing is registered or sent", () => {
-  const observer = vi.fn();
-  startVitals(undefined, [observer], vi.fn());
-  expect(observer).not.toHaveBeenCalled();
+test("METRO-104 startVitals loads nothing until the scheduler runs the task", async () => {
+  const load = vi.fn(() => Promise.resolve([]));
+  let task: (() => void) | undefined;
+  startVitals(true, load, vi.fn(), (scheduled) => {
+    task = scheduled;
+  });
+  await settle();
+  expect(load).not.toHaveBeenCalled();
+  task?.();
+  expect(load).toHaveBeenCalledTimes(1);
+});
+
+test("METRO-44 startVitals is off by default under test: nothing is scheduled, loaded or sent", () => {
+  const load = vi.fn(() => Promise.resolve([]));
+  const schedule = vi.fn();
+  startVitals(undefined, load, vi.fn(), schedule);
+  expect(schedule).not.toHaveBeenCalled();
+  expect(load).not.toHaveBeenCalled();
   expect(import.meta.env.PROD).toBe(false);
+});
+
+test("METRO-104 a failed chunk load or registration is swallowed: no log, no throw, no unhandled rejection", async () => {
+  const error = vi.spyOn(console, "error");
+  const warn = vi.spyOn(console, "warn");
+  const unhandled = vi.fn();
+  process.on("unhandledRejection", unhandled);
+  startVitals(
+    true,
+    () =>
+      Promise.reject(
+        new TypeError("Failed to fetch dynamically imported module: https://x.test/?lat=23.81"),
+      ),
+    vi.fn(),
+    now,
+  );
+  startVitals(
+    true,
+    () =>
+      Promise.resolve([
+        () => {
+          throw new RangeError("lat=23.81");
+        },
+      ]),
+    vi.fn(),
+    now,
+  );
+  await settle();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  process.off("unhandledRejection", unhandled);
+  expect(error).not.toHaveBeenCalled();
+  expect(warn).not.toHaveBeenCalled();
+  expect(unhandled).not.toHaveBeenCalled();
+});
+
+test("METRO-104 a throwing first observer does not stop the others from registering", async () => {
+  const error = vi.spyOn(console, "error");
+  const second = vi.fn();
+  const third = vi.fn();
+  startVitals(
+    true,
+    () =>
+      Promise.resolve([
+        () => {
+          throw new RangeError("lat=23.81");
+        },
+        second,
+        third,
+      ]),
+    vi.fn(),
+    now,
+  );
+  await settle();
+  expect(second).toHaveBeenCalledTimes(1);
+  expect(third).toHaveBeenCalledTimes(1);
+  expect(error).not.toHaveBeenCalled();
+});
+
+test("METRO-104 loadObservers resolves the three web-vitals observers from a dynamic import", async () => {
+  const observers = await loadObservers();
+  expect(observers).toHaveLength(3);
+  for (const observer of observers) expect(observer).toBeTypeOf("function");
+});
+
+describe("METRO-104 afterIdle", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  test("waits for the load event when the page is still loading, then uses requestIdleCallback", () => {
+    vi.spyOn(document, "readyState", "get").mockReturnValue("loading");
+    const idle = vi.fn();
+    vi.stubGlobal("requestIdleCallback", idle);
+    const task = vi.fn();
+    afterIdle(task);
+    expect(idle).not.toHaveBeenCalled();
+    dispatchEvent(new Event("load"));
+    expect(idle).toHaveBeenCalledWith(task, { timeout: 1000 });
+  });
+
+  test("with a loaded page and no requestIdleCallback it falls back to a 1 s timer", () => {
+    vi.useFakeTimers();
+    vi.spyOn(document, "readyState", "get").mockReturnValue("complete");
+    vi.stubGlobal("requestIdleCallback", null);
+    const task = vi.fn();
+    afterIdle(task);
+    vi.advanceTimersByTime(999);
+    expect(task).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(task).toHaveBeenCalledTimes(1);
+  });
+
+  test("with a loaded page it asks for an idle callback at once", () => {
+    vi.spyOn(document, "readyState", "get").mockReturnValue("complete");
+    const idle = vi.fn();
+    vi.stubGlobal("requestIdleCallback", idle);
+    afterIdle(vi.fn());
+    expect(idle).toHaveBeenCalledTimes(1);
+  });
 });
 
 test("METRO-44 sendVital posts the payload as JSON to the fixed path with keepalive, no credentials and no referrer", () => {

@@ -1,5 +1,5 @@
 import type { WebVitalPayload } from "@metro/contracts";
-import { onCLS, onINP, onLCP, type Metric } from "web-vitals";
+import type { Metric } from "web-vitals";
 
 /**
  * Real-user Core Web Vitals (LCP, INP, CLS; METRO-44, ADR-0019). Each metric becomes a five-field payload
@@ -54,20 +54,63 @@ export const sendVital: Send = (payload) => {
 
 type Report = (metric: Metric) => void;
 export type Observer = (report: Report) => void;
+export type LoadObservers = () => Promise<readonly Observer[]>;
+export type Schedule = (task: () => void) => void;
 
 /**
- * Registers the three observers. Off unless `enabled` (production builds only), so unit tests and the
- * dev server send nothing; tests inject the observers and the sender.
+ * The library is a dynamic import, so it is its own chunk and stays out of the first-visit set (METRO-104,
+ * ADR-0020). The observers read buffered performance entries, so registering after load still sees the
+ * paint and layout-shift history.
+ */
+export const loadObservers: LoadObservers = async () => {
+  const { onCLS, onINP, onLCP } = await import("web-vitals");
+  return [onCLS, onINP, onLCP];
+};
+
+/** Longest wait for an idle period before the task runs anyway. */
+const IDLE_TIMEOUT_MS = 1000;
+/** Where `requestIdleCallback` is missing (Safari), a timer stands in. */
+const FALLBACK_DELAY_MS = 1000;
+
+/** Runs `task` once the page has loaded and the browser is idle, so the chunk never competes with the first paint. */
+export const afterIdle: Schedule = (task) => {
+  const idle = (): void => {
+    if (typeof requestIdleCallback === "function")
+      requestIdleCallback(task, { timeout: IDLE_TIMEOUT_MS });
+    else setTimeout(task, FALLBACK_DELAY_MS);
+  };
+  if (document.readyState === "complete") idle();
+  else addEventListener("load", idle, { once: true });
+};
+
+/**
+ * Registers the three observers once the page is idle. Off unless `enabled` (production builds only), so
+ * unit tests and the dev server send nothing; tests inject the loader, the scheduler and the sender. A
+ * failed chunk load (offline, 404) or registration is dropped without a log: a lost sample is acceptable,
+ * the error text can carry a URL, and the page must never break.
  */
 export function startVitals(
   enabled: boolean = import.meta.env.PROD,
-  observers: readonly Observer[] = [onCLS, onINP, onLCP],
+  load: LoadObservers = loadObservers,
   send: Send = sendVital,
+  schedule: Schedule = afterIdle,
 ): void {
   if (!enabled) return;
   const report: Report = (metric) => {
     const payload = toPayload(metric);
     if (payload !== undefined) send(payload);
   };
-  for (const observe of observers) observe(report);
+  const register = async (): Promise<void> => {
+    for (const observe of await load()) {
+      // One failing observer must not skip the others; the error text is never kept or logged.
+      try {
+        observe(report);
+      } catch {
+        continue;
+      }
+    }
+  };
+  schedule(() => {
+    register().catch(() => null);
+  });
 }
