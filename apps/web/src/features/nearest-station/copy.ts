@@ -12,7 +12,10 @@ export const copy = {
   consent:
     "Your position and the place you choose are not sent to our server. What you type in the search goes to Google to suggest places. Your position goes to Google only to work out the walking route.",
   loadingSearch: "Loading place search…",
-  locating: "Finding your position…",
+  // METRO-113: the handoff's locating status (nearby-locating.light.html): a title and one line under it.
+  locating: "Finding your position",
+  locatingSub: "This can take a few seconds indoors.",
+  tryAgain: "Try again",
   denied: "Location is turned off. Search for a place instead.",
   unavailable: "Your position could not be found. Search for a place instead.",
   // METRO-103: shown instead of a station when the device located the user too roughly to name one.
@@ -23,17 +26,14 @@ export const copy = {
   searchUnavailable: "Place search is unavailable. You can still use your location.",
   resultHeading: "Nearest station",
   empty: "No station could be found for that location.",
-  straightLine: "Straight-line distance",
+  // METRO-113: a location result. The distance is an estimate: the device position is a circle, not a point.
+  distanceAbout: "about",
+  distanceLabel: "straight-line distance · est.",
   walking: "Walking route",
   routeLoading: "Finding the walking route…",
   routeUnavailable: "The walking route is unavailable. The station and fare are still correct.",
-  fareHeading: "Fare",
-  destinationLabel: "Destination station",
-  destinationPlaceholder: "Choose a destination",
-  fareUnknown: "No fare is available for that trip.",
-  fareChoose: "Choose a destination to see the fare.",
-  fareLine: (from: string, to: string, currency: string, amount: number): string =>
-    `${from} to ${to}: ${currency} ${amount}`,
+  alsoNearby: "Also nearby",
+  alsoMeta: (size: string): string => `about ${size} · est.`,
   faresAsOf: (notice: string, checked: string): string =>
     `Fares as of: DTCA notice dated ${notice}; last checked ${checked}.`,
 } as const;

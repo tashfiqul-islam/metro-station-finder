@@ -2,6 +2,7 @@ import { expect, test } from "vitest";
 
 import {
   formatAccuracy,
+  formatEstimate,
   formatIsoDate,
   formatKm,
   formatMinutes,
@@ -49,4 +50,18 @@ test("METRO-103 formatAccuracy: approximate, metres below 1 km, else km, capped 
   expect(formatAccuracy(1_000_000)).toBe("more than 1000 km");
   expect(formatAccuracy(1e308)).toBe("more than 1000 km");
   expect(formatAccuracy(Number.MAX_VALUE)).toBe("more than 1000 km");
+});
+
+test("METRO-113 an estimated distance is rounded: tens of metres under 1 km, one decimal of km above", () => {
+  expect(formatEstimate(0.5504)).toBe("550 m");
+  expect(formatEstimate(0.0004)).toBe("10 m");
+  expect(formatEstimate(0)).toBe("10 m");
+  expect(formatEstimate(0.9949)).toBe("990 m");
+  expect(formatEstimate(1.1)).toBe("1.1 km");
+  expect(formatEstimate(1.234)).toBe("1.2 km");
+  expect(formatEstimate(18.26)).toBe("18.3 km");
+});
+
+test("METRO-113 a distance that rounds up to 1 km reads as kilometres, never 1000 m", () => {
+  expect(formatEstimate(0.996)).toBe("1.0 km");
 });

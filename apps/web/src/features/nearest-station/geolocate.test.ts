@@ -19,7 +19,7 @@ test("METRO-88 a fix becomes a plain coordinate and the request uses the ADR-000
   });
   expect(geo.getCurrentPosition).toHaveBeenCalledTimes(1);
   expect(geo.getCurrentPosition.mock.calls[0]?.[2]).toEqual({
-    timeout: 10_000,
+    timeout: 8_000,
     maximumAge: 0,
     enableHighAccuracy: false,
   });
@@ -58,5 +58,26 @@ test("METRO-103 the accuracy radius is carried; NaN, infinite and negative are u
   expect(await read(0)).toBe(0);
   for (const bad of [Number.NaN, Infinity, -1]) {
     expect(await read(bad)).toBeUndefined();
+  }
+});
+
+test("METRO-113 a getCurrentPosition that throws is the unavailable outcome, with no error carried", async () => {
+  const geo = fakeGeo(() => {
+    throw new Error("synthetic: lat 23.0 lng 90.0");
+  });
+  expect(await locate(geo)).toEqual({ kind: "unavailable" });
+});
+
+test("METRO-113 a navigator.geolocation getter that throws is the unavailable outcome", async () => {
+  Object.defineProperty(navigator, "geolocation", {
+    configurable: true,
+    get: () => {
+      throw new Error("synthetic");
+    },
+  });
+  try {
+    expect(await locate()).toEqual({ kind: "unavailable" });
+  } finally {
+    Reflect.deleteProperty(navigator, "geolocation");
   }
 });
