@@ -122,11 +122,23 @@ test.describe("security headers and caching (METRO-31)", () => {
       expect(violations).toEqual([]);
       const styling = await page.evaluate(() => ({
         stylesheets: document.styleSheets.length,
+        linked: document.querySelectorAll('link[rel="stylesheet"]').length,
+        foreign: [...document.styleSheets].filter(
+          (sheet) => sheet.href !== null && new URL(sheet.href).origin !== location.origin,
+        ).length,
         styleElements: document.querySelectorAll("style").length,
         styleAttributes: document.querySelectorAll("[style]").length,
       }));
-      // One same-origin stylesheet (focus.css, METRO-58) is allowed by `style-src 'self'`; nothing inline.
-      expect(styling).toEqual({ stylesheets: 1, styleElements: 0, styleAttributes: 0 });
+      // Only same-origin stylesheets, as linked files (the entry's, then the slice chunk's), allowed by
+      // `style-src 'self'`; nothing inline (METRO-58, METRO-105).
+      expect(styling.stylesheets).toBeGreaterThanOrEqual(1);
+      expect(styling).toEqual({
+        stylesheets: styling.linked,
+        linked: styling.linked,
+        foreign: 0,
+        styleElements: 0,
+        styleAttributes: 0,
+      });
     });
   });
 

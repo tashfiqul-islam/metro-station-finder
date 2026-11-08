@@ -21,7 +21,12 @@ interface Props<P extends object> {
 }
 interface State {
   readonly failed: boolean;
+  /** An error that did not come from loading the chunk: the feature's own render error. Rethrown, never shown. */
+  readonly foreign: { readonly error: unknown } | null;
 }
+
+/** Errors a loader rejected with. Only these mean "the chunk could not be loaded"; any other error is the feature's own. */
+const loadErrors = new WeakSet();
 
 /**
  * Pending state: visible text in a polite status region, no spinner and no animation, so there is nothing
@@ -42,19 +47,28 @@ function Pending(): ReactNode {
  *
  * Accessibility: like a route change, the failure takes focus (a `tabIndex={-1}` region named by the fixed
  * text, which is read once when focus lands) and has NO `role="alert"`; an alert plus moved focus can
- * announce the same text twice. The visible focus ring comes from `focus.css`.
+ * announce the same text twice. The visible focus ring comes from `base.css` (`[tabindex="-1"]:focus`).
  */
 class FeatureBoundary<P extends object> extends Component<Props<P>, State> {
-  override state: State = { failed: false };
+  override state: State = { failed: false, foreign: null };
   private readonly focusRegion = (node: HTMLElement | null): void => {
     node?.focus();
   };
 
-  static getDerivedStateFromError(_error: unknown): State {
-    return { failed: true };
+  static getDerivedStateFromError(error: unknown): State {
+    const fromLoader = typeof error === "object" && error !== null && loadErrors.has(error);
+    return fromLoader ? { failed: true, foreign: null } : { failed: false, foreign: { error } };
   }
 
   override render(): ReactNode {
+    // The feature's own render error is not a load failure: pass it up to the root error boundary unchanged
+    // (METRO-105: the landing slice is a lazy feature, and its render errors keep the "Try again" fallback).
+    if (this.state.foreign !== null) {
+      const { error } = this.state.foreign;
+      throw error instanceof Error
+        ? error
+        : new Error("A feature threw a value that is not an error");
+    }
     if (this.state.failed) {
       return (
         <section ref={this.focusRegion} aria-label={lazyCopy.failed} tabIndex={-1}>
@@ -85,7 +99,15 @@ export function lazyFeature<P extends object>(
   load: FeatureLoader<P>,
   reload: Reload = reloadPage,
 ): ComponentType<P> {
-  const Feature = lazy(load);
+  const Feature = lazy(async () => {
+    try {
+      return await load();
+    } catch (error) {
+      const failure = error instanceof Error ? error : new Error("load failed");
+      loadErrors.add(failure);
+      throw failure;
+    }
+  });
   return function LazyFeature(props: P): ReactNode {
     return <FeatureBoundary Feature={Feature} featureProps={props} reload={reload} />;
   };

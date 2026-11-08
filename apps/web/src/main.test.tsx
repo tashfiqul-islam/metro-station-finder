@@ -28,7 +28,10 @@ test("METRO-58 main.tsx wraps the app in StrictMode and mounts the nearest-stati
   // twice, so a StrictMode placed only inside the boundary would leave this at 1.
   expect(renderSpy).toHaveBeenCalledTimes(2);
   renderSpy.mockRestore();
-  expect(root.querySelector("h1")?.textContent).toBe("Nearest Metro station");
+  // The slice is a lazy chunk (ADR-0021): it appears inside the shell once its chunk has loaded.
+  await vi.waitFor(() => {
+    expect(root.querySelector("main h1")?.textContent).toBe("Nearest Metro station");
+  });
 });
 
 test("METRO-79 main.tsx fails loudly when the page has no #root element", async () => {

@@ -25,6 +25,9 @@ import {
 } from "./format";
 import { locate } from "./geolocate";
 
+import "../../styles/components/common.css";
+import "./nearest-station.css";
+
 const stations = baselineDataset.stations;
 
 /** Suggestions lean toward the network: the mean of the station coordinates, not a hard-coded point. */
@@ -204,14 +207,20 @@ function Slice({ maps }: SliceProps) {
           : null;
 
   return (
-    <main>
-      <h1>{copy.heading}</h1>
-      <p>{copy.intro}</p>
-      <section aria-labelledby="where-heading">
-        <h2 id="where-heading">{copy.whereHeading}</h2>
-        <p id="place-label">{copy.searchLabel}</p>
-        <p id="place-hint">{copy.searchHint}</p>
-        {status === "loading" && <output>{copy.loadingSearch}</output>}
+    <>
+      <h1 className="screen-title">{copy.heading}</h1>
+      <p className="ns-lede">{copy.intro}</p>
+      <section className="ns-section" aria-labelledby="where-heading">
+        <h2 className="section-label" id="where-heading">
+          {copy.whereHeading}
+        </h2>
+        <p className="ns-label" id="place-label">
+          {copy.searchLabel}
+        </p>
+        <p className="footnote" id="place-hint">
+          {copy.searchHint}
+        </p>
+        {status === "loading" && <output className="ns-status">{copy.loadingSearch}</output>}
         <div role="presentation" onFocus={engage} onKeyDown={engage} onInput={engage}>
           {status !== "unavailable" && (
             <maps.PlaceSearch
@@ -223,10 +232,15 @@ function Slice({ maps }: SliceProps) {
             />
           )}
         </div>
-        {searchAlert !== null && <p role="alert">{searchAlert}</p>}
+        {searchAlert !== null && (
+          <p className="ns-alert" role="alert">
+            {searchAlert}
+          </p>
+        )}
         <p>
           <button
             type="button"
+            className="btn btn--primary btn--block"
             onClick={() => void findMe()}
             disabled={locating === "locating"}
             aria-describedby="consent"
@@ -234,19 +248,22 @@ function Slice({ maps }: SliceProps) {
             {copy.locateButton}
           </button>
         </p>
-        <p id="consent">{copy.consent}</p>
-        {locating === "locating" && <output>{copy.locating}</output>}
+        <p className="footnote" id="consent">
+          {copy.consent}
+        </p>
+        {locating === "locating" && <output className="ns-status">{copy.locating}</output>}
         {geoAlert !== null && (
-          <p role="alert" tabIndex={-1} ref={focusAlert}>
+          <p className="ns-alert" role="alert" tabIndex={-1} ref={focusAlert}>
             {geoAlert}
           </p>
         )}
       </section>
 
       {nearest !== null && (
-        <section aria-labelledby="result-heading">
+        <section className="ns-section" aria-labelledby="result-heading">
           {/* A new result takes focus (keyed by the origin), so a screen reader announces the station. */}
           <h2
+            className="ns-title"
             id="result-heading"
             key={`${origin?.lat},${origin?.lng}`}
             tabIndex={-1}
@@ -260,10 +277,10 @@ function Slice({ maps }: SliceProps) {
             )}
           </h2>
           {found === null || station === null ? (
-            <output>{copy.empty}</output>
+            <output className="ns-status">{copy.empty}</output>
           ) : (
             <>
-              <dl>
+              <dl className="ns-facts">
                 <dt>{copy.straightLine}</dt>
                 <dd>{formatKm(found.distance)}</dd>
                 <dt>{copy.walking}</dt>
@@ -273,13 +290,20 @@ function Slice({ maps }: SliceProps) {
                     {route.phase === "success" &&
                       `${formatWalkingDistance(route.route.distance)}, ${formatMinutes(route.route.durationSeconds)}`}
                   </output>
-                  {route.phase === "failure" && <span role="alert">{copy.routeUnavailable}</span>}
+                  {route.phase === "failure" && (
+                    <span className="ns-alert-inline" role="alert">
+                      {copy.routeUnavailable}
+                    </span>
+                  )}
                 </dd>
               </dl>
-              <h2>{copy.fareHeading}</h2>
-              <p>
-                <label htmlFor="destination">{copy.destinationLabel}</label>{" "}
+              <h2 className="section-label">{copy.fareHeading}</h2>
+              <p className="ns-section">
+                <label className="ns-label" htmlFor="destination">
+                  {copy.destinationLabel}
+                </label>
                 <select
+                  className="ns-select"
                   id="destination"
                   value={destination?.id ?? ""}
                   onChange={(event) => setDestinationId(event.target.value)}
@@ -292,7 +316,7 @@ function Slice({ maps }: SliceProps) {
                   ))}
                 </select>
               </p>
-              <output>
+              <output className="ns-fare">
                 {fare === null && copy.fareChoose}
                 {destination !== undefined &&
                   fare?.kind === "fare" &&
@@ -304,7 +328,7 @@ function Slice({ maps }: SliceProps) {
                   )}
                 {fare?.kind === "unknown-fare" && copy.fareUnknown}
               </output>
-              <p>
+              <p className="footnote">
                 {copy.faresAsOf(
                   formatIsoDate(datasetProvenance.fares.noticeDate),
                   formatIsoDate(datasetProvenance.fares.officialTableRetrieved),
@@ -314,7 +338,7 @@ function Slice({ maps }: SliceProps) {
           )}
         </section>
       )}
-    </main>
+    </>
   );
 }
 

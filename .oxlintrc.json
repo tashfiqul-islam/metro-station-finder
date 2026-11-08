@@ -53,6 +53,8 @@
     "import/no-duplicates": "error",
     "import/no-self-import": "error",
     "import/first": "error",
+    // A Vite app loads a stylesheet with a side-effect import; no other unassigned import is allowed (METRO-105).
+    "import/no-unassigned-import": ["error", { "allow": ["**/*.css"] }],
     "promise/no-return-wrap": "error",
     "promise/param-names": "error",
     "react/jsx-key": "error",
