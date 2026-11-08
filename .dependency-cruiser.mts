@@ -53,6 +53,14 @@ export default {
       to: { path: "^packages/contracts/", pathNot: "^packages/contracts/src/index\\.ts$" },
     },
     {
+      name: "web-imports-contracts-as-types-only",
+      comment:
+        "The browser bundle may import contracts as types only (import type), so the schema library stays out of it; the Worker validates (ADR-0019). Test files are exempt: they check payloads against the runtime schema.",
+      severity: "error",
+      from: { path: "^apps/web/src/", pathNot: "\\.test\\.tsx?$" },
+      to: { path: "^packages/contracts/", dependencyTypesNot: ["type-only"] },
+    },
+    {
       name: "apps-never-import-each-other",
       comment: "Web and API communicate over HTTP and the shared contract, never by import.",
       severity: "error",

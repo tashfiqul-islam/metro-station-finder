@@ -15,6 +15,7 @@ Read when: changing packages, imports, providers, workspace names or structure, 
 
 - `bun run imports:check` (dependency-cruiser, `.dependency-cruiser.mts`): fails on cycles, unresolved imports and any layering rule above. Each rule is proven red by a fixture in `scripts/layering.test.ts`. Fix the import, not the rule.
 - Rule `maps-library-only-in-maps-adapter` in the same file, with a fixture per import form in `scripts/layering.test.ts`; `scripts/google-containment.test.ts` covers the ambient `google.maps` global as a text guard (an alias is not caught).
+- Rule `web-imports-contracts-as-types-only` (same file and fixtures): non-test web code may `import type` from contracts, never a runtime import, so valibot stays out of the browser ([ADR-0019](../adr/0019-telemetry-endpoint.md)).
 - `scripts/boundaries.ts` (in `check`): fails core on external or escaping imports and on declared dependencies. It is a narrow smoke guard, not a sandbox.
 - `scripts/adr.test.ts`: fails an ADR with a wrong header, status or missing section.
 

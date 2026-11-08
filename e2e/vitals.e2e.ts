@@ -80,6 +80,16 @@ test.describe("real-user web vitals beacon (METRO-44)", () => {
         expect(beacon.body, fragment).not.toContain(fragment);
       }
     }
+    // Control: a same-origin request with the default referrer policy DOES show the Referer in this harness,
+    // so the absence asserted above is not vacuous.
+    await page.route("**/api/referer-control", (route) =>
+      route.fulfill({ status: 200, body: "{}" }),
+    );
+    const [control] = await Promise.all([
+      page.waitForRequest("**/api/referer-control"),
+      page.evaluate(() => fetch("/api/referer-control").then((response) => response.status)),
+    ]);
+    expect(control.headers()["referer"]).toContain("SECRETREF");
     expect(apiRequests.some((request) => request.url.endsWith("/api/vitals"))).toBe(true);
     await expectNoCoordinateInApi(page, apiRequests);
   });

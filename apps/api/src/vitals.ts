@@ -4,8 +4,8 @@ import { Hono } from "hono";
 /** The validated beacon fields that may be logged. `id` is deliberately absent (ADR-0019). */
 export type LoggedVital = Pick<WebVitalPayload, "name" | "value" | "rating" | "navigationType">;
 
-/** A valid beacon is about 130 bytes; 1 KB leaves room and refuses anything that is not one. */
-export const MAX_VITAL_BYTES = 1024;
+/** The largest legal body is under 256 bytes (id at most 64 characters); 512 refuses anything that is not a report. */
+export const MAX_VITAL_BYTES = 512;
 
 function envelope(code: string, message: string): ErrorEnvelope {
   return { error: { code, message } };
@@ -53,14 +53,16 @@ export const vitalsRoutes = new Hono<{ Variables: { vital?: LoggedVital } }>()
     }
     let body: unknown;
     try {
-      body = JSON.parse(new TextDecoder("utf-8", { fatal: true, ignoreBOM: false }).decode(bytes));
+      body = JSON.parse(new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes));
     } catch {
       return context.json(envelope("invalid_body", "Body is not valid JSON"), 400);
     }
     if (!isWebVitalPayload(body)) {
       return context.json(envelope("invalid_payload", "Body does not match the contract"), 400);
     }
-    const { name, value, rating, navigationType } = body;
+    // Four decimals keep CLS (about 0.0016) usable and stop a long double carrying data into the logs.
+    const { name, rating, navigationType } = body;
+    const value = Math.round(body.value * 10_000) / 10_000;
     context.set("vital", { name, value, rating, navigationType });
     return context.body(null, 204);
   })

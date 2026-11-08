@@ -212,3 +212,104 @@ test("METRO-44 a query string on the route is not logged and does not change the
     expect(text).not.toContain(secret);
   }
 });
+
+test("METRO-44 the content type must be exactly application/json, not a prefix or a variant", async () => {
+  const { app } = recorded();
+  for (const type of ["application/jsonp", "application/json-patch+json", "application/jsonx"]) {
+    const response = await post(app, JSON.stringify(vital), type);
+    expect(await rejected(response)).toEqual({ status: 415, code: "unsupported_media_type" });
+  }
+});
+
+test("METRO-44 405 and OPTIONS answers carry no CORS header, and HEAD is a 405", async () => {
+  const { app } = recorded();
+  for (const method of ["OPTIONS", "GET", "HEAD"]) {
+    const response = await app.request("/api/vitals", {
+      method,
+      headers: { origin: "https://other.example", "access-control-request-method": "POST" },
+    });
+    expect(response.status).toBe(405);
+    expect(
+      [...response.headers.keys()].filter((name) => name.startsWith("access-control-")),
+    ).toEqual([]);
+  }
+  const accepted = await post(app, JSON.stringify(vital), "application/json");
+  expect(accepted.headers.has("access-control-allow-origin")).toBe(false);
+});
+
+test("METRO-44 a percent-encoded path is decoded by the router, reaches the route and logs the exact path", async () => {
+  const { app, lines } = recorded();
+  const response = await post(app, JSON.stringify(vital), "application/json");
+  expect(response.status).toBe(204);
+  const encoded = await app.request("/api/%76itals", {
+    method: "POST",
+    body: JSON.stringify(vital),
+    headers: { "content-type": "application/json" },
+  });
+  expect(encoded.status).toBe(204);
+  expect(lines.map((line) => line.event === "request" && line.path)).toEqual([
+    "/api/vitals",
+    "/api/vitals",
+  ]);
+});
+
+test("METRO-44 a byte-order mark is rejected, not silently stripped", async () => {
+  const { app } = recorded();
+  const bytes = new TextEncoder().encode(JSON.stringify(vital));
+  const withBom = new Uint8Array([0xef, 0xbb, 0xbf, ...bytes]);
+  expect(await rejected(await post(app, withBom, "application/json"))).toEqual({
+    status: 400,
+    code: "invalid_body",
+  });
+});
+
+test("METRO-44 a duplicate key keeps the last value, which is then validated", async () => {
+  const { app, lines } = recorded();
+  const duplicate = `{"name":"LCP","name":"CLS","value":0.05,"rating":"good","navigationType":"navigate","id":"abcdef12"}`;
+  expect((await post(app, duplicate, "application/json")).status).toBe(204);
+  expect(lines[0]).toMatchObject({ vital: { name: "CLS", value: 0.05 } });
+  const invalidLast = `{"name":"LCP","value":1,"value":-1,"rating":"good","navigationType":"navigate","id":"abcdef12"}`;
+  expect((await post(app, invalidLast, "application/json")).status).toBe(400);
+});
+
+test("METRO-44 an own __proto__ key is rejected by the strict schema", async () => {
+  const { app } = recorded();
+  const body = `{"__proto__":{"lat":1},"name":"LCP","value":1,"rating":"good","navigationType":"navigate","id":"abcdef12"}`;
+  expect(await rejected(await post(app, body, "application/json"))).toEqual({
+    status: 400,
+    code: "invalid_payload",
+  });
+});
+
+test("METRO-44 the logged value is rounded to four decimals", async () => {
+  const { app, lines } = recorded();
+  await post(app, JSON.stringify({ ...vital, value: 1234.567_891_234 }), "application/json");
+  await post(
+    app,
+    JSON.stringify({ ...vital, name: "CLS", value: 0.001_639_404_296_875 }),
+    "application/json",
+  );
+  expect(lines.map((line) => line.event === "request" && line.vital?.value)).toEqual([
+    1234.5679, 0.0016,
+  ]);
+});
+
+test("METRO-44 a lying content-length is refused before the body is read", async () => {
+  const { app } = recorded();
+  const stream = new ReadableStream<Uint8Array>({
+    pull(controller) {
+      controller.enqueue(new TextEncoder().encode(JSON.stringify(vital)));
+      controller.close();
+    },
+  });
+  const response = await app.request("/api/vitals", {
+    method: "POST",
+    body: stream,
+    headers: { "content-type": "application/json", "content-length": String(MAX_VITAL_BYTES + 1) },
+    // @ts-expect-error -- duplex is required for a streamed request body and is missing from the DOM types
+    duplex: "half",
+  });
+  // The runtime pulls a stream once on construction, so a pull count proves nothing. The real body is short enough
+  // to pass the streamed check, so the 413 can only come from the declared length (the workerd runtime keeps it).
+  expect(await rejected(response)).toEqual({ status: 413, code: "payload_too_large" });
+});

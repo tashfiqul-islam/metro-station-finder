@@ -4,7 +4,7 @@ import { expect, test } from "vitest";
 
 import app from "./index";
 
-test("FND-R3 every /api/* request returns a 404 with a schema-valid error envelope (the API has no routes)", async () => {
+test("FND-R3 every /api/* request returns a 404 with a schema-valid error envelope (only POST /api/vitals exists)", async () => {
   for (const path of ["/api/unknown", "/api", "/api/nearest"]) {
     const response = await app.request(path);
     expect(response.status).toBe(404);

@@ -1,6 +1,6 @@
 # Local workspace
 
-**Confirmed / Repo-verified:** this independent rebuild contains a React/Vite web app, a Hono Cloudflare Worker, a dependency-free core package and a schema-validated contracts package. The Worker has no routes (METRO-93 retired the synthetic status route) and the page at `/` is the nearest-station slice. It is not product health, data correctness or Metro feature parity.
+**Confirmed / Repo-verified:** this independent rebuild contains a React/Vite web app, a Hono Cloudflare Worker, a dependency-free core package and a schema-validated contracts package. The Worker has one route, `POST /api/vitals` (METRO-93 retired the synthetic status route; ADR-0019 added it), and the page at `/` is the nearest-station slice. It is not product health, data correctness or Metro feature parity.
 
 ## Bootstrap and commands
 

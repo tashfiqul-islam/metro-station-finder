@@ -22,7 +22,7 @@ function expectSecurityHeaders(response: Response): void {
 test("METRO-31 404, 405 and 500 API responses carry the security headers", async () => {
   expectSecurityHeaders(await app.request("/api/unknown"));
   expectSecurityHeaders(await app.request("/assets/x.js", { method: "POST" }));
-  // The API has no routes, so the 500 comes from a probe route registered through the seam.
+  // The 500 comes from a probe route registered through the seam (the one real route cannot fail).
   const failing = createApp(
     () => {},
     (probe) => {
