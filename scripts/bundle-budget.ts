@@ -17,6 +17,18 @@ export const FIRST_VISIT_BUDGET = { raw: 250_000, gzip: 80_000 } as const;
  */
 export const ALL_FILES_CEILING = { raw: 400_000, gzip: 125_000 } as const;
 
+/**
+ * Classic scripts that `index.html` loads from `apps/web/public/` by their own name (METRO-105, ADR-0021).
+ * Vite copies them unhashed and leaves them out of the manifest, but they are on the first-visit path, so they
+ * count toward the first-visit total and are not orphans. One that `index.html` loads but the build lacks fails
+ * the gate (`HEAD_SCRIPT_MISSING`); one that nothing references and that is absent is simply not counted.
+ */
+export const HEAD_SCRIPTS = ["theme-boot.js"] as const;
+
+/** One fixed message when `index.html` loads a head script that is not in the build. */
+export const HEAD_SCRIPT_MISSING =
+  "A script that index.html loads from public/ is missing from the build";
+
 export const MANIFEST_PATH = ".vite/manifest.json";
 /** One fixed message for every way the first-visit set cannot be computed. */
 export const MANIFEST_FAILURE =
@@ -133,16 +145,21 @@ const total = (assets: readonly Asset[]) => ({
 export function evaluateBundle(
   assets: readonly Asset[],
   manifestText: string | null,
+  indexHtml: string | null = null,
 ): BudgetReport {
   if (total(assets).raw === 0)
     return { lines: [], problems: ["No production JS/CSS artifacts found"] };
   const manifest = parseManifest(manifestText);
-  const files = manifest === null ? null : firstVisitFiles(manifest);
+  const chunks = manifest === null ? null : firstVisitFiles(manifest);
   const onDisk = new Set(assets.map((asset) => asset.path));
+  const heads = HEAD_SCRIPTS.filter((script) => onDisk.has(script));
+  if (HEAD_SCRIPTS.some((script) => !onDisk.has(script) && indexHtml?.includes(`src="/${script}"`)))
+    return { lines: [], problems: [HEAD_SCRIPT_MISSING] };
+  const files = chunks === null ? null : new Set([...chunks, ...heads]);
   if (files === null || [...files].some((file) => !onDisk.has(file)))
     return { lines: [], problems: [MANIFEST_FAILURE] };
   // Every emitted file must be known to the manifest, as a chunk `file` or in a `css` list.
-  const listed = new Set<string>();
+  const listed = new Set<string>(heads);
   for (const chunk of manifest?.values() ?? []) {
     listed.add(chunk.file);
     for (const file of chunk.css) listed.add(file);
@@ -185,7 +202,8 @@ export function evaluateBundle(
 export async function bundleMain(args: readonly string[]): Promise<number> {
   const root = resolve(args[0] ?? "apps/web/dist/client");
   const manifest = await readFile(join(root, MANIFEST_PATH), "utf8").catch(() => null);
-  const report = evaluateBundle(await collectAssets(root), manifest);
+  const indexHtml = await readFile(join(root, "index.html"), "utf8").catch(() => null);
+  const report = evaluateBundle(await collectAssets(root), manifest, indexHtml);
   for (const line of report.lines) console.log(line);
   for (const problem of report.problems) console.error(problem);
   return report.problems.length === 0 ? 0 : 1;

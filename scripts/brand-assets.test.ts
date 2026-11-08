@@ -48,8 +48,11 @@ const CAPS: Record<string, number> = {
   "icons/icon-maskable-192.png": 13_000,
   "icons/icon-maskable-512.png": 110_000,
   "icons/icon-monochrome-512.png": 10_000,
+  // METRO-105: third-party notices (fonts, icons) and the pre-paint theme script; fonts stay in src/, hashed.
+  "licenses.txt": 14_500,
   "manifest.webmanifest": 2_000,
   "robots.txt": 200,
+  "theme-boot.js": 600,
 };
 
 describe("brand assets on disk (METRO-107)", () => {

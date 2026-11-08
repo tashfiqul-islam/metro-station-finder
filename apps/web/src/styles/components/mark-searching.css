@@ -1,0 +1,31 @@
+/* mark-searching.css: the looping ping of the mark while a position is being found (the locating status). Import with that status; not in the entry. Colours only via var(--…). */
+
+.mark--searching .mark__ping {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+  animation: mark-ping-loop 1800ms cubic-bezier(0.2, 0.7, 0.3, 1) infinite;
+}
+@keyframes mark-ping-loop {
+  0% {
+    transform: scale(0.55);
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  65% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.28);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mark--searching .mark__ping {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}

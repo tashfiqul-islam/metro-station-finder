@@ -1,0 +1,237 @@
+/* shell.css: App shell, header frame, theme button and the panel (bottom sheet below 768px, sidebar above). Entry set. Colours only via var(--…). Breakpoint 768px. */
+
+/* ════════════ App shell ════════════ */
+.app {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: var(--color-bg);
+}
+.app__map {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-map);
+  background: var(--color-map-bg);
+}
+.app__map-frame {
+  position: absolute;
+  top: 104px;
+  right: 64px;
+  left: 12px;
+  bottom: calc(var(--sheet-h) + var(--sheet-reserve) + 8px);
+}
+/* No section nav drawn (no router yet): nothing sits under the sheet, so it keeps only the side gap. */
+.app--plain {
+  --sheet-reserve: var(--space-2);
+}
+@media (min-width: 768px) {
+  .app__map-frame {
+    top: 84px;
+    right: 76px;
+    left: calc(var(--side-w) + 36px);
+    bottom: 20px;
+  }
+}
+
+/* ════════════ Header ════════════ */
+.app-header {
+  position: absolute;
+  z-index: var(--z-header);
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: max(10px, env(safe-area-inset-top)) var(--space-3) 0;
+  pointer-events: none;
+}
+.app-header > * {
+  pointer-events: auto;
+}
+.app-header__spacer {
+  flex: 1;
+  pointer-events: none;
+}
+@media (min-width: 768px) {
+  .app-header {
+    top: var(--space-3);
+    left: var(--space-3);
+    right: var(--space-3);
+    height: var(--header-h);
+    padding: 0 6px;
+    gap: 6px;
+    border-radius: var(--radius-pill);
+    background: var(--color-glass-thick);
+    -webkit-backdrop-filter: var(--blur);
+    backdrop-filter: var(--blur);
+    box-shadow:
+      var(--shadow-rim),
+      0 0 0 1px var(--color-hair),
+      var(--shadow-2);
+  }
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: var(--target);
+  height: var(--target);
+  border-radius: var(--radius-pill);
+  color: var(--color-fg);
+  background: var(--color-glass-thick);
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+  box-shadow:
+    var(--shadow-rim),
+    0 0 0 1px var(--color-hair),
+    var(--shadow-1);
+  transition:
+    background-color var(--dur-fast),
+    transform var(--dur-instant) var(--ease-out);
+}
+.icon-btn:hover {
+  background: var(--color-muted-2);
+}
+.icon-btn:active {
+  transform: scale(0.96);
+}
+@media (min-width: 768px) {
+  .app-header .icon-btn {
+    background: transparent;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .app-header .icon-btn:hover {
+    background: var(--color-muted);
+  }
+}
+
+/* ════════════ Panel: bottom sheet (< 768) / sidebar (≥ 768) ════════════ */
+.panel {
+  position: absolute;
+  z-index: var(--z-sheet);
+  left: var(--space-2);
+  right: var(--space-2);
+  bottom: calc(var(--sheet-reserve) + env(safe-area-inset-bottom));
+  height: var(--sheet-h);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: var(--radius-sheet);
+  background: var(--color-glass-thick);
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+  box-shadow:
+    var(--shadow-rim),
+    0 0 0 1px var(--color-hair),
+    var(--shadow-3);
+  transition: height var(--dur-sheet) var(--ease-sheet);
+}
+.app[data-snap="peek"] {
+  --sheet-h: var(--sheet-peek);
+}
+.app[data-snap="half"] {
+  --sheet-h: var(--sheet-half);
+}
+.app[data-snap="full"] {
+  --sheet-h: calc(100dvh - var(--sheet-top) - var(--sheet-reserve) - env(safe-area-inset-bottom));
+}
+.panel[data-dragging] {
+  transition: none;
+} /* while dragging, the app writes --sheet-h on .app via CSSOM */
+.panel__handle {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  height: var(--target);
+} /* 44px: owner decision 2026-11-08 (handoff drew 32px) */
+.panel__grip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: var(--target);
+  border-radius: var(--radius-pill);
+  cursor: grab;
+  touch-action: none;
+}
+.panel__grip::before {
+  content: "";
+  width: 40px;
+  height: 5px;
+  border-radius: var(--radius-pill);
+  background: var(--color-ctl-line);
+}
+.panel__snap {
+  position: absolute;
+  top: 0;
+  height: var(--target);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-12);
+  font-weight: var(--fw-semibold);
+  color: var(--color-muted-fg);
+  opacity: 0;
+  pointer-events: none;
+}
+.panel__snap:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+  background: var(--color-card);
+}
+.panel__snap--up {
+  right: var(--space-3);
+}
+.panel__snap--down {
+  left: var(--space-3);
+}
+.panel__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px 18px 32px;
+  scroll-padding-bottom: 96px;
+}
+/* tabindex="-1" keeps Firefox from making the scroller its own Tab stop; a click on it must not draw the
+   programmatic-focus ring of base.css around the whole panel. */
+.panel__scroll:focus {
+  outline: none;
+}
+.panel__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+@media (min-width: 768px) {
+  .panel {
+    z-index: var(--z-panel);
+    top: 76px;
+    left: var(--space-3);
+    right: auto;
+    bottom: var(--space-3);
+    width: var(--side-w);
+    height: auto;
+    border-radius: var(--radius-pane);
+    box-shadow:
+      var(--shadow-rim),
+      0 0 0 1px var(--color-hair),
+      var(--shadow-2);
+    transition: none;
+  }
+  .panel__handle {
+    display: none;
+  }
+  .panel__scroll {
+    padding: 72px 20px 32px;
+  }
+  .panel--plain .panel__scroll {
+    padding-top: 20px;
+  } /* no section nav drawn above the content */
+}

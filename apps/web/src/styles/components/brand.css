@@ -1,0 +1,143 @@
+/* brand.css: Header brand slot and the logo mark with its intro animation. Imported by the `Brand` component. Colours only via var(--…). Breakpoint 768px. */
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: var(--target);
+  padding: 0 var(--space-3) 0 6px;
+  border-radius: var(--radius-pill);
+  color: var(--color-fg);
+  text-decoration: none;
+  background: var(--color-glass-thick);
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+  box-shadow:
+    var(--shadow-rim),
+    0 0 0 1px var(--color-hair),
+    var(--shadow-1);
+}
+@media (min-width: 768px) {
+  .brand {
+    background: transparent;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+.brand__tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--color-brand-tile-a), var(--color-brand-tile-b));
+  box-shadow: var(--shadow-brand-tile);
+}
+.brand__name {
+  display: flex;
+  align-items: baseline;
+  gap: 0.28em;
+  white-space: nowrap;
+  font-size: var(--fs-15);
+  letter-spacing: -0.02em;
+}
+.brand__name-a {
+  font-weight: var(--fw-bold);
+}
+.brand__name-b {
+  font-weight: var(--fw-medium);
+  color: var(--color-muted-fg);
+}
+.brand__name-b--wide {
+  display: none;
+}
+@media (min-width: 768px) {
+  .brand__name-b--wide {
+    display: inline;
+  }
+}
+
+/* ════════════ Mark (logo) ════════════ */
+.mark {
+  display: block;
+  flex: none;
+  overflow: visible;
+}
+.mark__stop-a {
+  stop-color: var(--color-mark-a);
+}
+.mark__stop-b {
+  stop-color: var(--color-mark-b);
+}
+.mark__station {
+  stroke: var(--color-mark-station);
+}
+.mark--on-tile .mark__stop-a,
+.mark--on-tile .mark__stop-b {
+  stop-color: var(--color-brand-tile-ink);
+}
+.mark--on-tile .mark__station {
+  stroke: var(--color-brand-tile-ink);
+}
+.mark--on-tile .mark__line {
+  stroke-opacity: 0.94;
+}
+.mark--on-tile .mark__ping {
+  stroke-opacity: 0.72;
+}
+/* Intro: plays on every page load (CSS only). line draws → station lands → ping opens. */
+.mark-anim-line {
+  stroke-dasharray: 1 1.2;
+  stroke-dashoffset: 1;
+  animation: mark-draw 560ms var(--ease-in-out) 120ms forwards;
+}
+.mark-anim-station {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: mark-pop 440ms cubic-bezier(0.2, 0.9, 0.25, 1.3) 420ms both;
+}
+.mark-anim-ping {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+  animation: mark-ping-in 560ms var(--ease-out) 680ms both;
+}
+@keyframes mark-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes mark-pop {
+  from {
+    transform: scale(0);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+@keyframes mark-ping-in {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mark-anim-line {
+    stroke-dashoffset: 0;
+    animation: none;
+  }
+  .mark-anim-station,
+  .mark-anim-ping {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}

@@ -1,0 +1,86 @@
+/* palette.css: Command palette. Colours only via var(--…). Breakpoint 768px. */
+
+@import "../tokens-parts.css";
+
+/* ════════════ Command palette ════════════ */
+.palette {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-dialog);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 12vh 16px 16px;
+  background: var(--color-scrim);
+}
+.palette__box {
+  width: 100%;
+  max-width: 560px;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: var(--radius-tile);
+  background: var(--color-glass-thick);
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+  box-shadow:
+    var(--shadow-rim),
+    0 0 0 1px var(--color-hair),
+    var(--shadow-3);
+  animation: rise var(--dur-base) var(--ease-out) both;
+}
+.palette__field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 56px;
+  padding: 0 12px 0 16px;
+  border-bottom: 1px solid var(--color-hair);
+  color: var(--color-muted-fg);
+}
+.palette__input {
+  flex: 1;
+  height: 100%;
+  font-size: var(--fs-16);
+  color: var(--color-fg);
+}
+.palette__esc {
+  font-family: var(--font-mono);
+  font-size: var(--fs-11);
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  box-shadow: inset 0 0 0 1px var(--color-ctl-line);
+  color: var(--color-muted-fg);
+}
+.palette__list {
+  overflow: auto;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.palette__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--target);
+  padding: 0 12px;
+  border-radius: var(--radius-field);
+  cursor: pointer;
+  color: var(--color-fg);
+}
+.palette__item:hover,
+.palette__item[aria-selected="true"] {
+  background: var(--color-muted-2);
+}
+.palette__item .icon {
+  color: var(--color-muted-fg);
+}
+.palette__label {
+  flex: 1;
+}
+.palette__hint {
+  font-size: var(--fs-12);
+  color: var(--color-muted-fg);
+}

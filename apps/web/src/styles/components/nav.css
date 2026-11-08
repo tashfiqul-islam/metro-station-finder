@@ -1,0 +1,109 @@
+/* nav.css: Section navigation: bottom tab bar below 768px, segmented bar in the sidebar above. Colours only via var(--…). Breakpoint 768px. */
+
+@import "../tokens-parts.css";
+
+/* ════════════ Navigation: tab bar (< 768) / panel tabs (≥ 768) ════════════ */
+.tabs {
+  position: absolute;
+  z-index: var(--z-tabbar);
+  left: var(--space-3);
+  right: var(--space-3);
+  bottom: calc(var(--space-3) + env(safe-area-inset-bottom));
+  height: var(--tabbar-h);
+  padding: 6px;
+  display: flex;
+  gap: var(--space-1);
+  border-radius: var(--radius-pill);
+  background: var(--color-glass-thick);
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+  box-shadow:
+    var(--shadow-rim),
+    0 0 0 1px var(--color-hair),
+    var(--shadow-3);
+}
+.tabs__item {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-pill);
+  color: var(--color-muted-fg);
+  text-decoration: none;
+  transition:
+    flex var(--dur-slow) var(--ease-spring),
+    background-color var(--dur-base),
+    color var(--dur-base),
+    gap var(--dur-base);
+}
+.tabs__label {
+  font-size: var(--fs-13);
+  font-weight: var(--fw-strong);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  max-width: 0;
+  opacity: 0;
+  transition:
+    max-width var(--dur-slow) var(--ease-spring),
+    opacity var(--dur-fast);
+}
+.tabs__item[aria-current="page"] {
+  flex: 2.1 1 0;
+  gap: var(--space-2);
+  color: var(--color-on-accent);
+  background: var(--gradient-line);
+  box-shadow: var(--shadow-tab-active);
+}
+.tabs__item[aria-current="page"] .tabs__label {
+  max-width: 110px;
+  opacity: 1;
+}
+.tabs__item:not([aria-current="page"]):hover {
+  color: var(--color-fg);
+}
+@media (min-width: 768px) {
+  .tabs {
+    z-index: calc(var(--z-panel) + 1);
+    top: calc(76px + 12px);
+    bottom: auto;
+    left: calc(var(--space-3) + 12px);
+    right: auto;
+    width: calc(var(--side-w) - 24px);
+    height: auto;
+    padding: 4px;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    background: var(--color-muted);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: none;
+  }
+  .tabs__item {
+    min-height: 38px;
+    gap: 6px;
+    padding: 0 6px;
+    font-size: var(--fs-13);
+    font-weight: var(--fw-medium);
+  }
+  .tabs__label {
+    max-width: none;
+    opacity: 1;
+    font-weight: inherit;
+  }
+  .tabs__item[aria-current="page"] {
+    color: var(--color-fg);
+    font-weight: var(--fw-strong);
+    background: var(--color-thumb);
+    box-shadow:
+      var(--shadow-1),
+      0 0 0 1px var(--color-hair);
+  }
+  .tabs__item[aria-current="page"] .icon {
+    color: var(--color-accent);
+  }
+}
