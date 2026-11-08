@@ -1,4 +1,10 @@
-import { baselineDataset, datasetProvenance, findFare, findNearestStation } from "@metro/core";
+import {
+  assessNearestReliability,
+  baselineDataset,
+  datasetProvenance,
+  findFare,
+  findNearestStation,
+} from "@metro/core";
 import type { Coordinate, Station } from "@metro/core";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -10,7 +16,13 @@ import type {
   WalkingRoute,
 } from "../../adapters/maps/context";
 import { copy } from "./copy";
-import { formatIsoDate, formatKm, formatMinutes, formatWalkingDistance } from "./format";
+import {
+  formatAccuracy,
+  formatIsoDate,
+  formatKm,
+  formatMinutes,
+  formatWalkingDistance,
+} from "./format";
 import { locate } from "./geolocate";
 
 const stations = baselineDataset.stations;
@@ -75,11 +87,6 @@ function useWalkingRoute(
 
 function noop(): void {}
 
-/** Programmatic focus for an alert; the outline comes from `focus.css` (`[tabindex="-1"]`). */
-function focusOnMount(node: HTMLElement | null): void {
-  node?.focus();
-}
-
 interface SliceProps {
   readonly maps: MapsAdapter;
 }
@@ -88,6 +95,8 @@ function Slice({ maps }: SliceProps) {
   const { status, routes: service } = useMaps();
   const [origin, setOrigin] = useState<Coordinate | null>(null);
   const [locating, setLocating] = useState<Locating>("idle");
+  /** A device fix too rough to name a station (METRO-103): its radius in metres, or null when unknown. */
+  const [rough, setRough] = useState<{ readonly meters: number | null } | null>(null);
   const [searchFailed, setSearchFailed] = useState(false);
   const [destinationId, setDestinationId] = useState("");
   /** Counts user actions; a slower earlier action (a position fix, say) must not overwrite a later one. */
@@ -103,6 +112,12 @@ function Slice({ maps }: SliceProps) {
   const engage = (): void => {
     engagedWithSearch.current = true;
   };
+  /** Whether the geolocation alert may take focus when it mounts; false when a late result lands while the user types. */
+  const focusAlertNext = useRef(true);
+  /** Stable, so the alert takes focus only when it mounts; the outline comes from `focus.css` (`[tabindex="-1"]`). */
+  const focusAlert = useCallback((node: HTMLElement | null): void => {
+    if (node !== null && focusAlertNext.current) node.focus();
+  }, []);
   /** Stable, so focus moves when the heading mounts (a new origin re-keys it) and not on every render. */
   const focusResult = useCallback((node: HTMLElement | null): void => {
     if (node !== null && focusNext.current) node.focus();
@@ -130,7 +145,20 @@ function Slice({ maps }: SliceProps) {
     }
     setSearchFailed(false);
     setLocating("idle");
+    setRough(null);
     setOrigin(location);
+  }
+
+  /** The nearest station could be wrong: show no result, and request no route. The position is dropped. */
+  function applyRoughFix(accuracyMeters: number | undefined): void {
+    // Same rule as a reliable fix: a late fix never pulls focus out of the search box. The alert is still
+    // announced (role="alert"), it just does not take focus.
+    focusAlertNext.current = !engagedWithSearch.current;
+    setDestinationId("");
+    setSearchFailed(false);
+    setLocating("idle");
+    setOrigin(null);
+    setRough({ meters: accuracyMeters ?? null });
   }
 
   function choosePlace(location: Coordinate): void {
@@ -142,16 +170,38 @@ function Slice({ maps }: SliceProps) {
     latestAction.current += 1;
     const mine = latestAction.current;
     engagedWithSearch.current = false;
+    setRough(null);
     setLocating("locating");
     const outcome = await locate();
     if (mine !== latestAction.current) return;
-    if (outcome.kind === "position") applyLocation(outcome.coordinate, true);
-    else setLocating(outcome.kind);
+    if (outcome.kind !== "position") {
+      // Same rule as a rough fix: a late denial never pulls focus out of the search box (still announced).
+      focusAlertNext.current = !engagedWithSearch.current;
+      setRough(null);
+      setLocating(outcome.kind);
+    } else if (
+      // An invalid position is never "rough": it takes the usual empty state.
+      findNearestStation(stations, outcome.coordinate).kind !== "nearest" ||
+      assessNearestReliability(stations, outcome.coordinate, outcome.accuracyMeters).kind ===
+        "reliable"
+    ) {
+      applyLocation(outcome.coordinate, true);
+    } else {
+      applyRoughFix(outcome.accuracyMeters);
+    }
   }
 
   const searchAlert = status === "unavailable" || searchFailed ? copy.searchUnavailable : null;
   const geoAlert =
-    locating === "denied" ? copy.denied : locating === "unavailable" ? copy.unavailable : null;
+    locating === "denied"
+      ? copy.denied
+      : locating === "unavailable"
+        ? copy.unavailable
+        : rough !== null
+          ? rough.meters === null
+            ? copy.roughUnknown
+            : copy.roughKnown(formatAccuracy(rough.meters))
+          : null;
 
   return (
     <main>
@@ -187,7 +237,7 @@ function Slice({ maps }: SliceProps) {
         <p id="consent">{copy.consent}</p>
         {locating === "locating" && <output>{copy.locating}</output>}
         {geoAlert !== null && (
-          <p role="alert" tabIndex={-1} ref={focusOnMount}>
+          <p role="alert" tabIndex={-1} ref={focusAlert}>
             {geoAlert}
           </p>
         )}

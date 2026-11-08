@@ -1,7 +1,7 @@
 import { parseCoordinate } from "../geo/coordinate.ts";
 import type { Coordinate, CoordinateRejection } from "../geo/coordinate.ts";
-import { geographicDistanceKm } from "../geo/distance.ts";
 import type { GeographicDistanceKm } from "../geo/distance.ts";
+import { rankNearest } from "./rank-nearest.ts";
 import type { Station } from "./station.ts";
 
 export type NearestStationResult =
@@ -25,14 +25,9 @@ export function findNearestStation(
   const checked = parseCoordinate(origin.lat, origin.lng);
   if (!checked.ok)
     return { kind: "no-result", reason: "invalid-coordinate", detail: checked.reason };
-  let best: { station: Station; distance: GeographicDistanceKm } | undefined;
-  for (const station of stations) {
-    const distance = geographicDistanceKm(checked.coordinate, station.coordinate);
-    if (!Number.isFinite(distance)) continue;
-    if (best === undefined || distance < best.distance) best = { station, distance };
-  }
-  if (best === undefined) return { kind: "no-result", reason: "empty-dataset" };
-  return { kind: "nearest", ...best };
+  const ranked = rankNearest(stations, checked.coordinate);
+  if (ranked === undefined) return { kind: "no-result", reason: "empty-dataset" };
+  return { kind: "nearest", station: ranked.station, distance: ranked.distance };
 }
 
 /** Exact, case-sensitive match on a station name or alias; undefined when nothing matches. */
