@@ -83,6 +83,14 @@ async function main(): Promise<boolean> {
       step = "focus the place search element and type the query";
       await host.click();
       await page.keyboard.type(QUERY, { delay: 120 });
+      // Typing never throws when the inner input was not focused. A Places request proves the keys
+      // arrived; wait a bounded time for one. No retry: each attempt would bill.
+      const deadline = Date.now() + 10_000;
+      while (run.placesRequests === 0 && Date.now() < deadline) await page.waitForTimeout(250);
+      if (run.placesRequests === 0) {
+        step = "typing did not reach the widget (no Places request seen)";
+        throw new Error("no places request");
+      }
       await page.waitForTimeout(1500);
       step = "choose the first suggestion (ArrowDown, Enter)";
       await page.keyboard.press("ArrowDown");

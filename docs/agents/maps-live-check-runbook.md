@@ -32,12 +32,13 @@ Why: every automated test stubs Google, so the Google hosts in the enforced CSP,
 - `PASS`: no CSP message, version starts with `3.66`, station and route shown. Record the date, the commit and the output in the PR for METRO-88.
 - A `CSP:` line names a blocked directive and host. Add only that source to `apps/web/public/_headers` and `headers.test.ts`, with the message as evidence in the PR and an ADR-0011 note. Do not add `'unsafe-eval'`, `blob:` or inline styles without such a line.
 - Places requests per search: the widget sends its own requests per keystroke. If the count is high, the specification names the fallback (a custom combobox with debounce and a minimum length); that is a new decision.
-- `Failed step: wait for the place search element`: the key did not reach the build or Maps did not load. Check `.env` first. The script drives the `gmp-place-autocomplete` host element by click and keyboard because the widget's shadow root is probably closed; a later `Failed step` names the typing, the suggestion choice, or the station or route that never showed.
+- `Failed step: wait for the place search element`: the key did not reach the build or Maps did not load. Check `.env` first. The script drives the `gmp-place-autocomplete` host element by click and keyboard because the widget's shadow root is probably closed; a later `Failed step` names the suggestion choice, or the station or route that never showed.
+- `Failed step: typing did not reach the widget (no Places request seen)`: after the click and typing no request to `places.googleapis.com` appeared within 10 seconds. Typing is not retried (each attempt bills). Unverified: whether clicking the host focuses the inner input of Google's closed shadow root; the next run may fail with this label.
+- Check in the opened browser, with a screen reader if you can, that the search control has a name and Tab order is sane: the e2e fake cannot show Google's real accessibility tree.
+- After the run, check the Cloud console usage page: one search should be a handful of Autocomplete requests, one Place Details (Essentials) and one Routes call.
 
 ## What the first run settled (2026-11-08, METRO-96)
 
-- Confirmed: `style-src 'self'` blocked the Google fonts stylesheet and two inline styles; METRO-96 allows them (ADR-0011 amendment). Places requests 7 and Routes requests 1 came from the owner typing by hand, not from the script.
-- Inferred, Unverified: the widget uses a closed shadow root, so the old locator `gmp-place-autocomplete input` found nothing. The script now clicks the host and types.
-- Still open: whether the hashes are `<style>` elements or attributes; whether `font-src` is needed; Autocomplete requests per search by script; the accessibility tree; the SKU of the Routes call. Re-run to settle them; PASS is the proof.
-- Check in the opened browser, with a screen reader if you can, that the search control has a name and Tab order is sane: the e2e fake cannot show Google's real accessibility tree.
-- After the run, check the Cloud console usage page: one search should be a handful of Autocomplete requests, one Place Details (Essentials) and one Routes call.
+- Confirmed: `style-src 'self'` blocked the Google fonts stylesheet and two inline styles. METRO-96 allows the stylesheet and two hashes (ADR-0011 amendment); that is not a resolution until the owner run prints PASS. Places requests 7 and Routes requests 1 came from the owner typing by hand, not from the script.
+- Inferred, Unverified: the widget uses a closed shadow root, so the old locator `gmp-place-autocomplete input` found nothing. The script now clicks the host and types; whether that focuses the inner input is unproven.
+- Still open: whether the hashes are `<style>` elements or style attributes (hashes do not authorize attributes); whether `font-src` is needed; Autocomplete requests per search by script; the accessibility tree; the SKU of the Routes call.
