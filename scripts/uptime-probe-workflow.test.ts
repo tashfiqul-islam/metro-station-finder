@@ -33,6 +33,16 @@ test("METRO-44 the probe runs only on a schedule and by hand, never on pull requ
   expect(text).toContain("Inert until the default-branch switch");
 });
 
+test("METRO-44 a scheduled run with no PRODUCTION_URL skips the job; a dispatch never does", () => {
+  const { job } = probeJob();
+  // Job level, not a step-level exit 0: a skipped job is shown as Skipped, sends no notification and is not counted.
+  expect(job["if"]).toBe("${{ github.event_name != 'schedule' || vars.PRODUCTION_URL != '' }}");
+  // The skip applies to the schedule only, so a dispatch with no URL reaches the script, which fails it.
+  expect(String(job["if"])).toContain("github.event_name != 'schedule'");
+  const steps = job["steps"];
+  expect(JSON.stringify(steps)).not.toMatch(/exit 0|continue-on-error/u);
+});
+
 test("METRO-44 the job holds no secret, no environment and only read access", () => {
   const { doc, job } = probeJob();
   expect(doc["permissions"]).toEqual({});

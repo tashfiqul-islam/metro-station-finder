@@ -24,6 +24,10 @@ concurrency:
 jobs:
   probe:
     name: Probe the production site
+    # Between the default-branch switch and the first production deploy PRODUCTION_URL does not exist. A scheduled
+    # run then SKIPS the whole job (shown as Skipped, not green, no notification, not counted by the SLO) instead of
+    # failing every 30 minutes. A dispatch with no URL, and a variable that is set but invalid, still fail in the script.
+    if: ${{ github.event_name != 'schedule' || vars.PRODUCTION_URL != '' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 8
     # No secret, no environment: the target is a public URL taken from a repository variable.
@@ -43,7 +47,7 @@ jobs:
           install_args: bun
       - name: Install workspace dependencies
         run: bun install --frozen-lockfile
-      # An unset PRODUCTION_URL fails the run on purpose: a silent green run would look like a healthy site.
+      # A dispatch with no URL fails on purpose here: a silent green run would look like a healthy site.
       - name: Probe the site
         run: bun scripts/uptime-probe.ts
         timeout-minutes: 2 # two requests of at most 10 s each
