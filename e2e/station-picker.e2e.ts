@@ -32,7 +32,27 @@ async function pick(page: Page, text: string): Promise<void> {
   await combo(page).press("Enter");
 }
 
+/**
+ * Waits for the finite animations to end. The popup rises in (opacity and a few pixels of offset), so a colour or
+ * a box measured at once is measured halfway through it (Firefox did both in METRO-113's runs). The primary
+ * button's ping loops forever, so an endless animation is not awaited.
+ */
+const animationsEnded = (page: Page): Promise<unknown> =>
+  page.evaluate(() =>
+    Promise.all(
+      document
+        .getAnimations()
+        .filter((a) => a.effect?.getComputedTiming().iterations !== Infinity)
+        .map((a) => a.finished.catch(() => null)),
+    ),
+  );
+
 test.describe("station picker", () => {
+  // The fixture runs axe when each test ends, and several tests end just after the popup rose in.
+  test.afterEach(async ({ page }) => {
+    await animationsEnded(page);
+  });
+
   test("METRO-112 the combobox has its role, name, description and a closed popup at rest", async ({
     page,
   }) => {
@@ -183,6 +203,7 @@ test.describe("station picker", () => {
     expect(await snap(page)).toBe("full");
     const list = popup(page);
     await expect(list.getByRole("option")).not.toHaveCount(0);
+    await animationsEnded(page);
     const viewport = page.viewportSize();
     const header = await page.locator(".app-header").boundingBox();
     const box = await list.boundingBox();
@@ -281,7 +302,7 @@ test.describe("station picker", () => {
       await combo(page).fill("mir");
       await expect(popup(page).getByRole("option")).toHaveCount(2);
       // The popup rises in (opacity); axe must not measure colours halfway through it.
-      await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)));
+      await animationsEnded(page);
       expect((await axeBuilder(page).analyze()).violations.map((v) => v.id)).toEqual([]);
       await combo(page).fill("Sadarghat");
       await expect(page.getByText("No station matches that name.")).toBeVisible();

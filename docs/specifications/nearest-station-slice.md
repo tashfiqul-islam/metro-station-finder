@@ -203,6 +203,8 @@ Behaviour: an uncertain device fix shows no station, no fare control and request
 
 The e2e geolocation stub reports 20 m by default, so every existing journey is a reliable fix under the 100 m rule and proves what it proved before.
 
+METRO-113 changes how the states are shown, not the rule: the denied, unavailable and rough notices are a labelled group with Try again (not for denied) and "Search for a place" actions, and focus goes to the first action (the notice itself when it has none). Only a notice that appears without moving focus (a late outcome while the user types in the search box) keeps `role="alert"`, so nothing is announced twice. The locating state is one `output` status with the looping mark. A device fix shows the result without a walking route area; a searched place keeps its walking route. There is one current result for the screen: a picked station and a location result replace each other, and the map highlight, the user pin (device fix only), focus and the sheet snap follow it.
+
 Unverified: real devices and phones with GPS or Wi-Fi positioning (what accuracy they report, and how often the true point falls outside a 68 percent circle); other desktop browsers and operating systems; screen-reader announcement timing of the alert.
 
 ## The hint-text experiment and the live unknowns (METRO-102, 2026-11-08)

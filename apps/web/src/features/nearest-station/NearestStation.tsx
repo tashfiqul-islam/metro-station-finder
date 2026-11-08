@@ -206,9 +206,7 @@ function Slice({ maps, after, suppressed = false, onLocation, onSettle }: SliceP
           </span>
           <Icon icon={chevronIcon} size={20} />
         </button>
-        <p className="consent" id="consent">
-          {copy.consent}
-        </p>
+        {/* The status sits right under the button, so it is in view when the sheet settles at half. */}
         {locating && (
           <output className="status">
             <SearchingMark />
@@ -216,6 +214,9 @@ function Slice({ maps, after, suppressed = false, onLocation, onSettle }: SliceP
             <span className="status__sub">{copy.locatingSub}</span>
           </output>
         )}
+        <p className="consent" id="consent">
+          {copy.consent}
+        </p>
         <p className="ns-label" id="place-label">
           {copy.searchLabel}
         </p>
