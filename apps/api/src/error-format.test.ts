@@ -12,7 +12,7 @@ import { createApp, type ApiApp } from "./app";
 // The API has no routes, so the 500 comes from a probe route registered through the `register` seam.
 const probe = (app: ApiApp) => {
   app.get("/api/probe", () => {
-    throw new Error("boom");
+    throw new Error("secret internal detail");
   });
 };
 const makeApp = () => createApp(undefined, probe);
@@ -50,4 +50,12 @@ test("METRO-53 ADR-0013 the API 404, 405 and 500 set no Cache-Control", async ()
   ]) {
     expect(response.headers.get("cache-control")).toBeNull();
   }
+});
+
+test("METRO-93 a 500 never leaks the thrown error's text in the body", async () => {
+  const response = await makeApp().request("/api/probe");
+  expect(response.status).toBe(500);
+  const text = await response.text();
+  expect(text).not.toContain("secret internal detail");
+  expect(parseErrorEnvelope(JSON.parse(text)).error.code).toBe("internal_error");
 });

@@ -12,7 +12,7 @@ The status moved from the page importing core directly to a Worker response the 
 
 - We will add `packages/contracts` using Valibot 1.5.0. It defines the status schema and the error envelope schema, both strict (unknown fields are rejected) and read-only, derives their types, and exports a status parser and `parseErrorEnvelope`.
 - **Update (METRO-93, owner-approved contract removal):** the status schema, its parser, the core status type and the compile-time `Equal` assertion below were removed with the status route. Only the error envelope remains; the first real contract follows the same rules (strict, read-only, API validates its own output).
-- A compile-time `Equal` assertion keeps core's `ScaffoldStatus` and the schema-derived type identical; drift fails `typecheck`. Core stays dependency-free and now only re-exports its type.
+- (Removed by METRO-93 with the status type.) A compile-time `Equal` assertion keeps core's `ScaffoldStatus` and the schema-derived type identical; drift fails `typecheck`. Core stays dependency-free and now only re-exports its type.
 - The web client uses `fetch` plus a schema parse, not Hono RPC (`hc`). It rejects non-2xx responses, non-JSON responses and schema violations. The web app therefore imports no API code at all, and the layering rule is simply "apps never import each other".
 - The API validates its own output with the same schema before responding, so contract drift becomes a visible 500 instead of a silent bad body.
 - `packages/contracts/tsconfig.json` adds the `DOM` lib because Valibot's published declarations reference `Blob` and `File`. `skipLibCheck` stays off.
@@ -34,4 +34,4 @@ The status moved from the page importing core directly to a Worker response the 
 ## Confirmation
 
 - `contracts-imports-only-core-and-schema-library` and `contracts-public-entry-only` in `.dependency-cruiser.mts`, proven red by `scripts/layering.test.ts`.
-- The compile-time `Equal` assertion in `packages/contracts/src/index.ts` (`bun run typecheck`) and `packages/contracts/src/contracts.test.ts`.
+- (Removed by METRO-93.) The compile-time `Equal` assertion in `packages/contracts/src/index.ts` (`bun run typecheck`) and `packages/contracts/src/contracts.test.ts`.

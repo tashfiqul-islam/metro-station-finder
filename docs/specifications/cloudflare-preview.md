@@ -24,7 +24,7 @@ Decision 4 is tightened: no bot runs the preview. The `preview` job and the clea
 ## Acceptance (rewritten from the ticket)
 
 1. A preview job deploys only after `checks`, `build` and `security` succeed, only for same-repository pull requests; a failed required job leaves the preview job skipped (proved by workflow lint and a test of the job conditions).
-2. After deploy, the job requests the preview URL: `/` returns 200 HTML, an unknown `/api/x` returns the 404 envelope with `x-request-id` and `x-preview-sha` equal to `github.sha`, the merge commit the job built and checked (not the pull request head SHA), an unknown `/api/x` returns the 404 envelope. Any mismatch fails the job.
+2. After deploy, the job requests the preview URL: `/` returns 200 HTML, an unknown `/api/x` returns the 404 envelope with `x-request-id` and `x-preview-sha` equal to `github.sha`, the merge commit the job built and checked (not the pull request head SHA). Any mismatch fails the job.
 3. Missing `CLOUDFLARE_API_TOKEN` or `CLOUDFLARE_ACCOUNT_ID` fails the job with a message naming the missing secret and the environment.
 4. Every API response carries `x-request-id`; the log line has the fields above; a test proves query string, headers and error message are absent from logs.
 5. The job runs `wrangler rollback` on the preview Worker and re-checks the URL; a Worker with only one version skips the rollback and says so.
