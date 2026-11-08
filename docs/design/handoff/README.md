@@ -16,9 +16,9 @@ How the repository tools treat the folder (pinned by `scripts/design-handoff.tes
 
 ## Source
 
-- Per the owner (Unverified: nothing in the files records it): the owner's Claude design canvas, artifact https://claude.ai/artifact/1i2mTJdicAzJU82y8YQMLR, and the prototype export "Metro Station Finder Redesign – Metro Station Finder.html".
+- Per the owner (owner-stated; the files themselves do not record it): the owner's Claude design canvas, artifact https://claude.ai/artifact/1i2mTJdicAzJU82y8YQMLR, and the prototype export "Metro Station Finder Redesign – Metro Station Finder.html".
 - The handoff package delivered 2026-11-08 (the folder this snapshot copies).
-- The exact canvas version is not recorded in the files. Unverified: the owner can add it.
+- Canvas version, per the owner on 2026-11-09 (owner-stated, not checkable from the files): Version 12, version id 1794155130-5195, the publish labelled "Handoff, brand assets, animated logo". The only later change on the owner's side was shrinking the PNGs in `monorepo/`, which is excluded here, so this snapshot matches that version.
 
 ## Contents
 
