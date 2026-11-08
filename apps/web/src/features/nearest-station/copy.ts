@@ -3,7 +3,11 @@ export const copy = {
   heading: "Nearest Metro station",
   intro: "Find the nearest Dhaka MRT Line 6 station, the walk to it and the fare.",
   whereHeading: "Where are you?",
-  searchLabel: "Search for a place in Dhaka",
+  // The owner probe measured Google's input name as "Search For a Place" and no documented property sets it
+  // (METRO-101). WCAG 2.5.3 needs that name to contain this visible text, so the label is exactly those words.
+  // The hint is about bias only: results are also restricted to Bangladesh by includedRegionCodes ["bd"].
+  searchLabel: "Search for a place",
+  searchHint: "Suggestions favor places in Dhaka.",
   locateButton: "Use my location",
   consent:
     "Your position and the place you choose are not sent to our server. What you type in the search goes to Google to suggest places. Your position goes to Google only to work out the walking route.",

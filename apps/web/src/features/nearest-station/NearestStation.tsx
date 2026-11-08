@@ -160,11 +160,13 @@ function Slice({ maps }: SliceProps) {
       <section aria-labelledby="where-heading">
         <h2 id="where-heading">{copy.whereHeading}</h2>
         <p id="place-label">{copy.searchLabel}</p>
+        <p id="place-hint">{copy.searchHint}</p>
         {status === "loading" && <output>{copy.loadingSearch}</output>}
         <div role="presentation" onFocus={engage} onKeyDown={engage} onInput={engage}>
           {status !== "unavailable" && (
             <maps.PlaceSearch
               labelId="place-label"
+              description={copy.searchHint}
               bias={SEARCH_BIAS}
               onPlace={choosePlace}
               onFailure={() => setSearchFailed(true)}

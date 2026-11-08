@@ -7,7 +7,9 @@ import { GOOGLE_HOSTS, expect } from "./fixtures";
  * A fake of the Maps JavaScript API for the browser journeys (METRO-88). It is served by `page.route` at the
  * real `https://maps.googleapis.com/maps/api/js` URL, so the browser still checks that URL against the
  * enforced `script-src`. Every other Google host is aborted and recorded: a test run never reaches Google.
- * It does not reproduce Google's shadow DOM or ARIA, so the real widget needs the manual live check.
+ * It does not reproduce Google's shadow DOM or ARIA, so the real widget needs the manual live check. It
+ * copies the one name Google was measured to expose (owner probe 2026-11-08, METRO-101) and the documented
+ * `description` option, so the wiring we control is asserted; the real tree is verified only by smoke:live.
  * Synthetic coordinates only; the key the app sends is the fake `fake-key-for-tests`.
  */
 
@@ -26,6 +28,13 @@ export interface StubCalls {
   readonly scriptUrls: string[];
 }
 
+/**
+ * The accessible name the real widget was measured to expose: owner probe 2026-11-08 (METRO-101), relayed and
+ * not re-run by an agent. It is not a Google guarantee. The stub and the e2e tests share this one constant;
+ * the unit test in `NearestStation.test.tsx` keeps its own copy (vitest does not import from `e2e/`).
+ */
+export const MEASURED_GOOGLE_NAME = "Search For a Place";
+
 /** Typing "motijheel" or "uttara" and pressing Enter selects a point near that station. */
 const STUB_SCRIPT = `
 (() => {
@@ -40,7 +49,15 @@ const STUB_SCRIPT = `
       if (this.querySelector("input")) return;
       const input = document.createElement("input");
       input.type = "text";
-      input.setAttribute("aria-label", "Search for a place in Dhaka");
+      input.setAttribute("aria-label", ${JSON.stringify(MEASURED_GOOGLE_NAME)});
+      if (this.options.description) {
+        const hint = document.createElement("span");
+        hint.id = "fake-autocomplete-description";
+        hint.hidden = true;
+        hint.textContent = this.options.description;
+        input.setAttribute("aria-describedby", hint.id);
+        this.append(hint);
+      }
       input.addEventListener("keydown", (event) => {
         if (event.key !== "Enter") return;
         const text = input.value.toLowerCase();

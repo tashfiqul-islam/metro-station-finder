@@ -99,6 +99,10 @@ test("METRO-88 idle: search, the location button and the consent line, and no re
   render(<NearestStation maps={fakeMaps} />);
   expect(screen.getByRole("heading", { level: 1, name: copy.heading })).toBeTruthy();
   expect(screen.getByRole("group", { name: copy.searchLabel })).toBeTruthy();
+  // METRO-101: the hint is visible and is the description handed to the widget.
+  expect(screen.getByText(copy.searchHint)).toBeTruthy();
+  expect(world.searchProps?.description).toBe(copy.searchHint);
+  expect(world.searchProps?.labelId).toBe("place-label");
   const button = screen.getByRole("button", { name: copy.locateButton });
   expect(button.getAttribute("aria-describedby")).toBe("consent");
   const consent = document.getElementById("consent")?.textContent ?? "";
@@ -106,6 +110,19 @@ test("METRO-88 idle: search, the location button and the consent line, and no re
   expect(consent).toContain("goes to Google");
   expect(screen.queryByRole("alert")).toBeNull();
   expect(screen.queryByRole("heading", { name: copy.resultHeading })).toBeNull();
+});
+
+/**
+ * The name the real widget was measured to expose: owner probe 2026-11-08 (METRO-101), relayed and not re-run
+ * by an agent; not a Google guarantee. e2e/maps-stub.ts holds the e2e copy (vitest does not import from e2e/).
+ */
+const MEASURED_GOOGLE_NAME = "Search For a Place";
+
+test("METRO-101 copy guard: our visible label stays contained in the name Google was measured to expose", () => {
+  // This checks our copy only, not the real widget. WCAG 2.5.3 compares case-insensitively; the Dhaka wording
+  // lives in the hint, not the label.
+  expect(MEASURED_GOOGLE_NAME.toLowerCase()).toContain(copy.searchLabel.toLowerCase());
+  expect(copy.searchLabel).not.toContain("Dhaka");
 });
 
 test("METRO-88 the search gets a Dhaka bias derived from the dataset, not a hard-coded point", () => {

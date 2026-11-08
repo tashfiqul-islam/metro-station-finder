@@ -3,6 +3,7 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 import { expectTabReachesEveryControl } from "./keyboard";
 import {
+  MEASURED_GOOGLE_NAME,
   expectNoCoordinateInApi,
   installMapsStub,
   stubGeolocation,
@@ -21,7 +22,7 @@ async function openSlice(page: Page, options: StubOptions = {}) {
 }
 
 async function searchFor(page: Page, text: string) {
-  const search = page.getByRole("textbox", { name: "Search for a place in Dhaka" });
+  const search = page.getByRole("textbox", { name: MEASURED_GOOGLE_NAME, exact: true });
   await search.fill(text);
   await search.press("Enter");
 }
@@ -31,7 +32,9 @@ test.describe("nearest station from a searched place (METRO-88)", () => {
     page,
   }) => {
     const stub = await openSlice(page);
-    await expect(page.getByRole("group", { name: "Search for a place in Dhaka" })).toBeVisible();
+    await expect(
+      page.getByRole("group", { name: "Search for a place", exact: true }),
+    ).toBeVisible();
     await searchFor(page, "motijheel");
 
     await expect(page.getByText("Motijheel", { exact: true }).first()).toBeVisible();
@@ -173,7 +176,9 @@ test.describe("nearest station from a searched place (METRO-88)", () => {
     page,
   }) => {
     await openSlice(page);
-    await expect(page.getByRole("textbox", { name: "Search for a place in Dhaka" })).toBeVisible();
+    await expect(
+      page.getByRole("textbox", { name: MEASURED_GOOGLE_NAME, exact: true }),
+    ).toBeVisible();
     // Search input and the location button; the destination select appears with the first result.
     await expectTabReachesEveryControl(page, { expected: 2 });
     await searchFor(page, "motijheel");
@@ -181,6 +186,25 @@ test.describe("nearest station from a searched place (METRO-88)", () => {
     // Clicking the heading moves the sequential focus starting point back above the controls.
     await page.getByRole("heading", { level: 1 }).click();
     await expectTabReachesEveryControl(page, { expected: 3 });
+  });
+
+  test("METRO-101 stub wiring: the hint, the description option and aria-describedby we control", async ({
+    page,
+  }) => {
+    await openSlice(page);
+    const search = page.getByRole("textbox", { name: MEASURED_GOOGLE_NAME, exact: true });
+    // The stub sets the measured name itself, so this proves our visible text is contained in that name,
+    // not that the real widget exposes it (only the owner-run smoke:live does).
+    const visible = (await page.locator("#place-label").innerText()).toLowerCase();
+    const name = ((await search.getAttribute("aria-label")) ?? "").toLowerCase();
+    expect(name).toContain(visible);
+    // The visible hint is handed to the widget as its description (stub of the documented option).
+    await expect(page.locator("#place-hint")).toHaveText("Suggestions favor places in Dhaka.");
+    await expect(search).toHaveAccessibleDescription("Suggestions favor places in Dhaka.");
+    // The group around the widget carries the visible label; keyboard order is unchanged (see A6).
+    await expect(
+      page.getByRole("group", { name: "Search for a place", exact: true }),
+    ).toBeVisible();
   });
 
   test("METRO-88 idle page: accessibility tree of main", async ({ page }) => {
@@ -191,9 +215,10 @@ test.describe("nearest station from a searched place (METRO-88)", () => {
         - paragraph: Find the nearest Dhaka MRT Line 6 station, the walk to it and the fare.
         - region "Where are you?":
           - heading "Where are you?" [level=2]
-          - paragraph: Search for a place in Dhaka
-          - group "Search for a place in Dhaka":
-            - textbox "Search for a place in Dhaka"
+          - paragraph: Search for a place
+          - paragraph: Suggestions favor places in Dhaka.
+          - group "Search for a place":
+            - textbox "Search For a Place"
           - paragraph:
             - button "Use my location"
           - paragraph: /Your position and the place you choose are not sent to our server.*/
