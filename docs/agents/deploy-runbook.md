@@ -46,7 +46,7 @@ The config sets top-level `workers_dev: false` and leaves `preview_urls` unset (
 
 ## 4. Connect the custom domain (separate authorization)
 
-The domain cutover is its own owner-authorized step ([cutover runbook](cutover-runbook.md) step 4). Connect it to the Worker `metro-scaffold`, then confirm `https://<domain>/api/scaffold/status` answers.
+The domain cutover is its own owner-authorized step ([cutover runbook](cutover-runbook.md) step 4). Connect it to the Worker `metro-scaffold`, then confirm `https://<domain>/` serves the app and an unknown `/api/x` answers the 404 envelope.
 
 ## 5. Check the settings, then switch the workflow on (last)
 

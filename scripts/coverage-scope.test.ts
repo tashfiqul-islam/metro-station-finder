@@ -21,13 +21,13 @@ const lcov = (...files: string[]) => files.map((file) => `SF:${file}\nend_of_rec
 test("FND-T1 product source means non-test TypeScript under apps/*/src and packages/*/src", () => {
   for (const file of [
     "apps/api/src/app.ts",
-    "apps/web/src/App.tsx",
-    "packages/core/src/status/scaffold-status.ts",
+    "apps/web/src/AppRoutes.tsx",
+    "packages/core/src/geo/distance.ts",
   ])
     expect(isProductSource(file)).toBe(true);
   for (const file of [
     "apps/api/src/app.test.ts",
-    "apps/web/src/App.test.tsx",
+    "apps/web/src/AppRoutes.test.tsx",
     "apps/api/worker-configuration.d.ts",
     "scripts/links.ts",
     "e2e/fixtures.ts",
@@ -58,10 +58,10 @@ test("FND-T1 documented exemptions are the only files allowed to stay unmeasured
   expect(
     unmeasuredProductSources(lcov(), ["packages/core/src/fares/fare-matrix.ts"], exempt),
   ).toEqual([]);
-  // METRO-87: the status module is executable now, so it is no longer exempt and is reported when unmeasured.
-  expect(
-    unmeasuredProductSources(lcov(), ["packages/core/src/status/scaffold-status.ts"], exempt),
-  ).toEqual(["packages/core/src/status/scaffold-status.ts"]);
+  // An executable core module is not exempt, so it is reported when unmeasured.
+  expect(unmeasuredProductSources(lcov(), ["packages/core/src/geo/distance.ts"], exempt)).toEqual([
+    "packages/core/src/geo/distance.ts",
+  ]);
 });
 
 test("FND-T1 runCoverageScope fails visibly for a missing lcov file and an unmeasured file", async () => {

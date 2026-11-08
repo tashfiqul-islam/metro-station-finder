@@ -69,7 +69,7 @@ async function main(): Promise<boolean> {
     });
     let step = "open the page";
     try {
-      await page.goto(`${origin}/nearest`);
+      await page.goto(`${origin}/`);
       step =
         "wait for the place search element (is VITE_GOOGLE_MAPS_API_KEY set, and did Maps load?)";
       // Google's PlaceAutocompleteElement keeps its input in a shadow root that is probably closed

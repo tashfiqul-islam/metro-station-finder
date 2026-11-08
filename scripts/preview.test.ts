@@ -19,7 +19,6 @@ const base = "https://metro-scaffold-pr-7.example.workers.dev";
 
 interface Routes {
   page?: Response;
-  status?: Response;
   missing?: Response;
 }
 const headersOf = (extra: Record<string, string> = {}): Record<string, string> => ({
@@ -33,9 +32,6 @@ const urlOf = (input: string | URL | Request): string =>
 const down = () => Promise.reject(new TypeError("ENOTFOUND"));
 const good = (): Required<Routes> => ({
   page: new Response("<html></html>", { headers: { "content-type": "text/html" } }),
-  status: new Response(JSON.stringify({ kind: "synthetic-scaffold", ready: true }), {
-    headers: headersOf(),
-  }),
   missing: new Response(JSON.stringify({ error: { code: "not_found", message: "x" } }), {
     status: 404,
     headers: headersOf(),
@@ -45,11 +41,7 @@ const serve = (routes: Routes) => {
   const table = { ...good(), ...routes };
   return (input: string) =>
     Promise.resolve(
-      input.endsWith("/api/scaffold/status")
-        ? table.status.clone()
-        : input.endsWith("/api/does-not-exist")
-          ? table.missing.clone()
-          : table.page.clone(),
+      input.endsWith("/api/does-not-exist") ? table.missing.clone() : table.page.clone(),
     );
 };
 const fast = { attempts: 1, delayMs: 0 };
@@ -88,18 +80,10 @@ test("METRO-13 smoke passes for a healthy preview serving the checked commit", a
     return serve({})(input);
   };
   await smokePreview(base, SHA, { ...fast, fetch: recording });
-  expect(requested).toEqual([
-    `${base}/`,
-    `${base}/api/scaffold/status`,
-    `${base}/api/does-not-exist`,
-  ]);
+  expect(requested).toEqual([`${base}/`, `${base}/api/does-not-exist`]);
   requested.length = 0;
   await smokePreview(`${base}/`, undefined, { ...fast, fetch: recording });
-  expect(requested).toEqual([
-    `${base}/`,
-    `${base}/api/scaffold/status`,
-    `${base}/api/does-not-exist`,
-  ]);
+  expect(requested).toEqual([`${base}/`, `${base}/api/does-not-exist`]);
 });
 
 test("METRO-13 smoke fails visibly for each broken observation", async () => {
@@ -110,20 +94,11 @@ test("METRO-13 smoke fails visibly for each broken observation", async () => {
       { page: new Response("{}", { headers: { "content-type": "application/json" } }) },
       "did not return HTML",
     ],
-    ["status 503", { status: new Response("", { status: 503 }) }, "returned 503"],
-    [
-      "contract drift",
-      {
-        status: new Response(JSON.stringify({ kind: "synthetic-scaffold", ready: false }), {
-          headers: headersOf(),
-        }),
-      },
-      "",
-    ],
     [
       "no request id",
       {
-        status: new Response(JSON.stringify({ kind: "synthetic-scaffold", ready: true }), {
+        missing: new Response(JSON.stringify({ error: { code: "not_found", message: "x" } }), {
+          status: 404,
           headers: { "content-type": "application/json", "x-preview-sha": SHA },
         }),
       },
@@ -132,7 +107,8 @@ test("METRO-13 smoke fails visibly for each broken observation", async () => {
     [
       "wrong sha",
       {
-        status: new Response(JSON.stringify({ kind: "synthetic-scaffold", ready: true }), {
+        missing: new Response(JSON.stringify({ error: { code: "not_found", message: "x" } }), {
+          status: 404,
           headers: headersOf({ "x-preview-sha": "f".repeat(40) }),
         }),
       },

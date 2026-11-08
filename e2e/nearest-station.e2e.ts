@@ -10,10 +10,10 @@ import {
 } from "./maps-stub";
 import type { StubOptions } from "./maps-stub";
 
-/** The slice runs at /nearest against the real build, the real `_headers` and a fake Maps API. */
+/** The slice runs at / against the real build, the real `_headers` and a fake Maps API. */
 async function openSlice(page: Page, options: StubOptions = {}) {
   const stub = await installMapsStub(page, options);
-  await page.goto("/nearest");
+  await page.goto("/");
   await expect(
     page.getByRole("heading", { level: 1, name: "Nearest Metro station" }),
   ).toBeVisible();

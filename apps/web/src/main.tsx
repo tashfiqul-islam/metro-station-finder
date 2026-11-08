@@ -11,7 +11,7 @@ if (!root) throw new Error("Missing application root");
 createRoot(root, rootErrorOptions).render(
   <StrictMode>
     <ErrorBoundary>
-      <AppRoutes pathname={window.location.pathname} />
+      <AppRoutes />
     </ErrorBoundary>
   </StrictMode>,
 );

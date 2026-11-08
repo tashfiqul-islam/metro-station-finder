@@ -5,7 +5,7 @@ import ts from "@typescript/typescript6";
 
 import { isRecord } from "./guards.ts";
 
-/** Narrow scaffold guard. The full dependency graph gate belongs to METRO-12. */
+/** Narrow core guard. The full dependency graph gate belongs to METRO-12. */
 export async function checkCoreBoundary(root: string): Promise<string[]> {
   const errors: string[] = [];
   const manifest: unknown = JSON.parse(await readFile(join(root, "package.json"), "utf8"));

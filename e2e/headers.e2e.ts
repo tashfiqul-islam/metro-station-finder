@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 
 import { consoleProblems, expect, isWebKitStylesheetNotice, test } from "./fixtures";
+import { installMapsStub } from "./maps-stub";
 
 const shared = {
   "x-content-type-options": "nosniff",
@@ -30,7 +31,7 @@ async function injectBlockedImage(page: Page): Promise<void> {
 }
 
 test.describe("security headers and caching (METRO-31)", () => {
-  for (const path of ["/", "/deep/link", "/api/scaffold/status"]) {
+  for (const path of ["/", "/deep/link", "/api/unknown"]) {
     test(`METRO-31 ${path} carries the security headers`, async ({ request }) => {
       const headers = (await request.get(path)).headers();
       expect(headers).toMatchObject(shared);
@@ -99,8 +100,11 @@ test.describe("security headers and caching (METRO-31)", () => {
     }) => {
       test.skip(browserName !== "chromium", "console wording is verified on Chromium only");
       const violations = collect(page);
+      await installMapsStub(page);
       await page.goto("/");
-      await expect(page.getByLabel("Scaffold status")).toBeVisible();
+      await expect(
+        page.getByRole("heading", { level: 1, name: "Nearest Metro station" }),
+      ).toBeVisible();
       await injectBlockedImage(page);
       await expect.poll(() => violations.length).toBeGreaterThan(0);
       expect(violations[0]?.level).toBe("error");
@@ -110,8 +114,11 @@ test.describe("security headers and caching (METRO-31)", () => {
 
     test("METRO-31 the app itself produces no CSP violation", async ({ page }) => {
       const violations = collect(page);
+      await installMapsStub(page);
       await page.goto("/");
-      await expect(page.getByLabel("Scaffold status")).toBeVisible();
+      await expect(
+        page.getByRole("heading", { level: 1, name: "Nearest Metro station" }),
+      ).toBeVisible();
       expect(violations).toEqual([]);
       const styling = await page.evaluate(() => ({
         stylesheets: document.styleSheets.length,
@@ -134,8 +141,11 @@ test.describe("security headers and caching (METRO-31)", () => {
     page.on("console", (message) => {
       if (message.type() === "error") errors.push(message.text());
     });
+    await installMapsStub(page);
     await page.goto("/");
-    await expect(page.getByLabel("Scaffold status")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Nearest Metro station" }),
+    ).toBeVisible();
     await page.evaluate(() => {
       const select = document.createElement("select");
       select.setAttribute("aria-label", "probe");
@@ -170,15 +180,17 @@ test.describe("security headers and caching (METRO-31)", () => {
     expect(consoleProblems([csp, notice], null, "webkit")).toEqual([`console.error: ${csp.text}`]);
   });
 
-  // Fail closed: a test that forgets the Maps stub must not reach Google. The fixture aborts the request and
-  // reports it, so this test fails by design (`test.fail`).
+  // Fail closed: a test that forgets the Maps stub must not reach Google. The slice loads the Maps script at
+  // once, so without a stub the fixture aborts that request and reports it, and this test fails by design
+  // (`test.fail`).
   test("METRO-88 the fixture fails a test that reaches a Google host without a stub", async ({
     page,
   }) => {
     test.fail();
     await page.goto("/");
-    await expect(page.getByLabel("Scaffold status")).toBeVisible();
-    await page.evaluate(() => fetch("https://maps.googleapis.com/maps/api/js").catch(() => null));
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Nearest Metro station" }),
+    ).toBeVisible();
   });
 
   // Proves the console-error fixture itself: with no `allowedConsoleError`, the same blocked image must
@@ -192,8 +204,11 @@ test.describe("security headers and caching (METRO-31)", () => {
     const logged = page.waitForEvent("console", {
       predicate: (message) => BLOCKED_IMAGE.test(message.text()),
     });
+    await installMapsStub(page);
     await page.goto("/");
-    await expect(page.getByLabel("Scaffold status")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Nearest Metro station" }),
+    ).toBeVisible();
     await injectBlockedImage(page);
     await logged;
   });
