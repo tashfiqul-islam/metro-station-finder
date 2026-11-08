@@ -2,17 +2,26 @@ import { spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 import { chromium } from "@playwright/test";
-import type { Browser, ConsoleMessage, Request } from "@playwright/test";
+import type { Browser, CDPSession, ConsoleMessage, Page, Request } from "@playwright/test";
 
-import { ciRefusal, liveReport } from "./smoke-live-report.ts";
-import type { LiveRun } from "./smoke-live-report.ts";
+import {
+  MAX_TAB_STOPS,
+  addTabStop,
+  ciRefusal,
+  focusedEntry,
+  liveReport,
+  snapshotEntries,
+} from "./smoke-live-report.ts";
+import type { AxEntry, LiveRun } from "./smoke-live-report.ts";
 
 /**
  * Owner-run live check (METRO-88), never run by CI or an agent: `bun run smoke:live`. It builds the web app
  * (Vite reads VITE_GOOGLE_MAPS_API_KEY from the environment or the root .env; this script never reads or
  * prints it), serves the build with the real `_headers`, opens Chromium, makes ONE autocomplete selection
  * and ONE route request against real Google, and prints only CSP console messages, request counts, the
- * Maps version and PASS or FAIL (see smoke-live-report.ts). Chromium is headed unless SMOKE_LIVE_HEADLESS=1.
+ * Maps version, the accessibility roles and names of the search widget and PASS or FAIL (see
+ * smoke-live-report.ts). The accessibility reads (METRO-100) go over a DevTools session to the page's own
+ * accessibility tree: local, no network request, no extra search. Only roles and names are kept. Chromium is headed unless SMOKE_LIVE_HEADLESS=1.
  */
 const web = fileURLToPath(new URL("../apps/web", import.meta.url));
 const vite = fileURLToPath(new URL("../node_modules/vite/bin/vite.js", import.meta.url));
@@ -30,6 +39,28 @@ async function waitForServer(): Promise<void> {
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
   throw new Error("the preview server did not start");
+}
+
+/** The page's accessibility nodes, or null when the DevTools call fails (the report then says so). */
+async function readTree(cdp: CDPSession): Promise<unknown> {
+  try {
+    return (await cdp.send("Accessibility.getFullAXTree")).nodes;
+  } catch {
+    return null;
+  }
+}
+
+/** Presses Tab from the top of the page and records the focused role and name, up to the cap. */
+async function walkTab(page: Page, cdp: CDPSession): Promise<AxEntry[]> {
+  let order: readonly AxEntry[] = [];
+  for (let press = 0; press < MAX_TAB_STOPS; press += 1) {
+    await page.keyboard.press("Tab");
+    await page.waitForTimeout(100);
+    const step = addTabStop(order, focusedEntry(await readTree(cdp)));
+    order = step.order;
+    if (step.done) break;
+  }
+  return [...order];
 }
 
 async function main(): Promise<boolean> {
@@ -50,6 +81,7 @@ async function main(): Promise<boolean> {
     stationShown: false,
     routeShown: false,
     failedStep: null,
+    accessibility: { afterAttach: null, afterSuggestions: null, tabOrder: [] },
   };
   // Everything after the server starts is inside try/finally, so a launch failure cannot orphan it.
   let browser: Browser | null = null;
@@ -80,6 +112,16 @@ async function main(): Promise<boolean> {
       // Read right away, so the version prints even when a later step fails.
       const version: unknown = await page.evaluate("window.google?.maps?.version ?? null");
       run.version = typeof version === "string" ? version : null;
+      // Accessibility, first read: the closed shadow root hides the input from locators, but the browser's
+      // own tree should include it (Unverified; the report says when it does not). Tab does not search.
+      step = "read the accessibility tree";
+      const cdp = await page.context().newCDPSession(page);
+      const attached = await readTree(cdp);
+      run.accessibility = {
+        ...run.accessibility,
+        afterAttach: attached === null ? null : snapshotEntries(attached),
+        tabOrder: await walkTab(page, cdp),
+      };
       step = "focus the place search element and type the query";
       await host.click();
       await page.keyboard.type(QUERY, { delay: 120 });
@@ -92,6 +134,12 @@ async function main(): Promise<boolean> {
         throw new Error("no places request");
       }
       await page.waitForTimeout(1500);
+      // Second read, with the suggestions showing.
+      const suggested = await readTree(cdp);
+      run.accessibility = {
+        ...run.accessibility,
+        afterSuggestions: suggested === null ? null : snapshotEntries(suggested),
+      };
       step = "choose the first suggestion (ArrowDown, Enter)";
       await page.keyboard.press("ArrowDown");
       await page.keyboard.press("Enter");

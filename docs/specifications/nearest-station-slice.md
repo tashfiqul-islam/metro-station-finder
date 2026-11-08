@@ -143,7 +143,9 @@ Independent review (code). Owner: the live check before merge.
 
 ## Unverified items
 
-Routes SKU of the JS call; autocomplete requests per keystroke; whether a Maps-library load without a map is free; the CSP extras above; real shadow-DOM labelling of `PlaceAutocompleteElement` for screen readers (the e2e fake cannot show it); `google.maps.version` at runtime; production edge behaviour of `_headers`.
+Routes SKU of the JS call (read it from the Billing report, [runbook](../agents/maps-live-check-runbook.md)); whether a Maps-library load without a map is free; real shadow-DOM labelling of `PlaceAutocompleteElement` for screen readers (the e2e fake cannot show it): since METRO-100 `smoke:live` prints the search control's role and accessible name, the suggestion listbox and the Tab order from the browser accessibility tree, but whether that tree includes the closed shadow content is itself Unverified until an owner run prints it, and a screen-reader pass stays manual; production edge behaviour of `_headers`.
+
+Settled by the owner run of 2026-11-08 (e5a2e04): autocomplete requests (10 for one search of "Motijheel"), the CSP extras above (0 CSP messages after METRO-96), and `google.maps.version` at runtime (3.66.13d).
 
 ## Deviations from earlier docs
 

@@ -105,3 +105,14 @@ Default stays Google. We use an alternative (for example MapLibre with another p
 ## Confirmation
 
 - `scripts/maps-design.test.ts` checks this ADR. No map code exists yet; the first map slice must add its own checks.
+
+## Amendment 2026-11-08 (METRO-100): quota caps as set
+
+This adds to the cap paragraph above and the 330 and 160 figures; it does not change the decision to cap each API per day. The caps now set in the Cloud console, by row name, with the monthly arithmetic (31-day month) against Google's free caps (Web-verified on the undated pricing page):
+
+- Maps JavaScript, "Map loads per day": 300. 300 x 31 = 9,300, under 10,000 Dynamic Maps.
+- Places API (New), "AutocompletePlacesRequest per day": 100. 100 x 31 = 3,100, under 10,000 Autocomplete Requests.
+- Places API (New), "GetPlaceRequest per day": 100. 3,100, under 10,000 Place Details Essentials.
+- Routes, the "Compute Routes" per-day row: 100. 3,100, under 10,000 Compute Routes Essentials and under 5,000 Pro.
+
+These replace the 330 and 160 numbers (330 x 31 = 10,230 exceeded 10,000) and the 300, 300, 300 and 150 proposed in the paragraph above. A search sends about ten Autocomplete requests, so 100 per day allows about ten searches a day. The Routes SKU actually billed stays Unverified until the Billing report shows it ([runbook](../agents/maps-live-check-runbook.md)). The `font-src` entry `https://fonts.gstatic.com` stays, decided in METRO-100.
