@@ -155,6 +155,16 @@ export function trackApiRequests(page: Page): { url: string; headers: string; bo
 }
 
 /**
+ * A web-vitals report holds one legitimate number, `value` (for example an LCP of 1023.8712), which could
+ * contain a coordinate fragment by chance. Only that number is masked, and only in /api/vitals bodies; the
+ * URL, the headers and every other byte of every request are still scanned (the vitals e2e checks the keys).
+ */
+const maskVitalValue = (r: { url: string; body: string }) =>
+  new URL(r.url).pathname === "/api/vitals"
+    ? r.body.replace(/("value":)-?[\d.eE+-]+/u, "$1MASKED")
+    : r.body;
+
+/**
  * Asserts no recorded /api request carries a position. Not vacuous: it first makes one real request to
  * /api, which the listener must record, and then checks that request and any earlier one.
  */
@@ -162,12 +172,16 @@ export async function expectNoCoordinateInApi(
   page: Page,
   requests: readonly { url: string; headers: string; body: string }[],
 ): Promise<void> {
-  const before = requests.length;
-  // The API has no routes, so answer this probe in the browser: the request event still fires.
+  // The page also sends its own web-vitals reports to /api/vitals at any moment (METRO-44); they stay in
+  // `requests`, so the coordinate check below covers them, but only the probe is counted here.
+  const probes = () =>
+    requests.filter((request) => new URL(request.url).pathname === "/api/probe").length;
+  const before = probes();
+  // /api/probe is not a real route, so answer this probe in the browser: the request event still fires.
   await page.route("**/api/probe", (route) => route.fulfill({ status: 200, body: "{}" }));
   await page.evaluate(() => fetch("/api/probe").then((response) => response.status));
-  expect(requests.length, "the /api listener records requests").toBe(before + 1);
-  const everything = requests.map((r) => `${r.url} ${r.headers} ${r.body}`).join("\n");
+  expect(probes(), "the /api listener records requests").toBe(before + 1);
+  const everything = requests.map((r) => `${r.url} ${r.headers} ${maskVitalValue(r)}`).join("\n");
   for (const fragment of [
     "23.87",
     "90.367",

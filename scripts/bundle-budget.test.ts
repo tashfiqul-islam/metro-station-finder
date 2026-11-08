@@ -27,11 +27,17 @@ async function fixture(run: (root: string) => Promise<void>) {
   }
 }
 
-test("the total thresholds are unchanged and the entry budget is tighter", () => {
+test("the total thresholds are unchanged and the entry budget equals them while the build is one chunk", () => {
   expect(TOTAL_BUDGET).toEqual({ raw: 250_000, gzip: 80_000 });
-  expect(ENTRY_BUDGET.raw).toBeLessThan(TOTAL_BUDGET.raw);
-  expect(ENTRY_BUDGET.gzip).toBeLessThan(TOTAL_BUDGET.gzip);
+  expect(ENTRY_BUDGET).toEqual({ raw: 250_000, gzip: 80_000 });
 });
+
+// The entry is part of the total, so an entry over a budget as large as the totals is over the totals too:
+// both messages appear, the totals first. The entry check still fails on its own line.
+const both = [
+  `Bundle budget exceeded: ${TOTAL_BUDGET.raw} raw / ${TOTAL_BUDGET.gzip} gzip bytes`,
+  `Entry chunk budget exceeded: ${ENTRY_BUDGET.raw} raw / ${ENTRY_BUDGET.gzip} gzip bytes`,
+];
 
 test("entryScript returns the first module script without the leading slash", () => {
   expect(entryScript(page("/assets/index-x.js"))).toBe("assets/index-x.js");
@@ -78,22 +84,18 @@ test("evaluateBundle prints every file, the totals and the entry line, and passe
   ]);
 });
 
-test("an entry chunk over the raw budget fails alone", () => {
+test("an entry chunk over the raw budget fails", () => {
   const raw = ENTRY_BUDGET.raw + 1;
   const report = evaluateBundle([asset("assets/index.js", raw, 100)], page("/assets/index.js"));
-  expect(report.problems).toEqual([
-    `Entry chunk budget exceeded: ${ENTRY_BUDGET.raw} raw / ${ENTRY_BUDGET.gzip} gzip bytes`,
-  ]);
+  expect(report.problems).toEqual(both);
 });
 
-test("an entry chunk over the gzip budget fails alone", () => {
+test("an entry chunk over the gzip budget fails", () => {
   const report = evaluateBundle(
     [asset("assets/index.js", 1000, ENTRY_BUDGET.gzip + 1)],
     page("/assets/index.js"),
   );
-  expect(report.problems).toEqual([
-    `Entry chunk budget exceeded: ${ENTRY_BUDGET.raw} raw / ${ENTRY_BUDGET.gzip} gzip bytes`,
-  ]);
+  expect(report.problems).toEqual(both);
 });
 
 test("an entry chunk at the budget passes", () =>
@@ -141,7 +143,7 @@ test("bundleMain exits 0 within budget and 1 over the entry budget (output is pa
     expect(lines.at(-1)).toMatch(
       /^Entry chunk assets\/index\.js: \d+ bytes raw; \d+ bytes gzip \(budget \d+ \/ \d+\)$/u,
     );
-    // Highly compressible, so only the entry raw budget is exceeded: the totals stay within their limits.
+    // Highly compressible, so only raw is exceeded; the entry is the whole total, so both lines appear.
     await writeFile(join(root, "assets", "index.js"), "x".repeat(ENTRY_BUDGET.raw + 1));
     const error = console.error;
     const errors: string[] = [];
@@ -153,9 +155,7 @@ test("bundleMain exits 0 within budget and 1 over the entry budget (output is pa
       console.log = log;
       console.error = error;
     }
-    expect(errors).toEqual([
-      `Entry chunk budget exceeded: ${ENTRY_BUDGET.raw} raw / ${ENTRY_BUDGET.gzip} gzip bytes`,
-    ]);
+    expect(errors).toEqual(both);
   }));
 
 test("bundleMain fails closed when index.html is missing", () =>

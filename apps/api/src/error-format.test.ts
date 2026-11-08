@@ -9,7 +9,7 @@ import { createApp, type ApiApp } from "./app";
 // problem+json (or any new error shape) must change them deliberately, through a new ADR.
 // The ADR text is imported with Vite `?raw`: workerd has no view of the repository file system.
 
-// The API has no routes, so the 500 comes from a probe route registered through the `register` seam.
+// The 500 comes from a probe route registered through the `register` seam (the one real route cannot fail).
 const probe = (app: ApiApp) => {
   app.get("/api/probe", () => {
     throw new Error("secret internal detail");

@@ -6,14 +6,17 @@ import { gzipSync } from "node:zlib";
 export const TOTAL_BUDGET = { raw: 250_000, gzip: 80_000 } as const;
 
 /**
- * The entry chunk, the module script `index.html` loads first (METRO-44 part C). Measured 2026-11-08 with
- * `bun run bundle:check` on `eefd080` (tip of feature/metro-rebuild): entry 240,264 bytes raw / 76,109
- * gzip, totals 240,335 / 76,195. The limits are that entry plus about 3 percent (raw 7,236, gzip 2,391
- * bytes of headroom). While the build is one chunk the entry is 99.97 percent of the total, so this adds
- * little protection today; it matters once code is split, because lazy chunks count toward the totals only.
- * (On `1aeef64` the entry was 238,537 / 75,555; that is the older build, not the basis.)
+ * The entry chunk, the module script `index.html` loads first (METRO-44 part C). Part C first set it to the
+ * entry measured on `eefd080` (240,264 raw / 76,109 gzip) plus about 3 percent: 247,500 / 78,500. Part B of
+ * METRO-44 (web-vitals, ADR-0019) puts a library in that chunk, so on 2026-11-08 the orchestrator, under the
+ * owner's delegation, equalised ONLY this budget to the totals as an interim step (not a separate owner
+ * decision): 250,000 / 80,000. The check is inert until the owner-approved redesign (Plane METRO-104: the
+ * limits apply to the first-visit set from the Vite manifest, plus a ceiling for all chunks) replaces it. While the build is one chunk the entry is
+ * 99.97 percent of the total, so the entry budget cannot be tighter than the totals and adds no protection
+ * yet; it matters once code is split, because lazy chunks count toward the totals only. The totals above are
+ * unchanged. Headroom after web-vitals: 1,059 raw / 787 gzip bytes.
  */
-export const ENTRY_BUDGET = { raw: 247_500, gzip: 78_500 } as const;
+export const ENTRY_BUDGET = { raw: 250_000, gzip: 80_000 } as const;
 
 export interface Asset {
   /** Path relative to the build root, with forward slashes. */

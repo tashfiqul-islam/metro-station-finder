@@ -212,7 +212,7 @@ test("FND-R6 a clean layered tree passes", async () => {
     "packages/contracts/src/index.ts":
       'import { core } from "../../core/src/index.ts";\nimport "valibot";\nexport const c = core;\n',
     "apps/web/src/main.ts":
-      'import { c } from "../../../packages/contracts/src/index.ts";\nimport "react";\nexport const m = c;\n',
+      'import type { c } from "../../../packages/contracts/src/index.ts";\nimport "react";\nexport type M = typeof c;\n',
     "apps/api/src/index.ts":
       'import { c } from "../../../packages/contracts/src/index.ts";\nimport "hono";\nexport const a = c;\n',
   });
@@ -459,13 +459,96 @@ for (const app of ["web", "api"]) {
     LONG,
   );
 
-  const publicEntry = scenario((at) => ({
-    [at(`apps/${app}/src`)]: importSource("value", "@metro/contracts", "c"),
+  if (app === "api") {
+    const publicEntry = scenario((at) => ({
+      [at(`apps/${app}/src`)]: importSource("value", "@metro/contracts", "c"),
+    }));
+    test(
+      `METRO-54 ${app} may import the contracts public entry by package name`,
+      async () => {
+        expect((await verdict(publicEntry)).violations).toEqual([]);
+      },
+      LONG,
+    );
+  }
+}
+
+// METRO-44 part B (ADR-0019): the browser bundle may know contracts only as types, so valibot stays out of it.
+// Tests are exempt: they check the built payload against the runtime schema.
+for (const form of runtime) {
+  const id = scenario((at) => ({
+    [at("apps/web/src")]: importSource(form, "@metro/contracts", "c"),
   }));
   test(
-    `METRO-54 ${app} may import the contracts public entry by package name`,
+    `METRO-44 web ${form} of contracts is rejected (types only)`,
     async () => {
-      expect((await verdict(publicEntry)).violations).toEqual([]);
+      expect((await verdict(id)).errorRules).toContain("web-imports-contracts-as-types-only");
+    },
+    LONG,
+  );
+}
+for (const form of erased) {
+  const id = scenario((at) => ({
+    [at("apps/web/src")]: importSource(form, "@metro/contracts", "c"),
+  }));
+  test(
+    `METRO-44 web ${form} of the contracts public entry is allowed`,
+    async () => {
+      expect((await verdict(id)).violations).toEqual([]);
+    },
+    LONG,
+  );
+}
+// More import shapes for the same rule. A bare side-effect import and a runtime re-export load the module.
+const webContractsShapes: Record<string, string> = {
+  "a bare side-effect import": 'import "@metro/contracts";\nexport const b = 1;\n',
+  "a runtime re-export (export { c } from)": 'export { c } from "@metro/contracts";\n',
+};
+for (const [shape, source] of Object.entries(webContractsShapes)) {
+  const id = scenario((at) => ({ [at("apps/web/src")]: source }));
+  test(
+    `METRO-44 web ${shape} of contracts is rejected`,
+    async () => {
+      expect((await verdict(id)).errorRules).toContain("web-imports-contracts-as-types-only");
+    },
+    LONG,
+  );
+}
+const webTypeReExport = scenario((at) => ({
+  [at("apps/web/src")]: 'export type { C } from "@metro/contracts";\n',
+}));
+test(
+  "METRO-44 web export type { C } from contracts is allowed",
+  async () => {
+    expect((await verdict(webTypeReExport)).violations).toEqual([]);
+  },
+  LONG,
+);
+const webTypeofImport = scenario((at) => ({
+  [at("apps/web/src")]: 'export type Contracts = typeof import("@metro/contracts");\n',
+}));
+test(
+  "METRO-44 web typeof import() type expression of contracts is rejected (observed: the cruiser does not mark it type-only; stricter, fails closed)",
+  async () => {
+    expect((await verdict(webTypeofImport)).errorRules).toContain(
+      "web-imports-contracts-as-types-only",
+    );
+  },
+  LONG,
+);
+
+for (const extension of [".test.ts", ".test.tsx"]) {
+  const id = scenario((at) => ({
+    [at("apps/web/src").replace(/\.ts$/u, extension)]: importSource(
+      "value",
+      "@metro/contracts",
+      "c",
+    ),
+  }));
+  test(
+    `METRO-44 a web ${extension} file may import contracts at runtime`,
+    async () => {
+      expect((await verdict(id)).violations).toEqual([]);
     },
     LONG,
   );

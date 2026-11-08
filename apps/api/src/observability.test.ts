@@ -2,7 +2,7 @@ import { expect, test } from "vitest";
 
 import { createApp, type ApiApp, type LogLine } from "./app";
 
-// The API has no routes. Probe routes registered through the `register` seam stand in for real ones.
+// Probe routes registered through the `register` seam stand in for routes that fail or carry secrets.
 function probes(app: ApiApp): void {
   app.get("/api/probe", (context) => context.json({ ok: true }));
   app.get("/api/boom", () => {

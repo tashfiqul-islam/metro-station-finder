@@ -3,7 +3,7 @@ import { expect, test } from "./fixtures";
 import { installMapsStub } from "./maps-stub";
 
 test.describe("API through the real runtime", () => {
-  test("FND-T3 every /api route returns a schema-valid 404 envelope (the API has no routes)", async ({
+  test("FND-T3 every /api route returns a schema-valid 404 envelope (only POST /api/vitals exists)", async ({
     request,
   }) => {
     for (const path of ["/api/unknown", "/api/nearest"]) {

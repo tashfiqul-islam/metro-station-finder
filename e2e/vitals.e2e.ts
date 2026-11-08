@@ -1,0 +1,117 @@
+import { parseErrorEnvelope, parseWebVitalPayload } from "../packages/contracts/src/index.ts";
+import { expect, test } from "./fixtures";
+import { expectNoCoordinateInApi, installMapsStub, trackApiRequests } from "./maps-stub";
+
+/** What each engine reports for one click and a hide: WebKit has no LCP, Firefox and WebKit no CLS (layout-shift). */
+const EXPECTED = { chromium: ["LCP", "CLS"], firefox: ["LCP"], webkit: ["INP"] } as const;
+
+test.describe("real-user web vitals beacon (METRO-44)", () => {
+  test("METRO-44 the built app sends contract-valid, position-free beacons to /api/vitals and the Worker accepts them", async ({
+    page,
+    browserName,
+  }) => {
+    const apiRequests = trackApiRequests(page);
+    const beacons: {
+      method: string;
+      type: string;
+      body: string;
+      url: string;
+      referer: string | undefined;
+    }[] = [];
+    const statuses: number[] = [];
+    page.on("request", (request) => {
+      if (new URL(request.url()).pathname === "/api/vitals") {
+        beacons.push({
+          method: request.method(),
+          type: request.headers()["content-type"] ?? "",
+          body: request.postData() ?? "",
+          url: request.url(),
+          referer: request.headers()["referer"],
+        });
+      }
+    });
+    page.on("response", (response) => {
+      if (new URL(response.url()).pathname === "/api/vitals") statuses.push(response.status());
+    });
+    await installMapsStub(page);
+    // A query string on the page URL must not travel to the beacon, in the URL, the body or anywhere.
+    await page.goto("/?q=uttara&ref=SECRETREF");
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Nearest Metro station" }),
+    ).toBeVisible();
+    // LCP is final at the first input and CLS when the page is hidden. Click once, then hide the page on
+    // every poll until the beacons have arrived (CLS is Chromium-only: Firefox and WebKit do not implement layout-shift) (a later hide adds no duplicate).
+    await page.mouse.click(5, 5);
+    await expect
+      .poll(
+        async () => {
+          await page.evaluate(() => {
+            Object.defineProperty(document, "visibilityState", {
+              value: "hidden",
+              configurable: true,
+            });
+            document.dispatchEvent(new Event("visibilitychange"));
+          });
+          return beacons
+            .map((beacon) => parseWebVitalPayload(JSON.parse(beacon.body)).name)
+            .toSorted();
+        },
+        { message: "the expected beacons" },
+      )
+      .toEqual(expect.arrayContaining([...EXPECTED[browserName]]));
+    await expect.poll(() => statuses.length).toBe(beacons.length);
+    expect(statuses.every((status) => status === 204)).toBe(true);
+
+    for (const beacon of beacons) {
+      expect(beacon.method).toBe("POST");
+      expect(new URL(beacon.url).search).toBe("");
+      // The page URL (with its query string) must not travel in the Referer header either.
+      expect(beacon.referer).toBeUndefined();
+      expect(beacon.type).toContain("application/json");
+      const parsed = parseWebVitalPayload(JSON.parse(beacon.body));
+      expect(Object.keys(parsed).toSorted()).toEqual([
+        "id",
+        "name",
+        "navigationType",
+        "rating",
+        "value",
+      ]);
+      for (const fragment of ["lat", "lng", "uttara", "SECRETREF", "?", "http"]) {
+        expect(beacon.body, fragment).not.toContain(fragment);
+      }
+    }
+    // Control: a same-origin request with the default referrer policy DOES show the Referer in this harness,
+    // so the absence asserted above is not vacuous.
+    await page.route("**/api/referer-control", (route) =>
+      route.fulfill({ status: 200, body: "{}" }),
+    );
+    const [control] = await Promise.all([
+      page.waitForRequest("**/api/referer-control"),
+      page.evaluate(() => fetch("/api/referer-control").then((response) => response.status)),
+    ]);
+    expect(control.headers()["referer"]).toContain("SECRETREF");
+    expect(apiRequests.some((request) => request.url.endsWith("/api/vitals"))).toBe(true);
+    await expectNoCoordinateInApi(page, apiRequests);
+  });
+
+  test("METRO-44 the Worker rejects a non-contract beacon with the fixed envelope and a wrong method with 405", async ({
+    request,
+  }) => {
+    const rejected = await request.post("/api/vitals", {
+      data: {
+        name: "LCP",
+        value: 1,
+        rating: "good",
+        navigationType: "navigate",
+        id: "abcdef",
+        lat: 23.87,
+      },
+    });
+    expect(rejected.status()).toBe(400);
+    expect(parseErrorEnvelope(await rejected.json()).error.code).toBe("invalid_payload");
+    const wrongMethod = await request.get("/api/vitals");
+    expect(wrongMethod.status()).toBe(405);
+    expect(wrongMethod.headers()["allow"]).toBe("POST");
+    expect(parseErrorEnvelope(await wrongMethod.json()).error.code).toBe("method_not_allowed");
+  });
+});

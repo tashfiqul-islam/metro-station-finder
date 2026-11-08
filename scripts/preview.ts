@@ -68,7 +68,7 @@ async function smokeOnce(fetchFn: Fetch, base: string, sha: string | undefined):
   if (!(page.headers.get("content-type") ?? "").includes("text/html"))
     throw new Error("GET / did not return HTML");
 
-  // The API has no routes, so an unknown route proves the Worker and its headers are live.
+  // An unknown API route proves the Worker and its headers are live (the only real route is POST /api/vitals).
   const missing = await fetchFn(`${base}/api/does-not-exist`);
   await assertNotFoundEnvelope(missing);
   if (sha !== undefined && missing.headers.get("x-preview-sha") !== sha)
