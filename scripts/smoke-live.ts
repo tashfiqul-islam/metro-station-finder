@@ -69,7 +69,7 @@ async function main(): Promise<boolean> {
     });
     let step = "open the page";
     try {
-      await page.goto(`${origin}/nearest`);
+      await page.goto(`${origin}/`);
       step = "find the place search (is VITE_GOOGLE_MAPS_API_KEY set in the root .env?)";
       // Playwright locators pierce open shadow roots; whether Google's is open is part of what this proves.
       const input = page.locator("gmp-place-autocomplete input").first();

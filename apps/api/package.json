@@ -9,7 +9,6 @@
   },
   "dependencies": {
     "@metro/contracts": "workspace:*",
-    "@metro/core": "workspace:*",
     "hono": "4.13.14"
   }
 }

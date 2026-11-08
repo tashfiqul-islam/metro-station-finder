@@ -15,14 +15,13 @@ Two questions were open: which body the API returns for errors, and whether resp
 | Case                                        | Status | Body `error.code`    | Content-Type       | Other headers                                             |
 | ------------------------------------------- | ------ | -------------------- | ------------------ | --------------------------------------------------------- |
 | Unknown `/api/*`                            | 404    | `not_found`          | `application/json` | no `Cache-Control`; security headers, `x-request-id`      |
-| Non-GET/HEAD on `/api/scaffold/status`      | 405    | `method_not_allowed` | `application/json` | `Allow: GET, HEAD`; no `Cache-Control`                    |
 | Unexpected failure or contract drift        | 500    | `internal_error`     | `application/json` | no `Cache-Control`; the cause is never echoed             |
 | Missing `/assets/*` file (Worker-generated) | 404    | `not_found`          | `application/json` | `Cache-Control: no-store` (the only `no-store`, ADR-0011) |
 | Non-GET/HEAD on `/assets/*`                 | 405    | `method_not_allowed` | `application/json` | `Allow: GET, HEAD`                                        |
 
 The body is always `{ "error": { "code": string, "message": string } }`. There is no `status` member in the body.
 
-- Repo-verified gap: `@metro/contracts` exports `errorEnvelopeSchema` and `parseErrorEnvelope`, but the API builds error bodies with an `ErrorEnvelope` type annotation (`envelope()` in `app.ts`), not by running the schema at runtime. Success bodies are parsed with `parseScaffoldStatus` before sending. Tests (`index.test.ts`, `assets-route.test.ts`, `error-format.test.ts`, `e2e/scaffold.e2e.ts`) parse real error responses with the schema, so a drifting shape fails them, and the type annotation fails `typecheck`. The web client does not parse the error body (it rejects any non-2xx).
+- Repo-verified gap: `@metro/contracts` exports `errorEnvelopeSchema` and `parseErrorEnvelope`, but the API builds error bodies with an `ErrorEnvelope` type annotation (`envelope()` in `app.ts`), not by running the schema at runtime. The API has no success bodies since METRO-93 retired the only route. Tests (`index.test.ts`, `assets-route.test.ts`, `error-format.test.ts`, `e2e/app-shell.e2e.ts`) parse real error responses with the schema, so a drifting shape fails them, and the type annotation fails `typecheck`. The web client does not parse the error body (it rejects any non-2xx).
 - Deployment skew: the same Worker deployment serves the SPA and the API atomically, so a new API never meets an old SPA bundle from the same deployment. The only skew is a stale open tab or cached SPA calling a newer API. Its failure mode is a visible error state; METRO-58 adds an error boundary.
 
 ## Decision

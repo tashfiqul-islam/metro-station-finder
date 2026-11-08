@@ -10,7 +10,8 @@ The status moved from the page importing core directly to a Worker response the 
 
 ## Decision
 
-- We will add `packages/contracts` using Valibot 1.5.0. It defines the status schema and the error envelope schema, both strict (unknown fields are rejected) and read-only, derives their types, and exports `parseScaffoldStatus` and `parseErrorEnvelope`.
+- We will add `packages/contracts` using Valibot 1.5.0. It defines the status schema and the error envelope schema, both strict (unknown fields are rejected) and read-only, derives their types, and exports a status parser and `parseErrorEnvelope`.
+- **Update (METRO-93, owner-approved contract removal):** the status schema, its parser, the core status type and the compile-time `Equal` assertion below were removed with the status route. Only the error envelope remains; the first real contract follows the same rules (strict, read-only, API validates its own output).
 - A compile-time `Equal` assertion keeps core's `ScaffoldStatus` and the schema-derived type identical; drift fails `typecheck`. Core stays dependency-free and now only re-exports its type.
 - The web client uses `fetch` plus a schema parse, not Hono RPC (`hc`). It rejects non-2xx responses, non-JSON responses and schema violations. The web app therefore imports no API code at all, and the layering rule is simply "apps never import each other".
 - The API validates its own output with the same schema before responding, so contract drift becomes a visible 500 instead of a silent bad body.

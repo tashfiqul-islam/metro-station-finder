@@ -146,7 +146,9 @@ export async function expectNoCoordinateInApi(
   requests: readonly { url: string; headers: string; body: string }[],
 ): Promise<void> {
   const before = requests.length;
-  await page.evaluate(() => fetch("/api/scaffold/status").then((response) => response.status));
+  // The API has no routes, so answer this probe in the browser: the request event still fires.
+  await page.route("**/api/probe", (route) => route.fulfill({ status: 200, body: "{}" }));
+  await page.evaluate(() => fetch("/api/probe").then((response) => response.status));
   expect(requests.length, "the /api listener records requests").toBe(before + 1);
   const everything = requests.map((r) => `${r.url} ${r.headers} ${r.body}`).join("\n");
   for (const fragment of [

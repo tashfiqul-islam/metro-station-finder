@@ -1,6 +1,6 @@
 import { appendFileSync, readFileSync } from "node:fs";
 
-import { parseErrorEnvelope, parseScaffoldStatus } from "@metro/contracts";
+import { parseErrorEnvelope } from "@metro/contracts";
 
 /**
  * Helpers for the per-pull-request Cloudflare preview job (METRO-13, docs/specifications/cloudflare-preview.md).
@@ -68,19 +68,16 @@ async function smokeOnce(fetchFn: Fetch, base: string, sha: string | undefined):
   if (!(page.headers.get("content-type") ?? "").includes("text/html"))
     throw new Error("GET / did not return HTML");
 
-  const status = await fetchFn(`${base}/api/scaffold/status`);
-  if (status.status !== 200) throw new Error(`GET /api/scaffold/status returned ${status.status}`);
-  parseScaffoldStatus(await status.json());
-  if (!status.headers.get("x-request-id")) throw new Error("Status response has no x-request-id");
-  if (sha !== undefined && status.headers.get("x-preview-sha") !== sha)
-    throw new Error(
-      `x-preview-sha is "${status.headers.get("x-preview-sha") ?? ""}", expected the checked commit ${sha}`,
-    );
-
+  // The API has no routes, so an unknown route proves the Worker and its headers are live.
   const missing = await fetchFn(`${base}/api/does-not-exist`);
   if (missing.status !== 404)
     throw new Error(`Unknown API route returned ${missing.status}, not 404`);
   parseErrorEnvelope(await missing.json());
+  if (!missing.headers.get("x-request-id")) throw new Error("API response has no x-request-id");
+  if (sha !== undefined && missing.headers.get("x-preview-sha") !== sha)
+    throw new Error(
+      `x-preview-sha is "${missing.headers.get("x-preview-sha") ?? ""}", expected the checked commit ${sha}`,
+    );
 }
 
 /** Checks a deployed preview. Pass `sha` to prove it serves the checked commit; omit it after a rollback. */

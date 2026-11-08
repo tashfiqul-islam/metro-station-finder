@@ -1,5 +1,4 @@
-import { parseScaffoldStatus, type ErrorEnvelope } from "@metro/contracts";
-import { getScaffoldStatus } from "@metro/core";
+import type { ErrorEnvelope } from "@metro/contracts";
 import { Hono } from "hono";
 import { secureHeaders } from "hono/secure-headers";
 
@@ -45,12 +44,11 @@ const SECURE_HEADERS = {
   permissionsPolicy: { geolocation: ["self"] },
 } as const satisfies Parameters<typeof secureHeaders>[0];
 
-const STATUS_ROUTE = "/api/scaffold/status";
-
-/** The route pattern to log. Anything but a known route collapses to `/api/*`, so a raw path is never logged. */
-function routeLabel(pathname: string): string {
-  return pathname === STATUS_ROUTE ? STATUS_ROUTE : "/api/*";
-}
+/**
+ * The route pattern to log. The API has no routes yet, so every request logs `/api/*` and a raw path is
+ * never logged. When the first route lands, map only its exact pattern here.
+ */
+const LOGGED_PATH = "/api/*";
 
 function previewSha(env: unknown): string | undefined {
   if (typeof env !== "object" || env === null || !("PREVIEW_SHA" in env)) return undefined;
@@ -58,12 +56,15 @@ function previewSha(env: unknown): string | undefined {
   return typeof value === "string" && GIT_SHA.test(value) ? value : undefined;
 }
 
-/** Builds the API. The status source and log sink are injectable so failure paths can be tested. */
-export function createApp(
-  readStatus: () => unknown = getScaffoldStatus,
-  log: Logger = consoleLogger,
-) {
-  const app = new Hono<{ Bindings: Env; Variables: { requestId: string } }>();
+export type ApiApp = Hono<{ Bindings: Env; Variables: { requestId: string } }>;
+
+/**
+ * Builds the API. The log sink and the route registration are injectable so failure paths can be
+ * tested. `register` runs after the shared middleware and before the 404 catch-all: it is where the
+ * first real route goes (docs/agents/api.md). The API has none today.
+ */
+export function createApp(log: Logger = consoleLogger, register: (app: ApiApp) => void = () => {}) {
+  const app: ApiApp = new Hono();
 
   // Worker-generated responses: /api/* and the /assets/* 404 and 405 (ADR-0011).
   app.use("/api/*", secureHeaders(SECURE_HEADERS));
@@ -84,17 +85,13 @@ export function createApp(
       event: "request",
       requestId,
       method: context.req.method,
-      path: routeLabel(new URL(context.req.url).pathname),
+      path: LOGGED_PATH,
       status: context.res.status,
       durationMs: Math.round(performance.now() - started),
     });
   });
 
-  app.get("/api/scaffold/status", (context) => context.json(parseScaffoldStatus(readStatus())));
-  app.all("/api/scaffold/status", (context) => {
-    context.header("Allow", "GET, HEAD");
-    return context.json(envelope("method_not_allowed", "Use GET"), 405);
-  });
+  register(app);
   // Worker-first for /assets/* (see wrangler.jsonc). With run_worker_first patterns Cloudflare answers a
   // missing file with the SPA's index.html (200), and _headers would mark that immutable. Only a real
   // asset may pass; an HTML answer under /assets/ is a miss. That includes any .html or .htm file

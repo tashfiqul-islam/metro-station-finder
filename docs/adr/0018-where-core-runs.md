@@ -12,7 +12,7 @@ What the rule rests on. The sentence "the browser app gets every runtime value t
 
 Facts, labels and sources are in the [evidence](../evidence/metro-84.md):
 
-- Repo-verified: core is pure, dependency-free and tiny (16 stations, 16x16 fares, `baseline-v2`); the API has one scaffold route; the SPA and the Worker deploy atomically from one commit, so both always carry the same dataset bytes.
+- Repo-verified: core is pure, dependency-free and tiny (16 stations, 16x16 fares, `baseline-v2`); the API had one synthetic status route, since retired by METRO-93; the SPA and the Worker deploy atomically from one commit, so both always carry the same dataset bytes.
 - Repo-verified, measured: the whole core public surface plus the dataset adds +4,874 bytes raw, +2,049 gzip (level 9), +2,050 gzip (default level, the one `bundle:check` uses) and +1,728 brotli (q11) to the web bundle (nearest, fare and dataset alone: +3,992 raw, +1,724 gzip level 9, +1,429 brotli). With the whole core in, `bundle:check` reports 230,751 raw and 72,471 gzip (default level) against the 250,000 and 80,000 budget, leaving 7,529 gzip bytes.
 - Web-verified 2026-11-06: Workers Free allows 100,000 requests per day; static asset requests are free; requests matching `run_worker_first` (here `/api/*` and `/assets/*`) are billed Worker requests. Real traffic is Unknown, so no option is rejected on request counts (see the evidence model).
 - Web-verified 2026-11-06: Google says browser keys use HTTP-referrer restrictions and server keys IP restrictions. That the Worker has no stable egress address is Inferred, not Web-verified (carried from ADR-0009). Whether `Route.computeRoutes` accepts a referrer-restricted key is Unverified.

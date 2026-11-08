@@ -2,21 +2,31 @@ import type { Page } from "@playwright/test";
 
 import { axeBuilder, expect, test } from "./fixtures";
 import { expectTabReachesEveryControl } from "./keyboard";
+import { installMapsStub } from "./maps-stub";
 
-/** Browser-side script (a string, so no type gymnastics around `JSON.stringify` overloads). */
-const THROW_ON_STATUS_STRINGIFY = `
-  const original = JSON.stringify;
-  JSON.stringify = function (value, ...rest) {
-    if (typeof value === "object" && value !== null && "kind" in value) {
+/** Browser-side script (a string, so no type gymnastics around overloads). Armed from the test. */
+const THROW_ON_DISTANCE_FORMAT = `
+  const original = Number.prototype.toFixed;
+  Number.prototype.toFixed = function (...rest) {
+    if (globalThis.failDistanceFormat === true) {
       throw new TypeError("lat=23.81 lng=90.41 https://example.test/stations?lat=23.81");
     }
-    return original.call(this, value, ...rest);
+    return original.apply(this, rest);
   };
 `;
 
-/** Makes the real success render throw: App renders `JSON.stringify(status)` once the status loads. */
+/** Makes the real success render throw: the slice formats the straight-line distance with `toFixed` once a place is chosen. */
 async function failTheSuccessRender(page: Page): Promise<void> {
-  await page.addInitScript(THROW_ON_STATUS_STRINGIFY);
+  await installMapsStub(page);
+  await page.addInitScript(THROW_ON_DISTANCE_FORMAT);
+  await page.goto("/");
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Nearest Metro station" }),
+  ).toBeVisible();
+  await page.evaluate(() => Reflect.set(globalThis, "failDistanceFormat", true));
+  const search = page.getByRole("textbox", { name: "Search for a place in Dhaka" });
+  await search.fill("motijheel");
+  await search.press("Enter");
 }
 
 test.describe("error fallback in the production build (METRO-58)", () => {
@@ -28,7 +38,6 @@ test.describe("error fallback in the production build (METRO-58)", () => {
     const logged: string[] = [];
     page.on("console", (message) => logged.push(message.text()));
     await failTheSuccessRender(page);
-    await page.goto("/");
     const alert = page.getByRole("alert", { name: "Something went wrong" });
     await expect(alert).toBeFocused();
     await expect(page.getByRole("button", { name: "Try again" })).toBeVisible();
@@ -47,12 +56,14 @@ test.describe("error fallback in the production build (METRO-58)", () => {
 
   test("METRO-58 Tab reaches the retry button and Enter retries", async ({ page }) => {
     await failTheSuccessRender(page);
-    await page.goto("/");
     await expect(page.getByRole("alert", { name: "Something went wrong" })).toBeFocused();
     await expectTabReachesEveryControl(page, { expected: 1 });
     await page.getByRole("button", { name: "Try again" }).focus();
     await page.keyboard.press("Enter");
-    // The child still throws, so the fallback comes back and takes focus again.
-    await expect(page.getByRole("alert", { name: "Something went wrong" })).toBeFocused();
+    // Retry remounts the slice from its idle state, which does not format a distance, so the page recovers.
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Nearest Metro station" }),
+    ).toBeVisible();
+    await expect(page.getByRole("alert", { name: "Something went wrong" })).toHaveCount(0);
   });
 });

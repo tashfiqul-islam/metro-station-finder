@@ -4,7 +4,7 @@ Read when: starting a new feature, slice, adapter or screen. Copy the reference 
 
 ## Rules
 
-- The scaffold page at `/` is only a placeholder until METRO-93 removes it; copy the `/nearest` slice, not the scaffold.
+- The slice is the app: `AppRoutes.tsx` mounts it at every path (no router yet). Add a router with the second screen.
 - Flow: pure rule in `packages/core` (browser-safe, public entry only) → port and adapter in `apps/web/src/adapters/<provider>` → feature in `apps/web/src/features/<name>` → wiring in `AppRoutes.tsx`. Files to copy:
   - `adapters/maps/context.ts` (the port types a feature sees, `useMaps`), `provider.tsx` (loads once), `place-search.tsx`, `routes.ts`, `libraries.ts`, `config.ts` (pinned version, key reader).
   - `features/nearest-station/NearestStation.tsx` (receives `MapsAdapter` as a prop), `copy.ts`, `format.ts`, `geolocate.ts`.
