@@ -1,27 +1,3 @@
-import { readdir, readFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
-import { gzipSync } from "node:zlib";
+import { bundleMain } from "./bundle-budget.ts";
 
-const root = resolve(process.argv[2] ?? "apps/web/dist/client");
-async function sizes(directory: string): Promise<{ raw: number; gzip: number }> {
-  let raw = 0;
-  let gzip = 0;
-  for (const entry of await readdir(directory, { withFileTypes: true })) {
-    const path = join(directory, entry.name);
-    if (entry.isDirectory()) {
-      const nested = await sizes(path);
-      raw += nested.raw;
-      gzip += nested.gzip;
-    } else if (/\.(js|css)$/u.test(entry.name)) {
-      const bytes = await readFile(path);
-      raw += bytes.length;
-      gzip += gzipSync(bytes).length;
-    }
-  }
-  return { raw, gzip };
-}
-const measured = await sizes(root);
-if (measured.raw === 0) throw new Error("No production JS/CSS artifacts found");
-console.log(`Production JS/CSS: ${measured.raw} bytes raw; ${measured.gzip} bytes gzip`);
-if (measured.raw > 250_000 || measured.gzip > 80_000)
-  throw new Error("Bundle budget exceeded: 250000 raw / 80000 gzip bytes");
+if (import.meta.main) process.exitCode = await bundleMain(process.argv.slice(2));

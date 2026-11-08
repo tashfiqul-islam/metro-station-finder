@@ -126,8 +126,10 @@ test("type gate rejects malformed existing domain data", () =>
 test("bundle gate rejects oversized production artifacts", () =>
   fixture(async (root) => {
     await writeFile(join(root, "large.js"), "x".repeat(250_001));
+    await writeFile(join(root, "index.html"), '<script type="module" src="/large.js"></script>');
     const result = Bun.spawnSync(["node", resolve("scripts/bundle.ts"), root]);
     expect(result.stderr.toString()).toContain("Bundle budget exceeded");
+    expect(result.stderr.toString()).not.toContain("Entry chunk not found");
     expect(result.exitCode).not.toBe(0);
   }));
 
@@ -135,16 +137,38 @@ test("bundle gate rejects artifacts that exceed only the gzip budget", () =>
   fixture(async (root) => {
     // Incompressible bytes: raw size stays under the raw cap while gzip exceeds its cap.
     await writeFile(join(root, "dense.js"), randomBytes(81_000));
+    await writeFile(join(root, "index.html"), '<script type="module" src="/dense.js"></script>');
     const result = Bun.spawnSync(["node", resolve("scripts/bundle.ts"), root]);
     expect(result.stderr.toString()).toContain("Bundle budget exceeded");
+    expect(result.stderr.toString()).not.toContain("Entry chunk not found");
     expect(result.exitCode).not.toBe(0);
   }));
 
 test("bundle gate accepts artifacts within budget", () =>
   fixture(async (root) => {
     await writeFile(join(root, "small.js"), "console.log(1);\n");
+    await writeFile(join(root, "index.html"), '<script type="module" src="/small.js"></script>');
     const result = Bun.spawnSync(["node", resolve("scripts/bundle.ts"), root]);
+    expect(result.stdout.toString()).toContain("Entry chunk small.js:");
     expect(result.exitCode).toBe(0);
+  }));
+
+test("bundle gate rejects an entry chunk over its own budget while the totals still pass", () =>
+  fixture(async (root) => {
+    await writeFile(join(root, "entry.js"), "x".repeat(248_000));
+    await writeFile(join(root, "index.html"), '<script type="module" src="/entry.js"></script>');
+    const result = Bun.spawnSync(["node", resolve("scripts/bundle.ts"), root]);
+    expect(result.stderr.toString()).toContain("Entry chunk budget exceeded");
+    expect(result.stderr.toString()).not.toContain("Bundle budget exceeded");
+    expect(result.exitCode).not.toBe(0);
+  }));
+
+test("bundle gate rejects a build whose index.html names no entry chunk", () =>
+  fixture(async (root) => {
+    await writeFile(join(root, "small.js"), "console.log(1);\n");
+    const result = Bun.spawnSync(["node", resolve("scripts/bundle.ts"), root]);
+    expect(result.stderr.toString()).toContain("Entry chunk not found");
+    expect(result.exitCode).not.toBe(0);
   }));
 
 const FAKE_TOKEN = ["gh", "p_", "Ab3dEf6hIj9kLm2nOp5qRs8tUv1wXy4zAB7c"].join("");
