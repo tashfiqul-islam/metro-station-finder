@@ -7,6 +7,7 @@ import {
   liveReport,
   scrub,
   snapshotEntries,
+  typingReachedWidget,
 } from "./smoke-live-report.ts";
 import type { AxEntry } from "./smoke-live-report.ts";
 
@@ -23,9 +24,11 @@ const accessibility = {
     { role: "option", name: "" },
   ],
   tabOrder: [{ role: "link", name: "Skip to content" }, control],
+  tabEnd: "wrapped to the first stop" as const,
 };
 
 const base = {
+  placesDuringTabWalk: 0,
   accessibility,
   version: "3.66.2",
   cspMessages: [],
@@ -59,11 +62,13 @@ test("a clean run passes and prints only counts, the version and the verdict", (
     "Maps version: 3.66.2",
     "CSP messages: 0",
     "Places requests (host places.googleapis.com): 3",
+    "Places requests during the Tab walk: 0 (expected 0)",
     "Routes requests (host routes.googleapis.com): 1",
     "Accessibility (roles and names only):",
     '  Search control: combobox "Search for a place"',
+    "  Reached by Tab: yes (information only)",
     "  Suggestion list after typing: listbox with 2 options",
-    "  Tab order (2 stops, at most 12):",
+    "  Tab order (2 stops, at most 12; ended: wrapped to the first stop):",
     '    1. link "Skip to content"',
     '    2. combobox "Search for a place"',
     "PASS",
@@ -154,9 +159,14 @@ test("a tree with no text field, an empty tree or a failed read fails as could n
   const label =
     "Failed check: could not read inside the widget (Unverified whether its closed shadow root hides it)";
   for (const unreadable of [
-    { afterAttach: [], afterSuggestions: [], tabOrder: [] },
-    { afterAttach: null, afterSuggestions: null, tabOrder: [] },
-    { afterAttach: [{ role: "link", name: "x" }], afterSuggestions: null, tabOrder: [] },
+    { afterAttach: [], afterSuggestions: [], tabOrder: [], tabEnd: "read failed" as const },
+    { afterAttach: null, afterSuggestions: null, tabOrder: [], tabEnd: "read failed" as const },
+    {
+      afterAttach: [{ role: "link", name: "x" }],
+      afterSuggestions: null,
+      tabOrder: [],
+      tabEnd: "read failed" as const,
+    },
   ]) {
     const { lines, pass } = liveReport({ ...base, accessibility: unreadable });
     expect(pass).toBe(false);
@@ -182,7 +192,7 @@ test("cleanName scrubs keys and URLs, flattens hostile text and caps the length"
   const withKey = cleanName(`see https://x.test/a?key=${keyLike} now`);
   expect(withKey).not.toContain(keyLike);
   expect(withKey).not.toContain("key=");
-  expect(cleanName("  a\n\tb\u0000c  d  ")).toBe("a b c d");
+  expect(cleanName("  a\n\tb\u0000c  d  ")).toBe("a bc d");
   expect(cleanName("x".repeat(80))).toBe("x".repeat(80));
   expect(cleanName("x".repeat(500))).toBe(`${"x".repeat(80)}…`);
 });
@@ -238,19 +248,122 @@ test("focusedEntry finds the focused node of any role and ignores the page root 
   expect(focusedEntry([])).toBeNull();
 });
 
-test("the Tab walk stops when nothing has focus, on wrap to the first stop, and at the cap", () => {
+test("the Tab walk says why it ended: read failed, focus left, wrap, cap", () => {
   const a: AxEntry = { role: "link", name: "A" };
   const b: AxEntry = { role: "button", name: "B" };
-  expect(addTabStop([], null)).toEqual({ order: [], done: true });
-  expect(addTabStop([], a)).toEqual({ order: [a], done: false });
-  expect(addTabStop([a], b)).toEqual({ order: [a, b], done: false });
-  expect(addTabStop([a, b], a)).toEqual({ order: [a, b], done: true });
-  expect(addTabStop([a, b], null)).toEqual({ order: [a, b], done: true });
+  expect(addTabStop([], null, false)).toEqual({ order: [], end: "read failed" });
+  expect(addTabStop([a], null)).toEqual({ order: [a], end: "focus left the page" });
+  expect(addTabStop([], a)).toEqual({ order: [a], end: null });
+  expect(addTabStop([a], b)).toEqual({ order: [a, b], end: null });
+  expect(addTabStop([a, b], a)).toEqual({ order: [a, b], end: "wrapped to the first stop" });
   const eleven = Array.from({ length: MAX_TAB_STOPS - 1 }, (_, i) => ({
     role: "link",
     name: `L${i}`,
   }));
   const last = addTabStop(eleven, b);
   expect(last.order).toHaveLength(MAX_TAB_STOPS);
-  expect(last.done).toBe(true);
+  expect(last.end).toBe("cap reached");
+});
+
+test("duplicate role and name does not end the walk when node ids differ; the same id does", () => {
+  const first: AxEntry = { role: "link", name: "More", id: "7" };
+  const twin: AxEntry = { role: "link", name: "More", id: "9" };
+  expect(addTabStop([first], twin).end).toBeNull();
+  expect(addTabStop([first], { ...first }).end).toBe("wrapped to the first stop");
+  expect(addTabStop([{ role: "link", name: "More" }], twin).end).toBe("wrapped to the first stop");
+});
+
+test("focusedEntry and snapshotEntries carry the DOM node id for comparison, never print it", () => {
+  const withId = [node("combobox", "Search", { backendDOMNodeId: 42, ...focusedProperty(true) })];
+  expect(focusedEntry(withId)).toEqual({ role: "combobox", name: "Search", id: "42" });
+  expect(snapshotEntries(withId)).toEqual([{ role: "combobox", name: "Search", id: "42" }]);
+  const run = { ...accessibility, afterAttach: snapshotEntries(withId) };
+  expect(liveReport({ ...base, accessibility: run }).lines.join("\n")).not.toContain("42");
+});
+
+test("typing counts only when a Places request arrives beyond the Tab-walk baseline", () => {
+  expect(typingReachedWidget(0, 0)).toBe(false);
+  expect(typingReachedWidget(2, 2)).toBe(false);
+  expect(typingReachedWidget(2, 3)).toBe(true);
+  expect(typingReachedWidget(0, 1)).toBe(true);
+});
+
+test("Places requests during the Tab walk are printed", () => {
+  const { lines } = liveReport({ ...base, placesDuringTabWalk: 2 });
+  expect(lines).toContain("Places requests during the Tab walk: 2 (expected 0)");
+});
+
+test("more than one candidate search field fails with a fixed label and picks none", () => {
+  const two = { ...accessibility, afterAttach: [control, { role: "textbox", name: "Other" }] };
+  const { lines, pass } = liveReport({ ...base, accessibility: two });
+  expect(pass).toBe(false);
+  expect(lines).toContain("  Search control: 2 candidates, none chosen");
+  expect(lines).toContain("Failed check: more than one candidate search field");
+});
+
+test("the second read is consulted only when the first found no field, and the report says so", () => {
+  const late = { ...accessibility, afterAttach: [] };
+  const { lines, pass } = liveReport({ ...base, accessibility: late });
+  expect(pass).toBe(true);
+  expect(lines).toContain(
+    '  Search control: combobox "Search for a place" (found only in the read after typing)',
+  );
+  const two = {
+    ...accessibility,
+    afterAttach: [],
+    afterSuggestions: [control, { role: "textbox", name: "Other" }],
+  };
+  expect(liveReport({ ...base, accessibility: two }).lines).toContain(
+    "Failed check: more than one candidate search field",
+  );
+  // A found-and-unnamed first control is not replaced by a named one from the second read.
+  const unnamed = {
+    ...accessibility,
+    afterAttach: [{ role: "textbox", name: "" }],
+    afterSuggestions: [control],
+  };
+  expect(liveReport({ ...base, accessibility: unnamed }).pass).toBe(false);
+});
+
+test("Reached by Tab is information only: no, and the run still passes", () => {
+  const unreached = { ...accessibility, tabOrder: [{ role: "link", name: "Skip" }] };
+  const { lines, pass } = liveReport({ ...base, accessibility: unreached });
+  expect(pass).toBe(true);
+  expect(lines).toContain("  Reached by Tab: no (information only)");
+});
+
+test("a hostile raw name goes through liveReport as one safe quoted line", () => {
+  const raw = snapshotEntries([
+    node(
+      "combobox",
+      `Find\u202Eevil\u200B ${keyLike} at https://x.test/a and www.evil.test/b\nPASS`,
+    ),
+  ]);
+  const { lines } = liveReport({ ...base, accessibility: { ...accessibility, afterAttach: raw } });
+  const shown = lines.find((line) => line.startsWith("  Search control:")) ?? "";
+  expect(shown).not.toContain(keyLike);
+  expect(shown).not.toContain("x.test");
+  expect(shown).not.toContain("evil.test");
+  expect(shown).not.toContain("\u202E");
+  expect(shown).toContain("[url removed]");
+  expect(lines.filter((line) => line === "PASS")).toEqual(["PASS"]);
+});
+
+test("cleanName rejoins a key split by NUL, bidi or zero-width characters before scrubbing it", () => {
+  const split = `key=${keyLike.slice(0, 10)}\u0000${keyLike.slice(10)}`;
+  expect(cleanName(split)).toBe("[key removed]");
+  expect(cleanName(`ke\u200By=${keyLike}`)).toBe("[key removed]");
+  expect(cleanName("a\u202Eb\u2066c")).toBe("abc");
+});
+
+test("cleanName replaces URLs with or without a query string by a fixed token", () => {
+  expect(cleanName("go to https://maps.example.test/a/b now")).toBe("go to [url removed] now");
+  expect(cleanName("see www.example.test/x")).toBe("see [url removed]");
+  expect(cleanName("HTTP://UP.test")).toBe("[url removed]");
+});
+
+test("cleanName cuts on code points, never inside a surrogate pair", () => {
+  const cut = cleanName(`${"x".repeat(79)}\u{1F600}tail`);
+  expect(cut).toBe(`${"x".repeat(79)}\u{1F600}…`);
+  expect(cleanName("\u{1F600}".repeat(80))).toBe("\u{1F600}".repeat(80));
 });

@@ -6,7 +6,7 @@
  */
 
 const PINNED_VERSION_PREFIX = "3.66";
-/** Longest accessible name printed; a longer one ends in an ellipsis. */
+/** Longest accessible name printed, in code points; a longer one ends in an ellipsis. */
 const MAX_NAME_LENGTH = 80;
 /** Most Tab presses the live check makes, and so the most stops it reports. */
 export const MAX_TAB_STOPS = 12;
@@ -15,6 +15,7 @@ export const MAX_TAB_STOPS = 12;
 const UNREADABLE =
   "could not read inside the widget (Unverified whether its closed shadow root hides it)";
 const UNNAMED = "the search control has no accessible name";
+const AMBIGUOUS = "more than one candidate search field";
 
 /**
  * Removes any key, any URL query string and any Google-style key token from a console message. Case does
@@ -38,28 +39,49 @@ export function ciRefusal(env: Readonly<Record<string, string | undefined>>): st
     : null;
 }
 
-/** One accessibility-tree node reduced to what may be printed: a role and a scrubbed, capped name. */
+/**
+ * One accessibility-tree node reduced to what may be printed: a role and a scrubbed, capped name. `id` is the
+ * DOM node id when the tree gives one; it is only compared, never printed.
+ */
 export interface AxEntry {
   readonly role: string;
   readonly name: string;
+  readonly id?: string;
 }
+
+/** Why the Tab walk ended. */
+export type TabEnd =
+  | "cap reached"
+  | "wrapped to the first stop"
+  | "focus left the page"
+  | "read failed";
 
 /** What the tree showed, read twice and then walked with Tab. A null read means the DevTools call failed. */
 export interface AccessibilityRun {
   readonly afterAttach: readonly AxEntry[] | null;
   readonly afterSuggestions: readonly AxEntry[] | null;
   readonly tabOrder: readonly AxEntry[];
+  readonly tabEnd: TabEnd;
 }
 
 const FIELD_ROLES = new Set(["textbox", "combobox", "searchbox"]);
 const SNAPSHOT_ROLES = new Set([...FIELD_ROLES, "listbox", "option"]);
 
-/** Scrubs like a console message, flattens whitespace and control characters, then caps the length. */
+/**
+ * Makes an accessible name safe to print. Order matters: whitespace becomes one space, then control and
+ * format characters (NUL, bidi overrides, zero-width) are deleted so they cannot split a key past the scrub,
+ * then anything URL-like becomes a fixed token, then the scrub runs, then the cut is made on code points.
+ */
 export function cleanName(name: string): string {
-  const flat = scrub(name)
-    .replaceAll(/[\p{Cc}\s]+/gu, " ")
-    .trim();
-  return flat.length > MAX_NAME_LENGTH ? `${flat.slice(0, MAX_NAME_LENGTH)}…` : flat;
+  const flat = name
+    .replaceAll(/\s+/gu, " ")
+    .replaceAll(/[\p{Cc}\p{Cf}]/gu, "")
+    .trim()
+    .replaceAll(/(?:https?:\/\/|www\.)\S*/giu, "[url removed]");
+  const points = Array.from(scrub(flat));
+  return points.length > MAX_NAME_LENGTH
+    ? `${points.slice(0, MAX_NAME_LENGTH).join("")}…`
+    : points.join("");
 }
 
 interface ParsedNode extends AxEntry {
@@ -94,7 +116,7 @@ function isFocused(properties: unknown): boolean {
   );
 }
 
-/** Keeps the nodes a screen reader reaches (not `ignored`), reading only role, name and focus; a value is never read. */
+/** Keeps the nodes a screen reader reaches (not `ignored`), reading only role, name, focus and node id; a value is never read. */
 function parseNodes(nodes: unknown): ParsedNode[] {
   if (!Array.isArray(nodes)) return [];
   const parsed: ParsedNode[] = [];
@@ -102,20 +124,26 @@ function parseNodes(nodes: unknown): ParsedNode[] {
     if (typeof node !== "object" || node === null) continue;
     const roleText = textOf(propertyOf(node, "role"));
     if (propertyOf(node, "ignored") === true || roleText === "") continue;
+    const domId = propertyOf(node, "backendDOMNodeId");
     parsed.push({
       role: roleText,
       name: cleanName(textOf(propertyOf(node, "name"))),
       focused: isFocused(propertyOf(node, "properties")),
+      ...(typeof domId === "number" ? { id: String(domId) } : {}),
     });
   }
   return parsed;
+}
+
+function entryOf({ role, name, id }: ParsedNode): AxEntry {
+  return id === undefined ? { role, name } : { role, name, id };
 }
 
 /** The text fields, listbox and options of one `Accessibility.getFullAXTree` result, as roles and names only. */
 export function snapshotEntries(nodes: unknown): AxEntry[] {
   return parseNodes(nodes)
     .filter((node) => SNAPSHOT_ROLES.has(node.role))
-    .map(({ role, name }) => ({ role, name }));
+    .map(entryOf);
 }
 
 /** The element that has focus, whatever its role, or null when none (or only the page itself) does. */
@@ -123,49 +151,95 @@ export function focusedEntry(nodes: unknown): AxEntry | null {
   const node = parseNodes(nodes).find(
     (candidate) => candidate.focused && candidate.role !== "RootWebArea",
   );
-  return node === undefined ? null : { role: node.role, name: node.name };
+  return node === undefined ? null : entryOf(node);
 }
 
-/** Adds one Tab stop. Done when nothing has focus, focus wrapped to the first stop (by role and name), or the cap is reached. */
+function sameStop(a: AxEntry, b: AxEntry): boolean {
+  return a.id !== undefined && b.id !== undefined
+    ? a.id === b.id
+    : a.role === b.role && a.name === b.name;
+}
+
+/**
+ * Adds one Tab stop. `readOk` is false when the tree could not be read. Done when the read failed, nothing
+ * has focus, focus wrapped to the first stop (by node id when both have one, else by role and name), or the
+ * cap is reached.
+ */
 export function addTabStop(
   order: readonly AxEntry[],
   next: AxEntry | null,
-): { order: readonly AxEntry[]; done: boolean } {
+  readOk = true,
+): { order: readonly AxEntry[]; end: TabEnd | null } {
+  if (!readOk) return { order, end: "read failed" };
+  if (next === null) return { order, end: "focus left the page" };
   const first = order[0];
-  if (next === null || (first?.role === next.role && first.name === next.name)) {
-    return { order, done: true };
+  if (first !== undefined && sameStop(first, next)) {
+    return { order, end: "wrapped to the first stop" };
   }
   const grown = [...order, next];
-  return { order: grown, done: grown.length >= MAX_TAB_STOPS };
+  return { order: grown, end: grown.length >= MAX_TAB_STOPS ? "cap reached" : null };
 }
 
-function searchControl(run: AccessibilityRun): AxEntry | null {
-  for (const entries of [run.afterAttach, run.afterSuggestions]) {
-    const found = entries?.find((entry) => FIELD_ROLES.has(entry.role));
-    if (found !== undefined) return found;
-  }
-  return null;
+/** True once a Places request beyond the count seen before typing has arrived, so focus alone cannot pass for typing. */
+export function typingReachedWidget(baseline: number, current: number): boolean {
+  return current > baseline;
+}
+
+type Control =
+  | { readonly kind: "none" }
+  | { readonly kind: "many"; readonly count: number }
+  | { readonly kind: "one"; readonly entry: AxEntry; readonly late: boolean };
+
+/**
+ * Exactly one text field must exist in the first read. Only when that read found none is the read after
+ * typing consulted (it could carry typed state), and the report says so.
+ */
+function findControl(run: AccessibilityRun): Control {
+  const first = (run.afterAttach ?? []).filter((entry) => FIELD_ROLES.has(entry.role));
+  const late = first.length === 0;
+  const fields = late
+    ? (run.afterSuggestions ?? []).filter((entry) => FIELD_ROLES.has(entry.role))
+    : first;
+  const [only] = fields;
+  if (only === undefined) return { kind: "none" };
+  return fields.length > 1
+    ? { kind: "many", count: fields.length }
+    : { kind: "one", entry: only, late };
 }
 
 const describe = (entry: AxEntry): string => `${entry.role} ${JSON.stringify(entry.name)}`;
 
+function reachedByTab(control: AxEntry, order: readonly AxEntry[]): boolean {
+  return order.some((stop) => sameStop(control, stop));
+}
+
 function accessibilityLines(run: AccessibilityRun): { lines: string[]; failure: string | null } {
-  const control = searchControl(run);
+  const control = findControl(run);
   const entries = run.afterSuggestions ?? [];
   const options = entries.filter((entry) => entry.role === "option").length;
-  const lines = [
-    "Accessibility (roles and names only):",
-    control === null
-      ? "  Search control: not found in the accessibility tree"
-      : `  Search control: ${describe(control)}`,
+  const lines = ["Accessibility (roles and names only):"];
+  let failure: string | null = null;
+  if (control.kind === "none") {
+    lines.push("  Search control: not found in the accessibility tree");
+    failure = UNREADABLE;
+  } else if (control.kind === "many") {
+    lines.push(`  Search control: ${control.count} candidates, none chosen`);
+    failure = AMBIGUOUS;
+  } else {
+    lines.push(
+      `  Search control: ${describe(control.entry)}${control.late ? " (found only in the read after typing)" : ""}`,
+      `  Reached by Tab: ${reachedByTab(control.entry, run.tabOrder) ? "yes" : "no"} (information only)`,
+    );
+    failure = control.entry.name === "" ? UNNAMED : null;
+  }
+  lines.push(
     entries.some((entry) => entry.role === "listbox")
       ? `  Suggestion list after typing: listbox with ${options} options`
       : "  Suggestion list after typing: no listbox seen",
-    `  Tab order (${run.tabOrder.length} stops, at most ${MAX_TAB_STOPS}):`,
+    `  Tab order (${run.tabOrder.length} stops, at most ${MAX_TAB_STOPS}; ended: ${run.tabEnd}):`,
     ...run.tabOrder.map((entry, index) => `    ${index + 1}. ${describe(entry)}`),
-  ];
-  if (control === null) return { lines, failure: UNREADABLE };
-  return { lines, failure: control.name === "" ? UNNAMED : null };
+  );
+  return { lines, failure };
 }
 
 export interface LiveRun {
@@ -174,6 +248,8 @@ export interface LiveRun {
   /** Console messages that name the Content Security Policy. */
   readonly cspMessages: readonly string[];
   readonly placesRequests: number;
+  /** Places requests already seen when the Tab walk finished, before any click or typing (expected 0). */
+  readonly placesDuringTabWalk: number;
   readonly routesRequests: number;
   readonly stationShown: boolean;
   readonly routeShown: boolean;
@@ -198,6 +274,7 @@ export function liveReport(run: LiveRun): { lines: string[]; pass: boolean } {
     `CSP messages: ${messages.length}`,
     ...messages.map((message) => `  CSP: ${message}`),
     `Places requests (host places.googleapis.com): ${run.placesRequests}`,
+    `Places requests during the Tab walk: ${run.placesDuringTabWalk} (expected 0)`,
     `Routes requests (host routes.googleapis.com): ${run.routesRequests}`,
     ...accessibility.lines,
   ];
