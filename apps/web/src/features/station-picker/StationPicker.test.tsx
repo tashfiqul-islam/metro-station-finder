@@ -37,7 +37,8 @@ function must(node: HTMLElement | null | undefined): HTMLElement {
   return node;
 }
 const listbox = (): HTMLElement => must(document.querySelector<HTMLElement>("[role=listbox]"));
-const pickStatus = (): HTMLElement => must(document.querySelector<HTMLElement>(".pick__status"));
+const pickStatus = (): HTMLElement =>
+  must(document.querySelector<HTMLElement>(".pick__combo output"));
 /** Dispatches a raw event inside act and returns whether it was left alone (not default-prevented). */
 function send(target: Element, event: Event): boolean {
   let result = true;
@@ -74,7 +75,7 @@ test("METRO-112 the combobox has its role, name, description and a closed popup 
   expect(box().tabIndex).toBe(0);
   expect(box().getAttribute("aria-describedby")).toBeTruthy();
   expect(document.getElementById(box().getAttribute("aria-describedby") ?? "")?.textContent).toBe(
-    "Works offline. All 16 stations.",
+    "Search all 16 stations by name.",
   );
   expect(listbox().hidden).toBe(true);
   expect(listbox().getAttribute("aria-label")).toBe("Stations");
@@ -241,16 +242,17 @@ test("METRO-112 leaving the input closes the list", () => {
   expect(box().hasAttribute("aria-activedescendant")).toBe(false);
 });
 
-test("METRO-112 no match: the message and Browse all stay after blur, and Browse all lists the 16 stations", () => {
+test("METRO-112 no match: the text is announced by the one status, Browse all stays after blur outside it, and lists the 16 stations", () => {
   setup();
   type("Sadarghat");
   const status = pickStatus();
-  expect(status.textContent).toContain("No station matches that name.");
+  expect(status.textContent).toBe("No station matches that name.");
+  expect(status.querySelector("button")).toBeNull();
   expect(box().getAttribute("aria-expanded")).toBe("false");
   fireEvent.blur(box());
-  const browse = within(status).getByRole("button", { name: "Browse all 16 stations" });
-  expect(browse).toBeTruthy();
-  // The list is reachable by Tab from the input: the button is a plain button in the document, not in the popup.
+  const browse = screen.getByRole("button", { name: "Browse all 16 stations" });
+  // A control never lives in a live region, and the popup does not hold it either.
+  expect(status.contains(browse)).toBe(false);
   expect(listbox().contains(browse)).toBe(false);
   fireEvent.click(browse);
   expect(box().value).toBe("");
@@ -258,13 +260,79 @@ test("METRO-112 no match: the message and Browse all stay after blur, and Browse
   expect(options()).toHaveLength(16);
   expect(document.activeElement).toBe(box());
   expect(pickStatus().textContent).toBe("");
+  expect(screen.queryByRole("button", { name: "Browse all 16 stations" })).toBeNull();
   expect(grip().getAttribute("aria-label")).toContain("Now full height");
+});
+
+test("METRO-112 the one polite status announces the count after each input, and nothing stale", () => {
+  setup();
+  // The same element throughout: a live region must exist before its text changes.
+  const status = pickStatus();
+  expect(status.textContent).toBe("");
+  type("m");
+  expect(pickStatus()).toBe(status);
+  expect(status.textContent).toBe("4 stations");
+  type("mir");
+  expect(status.textContent).toBe("2 stations");
+  type("mirpur 1");
+  expect(status.textContent).toBe("2 stations");
+  type("mirpur 11");
+  expect(status.textContent).toBe("1 station");
+  type("mirpur 111");
+  expect(status.textContent).toBe("No station matches that name.");
+  type("");
+  expect(status.textContent).toBe("");
+  type("   ");
+  expect(status.textContent).toBe("");
+  type("farm");
+  key("Enter");
+  expect(status.textContent).toBe("");
+  expect(
+    document.querySelectorAll("[role=status], [role=alert], [aria-live], output"),
+  ).toHaveLength(2);
+});
+
+test("METRO-112 Escape and the clear button leave no stale count behind", () => {
+  setup();
+  type("mir");
+  key("Escape");
+  expect(pickStatus().textContent).toBe("2 stations");
+  key("Escape");
+  expect(box().value).toBe("");
+  expect(pickStatus().textContent).toBe("");
+  type("mir");
+  fireEvent.click(screen.getByRole("button", { name: "Clear station search" }));
+  expect(pickStatus().textContent).toBe("");
 });
 
 test("METRO-112 a blank text is not a no-match", () => {
   setup();
   type("   ");
   expect(pickStatus().textContent).toBe("");
+});
+
+test("METRO-112 keys pressed while an input method is composing are not ours: Enter does not pick, arrows do not move", () => {
+  const { onPick } = setup();
+  type("mir");
+  const before = active();
+  for (const init of [
+    { key: "Enter", isComposing: true },
+    { key: "ArrowDown", isComposing: true },
+    { key: "ArrowUp", isComposing: true },
+    { key: "Escape", isComposing: true },
+    { key: "Process" },
+    { key: "Enter", keyCode: 229 },
+  ]) {
+    const event = new KeyboardEvent("keydown", { ...init, bubbles: true, cancelable: true });
+    expect(send(box(), event)).toBe(true);
+  }
+  expect(onPick).not.toHaveBeenCalled();
+  expect(active()).toBe(before);
+  expect(box().getAttribute("aria-expanded")).toBe("true");
+  expect(box().value).toBe("mir");
+  // The control: the same keys outside composition do act.
+  key("Enter");
+  expect(onPick).toHaveBeenCalledWith("mirpur-11");
 });
 
 test("METRO-112 the result shows the station, the fare range, the footnote from the dataset provenance and the Directions link", () => {
@@ -389,7 +457,7 @@ test("METRO-112 a browser without scrollIntoView still moves the active option a
   }
 });
 
-test("METRO-112 opening the list scrolls the field to the top of the panel, and the active option into the list", () => {
+test("METRO-112 opening the list scrolls the field with its list into view (nearest), and the active option into the list", () => {
   const scroll = vi.fn();
   Object.defineProperty(Element.prototype, "scrollIntoView", {
     value: scroll,
@@ -399,8 +467,10 @@ test("METRO-112 opening the list scrolls the field to the top of the panel, and 
   try {
     setup();
     type("mir");
-    expect(scroll).toHaveBeenCalledWith({ block: "start" });
-    expect(scroll).toHaveBeenCalledWith({ block: "nearest" });
+    // The field with its list and the active option both ask for "nearest": nothing moves when already in view.
+    expect(scroll).toHaveBeenCalledTimes(2);
+    expect(scroll).toHaveBeenNthCalledWith(1, { block: "nearest" });
+    expect(scroll).toHaveBeenNthCalledWith(2, { block: "nearest" });
   } finally {
     Reflect.deleteProperty(Element.prototype, "scrollIntoView");
   }

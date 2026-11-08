@@ -44,31 +44,37 @@ export function StationCombobox({
   const optionId = (station: Station): string => `${base}-option-${station.id}`;
 
   const input = useRef<HTMLInputElement>(null);
-  const field = useRef<HTMLDivElement>(null);
+  const region = useRef<HTMLDivElement>(null);
   const [text, setText] = useState("");
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
+  /** True from the first keystroke until a pick, a clear or Browse all: the status speaks only for typed text. */
+  const [typed, setTyped] = useState(false);
 
   const matches = matchStations(stations, text);
   const expanded = open && matches.length > 0;
   const activeMatch = expanded ? matches[active] : undefined;
-  const noMatch = text.trim() !== "" && matches.length === 0;
+  const searching = typed && text.trim() !== "";
+  const noMatch = searching && matches.length === 0;
+  // The one polite status: the count after typing, or the no-match text; nothing for a cleared or picked text.
+  const status = !searching ? "" : noMatch ? pickerCopy.noMatch : pickerCopy.count(matches.length);
   const activeId = activeMatch === undefined ? undefined : optionId(activeMatch.station);
 
   useEffect(() => {
     if (activeId !== undefined) revealOption(activeId);
   }, [activeId]);
 
-  // When the list opens the field goes to the top of the panel, so the suggestions below it are in view whatever
-  // the screen above the field holds. Instant (no smooth scroll), so reduced motion needs no special case.
+  // When the list opens, the field and the list below it are brought into view: "nearest" does nothing when they
+  // already are, and otherwise scrolls the least. Instant, so reduced motion needs no special case.
   useEffect(() => {
-    if (expanded && typeof field.current?.scrollIntoView === "function") {
-      field.current.scrollIntoView({ block: "start" });
+    if (expanded && typeof region.current?.scrollIntoView === "function") {
+      region.current.scrollIntoView({ block: "nearest" });
     }
   }, [expanded]);
 
   function choose(station: Station): void {
     setText(station.name);
+    setTyped(false);
     setOpen(false);
     setActive(-1);
     onSelect(station);
@@ -76,12 +82,21 @@ export function StationCombobox({
 
   function onChange(event: ChangeEvent<HTMLInputElement>): void {
     setText(event.target.value);
+    setTyped(true);
     setOpen(true);
     setActive(0);
     onEngage();
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLInputElement>): void {
+    // An input method editor owns the keys while it composes (Enter confirms a candidate, arrows pick one):
+    // none of them is ours. `key` is "Process" or the keyCode 229 in browsers that do not set isComposing.
+    if (
+      event.nativeEvent.isComposing ||
+      event.key === "Process" ||
+      event.nativeEvent.keyCode === 229
+    )
+      return;
     const count = matches.length;
     switch (event.key) {
       case "ArrowDown":
@@ -114,6 +129,7 @@ export function StationCombobox({
         } else if (text !== "") {
           event.preventDefault();
           setText("");
+          setTyped(false);
         }
         return;
       }
@@ -132,6 +148,7 @@ export function StationCombobox({
 
   function clear(): void {
     setText("");
+    setTyped(false);
     setOpen(false);
     setActive(-1);
     input.current?.focus();
@@ -139,6 +156,7 @@ export function StationCombobox({
 
   function browseAll(): void {
     setText("");
+    setTyped(false);
     setOpen(true);
     setActive(0);
     onEngage();
@@ -146,8 +164,8 @@ export function StationCombobox({
   }
 
   return (
-    <>
-      <div className="field" ref={field}>
+    <div className="pick__combo" ref={region}>
+      <div className="field">
         <label className="field__label" htmlFor={inputId}>
           {pickerCopy.label}
         </label>
@@ -233,19 +251,19 @@ export function StationCombobox({
           );
         })}
       </div>
-      <output className="pick__status">
+      <div className={noMatch ? "empty" : "pick__feedback"}>
+        <output className={noMatch ? "empty__title" : "visually-hidden"}>{status}</output>
         {noMatch ? (
-          <span className="empty">
-            <span className="empty__title">{pickerCopy.noMatch}</span>
+          <>
             <span className="empty__text">{pickerCopy.noMatchHint}</span>
             <span className="empty__actions">
               <button type="button" className="btn btn--primary btn--sm" onClick={browseAll}>
                 {pickerCopy.browse(stations.length)}
               </button>
             </span>
-          </span>
+          </>
         ) : null}
-      </output>
-    </>
+      </div>
+    </div>
   );
 }

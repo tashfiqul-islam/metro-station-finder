@@ -6,6 +6,10 @@ import type { MapsAdapter } from "../../adapters/maps/context";
 import { LineMap } from "../line-map/LineMap";
 import { NearestStation } from "../nearest-station/NearestStation";
 import { StationPicker } from "../station-picker/StationPicker";
+import { MapBoundary } from "./MapBoundary";
+
+import "../../styles/components/common.css";
+import "./nearby-screen.css";
 
 export interface NearbyProps {
   readonly maps: MapsAdapter;
@@ -22,14 +26,19 @@ function focusMap(): void {
 /**
  * The Nearby screen (METRO-112): one lazy boundary loads the page, the line map and the station picker together
  * (ADR-0022), so the entry carries one loader instead of one per part. The map goes to the shell through
- * `setMap`; a picked station is highlighted on it. The picker sits between the location controls and the
- * nearest-station result; reordering to the handoff's layout belongs to the location slice.
+ * `setMap`, inside its own error boundary (the shell is outside this tree); a picked station is highlighted on
+ * it. The picker sits between the location controls and the nearest-station result; reordering to the
+ * handoff's layout belongs to the location slice.
  */
 export function Nearby({ maps, setMap }: NearbyProps): ReactElement {
   const [picked, setPicked] = useState<StationId | null>(null);
 
   useEffect(() => {
-    setMap(<LineMap highlighted={picked === null ? [] : [picked]} />);
+    setMap(
+      <MapBoundary>
+        <LineMap highlighted={picked === null ? [] : [picked]} />
+      </MapBoundary>,
+    );
   }, [setMap, picked]);
   useEffect(() => () => setMap(null), [setMap]);
 

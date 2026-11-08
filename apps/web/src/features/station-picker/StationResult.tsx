@@ -54,35 +54,37 @@ export function StationResult({
               {stopLabel(position)}
             </span>
           </div>
-          <div className="ticket__row">
-            <span className="ticket__chip">{pickerCopy.fareLabel}</span>
+          {range === null ? null : (
+            <>
+              <div className="ticket__row">
+                <span className="ticket__chip">{pickerCopy.fareLabel}</span>
+              </div>
+              <p className="ticket__fare">
+                <span className="ticket__amount ticket__amount--range">
+                  <Price amount={range.cheapest} />
+                  {range.dearest === range.cheapest ? null : (
+                    <>
+                      <span aria-hidden="true">–</span>
+                      <span className="visually-hidden">{pickerCopy.fareTo}</span>
+                      <Price amount={range.dearest} />
+                    </>
+                  )}
+                </span>
+              </p>
+            </>
+          )}
+        </div>
+        {range === null ? null : (
+          <div className="ticket__stub">
+            <span className="ticket__perf" aria-hidden="true" />
+            <p className="ticket__note">
+              {nearestCopy.faresAsOf(
+                formatIsoDate(datasetProvenance.fares.noticeDate),
+                formatIsoDate(datasetProvenance.fares.officialTableRetrieved),
+              )}
+            </p>
           </div>
-          <p className="ticket__fare">
-            {range === null ? (
-              <span className="ticket__note">{pickerCopy.fareUnavailable}</span>
-            ) : (
-              <span className="ticket__amount ticket__amount--range">
-                <Price amount={range.cheapest} />
-                {range.dearest === range.cheapest ? null : (
-                  <>
-                    <span aria-hidden="true">–</span>
-                    <span className="visually-hidden">{pickerCopy.fareTo}</span>
-                    <Price amount={range.dearest} />
-                  </>
-                )}
-              </span>
-            )}
-          </p>
-        </div>
-        <div className="ticket__stub">
-          <span className="ticket__perf" aria-hidden="true" />
-          <p className="ticket__note">
-            {nearestCopy.faresAsOf(
-              formatIsoDate(datasetProvenance.fares.noticeDate),
-              formatIsoDate(datasetProvenance.fares.officialTableRetrieved),
-            )}
-          </p>
-        </div>
+        )}
       </article>
       <div className="pick__actions">
         <a

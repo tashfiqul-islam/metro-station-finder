@@ -8,7 +8,7 @@ import { linksAreTabbable } from "./keyboard";
 import { installMapsStub } from "./maps-stub";
 
 /**
- * METRO-112: the offline station picker and the station result, in the real build with the enforced CSP. A pick
+ * METRO-112: the station picker and the station result (local data, no network), in the real build with the enforced CSP. A pick
  * has no user position, so it must show no distance or walk and make no request of any kind.
  */
 const MAP_NAME = "Schematic map of MRT Line 6";
@@ -40,7 +40,7 @@ test.describe("station picker", () => {
     const box = combo(page);
     await expect(box).toHaveAttribute("aria-expanded", "false");
     await expect(box).toHaveAttribute("aria-autocomplete", "list");
-    await expect(box).toHaveAccessibleDescription("Works offline. All 16 stations.");
+    await expect(box).toHaveAccessibleDescription("Search all 16 stations by name.");
     const controls = await box.getAttribute("aria-controls");
     expect(await page.locator(`#${controls}`).getAttribute("role")).toBe("listbox");
     await expect(page.getByRole("option")).toHaveCount(0);
@@ -134,6 +134,24 @@ test.describe("station picker", () => {
     // Motijheel's coordinate in the dataset; any other pair of numbers in the URL fails.
     expect(url.searchParams.get("destination")).toBe("23.728141,90.419341");
     expect(href.match(/-?\d+\.\d+/gu)).toHaveLength(2);
+  });
+
+  test("METRO-112 the one polite status announces the count and the no-match text, never the button", async ({
+    page,
+  }) => {
+    await open(page);
+    const status = page.locator(".pick__combo output");
+    await expect(status).toHaveText("");
+    await combo(page).fill("mir");
+    await expect(status).toHaveText("2 stations");
+    await combo(page).fill("mirpur 11");
+    await expect(status).toHaveText("1 station");
+    await combo(page).fill("Sadarghat");
+    await expect(status).toHaveText("No station matches that name.");
+    await expect(status.getByRole("button")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Browse all 16 stations" })).toBeVisible();
+    await combo(page).fill("");
+    await expect(status).toHaveText("");
   });
 
   test("METRO-112 no match: the message and Browse all stay reachable after the input loses focus", async ({
@@ -363,6 +381,16 @@ test.describe("station picker", () => {
       .filter((entry) => marker.test(readFileSync(join(entry.parentPath, entry.name), "utf8")))
       .map((entry) => entry.name);
     expect(found).toEqual([]);
+    // No user-visible offline claim ships before the offline cache of METRO-106 (owner ruling): comments are
+    // stripped from the build, so any "offline" in a built script is a string.
+    const claims = names
+      .filter(
+        (entry) =>
+          /\.(js|html)$/u.test(entry.name) &&
+          /offline/iu.test(readFileSync(join(entry.parentPath, entry.name), "utf8")),
+      )
+      .map((entry) => entry.name);
+    expect(claims).toEqual([]);
     // Control: the check reads real files (the lazy screen's chunk is among them) and its pattern can match.
     expect(names.some((entry) => /^Nearby-.*\.js$/u.test(entry.name))).toBe(true);
     expect(marker.test('<span class="tag--sample mock-only">Sample data</span>')).toBe(true);

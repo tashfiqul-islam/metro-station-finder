@@ -16,8 +16,14 @@
   overflow-y: auto;
   overscroll-behavior: contain;
 }
-.pick__status:empty {
-  display: none;
+.pick__combo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+/* The status is always in the tree (a live region must exist before its text changes) but takes no room. */
+.pick__feedback {
+  display: contents;
 }
 .ticket__amount--range {
   font-size: var(--fs-40);

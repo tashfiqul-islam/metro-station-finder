@@ -47,11 +47,12 @@ test("METRO-112 a station with a single fare value shows it once, with no range"
   expect(article.textContent).not.toContain(" to ");
 });
 
-test("METRO-112 a station with no known fare says so and shows no amount, but keeps the footnote and the link", () => {
+test("METRO-112 a station with no known fare shows no amount and no fare footnote, but keeps the heading and the link", () => {
   override.range = null;
   show();
-  expect(screen.getByText("No fare is available from this station.")).toBeTruthy();
+  expect(screen.getByRole("heading", { level: 2, name: station.name })).toBeTruthy();
   expect(screen.getByRole("article").textContent).not.toContain("৳");
-  expect(screen.getByText(/^Fares as of: DTCA notice dated 8 September 2022/u)).toBeTruthy();
+  expect(screen.queryByText(/^Fares as of:/u)).toBeNull();
+  expect(screen.queryByText("Single fare from here")).toBeNull();
   expect(screen.getByRole("link", { name: /^Directions in Google Maps/u })).toBeTruthy();
 });

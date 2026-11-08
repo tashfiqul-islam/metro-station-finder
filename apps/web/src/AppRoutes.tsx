@@ -27,7 +27,8 @@ const Landing = lazyFeature(async () => {
 export function AppRoutes() {
   const [map, setMap] = useState<ReactNode>(null);
   return (
-    <AppShell map={map}>
+    // No map yet, or the screen failed to load: no map frame at all (an empty frame is not a region).
+    <AppShell map={map ?? undefined}>
       <Landing setMap={setMap} />
     </AppShell>
   );
