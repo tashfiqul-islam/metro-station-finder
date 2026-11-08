@@ -180,6 +180,31 @@ What the stubs show: the e2e fake copies the measured name (one shared constant,
 
 Unverified until the owner runs `bun run smoke:live` (METRO-100): the real widget's accessibility tree. Expect `combobox "Search For a Place"` (or a name that contains "search for a place", ignoring case), its description reading "Suggestions favor places in Dhaka." if Google wires `description` as documented, one Tab stop for the search, then `button "Use my location"`, and no axe violation. If the name differs, or the description is absent, record it on METRO-101.
 
+## Rough device location (METRO-103, 2026-11-08)
+
+Measured (owner, desktop Chrome on Windows, no GPS, 2026-11-08; relayed, not re-run by an agent): `navigator.geolocation.getCurrentPosition` returned `coords.accuracy` 25,000 m for both the normal and the `enableHighAccuracy` request, a city or ISP level guess, and "Use my location" showed a station nowhere near the owner. The code maps latitude and longitude correctly (Repo-verified); it ignored `coords.accuracy`.
+
+Station spacing (Repo-verified, computed 2026-11-08 from `packages/core/src/stations/dataset.ts`, Haversine between consecutive stations): 16 stations, 15 gaps, about 18.2 km end to end; minimum 801 m, median 1,103 m, maximum 2,163 m. Line 6 is therefore about 18 km along the stations, and a 25 km accuracy circle covers every station, so "nearest" is meaningless. A walking-route call from such a point is also wasted billing.
+
+What `coords.accuracy` means (Web-verified 2026-11-08, MDN `GeolocationCoordinates.accuracy` and the W3C Geolocation specification): a radius in metres at a 68 percent confidence level (one standard deviation). Older text said 95 percent; the specification's change log records the update to 68 percent. So the true position lies outside the reported circle about a third of the time, and "reliable" below is probabilistic, never a guarantee.
+
+Rule (core `assessNearestReliability`, pure and browser-safe), checked in this order:
+
+1. Accuracy missing, NaN, infinite or negative: unknown, so uncertain. This is judged before the origin, so an unknown accuracy wins over an invalid origin (the slice checks the origin itself first and shows the empty state for an invalid position).
+2. An invalid origin or no station: `no-nearest`.
+3. `GOOD_FIX_METERS = 100`: with `r <= 100 m` the fix is reliable and the nearest station by distance is shown. This constant is a product judgment, not derived (Inferred): a GPS-grade fix must never be told it is "only rough". Worst case at exactly 100 m: the runner-up can be within 2r = 200 m of equal distance, an acceptable detour. An exact tie at a small `r` returns the first station in dataset order.
+4. `r > 100 m`: with radius `r`, the nearest is uncertain when the runner-up is not farther than the nearest by more than `2r`. By the triangle inequality, if the gap exceeds 2r the nearest cannot change anywhere in the circle, so this is a SUFFICIENT bound for "reliable": conservative, tight only for collinear geometry, not an exact test. Equality (gap exactly 2r) is uncertain.
+
+One station has no runner-up and is reliable at any known radius, including the largest finite number.
+
+Quantified (Inferred from the computed spacing): for `r` just above 100 m the uncertain band is a stripe about 2r (about 200 m) wide around each bisector between neighbouring stations, a small share of the line. For `r` of half the spacing or more (about 400 m to 1.1 km) essentially every position is uncertain, and at 25 km all of them are.
+
+Behaviour: an uncertain device fix shows no station, no fare control and requests no walking route; it clears an earlier result. It shows one fixed message in the same `role="alert"` paragraph as the denied and unavailable states, focused on mount unless the user has already touched the search box (then it is announced but does not take focus, the METRO-88 rule for a late result). The same rule applies to the rough, denied and unavailable alerts; a reliable fix or a result for a chosen place follows it through the result heading. Copy: "Your device found your position only roughly, with an error of {size}. The nearest station could be wrong, so none is shown. Search for a place instead." where size is "about N m" below 1 km, else "about N km" with at most one decimal, and "more than 1000 km" from 1000 km up. When the accuracy is unknown: "Your device could not say how precisely it found your position. The nearest station could be wrong, so none is shown. Search for a place instead." An invalid position keeps the empty state. The consent line, place search and keyboard order are unchanged. The position stays in the browser (ADR-0009); `enableHighAccuracy` stays off.
+
+The e2e geolocation stub reports 20 m by default, so every existing journey is a reliable fix under the 100 m rule and proves what it proved before.
+
+Unverified: real devices and phones with GPS or Wi-Fi positioning (what accuracy they report, and how often the true point falls outside a 68 percent circle); other desktop browsers and operating systems; screen-reader announcement timing of the alert.
+
 ## The hint-text experiment and the live unknowns (METRO-102, 2026-11-08)
 
 Measured (owner's third live run, 2026-11-08 19:17, relayed in a comment on PR #102 (id 6721991523), not re-run by an agent), with the hint-text (`placeholder`) option passed as "Search for a place":
