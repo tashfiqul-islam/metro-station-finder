@@ -31,7 +31,9 @@ Before: 33 of 200 failed (chromium 11 of 100, mobile-chrome 22 of 100; an earlie
 
 The beacon is not a coincidence: web-vitals reports LCP on the first input, and the Reload press is the first input of the page. Chromium's activation waits for the old worker to have no work; the restart arrives after it decided to stop it, and Playwright's attach keeps the restarted worker from being stopped by the idle timer (Unverified: the exact Chromium path; the observed states are Repo-verified).
 
-Fix and measurement (same command `M`): 0 of 200 failed. The whole spec, `--repeat-each=10`, chromium and mobile-chrome, 12 workers: 340 passed. After the 3 s reading pause and the settle comment were removed from the spec (a sleep used as synchronisation): `--repeat-each=15`, same projects and workers: 510 passed. A new Chromium-only test (`METRO-125 ... an API request goes to the network without the worker`) pins the behaviour: a shell file is answered by the worker, `/api/other` is not (`Response.fromServiceWorker()`).
+Fix and measurement (same command `M`): 0 of 200 failed. The whole spec, `--repeat-each=10`, chromium and mobile-chrome, 12 workers: 340 passed. After the 3 s reading pause and the settle comment were removed from the spec (a sleep used as synchronisation): `--repeat-each=15`, same projects and workers: 510 passed. A Chromium-only test (`METRO-125 in Chromium an API request leaves a stopped worker stopped, and a shell file starts it`) pins the behaviour. It stops the worker with CDP `ServiceWorker.stopWorker`, sends `POST /api/vitals` and `GET /api/other` from the page, and reads the worker's running status from `ServiceWorker.workerVersionUpdated`: it must still be `stopped` once both are answered; a shell file fetch is the control and must start it (`running`). An earlier version of this test used `Response.fromServiceWorker()`, which is false for `/api/*` even without the route (the worker never answers it), so it could not fail; the review caught that. Proof for the current test (`-g METRO-125 --project=chromium --project=mobile-chrome --repeat-each=20 --workers=6`): with the `routeApiToNetwork` call temporarily removed, 40 of 40 failed (`Expected: "stopped"`, `Received: "running"`); restored, 40 of 40 passed.
+
+Transitional case: static routes are registered by the worker version being installed, so the update that first delivers this fix still runs the old worker, without routes, during its takeover. A person who presses Reload on that one update with the beacon in flight can still meet the race: the page shows the fixed failure words after 5 s, stays usable, and the next visit applies the update. A cheap mitigation in `register.ts` (for example, Reload first waiting for the beacon's chunk to report, or retrying the takeover) was not built; it needs an owner decision, since it changes what the Reload press does. The rule `/api/*` does not match `/api` itself; no such endpoint exists today.
 
 What is not covered: another request sent in the same window can still restart the worker; and whether a real Chrome without a debugger recovers when its own idle timer stops the restarted worker is Unverified (no real-browser run). Firefox and WebKit have no static routing API (Unverified for WebKit 26) and keep the pass-through; the race was never seen there.
 
@@ -40,6 +42,8 @@ What is not covered: another request sent in the same window can still restart t
 Reproduction: a copy of `NearestStation.test.tsx` whose METRO-120 cases ran 800 times, with 24 busy processes (`vitest run --coverage.enabled=false --sequence.seed=N`). Before: seeds 5 to 10 failed 1, 4, 2, 2, 2, 1 times (12 of 5,220 tests); each failure was `expected <body> to be <button>` (focus not yet moved). After the setup file: the same seeds, same load: 0 of 5,220. The real file, 30 seeds (101 to 130) under 24 busy processes: 0 failed.
 
 `AppRoutes.map`: under 40 busy processes the test failed 8 of 8 runs before (1,027 to 1,148 ms, the 1 s limit) and 0 of 30 after.
+
+The same cold `import()` made two more tests fail: `AppRoutes.test.tsx` (METRO-93, `findByRole` at about 1,049 ms) and `main.test.tsx` (METRO-58, `vi.waitFor`, 1 s default). Both now load the screen's two modules in `beforeAll` (30 s hook timeout); `main.test.tsx` calls `vi.resetModules()` in the test, which keeps the transform cache the warm-up filled. The METRO-93 pending status is still seen first (checked: the test passes with its assertions unchanged). Under 40 busy processes, 16 runs each (`vitest run --coverage.enabled=false --sequence.seed=N <file>`): `AppRoutes.test.tsx` failed 10 of 16 before, 0 of 16 after; `main.test.tsx` failed 11 of 16 before, 0 of 16 after. Other `apps/web` tests with a lazy chunk were checked: only these four files (`AppRoutes`, `AppRoutes.map`, `AppRoutes.failure`, `main`) render the real lazy boundary; `AppRoutes.failure.test.tsx` mocks the screen to reject at once (the other import cannot delay a rejection) and `lazy-feature.test.tsx` uses fake loaders, so neither waits on a cold graph.
 
 ## Scripts
 
@@ -61,6 +65,16 @@ The uncovered statements, branches and functions are the same ones as at the bas
 ## Full smoke
 
 `CI=true bun run smoke -- --shuffle` (all four projects, default workers), five runs in a row on the final tree: each 789 passed, 24 skipped, 0 failed, 5.9 to 6.7 minutes. `bun run check` and `bun run build` passed on the same tree.
+
+## Machine load seen during the final smoke runs
+
+Another agent's `bun run check` shared this machine with five default-worker (10) smoke runs on the tree before the last Vitest edits: three of the five failed once or more, each in a different test (the lab LCP at 2,620 ms against 2,500 ms; a Firefox heading not visible within 5 s; three tests in Firefox and mobile-chrome), and the five runs before that, on a quiet machine, all passed. Load-driven, not caused by this change (none involves the worker, the beacon, the split axe tests or the Vitest setup), but it shows that the lab LCP test measures while nine other browsers run: isolating it (its own Playwright project after the others) would change `playwright.config.ts` and the workflow's `--project` policy and needs an owner decision; not done here.
+
+## Review follow-ups
+
+- `location.e2e.ts`: `open()` waits for `locate(page)` to be visible, so the per-state reload and its visibility check the split removed are covered by the fresh page. The diff of the base against this change (`git diff -w`) shows the 24 test bodies keep every step and assertion; only the loop, the title and the reload moved. The split raises the page-open count: six opens per theme and size instead of one open and five reloads, about the same number of page loads, with more context set-ups.
+- `AppRoutes.map.test.tsx`: the two `beforeAll` imports (`./features/nearby/Nearby`, `./adapters/maps`) are the exact dynamic imports of the lazy boundary in `AppRoutes.tsx`.
+- One pre-push attempt failed on a single `net::ERR_NO_BUFFER_SPACE` console error in a split axe test (Windows socket buffers under the hook's parallel load). It did not recur in five smoke runs or the next attempt. Cause Unverified.
 
 ## Checks not run
 

@@ -235,6 +235,7 @@ export async function cacheFirst(deps: Deps, request: Request): Promise<Response
  * web-vitals beacon sent on a person's first input reached a worker Chromium was stopping for a takeover, which
  * restarted it, and the waiting worker then stayed waiting (Repo-verified, docs/evidence/metro-125.md). A browser
  * without the API, or a refused rule, keeps the old behaviour: the fetch handler passes the request through.
+ * `/api/*` does not match `/api` itself; no such endpoint exists, and `route` still passes it through.
  */
 async function routeApiToNetwork(event: InstallEvent): Promise<void> {
   try {

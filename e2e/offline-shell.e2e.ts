@@ -304,10 +304,13 @@ test.describe("offline shell on the real server", () => {
       expect(served).toBe(true);
     });
 
-    // METRO-125: where Chromium has the static routing API, an API request never starts the worker. The
-    // web-vitals beacon sent on a person's first input used to reach a worker that was being stopped for a takeover.
-    test("METRO-125 in Chromium an API request goes to the network without the worker, a shell file through it", async ({
+    // METRO-125: where Chromium has the static routing API, an API request does not start the worker. The
+    // web-vitals beacon sent on a person's first input used to reach a worker that was being stopped for a takeover
+    // and restart it. The test stops the worker through the browser's own protocol, sends API requests, and reads the
+    // worker's running status from the browser: a request that dispatched a fetch event would have started it first.
+    test("METRO-125 in Chromium an API request leaves a stopped worker stopped, and a shell file starts it", async ({
       page,
+      context,
       browserName,
     }) => {
       test.skip(
@@ -316,16 +319,30 @@ test.describe("offline shell on the real server", () => {
       );
       await open(page);
       await shellReady(page);
-      const through = async (path: string): Promise<boolean> => {
-        const [response] = await Promise.all([
-          page.waitForResponse((candidate) => candidate.url().endsWith(path)),
-          page.evaluate(async (url) => (await fetch(url)).status, path),
-        ]);
-        return response.fromServiceWorker();
-      };
-      // Control first: a shell file is answered by the worker, so the check can see the worker at all.
-      expect(await through("/theme-boot.js")).toBe(true);
-      expect(await through("/api/other")).toBe(false);
+      const cdp = await context.newCDPSession(page);
+      const running = new Map<string, string>();
+      cdp.on("ServiceWorker.workerVersionUpdated", (event) => {
+        for (const version of event.versions) running.set(version.versionId, version.runningStatus);
+      });
+      await cdp.send("ServiceWorker.enable");
+      await expect.poll(() => running.size).toBeGreaterThan(0);
+      const [versionId = ""] = [...running.keys()];
+      expect(versionId).not.toBe("");
+      await cdp.send("ServiceWorker.stopWorker", { versionId });
+      await expect.poll(() => running.get(versionId)).toBe("stopped");
+      // A beacon like the page's own, and a read: both are answered (4xx is fine) before the status is read.
+      await page.evaluate(async () => {
+        await fetch("/api/vitals", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: "{}",
+        });
+        await fetch("/api/other");
+      });
+      expect(running.get(versionId)).toBe("stopped");
+      // Control: a shell file does go through the worker, which starts it again, so "stopped" above was observable.
+      await page.evaluate(async () => (await fetch("/theme-boot.js")).status);
+      await expect.poll(() => running.get(versionId)).toBe("running");
     });
   });
 });
