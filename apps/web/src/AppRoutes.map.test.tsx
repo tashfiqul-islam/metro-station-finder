@@ -3,9 +3,15 @@ import { afterAll, afterEach, beforeAll, expect, test } from "vitest";
 
 import { AppRoutes } from "./AppRoutes";
 
-beforeAll(() => {
+// The first `import()` of the screen loads and transforms its whole module graph (about 0.4 s alone, over 1 s on
+// a loaded machine, METRO-125), which a 1 s `findBy` could not wait for. Loading it here, with a hook timeout
+// sized for a cold graph, leaves the test to wait only for what it checks: the lazy boundary resolving and the
+// screen rendering its map.
+const COLD_GRAPH_MS = 30_000;
+beforeAll(async () => {
   Reflect.set(globalThis, "IS_REACT_ACT_ENVIRONMENT", true);
-});
+  await Promise.all([import("./features/nearby/Nearby"), import("./adapters/maps")]);
+}, COLD_GRAPH_MS);
 afterEach(cleanup);
 afterAll(() => {
   Reflect.deleteProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT");
