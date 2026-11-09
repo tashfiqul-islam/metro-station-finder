@@ -29,6 +29,13 @@ export const HEAD_SCRIPTS = ["theme-boot.js"] as const;
 export const HEAD_SCRIPT_MISSING =
   "A script that index.html loads from public/ is missing from the build";
 
+/**
+ * The offline shell worker, written beside `index.html` by `scripts/sw-plugin.ts` (METRO-106, ADR-0023). It is a
+ * separate small build, so it is not in the Vite manifest and not an orphan. It is never on the first-visit path
+ * (the page registers it after load and idle), so it counts toward the all-files ceiling only.
+ */
+export const WORKER_SCRIPTS = ["sw.js"] as const;
+
 export const MANIFEST_PATH = ".vite/manifest.json";
 /** One fixed message for every way the first-visit set cannot be computed. */
 export const MANIFEST_FAILURE =
@@ -159,7 +166,7 @@ export function evaluateBundle(
   if (files === null || [...files].some((file) => !onDisk.has(file)))
     return { lines: [], problems: [MANIFEST_FAILURE] };
   // Every emitted file must be known to the manifest, as a chunk `file` or in a `css` list.
-  const listed = new Set<string>(heads);
+  const listed = new Set<string>([...heads, ...WORKER_SCRIPTS]);
   for (const chunk of manifest?.values() ?? []) {
     listed.add(chunk.file);
     for (const file of chunk.css) listed.add(file);

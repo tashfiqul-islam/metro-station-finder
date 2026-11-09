@@ -414,6 +414,21 @@ test("METRO-105 a classic head script from public/ counts as first-visit and is 
   expect(without.lines.some((line) => line.includes("theme-boot.js"))).toBe(false);
 });
 
+test("METRO-106 sw.js is not an orphan, is never first-visit, counts toward the ceiling, and a stray worker-like file is still an orphan", () => {
+  const withWorker = [...split(100), asset("sw.js", 3000, 1200)];
+  const report = evaluateBundle(withWorker, SPLIT);
+  expect(report.problems).toEqual([]);
+  expect(report.lines).toContain("  sw.js: 3000 raw; 1200 gzip; lazy");
+  expect(report.lines).toContain(
+    `All JS/CSS: ${1660 + 3000} bytes raw; ${760 + 1200} bytes gzip (ceiling 400000 / 125000)`,
+  );
+  expect(evaluateBundle([...split(100), asset("sw2.js", 3000, 1200)], SPLIT).problems).toEqual([
+    MANIFEST_STALE,
+  ]);
+  // Over the ceiling it still fails: the worker is not free.
+  const huge = [...split(100), asset("sw.js", ALL_FILES_CEILING.raw, 1200)];
+  expect(evaluateBundle(huge, SPLIT).problems).toEqual([CEILING_OVER]);
+});
 test("METRO-105 the head script counts against the first-visit budget", () => {
   const nearlyFull = [
     asset("assets/index.js", FIRST_VISIT_BUDGET.raw - 500, 400),
