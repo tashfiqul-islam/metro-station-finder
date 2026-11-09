@@ -475,3 +475,26 @@ test("METRO-112 opening the list scrolls the field with its list into view (near
     Reflect.deleteProperty(Element.prototype, "scrollIntoView");
   }
 });
+
+// METRO-118: a click on an option keeps focus in the field (still `:focus-visible`), so the heading is focused
+// with a request for no ring; Enter asks for the ring.
+test("METRO-118 focuses the heading with a ring after Enter and without one after a click on an option", () => {
+  const focus = vi.spyOn(HTMLElement.prototype, "focus");
+  setup();
+  fireEvent.change(box(), { target: { value: "motijheel" } });
+  fireEvent.keyDown(box(), { key: "Enter" });
+  const motijheel = screen.getByRole("heading", { level: 2, name: "Motijheel" });
+  const lastCall = (target: HTMLElement): FocusOptions | undefined => {
+    let found: FocusOptions | undefined;
+    for (const [index, self] of focus.mock.contexts.entries()) {
+      if (self === target) found = focus.mock.calls[index]?.[0];
+    }
+    return found;
+  };
+  expect(lastCall(motijheel)).toEqual({ focusVisible: true });
+
+  fireEvent.change(box(), { target: { value: "uttara north" } });
+  fireEvent.click(must(listbox().querySelector<HTMLElement>("[role=option]")));
+  const uttara = screen.getByRole("heading", { level: 2, name: "Uttara North" });
+  expect(lastCall(uttara)).toEqual({ focusVisible: false });
+});

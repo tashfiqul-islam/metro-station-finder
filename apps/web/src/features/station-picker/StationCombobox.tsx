@@ -13,8 +13,8 @@ import "../../styles/components/common.css";
 
 interface StationComboboxProps {
   readonly stations: readonly Station[];
-  /** A station was chosen (Enter or a click on an option). */
-  readonly onSelect: (station: Station) => void;
+  /** A station was chosen: by Enter (`keyboard`) or a click or tap on an option (`pointer`). */
+  readonly onSelect: (station: Station, source: "keyboard" | "pointer") => void;
   /** The user typed, cleared or asked for the full list: the sheet opens to full so the list has room. */
   readonly onEngage: () => void;
 }
@@ -72,12 +72,12 @@ export function StationCombobox({
     }
   }, [expanded]);
 
-  function choose(station: Station): void {
+  function choose(station: Station, source: "keyboard" | "pointer"): void {
     setText(station.name);
     setTyped(false);
     setOpen(false);
     setActive(-1);
-    onSelect(station);
+    onSelect(station, source);
   }
 
   function onChange(event: ChangeEvent<HTMLInputElement>): void {
@@ -118,7 +118,7 @@ export function StationCombobox({
       case "Enter": {
         if (activeMatch === undefined) return;
         event.preventDefault();
-        choose(activeMatch.station);
+        choose(activeMatch.station, "keyboard");
         return;
       }
       case "Escape": {
@@ -231,7 +231,7 @@ export function StationCombobox({
               // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a native option cannot hold the roundel and the two-line text
               role="option"
               aria-selected={index === active}
-              onClick={() => choose(match.station)}
+              onClick={() => choose(match.station, "pointer")}
             >
               <span className="roundel roundel--md" data-stop={position} aria-hidden="true">
                 {stopLabel(position)}
