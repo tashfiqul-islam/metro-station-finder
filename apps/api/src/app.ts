@@ -35,6 +35,9 @@ const consoleLogger: Logger = (line) => {
   console.log(JSON.stringify(line));
 };
 
+/** Static files the Worker answers first (wrangler.jsonc `run_worker_first`) so a miss is a 404, not index.html. */
+const WORKER_FIRST_ASSETS = ["/assets/*", "/sw.js"] as const;
+
 const REQUEST_ID = /^[A-Za-z0-9_-]{8,64}$/u;
 const GIT_SHA = /^[0-9a-f]{40}$/u;
 
@@ -81,7 +84,7 @@ export function createApp(log: Logger = consoleLogger, register: (app: ApiApp) =
 
   // Worker-generated responses: /api/* and the /assets/* 404 and 405 (ADR-0011).
   app.use("/api/*", secureHeaders(SECURE_HEADERS));
-  app.use("/assets/*", secureHeaders(SECURE_HEADERS));
+  for (const path of WORKER_FIRST_ASSETS) app.use(path, secureHeaders(SECURE_HEADERS));
 
   app.use("/api/*", async (context, next) => {
     const supplied = context.req.header("x-request-id");
@@ -112,19 +115,23 @@ export function createApp(log: Logger = consoleLogger, register: (app: ApiApp) =
   // missing file with the SPA's index.html (200), and _headers would mark that immutable. Only a real
   // asset may pass; an HTML answer under /assets/ is a miss. That includes any .html or .htm file
   // placed under /assets/ on purpose: it is indistinguishable from the SPA fallback and is a 404.
-  app.get("/assets/*", async (context) => {
-    const asset = await context.env.ASSETS.fetch(context.req.raw);
-    if (!(asset.headers.get("content-type") ?? "").toLowerCase().startsWith("text/html")) {
-      // The fetcher's response has immutable headers; copy it so secureHeaders can add its own.
-      return new Response(asset.body, asset);
-    }
-    context.header("Cache-Control", "no-store");
-    return context.json(envelope("not_found", "No such asset"), 404);
-  });
-  app.all("/assets/*", (context) => {
-    context.header("Allow", "GET, HEAD");
-    return context.json(envelope("method_not_allowed", "Use GET"), 405);
-  });
+  // `/sw.js` follows the same rule (METRO-106, ADR-0023): were it missing, the SPA fallback would answer with
+  // index.html as a 200, and a browser must see a miss, not HTML, when it checks for a new worker.
+  for (const path of WORKER_FIRST_ASSETS) {
+    app.get(path, async (context) => {
+      const asset = await context.env.ASSETS.fetch(context.req.raw);
+      if (!(asset.headers.get("content-type") ?? "").toLowerCase().startsWith("text/html")) {
+        // The fetcher's response has immutable headers; copy it so secureHeaders can add its own.
+        return new Response(asset.body, asset);
+      }
+      context.header("Cache-Control", "no-store");
+      return context.json(envelope("not_found", "No such asset"), 404);
+    });
+    app.all(path, (context) => {
+      context.header("Allow", "GET, HEAD");
+      return context.json(envelope("method_not_allowed", "Use GET"), 405);
+    });
+  }
   app.all("/api/*", (context) => context.json(envelope("not_found", "No such API route"), 404));
   // The cause is deliberately not echoed to clients or logged beyond its class name.
   app.onError((error, context) => {
