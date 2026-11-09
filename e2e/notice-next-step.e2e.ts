@@ -64,8 +64,11 @@ async function reconnect(page: Page): Promise<void> {
   });
 }
 
-async function open(page: Page, scriptFails = false): Promise<void> {
-  await installMapsStub(page, { scriptFails });
+async function open(page: Page, scriptFails = false, scriptDelayMs?: number): Promise<void> {
+  await installMapsStub(page, {
+    scriptFails,
+    ...(scriptDelayMs === undefined ? {} : { scriptDelayMs }),
+  });
   await page.goto("/");
   await expect(locate(page)).toBeVisible();
 }
@@ -83,15 +86,14 @@ async function settle(page: Page): Promise<void> {
 }
 
 /**
- * Starts the load that fails without moving focus: the plain field's focus handler is what asks for the
- * script, and a real focus would take focus off the notice's action, which is the case under test.
+ * A Maps load that is already under way and fails a little later. The first focus of the plain field starts it;
+ * pressing "Use my location" then moves focus out of the field (so the field is not what held focus) and the
+ * notice's first action takes it. When the load fails, that action is removed under the focus.
  */
-async function startFailingLoad(page: Page): Promise<void> {
-  await page.evaluate(() => {
-    document
-      .getElementById("place-input")
-      ?.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
-  });
+const FAILS_AFTER_MS = 2500;
+async function startLoadThatFailsLater(page: Page): Promise<void> {
+  await plainSearch(page).focus();
+  await locate(page).click();
 }
 
 /** Axe after the notice has finished rising in: a half-faded notice reads as a contrast failure. */
@@ -169,14 +171,13 @@ test.describe("a notice's next step is available right now (METRO-120)", () => {
       page,
     }) => {
       await stubGeolocation(page, "denied");
-      await open(page, true);
-      await locate(page).click();
+      await open(page, true, FAILS_AFTER_MS);
+      await startLoadThatFailsLater(page);
       const before = page.getByRole("group", { name: "Location is turned off. " + SEARCH });
       const action = before.getByRole("button", { name: "Search for a place" });
       await expect(action).toBeFocused();
-      await startFailingLoad(page);
       const after = page.getByRole("group", { name: "Location is turned off. " + PICK });
-      await expect(after).toBeVisible();
+      await expect(after).toBeVisible({ timeout: 15_000 });
       await expect(after.getByRole("button", { name: "Search for a place" })).toHaveCount(0);
       await expect(page.getByText(SEARCH)).toHaveCount(0);
       await expect(after).toBeFocused();
@@ -187,16 +188,15 @@ test.describe("a notice's next step is available right now (METRO-120)", () => {
       page,
     }) => {
       await stubGeolocation(page, "denied");
-      await open(page, true);
-      await locate(page).click();
+      await open(page, true, FAILS_AFTER_MS);
+      await startLoadThatFailsLater(page);
       const before = page.getByRole("group", { name: "Location is turned off. " + SEARCH });
       await expect(before.getByRole("button", { name: "Search for a place" })).toBeFocused();
       await page.evaluate(() => {
         if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
       });
-      await startFailingLoad(page);
       const after = page.getByRole("group", { name: "Location is turned off. " + PICK });
-      await expect(after).toBeVisible();
+      await expect(after).toBeVisible({ timeout: 15_000 });
       await expect(after).not.toBeFocused();
       await expect(page.locator("body")).toBeFocused();
     });

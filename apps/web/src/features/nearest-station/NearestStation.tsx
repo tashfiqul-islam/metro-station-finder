@@ -167,16 +167,20 @@ function Slice({
 
   // Place search went away while a location notice showed (METRO-120): its "Search for a place" action leaves with
   // it. If focus was on that action it fell to the page; the notice takes it, so the keyboard user is not lost.
-  // Only when that action really had focus (a ref set by its focus and blur): a user who clicked the blank page
-  // keeps focus there. A blur from the element leaving the page is ignored (it is no longer connected).
+  // Only when that action really had focus as it was removed (its ref cleanup records that): a user who clicked
+  // the blank page keeps focus there. A flag set while search is available is dropped after each commit.
   const actionHadFocus = useRef(false);
   useEffect(() => {
-    if (searchAvailable || !actionHadFocus.current) return;
+    if (searchAvailable) {
+      actionHadFocus.current = false;
+      return;
+    }
+    if (!actionHadFocus.current) return;
     actionHadFocus.current = false;
     if (document.activeElement === null || document.activeElement === document.body) {
       document.getElementById("location-notice-text")?.closest<HTMLElement>(".notice")?.focus();
     }
-  }, [searchAvailable]);
+  });
 
   function show(origin: Coordinate, source: LocationSource): void {
     // A late device fix never pulls focus (or the sheet) out of the search box the user is typing in.
@@ -245,11 +249,12 @@ function Slice({
       type="button"
       className="btn btn--quiet btn--sm"
       onClick={focusSearch}
-      onFocus={() => {
-        actionHadFocus.current = true;
-      }}
-      onBlur={(event) => {
-        if (event.currentTarget.isConnected) actionHadFocus.current = false;
+      ref={(node) => {
+        // The cleanup runs as React detaches the button, before the node leaves the page, so activeElement is
+        // still the button if it had focus.
+        return () => {
+          if (document.activeElement === node) actionHadFocus.current = true;
+        };
       }}
     >
       <Icon icon={searchIcon} size={16} />
