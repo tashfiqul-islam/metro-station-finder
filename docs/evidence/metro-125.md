@@ -76,6 +76,12 @@ Another agent's `bun run check` shared this machine with five default-worker (10
 - `AppRoutes.map.test.tsx`: the two `beforeAll` imports (`./features/nearby/Nearby`, `./adapters/maps`) are the exact dynamic imports of the lazy boundary in `AppRoutes.tsx`.
 - One pre-push attempt failed on a single `net::ERR_NO_BUFFER_SPACE` console error in a split axe test (Windows socket buffers under the hook's parallel load). It did not recur in five smoke runs or the next attempt. Cause Unverified.
 
+## Re-verification by the second implementer
+
+Re-proof of the Chromium API test on the tree at `8c9834f`: with the `routeApiToNetwork` call replaced by `Promise.resolve()`, `-g METRO-125 --project=chromium --project=mobile-chrome --repeat-each=10 --workers=6` failed 20 of 20; restored (`git diff` clean), 20 of 20 passed. The race metric `M` on the same tree: 200 passed.
+
+Five shuffled four-project runs on `8c9834f`: one passed (789 passed, 24 skipped); the other four each failed one test, each a different one, none touching the worker, the beacon or the Vitest setup. Causes: `web-vitals-lab` LCP over budget while nine other browsers ran; two axe `color-contrast` failures of 1.48 on a `.notice` in Firefox (axe read the text mid-way through the notice's 280 ms rise); a Firefox `downloadable font ... NS_BINDING_ABORTED` console error; a `heading not found within 5 s` with `net::ERR_NO_BUFFER_SPACE` (a Windows socket-buffer error, the same one noted below). Fixed here: the shared guard in `e2e/fixtures.ts` now waits for finite animations to finish (`animationsSettled`) before axe runs; no rule, tag or threshold changed. The font abort, the buffer error and the LCP measurement are load effects of this Windows machine and are Unverified as to cause; nothing was weakened for them.
+
 ## Checks not run
 
 Hosted CI on this branch; Firefox and WebKit stress runs of the update flow (the race was seen in Chromium only); a real-device run of the takeover; a Linux run of the stress (the failure was reproduced on Windows, the hosted failure on Linux).

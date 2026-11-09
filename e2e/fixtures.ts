@@ -79,6 +79,21 @@ export function axeBuilder(page: Page): AxeBuilder {
 }
 
 /**
+ * Waits for every finite animation on the page to finish (the notice rises over 280 ms; METRO-125). Axe reads
+ * the colours the page shows at that instant: mid-fade a notice's text is a pale blend and fails contrast, which
+ * under load happened in about one run in five. Infinite animations (the loading shimmer) are left running; they
+ * are not a state the page settles into.
+ */
+export async function animationsSettled(page: Page): Promise<void> {
+  await page.evaluate(async () => {
+    const finite = document
+      .getAnimations()
+      .filter((animation) => animation.effect?.getComputedTiming().iterations !== Infinity);
+    await Promise.allSettled(finite.map((animation) => animation.finished));
+  });
+}
+
+/**
  * Every test fails on any console error or uncaught page error, and every page a test leaves open
  * must have zero axe violations in every project.
  */
@@ -104,6 +119,7 @@ export const test = base.extend<{ guards: void } & Options>({
       ];
       expect(problems, "console and page errors").toEqual([]);
       if (page.url() !== "about:blank") {
+        await animationsSettled(page);
         const results = await axeBuilder(page).analyze();
         expect(results.violations, "axe violations").toEqual([]);
       }
