@@ -1323,7 +1323,9 @@ test("METRO-114 the library failing leaves focus alone when it already moved to 
   publish({ status: "unavailable" });
   const button = screen.getByRole("button", { name: copy.locateButton });
   expect(document.activeElement).toBe(button);
-  expect(document.activeElement).not.toBe(document.querySelector(".notice[data-size=sm]"));
+  const notice = must(document.querySelector<HTMLElement>(".notice[data-size=sm]"));
+  expect(notice.textContent).toContain(copy.searchUnavailable);
+  expect(document.activeElement).not.toBe(notice);
 });
 
 test("METRO-120 place search failing leaves focus alone when it already moved to another control as the action left", async () => {
@@ -1335,6 +1337,8 @@ test("METRO-120 place search failing leaves focus alone when it already moved to
   publish({ status: "unavailable" });
   const now = screen.getByRole("group", { name: copy.unavailable.pick });
   expect(document.activeElement).not.toBe(now);
-  expect(document.activeElement).not.toBe(document.body);
-  expect(document.activeElement?.tagName).toBe("BUTTON");
+  // The field handed focus to the page's first button as it left; the notice did not take it back.
+  const first = must(document.querySelector<HTMLElement>("button"));
+  expect(document.activeElement).toBe(first);
+  expect(first.textContent).toBe(copy.tryAgain);
 });
