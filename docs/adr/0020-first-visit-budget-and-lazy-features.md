@@ -4,6 +4,8 @@
 - Date: 2026-11-08
 - Ticket and specification: METRO-104 (Plane); no separate specification, the ticket's owner decision of 2026-11-08 (gate policy, approved with "ok") is the contract.
 
+> Amended by [ADR-0023](0023-bundle-budget-model.md) (METRO-116, 2026-11-09): the first-visit limit is split into JS (250,000 / 80,000, unchanged) and CSS, and the all-files ceiling is replaced by a per-screen limit and a shared lazy allowance, with unclassified chunks failing. The text below is the record of the original decision.
+
 ## Context
 
 The bundle gate summed every JS and CSS file against 250,000 bytes raw and 80,000 gzip (METRO-12). After METRO-44 part B the build was 248,941 / 79,213, so the next feature of any size would fail, and a lazy chunk could not help because it counted the same as the entry. The budget exists to bound how much a first visit must download and parse, not how many files a product has. Part C added an entry-chunk check, then the orchestrator equalised it to the totals as an interim step ([ADR-0019](0019-telemetry-endpoint.md), [METRO-44c evidence](../evidence/metro-44c.md)), which left it inert.
