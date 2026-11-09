@@ -170,7 +170,8 @@ async function retire(scope: WorkerScope, deps: Deps): Promise<void> {
 export function attach(scope: WorkerScope, config: WorkerConfig): void {
   const deps: Deps = {
     caches: scope.caches,
-    fetch: scope.fetch,
+    // Called as a method of the scope: a detached `fetch` throws "Illegal invocation" in a browser.
+    fetch: async (input, init) => scope.fetch(input, init),
     wait: (task, ms) => {
       scope.setTimeout(task, ms);
     },

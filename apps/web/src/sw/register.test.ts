@@ -256,3 +256,11 @@ test("METRO-106 with the browser's own container the defaults register, reload a
     vi.useRealTimers();
   }
 });
+
+test("METRO-106 offline, no registration is attempted and no region is mounted", async () => {
+  const { container, env, online } = setup();
+  online.value = false;
+  await registerWorker(container, env);
+  expect(container.registered).toEqual([]);
+  expect(document.querySelector("[role=status]")).toBeNull();
+});

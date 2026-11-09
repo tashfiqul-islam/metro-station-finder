@@ -123,6 +123,8 @@ export async function registerWorker(
   env: Env | undefined = container === undefined ? undefined : defaultEnv(container),
 ): Promise<void> {
   if (container === undefined || env === undefined) return;
+  // Offline, a worker already controls the page (or none can be fetched): checking for a new one waits.
+  if (!env.online()) return;
   const registration = await container.register("/sw.js", { scope: "/", updateViaCache: "none" });
   const region = mountRegion(env.document);
   let offered = false;

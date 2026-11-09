@@ -31,6 +31,7 @@ async function fixture(
     "assets/font-c3.woff2": "d",
     "icons/icon-192.png": "e",
     "theme-boot.js": "f",
+    "favicon.ico": "i",
     "manifest.webmanifest": "{}",
     _headers: "/*",
     ".assetsignore": ".vite",

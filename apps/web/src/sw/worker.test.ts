@@ -341,7 +341,11 @@ describe("attach", () => {
     ];
     const scope: WorkerScope = {
       caches,
-      fetch: fetcher,
+      // Like a real worker scope: `fetch` must be called as its method, or the browser throws.
+      fetch(this: unknown, input, init) {
+        if (this !== scope) throw new TypeError("Illegal invocation");
+        return fetcher(input, init);
+      },
       location: { origin: ORIGIN },
       registration: {
         unregister: () => {

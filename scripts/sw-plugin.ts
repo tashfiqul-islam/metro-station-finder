@@ -15,9 +15,15 @@ export interface WorkerConfig {
   readonly kill: boolean;
 }
 
-/** Build output that is never part of the offline shell. `sw.js` is excluded because it is the worker. */
+/**
+ * Build output that is never part of the offline shell. `sw.js` is excluded because it is the worker.
+ * `favicon.ico` is excluded because a script cannot fetch it under Playwright Chromium (`fetch("/favicon.ico")`
+ * fails with a network error while `/favicon.ico?x=1` and every other icon succeed; cause Unverified), which
+ * would fail the whole install. The page also declares `favicon.svg` and `apple-touch-icon.png`, both cached.
+ */
 const NOT_SHELL = new Set([
   "sw.js",
+  "favicon.ico",
   "_headers",
   ".assetsignore",
   "robots.txt",
