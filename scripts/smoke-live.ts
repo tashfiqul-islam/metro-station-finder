@@ -133,7 +133,7 @@ async function main(): Promise<boolean> {
     cspMessages: [],
     placesRequests: 0,
     googleBeforeFocus: 0,
-    focusInWidget: null,
+    focusAfterSwap: null,
     placesDuringTabWalk: 0,
     routesRequests: 0,
     stationShown: false,
@@ -180,11 +180,19 @@ async function main(): Promise<boolean> {
       // a click focuses the inner input, then the keyboard types into it.
       const host = page.locator("gmp-place-autocomplete").first();
       await host.waitFor({ state: "attached", timeout: 30_000 });
-      // Focus kept? The host (or an element inside it) is the active element when the swap kept focus.
-      const active: unknown = await page.evaluate(
-        "document.activeElement?.tagName === 'GMP-PLACE-AUTOCOMPLETE'",
-      );
-      run.focusInWidget = typeof active === "boolean" ? active : null;
+      // Focus kept after the swap?
+      // Read now, before the Tab walk and the click move focus. The page can see inside the host only through an
+      // open shadow root; a closed one reads as "host-only".
+      const active: unknown = await page.evaluate(`(() => {
+        const el = document.activeElement;
+        if (el === null || el.tagName !== "GMP-PLACE-AUTOCOMPLETE") return "elsewhere";
+        const inner = el.shadowRoot === null ? null : el.shadowRoot.activeElement;
+        return inner !== null && inner.tagName === "INPUT" ? "inner-input" : "host-only";
+      })()`);
+      run.focusAfterSwap =
+        active === "inner-input" || active === "host-only" || active === "elsewhere"
+          ? active
+          : null;
       // Read right away, so the version prints even when a later step fails.
       const version: unknown = await page.evaluate("window.google?.maps?.version ?? null");
       run.version = typeof version === "string" ? version : null;

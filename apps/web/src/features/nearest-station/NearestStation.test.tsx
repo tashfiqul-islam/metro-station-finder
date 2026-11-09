@@ -13,6 +13,7 @@ import type {
   RouteService,
   WalkingRoute,
 } from "../../adapters/maps/context";
+import { createRouteService } from "../../adapters/maps/routes";
 import { copy } from "./copy";
 import { WATCHDOG_MS } from "./geolocate";
 import { fakePosition, fakePositionError } from "./geolocation-fakes";
@@ -175,6 +176,8 @@ const locatingStatus = (): HTMLElement => must(document.querySelector("output"))
 /** The estimate shown in the result: "about" then a figure then "straight-line distance · est.". */
 const distanceText = (): string => must(document.querySelector(".metric__value")).textContent;
 
+const smallNoticeElement = (): HTMLElement | null =>
+  document.querySelector<HTMLElement>(".notice[data-size=sm]");
 const good = (): void => geolocation((success) => success(fakePosition(23.87, 90.367, 20)));
 const pressLocate = (): void => {
   fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
@@ -290,9 +293,19 @@ test("METRO-114 a good device fix asks for exactly one walking route and shows i
   expect(screen.getByText(copy.walking + ":")).toBeTruthy();
 });
 
-test("METRO-114 a re-render, StrictMode and a theme change add no walking route request", async () => {
-  const walk = vi.fn<RouteService["walk"]>(() => Promise.resolve(route(1234, 900)));
-  world.service = routeService(walk);
+/** The real route service over a counted fake of Google's `Route.computeRoutes`, wrapped to count `walk` too. */
+function countedRealService() {
+  const computeRoutes = vi.fn(() =>
+    Promise.resolve({ routes: [{ distanceMeters: 1234, durationMillis: 900_000 }] }),
+  );
+  const real = createRouteService({ computeRoutes });
+  const walk = vi.fn<RouteService["walk"]>((origin, destination) => real.walk(origin, destination));
+  return { computeRoutes, walk, service: routeService(walk) };
+}
+
+test("METRO-114 under StrictMode (as in production) a good fix asks for one route and a place for one more", async () => {
+  const { computeRoutes, walk, service } = countedRealService();
+  world.service = service;
   good();
   const view = render(
     <StrictMode>
@@ -301,8 +314,10 @@ test("METRO-114 a re-render, StrictMode and a theme change add no walking route 
   );
   pressLocate();
   await screen.findByText(ROUTE_TEXT);
-  const before = walk.mock.calls.length;
-  // StrictMode may run the effect twice in development; the count is of the settled result.
+  // The effect ran twice (StrictMode); the result still made one walk call and Google one request.
+  expect(walk).toHaveBeenCalledTimes(1);
+  expect(computeRoutes).toHaveBeenCalledTimes(1);
+  // A re-render and a theme change add nothing.
   document.documentElement.setAttribute("data-theme", "dark");
   view.rerender(
     <StrictMode>
@@ -311,8 +326,66 @@ test("METRO-114 a re-render, StrictMode and a theme change add no walking route 
   );
   publish({});
   await act(async () => {});
-  expect(walk.mock.calls.length).toBe(before);
   document.documentElement.removeAttribute("data-theme");
+  expect(walk).toHaveBeenCalledTimes(1);
+  expect(computeRoutes).toHaveBeenCalledTimes(1);
+  pickPlace(NEAR_MOTIJHEEL);
+  await screen.findByText(ROUTE_TEXT);
+  expect(walk).toHaveBeenCalledTimes(2);
+  expect(computeRoutes).toHaveBeenCalledTimes(2);
+});
+
+test("METRO-114 the same fix twice is two results, two walk calls, and one request to Google", async () => {
+  const { computeRoutes, walk, service } = countedRealService();
+  world.service = service;
+  good();
+  render(<NearestStation maps={fakeMaps} />);
+  pressLocate();
+  await screen.findByText(ROUTE_TEXT);
+  pressLocate();
+  await act(async () => {});
+  await screen.findByText(ROUTE_TEXT);
+  // One request per result at the screen; the service shares the request for an identical pair.
+  expect(walk).toHaveBeenCalledTimes(2);
+  expect(computeRoutes).toHaveBeenCalledTimes(1);
+});
+
+test("METRO-114 a stored failure followed by a new service object does not ask again for the same result", async () => {
+  vi.useFakeTimers();
+  try {
+    const first = vi.fn<RouteService["walk"]>(() => new Promise<WalkingRoute>(() => {}));
+    const second = vi.fn<RouteService["walk"]>(() => Promise.resolve(route(1234, 900)));
+    world.service = routeService(first);
+    render(<NearestStation maps={fakeMaps} />);
+    pickPlace(NEAR_UTTARA_NORTH);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(ROUTE_WATCHDOG_MS + 1);
+    });
+    expect(screen.getByText(copy.routeUnavailable)).toBeTruthy();
+    // The provider publishes a different service object (the libraries were reloaded, say).
+    publish({ service: routeService(second) });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10);
+    });
+    expect(first).toHaveBeenCalledTimes(1);
+    expect(second).not.toHaveBeenCalled();
+    // The stored failure stands; nothing was asked a second time.
+    expect(screen.getByText(copy.routeUnavailable)).toBeTruthy();
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+test("METRO-114 a library failure later does not pull focus from a user who clicked away from the field", () => {
+  render(<NearestStation maps={fakeMaps} />);
+  const box = screen.getByRole("textbox", { name: "fake search box" });
+  act(() => box.focus());
+  // Focus leaves for nothing (a click on blank page): the field no longer holds focus.
+  act(() => box.blur());
+  expect(document.activeElement === document.body || document.activeElement === null).toBe(true);
+  publish({ status: "unavailable" });
+  expect(smallNoticeElement()).not.toBeNull();
+  expect(document.activeElement).not.toBe(smallNoticeElement());
 });
 
 test("METRO-114 exactly one request: the settled count is one without StrictMode", async () => {

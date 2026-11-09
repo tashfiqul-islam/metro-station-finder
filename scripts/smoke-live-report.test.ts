@@ -31,7 +31,7 @@ const accessibility = {
 
 const base = {
   googleBeforeFocus: 0,
-  focusInWidget: true,
+  focusAfterSwap: "inner-input" as const,
   placesDuringTabWalk: 0,
   accessibility,
   version: "3.66.2",
@@ -66,7 +66,7 @@ test("a clean run passes and prints only counts, the version and the verdict", (
     "Maps version: 3.66.2",
     "CSP messages: 0",
     "Google requests before the first focus: 0 (expected 0)",
-    "Focus in the widget after the swap: yes",
+    "Focus after the swap (read before any click): on the inner input (read through an open shadow root)",
     "Places requests (host places.googleapis.com): 3",
     "Places requests during the Tab walk: 0 (expected 0)",
     "Routes requests (host routes.googleapis.com): 1",
@@ -936,12 +936,22 @@ test("METRO-114 a Google request before the first focus fails the run and is pri
   );
 });
 
-test("METRO-114 the focus after the swap is information, never a failure", () => {
-  expect(liveReport(base).lines).toContain("Focus in the widget after the swap: yes");
-  const lost = liveReport({ ...base, focusInWidget: false });
-  expect(lost.lines).toContain("Focus in the widget after the swap: no");
-  expect(lost.pass).toBe(true);
-  expect(liveReport({ ...base, focusInWidget: null }).lines).toContain(
-    "Focus in the widget after the swap: not read",
+const focusReport = (focusAfterSwap: Parameters<typeof liveReport>[0]["focusAfterSwap"]) =>
+  liveReport({ ...base, focusAfterSwap });
+
+test("METRO-114 the focus after the swap names where focus is, and is information, never a failure", () => {
+  expect(focusReport("inner-input").lines).toContain(
+    "Focus after the swap (read before any click): on the inner input (read through an open shadow root)",
+  );
+  const host = focusReport("host-only");
+  expect(host.lines).toContain(
+    "Focus after the swap (read before any click): on the widget host; the inner input is not readable (closed shadow root) or not focused",
+  );
+  expect(host.pass).toBe(true);
+  const away = focusReport("elsewhere");
+  expect(away.lines).toContain("Focus after the swap (read before any click): not on the widget");
+  expect(away.pass).toBe(true);
+  expect(focusReport(null).lines).toContain(
+    "Focus after the swap (read before any click): not read",
   );
 });

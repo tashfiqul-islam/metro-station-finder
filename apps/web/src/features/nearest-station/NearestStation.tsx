@@ -289,7 +289,7 @@ function Slice({
         <p className="consent" id="consent">
           {copy.consent}
         </p>
-        {/* Mounted from the start and empty, so the notice is announced when it fills (and from the start when already unavailable). */}
+        {/* A status region that is always mounted. A notice that appears later (a failed load, the connection back) fills a region that was already there, which is the reliable way to be announced; one that is there from the first render (no connection or no key at load) is simply part of the page and is not announced as news. */}
         <output className={searchAvailable ? "visually-hidden" : undefined}>
           {!searchAvailable && (
             <div
@@ -325,8 +325,10 @@ function Slice({
                 engage();
                 searchHadFocus.current = true;
               }}
-              onBlur={(event) => {
-                if (event.relatedTarget !== null) searchHadFocus.current = false;
+              onBlur={() => {
+                // Any blur ends it, whether focus went to a control or to nothing (a click on the page): a failure
+                // that comes later must not pull focus from a user who is elsewhere.
+                searchHadFocus.current = false;
               }}
               onKeyDown={engage}
               onInput={() => {

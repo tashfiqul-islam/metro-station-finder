@@ -571,6 +571,15 @@ function accessibilityLines(run: AccessibilityRun | null): {
   return { lines, failure };
 }
 
+export type FocusAfterSwap = "inner-input" | "host-only" | "elsewhere";
+
+const FOCUS_LINES: Readonly<Record<FocusAfterSwap, string>> = {
+  "inner-input": "on the inner input (read through an open shadow root)",
+  "host-only":
+    "on the widget host; the inner input is not readable (closed shadow root) or not focused",
+  elsewhere: "not on the widget",
+};
+
 export interface LiveRun {
   /** `google.maps.version` read from the page, or null when it could not be read. */
   readonly version: string | null;
@@ -583,11 +592,13 @@ export interface LiveRun {
    */
   readonly googleBeforeFocus: number;
   /**
-   * Whether keyboard focus was on the Google widget (its host or inside it) right after the widget replaced the
-   * plain input that had focus; null when it could not be read. Information only (Unverified: whether `focus()`
-   * on Google's host reaches its inner input).
+   * Where keyboard focus was right after the widget replaced the plain input that had focus, read before any
+   * click: `inner-input` (the host's shadow root is open and its input holds focus), `host-only` (the host holds
+   * focus and the page cannot see further: a closed shadow root, or an inner input that did not take focus; the
+   * two look the same), `elsewhere`, or null when it could not be read. Information only (Unverified: whether
+   * `focus()` on Google's host reaches its inner input).
    */
-  readonly focusInWidget: boolean | null;
+  readonly focusAfterSwap: FocusAfterSwap | null;
   /** Places requests already seen when the Tab walk finished, before any click or typing (expected 0). */
   readonly placesDuringTabWalk: number;
   readonly routesRequests: number;
@@ -617,7 +628,7 @@ export function liveReport(run: LiveRun): { lines: string[]; pass: boolean } {
     `CSP messages: ${messages.length}`,
     ...messages.map((message) => `  CSP: ${message}`),
     `Google requests before the first focus: ${run.googleBeforeFocus} (expected 0)`,
-    `Focus in the widget after the swap: ${run.focusInWidget === null ? "not read" : run.focusInWidget ? "yes" : "no"}`,
+    `Focus after the swap (read before any click): ${run.focusAfterSwap === null ? "not read" : FOCUS_LINES[run.focusAfterSwap]}`,
     `Places requests (host places.googleapis.com): ${run.placesRequests}`,
     `Places requests during the Tab walk: ${run.placesDuringTabWalk} (expected 0)`,
     `Routes requests (host routes.googleapis.com): ${run.routesRequests}`,
