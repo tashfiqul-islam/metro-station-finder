@@ -1100,11 +1100,13 @@ test("METRO-113 locating and every notice or result ask the sheet to settle at h
   expect(onSettle).toHaveBeenCalledTimes(3);
 });
 
-test("METRO-114 focus entering the place search tells the screen once per entry, and a station pick elsewhere does not", () => {
+test("METRO-114 typing in the place search tells the screen, focus alone does not", () => {
   const engage = vi.fn();
   render(<NearestStation maps={fakeMaps} onSearchEngage={engage} />);
-  fireEvent.focus(screen.getByRole("textbox", { name: "fake search box" }));
-  expect(engage).toHaveBeenCalledTimes(1);
+  const box = screen.getByRole("textbox", { name: "fake search box" });
+  act(() => box.focus());
   act(() => screen.getByRole("button", { name: copy.locateButton }).focus());
+  expect(engage).not.toHaveBeenCalled();
+  fireEvent.input(box, { target: { value: "mot" } });
   expect(engage).toHaveBeenCalledTimes(1);
 });

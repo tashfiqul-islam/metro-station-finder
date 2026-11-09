@@ -344,11 +344,12 @@ test.describe("the suggestion list above the sheet (METRO-114)", () => {
       await page.setViewportSize(size);
       await open(page);
       await plainSearch(page).focus();
-      // Typing opens the sheet to full (like the station picker), whatever it was.
-      await expect.poll(() => snap(page)).toBe("full");
       const widget = widgetSearch(page);
       await expect(widget).toBeVisible();
+      // Focus alone leaves the sheet where it was; typing opens it to full (like the station picker).
+      expect(await snap(page)).not.toBe("full");
       await page.keyboard.type("mot");
+      await expect.poll(() => snap(page)).toBe("full");
       const popup = page.getByRole("listbox", { name: "Suggestions" });
       await expect(popup).toBeVisible();
       const geometry = await page.evaluate(() => {

@@ -254,7 +254,14 @@ test.describe("nearest station from a searched place (METRO-88)", () => {
     page,
   }) => {
     await openSlice(page);
-    await expect(plainSearch(page)).toBeVisible();
+    // The first focus swaps the widget in, which would change the control list in the middle of the walk, so
+    // the swap happens first (the plain phase has its own walk below).
+    await plainSearch(page).focus();
+    await expect(widgetSearch(page)).toBeVisible();
+    // Leave the field, so its unfocused look is what the walk records.
+    await page.evaluate(() => {
+      if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+    });
     // The location button, the search input and the picker's combobox (METRO-112), after the shell's controls:
     // the Home link, the theme button, plus the three sheet-handle controls where the sheet is drawn.
     // The line map adds four tab stops (METRO-111): the map and its three zoom buttons, after the panel's content.
@@ -266,6 +273,17 @@ test.describe("nearest station from a searched place (METRO-88)", () => {
     // destination select of METRO-88 is gone.
     const link = (await linksAreTabbable(page)) ? 1 : 0;
     await expectTabReachesEveryControl(page, { expected: shell + 3 + link });
+  });
+
+  test("METRO-114 A6 in the plain phase the keyboard reaches the plain input, which draws a focus indicator", async ({
+    page,
+  }) => {
+    // The script is held back for the whole walk, so the plain input stays in place while Tab passes it.
+    await openSlice(page, { scriptDelayMs: 25_000 });
+    await expect(plainSearch(page)).toBeVisible();
+    const shell = (await shellControls(page)) + 4;
+    await expectTabReachesEveryControl(page, { expected: shell + 3 });
+    await expect(plainSearch(page)).toBeVisible();
   });
 
   test("METRO-101 stub wiring: the hint, the description option and aria-describedby we control", async ({

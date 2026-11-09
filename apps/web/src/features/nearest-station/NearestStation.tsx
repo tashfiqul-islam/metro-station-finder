@@ -65,8 +65,9 @@ interface SliceProps {
   /** Locating began, a result appeared or a notice showed: the screen snaps its sheet to half. */
   readonly onSettle?: () => void;
   /**
-   * Focus entered the place search: the screen opens its sheet to full, so the suggestion popup has room above
-   * the fold (the station picker does the same, METRO-112). Not called again by the result that follows.
+   * The user is typing in the place search: the screen opens its sheet to full, so the suggestion popup has room
+   * above the fold (the station picker does the same, METRO-112). Focus alone does not call it, so Tab through the
+   * page never changes the sheet.
    */
   readonly onSearchEngage?: () => void;
   /**
@@ -323,13 +324,15 @@ function Slice({
               onFocus={() => {
                 engage();
                 searchHadFocus.current = true;
-                onSearchEngage?.();
               }}
               onBlur={(event) => {
                 if (event.relatedTarget !== null) searchHadFocus.current = false;
               }}
               onKeyDown={engage}
-              onInput={engage}
+              onInput={() => {
+                engage();
+                onSearchEngage?.();
+              }}
             >
               <maps.PlaceSearch
                 labelId="place-label"

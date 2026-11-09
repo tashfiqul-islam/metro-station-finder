@@ -345,9 +345,11 @@ test("METRO-113 unmounting the screen during a locating leaves the shell alone w
   expect(screen.queryByRole("heading", { level: 2, name: "Uttara North" })).toBeNull();
 });
 
-test("METRO-114 focusing the place search opens the sheet to full, so the suggestion list has room", () => {
+test("METRO-114 typing in the place search opens the sheet to full, focus alone does not", () => {
   render(<Harness maps={readyMaps} initialSnap="half" />);
+  const box = screen.getByRole("textbox", { name: "stand-in search" });
+  act(() => box.focus());
   expect(sheet()).toContain("half height");
-  act(() => screen.getByRole("textbox", { name: "stand-in search" }).focus());
+  fireEvent.input(box, { target: { value: "mot" } });
   expect(sheet()).toContain("full height");
 });

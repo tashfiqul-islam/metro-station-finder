@@ -174,8 +174,10 @@ test.describe("use my location (METRO-113)", () => {
     // widget (the stub's input stands for Google's) replaces it with focus kept. Only the stub is verified.
     await search.click();
     await expect(widgetSearch(page)).toBeFocused();
-    // The sheet opens to full for typing (METRO-114), like the station picker.
-    expect(await snap(page)).toBe("full");
+    // Typing opens the sheet to full (METRO-114), like the station picker; focus alone does not.
+    expect(await snap(page)).toBe("half");
+    await page.keyboard.type("m");
+    await expect.poll(() => snap(page)).toBe("full");
   });
 
   test("METRO-113 a station picked while locating cancels it: the status goes and the late answer changes nothing", async ({
