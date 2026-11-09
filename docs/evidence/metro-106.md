@@ -8,9 +8,9 @@ Date: 2026-11-09. Base: `061d771` (`feature/metro-rebuild`, merge of METRO-114).
 | ------------------------------------------------------------ | ---------------------- | ---------------- | ----------- | -------------------- | ----------------- |
 | Base (METRO-114)                                             | 249,561 / 78,134       | 250,000 / 80,000 | 439 / 1,866 | 358,674 / 109,064    | 400,000 / 125,000 |
 | Worker, plugin, `sw.js` known to the gate (no page code yet) | 249,561 / 78,134       | 250,000 / 80,000 | 439 / 1,866 | 361,610 / 110,416    | 400,000 / 125,000 |
-| Registration chunk, update prompt, beacon guard (shipped)    | 249,725 / 78,199       | 250,000 / 80,000 | 275 / 1,801 | 363,665 / 111,430    | 400,000 / 125,000 |
+| Registration chunk, update prompt, beacon guard (shipped)    | 249,725 / 78,202       | 250,000 / 80,000 | 275 / 1,798 | 363,831 / 111,483    | 400,000 / 125,000 |
 
-"All files" for the base is the sum of the base list less `sw.js` of the second row (derived, not a separate run). No limit was changed. The entry grew by 164 raw / 65 gzip bytes: `startServiceWorker` (a scheduler call and a dynamic import) and the `navigator.onLine` guard in `sendVital`. Everything else is lazy: `assets/register-*.js` 1,903 / 930 and `sw.js` 2,969 / 1,369. The gate lists `sw.js` as `lazy` (it is never on the first-visit path) and counts it in the all-files ceiling; it is the one JS file `scripts/bundle-budget.ts` accepts without a manifest entry (`WORKER_SCRIPTS`), a stray `sw2.js` is still an orphan (tested).
+"All files" for the base is the sum of the base list less `sw.js` of the second row (derived, not a separate run). No limit was changed. The entry grew by 164 raw / 68 gzip bytes: `startServiceWorker` (a scheduler call and a dynamic import) and the `navigator.onLine` guard in `sendVital`. Everything else is lazy: `assets/register-*.js` 1,903 / 930 and `sw.js` 3,135 / 1,422. The gate lists `sw.js` as `lazy` (it is never on the first-visit path) and counts it in the all-files ceiling; it is the one JS file `scripts/bundle-budget.ts` accepts without a manifest entry (`WORKER_SCRIPTS`), a stray `sw2.js` is still an orphan (tested).
 
 The ceiling for all files is now used to 91 percent raw / 89 percent gzip (it was 90 / 87). The gate prints its growth note. The next lazy feature of any size needs a ceiling decision from the owner; this ticket did not raise it.
 
@@ -52,7 +52,7 @@ Lab web vitals (Repo-verified, `e2e/web-vitals-lab.e2e.ts`, Chromium, the worker
 
 ## Smoke
 
-SMOKE_RESULT
+`CI=true bun run smoke --shuffle`, Chromium, Firefox, WebKit and Pixel 7 Chromium, on the final code: 612 passed, 21 skipped, 0 failed, no retries (5.2 minutes). The 21 skips are the 19 browser-specific skips of the base plus the two Firefox skips of this ticket (`setOffline`, reason on the test). An earlier full run of the same suite, before the last two fixes, had one failure (the WebKit "cannot install" test, see Findings) and 611 passed. `e2e/offline-shell.e2e.ts` alone passed twice over (`--repeat-each=2`, 84 passed, 4 skipped). The first full runs on a loaded machine also saw Firefox compositor crashes (see Findings). Another session was serving port 4173 when I wanted to start; I waited for it to exit and ran my own server.
 
 ## Existing tests edited (and why)
 
@@ -74,6 +74,7 @@ SMOKE_RESULT
 - Firefox: `context.setOffline(true)` fails navigations with `NS_ERROR_OFFLINE` before the worker can answer, so two real-server tests skip Firefox with that reason on the test; the static-server group covers Firefox by closing the server's connections. Firefox also does not report the worker script request to Playwright, so the "worker request comes after load" half is Chromium and WebKit; the "registration chunk is not fetched before load" half runs in all four.
 - `fetch("/favicon.ico")` from a page or worker fails under Playwright Chromium while `/favicon.ico?x=1` works (cause Unverified). It made the whole install fail, so `favicon.ico` is not precached.
 - The captured `installing` worker reference did not deliver the skip-waiting message in WebKit; the registration's waiting worker did. The code tells the registration's waiting worker.
+- Two real defects the browser runs found and the unit tests had missed (both fixed, both now tested): the worker passed `scope.fetch` detached, which throws "Illegal invocation" in a browser (every install failed until fixed); and WebKit reported the first install as "installed" after the page was claimed, which showed an update prompt on a first visit, so "update" is now decided from `registration.active` when the worker is found. The update e2e "cannot install" first passed vacuously (it polled for "no installing worker" before the install began); it now records the states from the page and requires `redundant`, never `installed`, and the half-filled cache of the failed version is deleted.
 - Under the combined four-browser run on ten workers, Firefox crashed its compositor twice (`RenderCompositorSWGL`) and timed out in axe teardown; the same specs pass when Firefox runs alone and in repeats of the Chromium-family projects. A flaky test is a defect, so this is reported and not hidden: if it recurs on the hosted run, serialise the update-flow group.
 
 ## Unverified
