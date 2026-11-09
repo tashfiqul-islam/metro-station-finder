@@ -176,17 +176,28 @@ test("bundle gate accepts artifacts within budget and prints every total", () =>
     expect(result.exitCode).toBe(0);
   }));
 
-test("bundle gate: a lazy chunk over the old 250,000 total leaves the first visit unchanged and passes", () =>
+test("bundle gate: a lazy screen exactly at its raw limit leaves the first visit unchanged and passes", () =>
   fixture(async (root) => {
     await writeFile(join(root, "entry.js"), "x".repeat(1000));
-    await writeFile(join(root, "lazy.js"), "y".repeat(250_000));
+    await writeFile(join(root, "lazy.js"), "y".repeat(120_000));
     await writeManifest(root, "entry.js", { [SCREEN_KEY]: "lazy.js" });
     const result = runBundle(root);
-    expect(result.stdout.toString()).toContain("lazy.js: 250000 raw;");
-    expect(result.stdout.toString()).toContain("; lazy");
+    expect(result.stdout.toString()).toContain("lazy.js: 120000 raw;");
+    expect(result.stdout.toString()).toContain("; lazy (nearby)");
     expect(result.stdout.toString()).toContain("First-visit JS: 1000 bytes raw;");
     expect(result.stderr.toString()).toBe("");
     expect(result.exitCode).toBe(0);
+  }));
+
+test("bundle gate: a lazy screen one byte over its raw limit fails on the screen limit, though it gzips small", () =>
+  fixture(async (root) => {
+    await writeFile(join(root, "entry.js"), "x".repeat(1000));
+    await writeFile(join(root, "lazy.js"), "y".repeat(120_001));
+    await writeManifest(root, "entry.js", { [SCREEN_KEY]: "lazy.js" });
+    const result = runBundle(root);
+    expect(result.stderr.toString()).toContain("Lazy screen limit exceeded for nearby");
+    expect(result.stderr.toString()).not.toContain("Bundle budget exceeded");
+    expect(result.exitCode).not.toBe(0);
   }));
 
 test("bundle gate: a lazy screen over its gzip limit fails on the screen limit alone", () =>

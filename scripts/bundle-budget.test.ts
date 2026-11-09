@@ -6,6 +6,7 @@ import {
   FIRST_VISIT_CSS_BUDGET,
   FIRST_VISIT_JS_BUDGET,
   HEAD_SCRIPT_MISSING,
+  LAZY_MODEL,
   LAZY_SCREEN_LIMITS,
   MANIFEST_FAILURE,
   MANIFEST_STALE,
@@ -16,6 +17,7 @@ import {
   firstVisitFiles,
   parseManifest,
   type Asset,
+  type LazyModel,
 } from "./bundle-budget.ts";
 
 const sunk: string[] = [];
@@ -23,11 +25,23 @@ const asset = (path: string, raw: number, gzip: number): Asset => ({ path, raw, 
 const manifest = (value: unknown) => JSON.stringify(value);
 const SCREEN = "src/features/nearby/Nearby.tsx";
 const SCREEN_GZIP = LAZY_SCREEN_LIMITS.get(SCREEN)?.gzip ?? 0;
+const SCREEN_RAW = LAZY_SCREEN_LIMITS.get(SCREEN)?.raw ?? 0;
 const SHARED_GZIP = SHARED_LAZY_ALLOWANCE.gzip;
+const SHARED_RAW = SHARED_LAZY_ALLOWANCE.raw;
+const ROUTE = "src/features/route/Route.tsx";
+/** Nearby and a second screen, to test what two screens share. */
+const TWO_SCREENS: LazyModel = {
+  ...LAZY_MODEL,
+  screens: new Map([
+    ...LAZY_SCREEN_LIMITS,
+    [ROUTE, { name: "route", raw: SCREEN_RAW, gzip: SCREEN_GZIP }],
+  ]),
+};
 const JS_OVER = `Bundle budget exceeded for the first visit JS: ${FIRST_VISIT_JS_BUDGET.raw} raw / ${FIRST_VISIT_JS_BUDGET.gzip} gzip bytes`;
 const CSS_OVER = `Bundle budget exceeded for the first visit CSS: ${FIRST_VISIT_CSS_BUDGET.raw} raw / ${FIRST_VISIT_CSS_BUDGET.gzip} gzip bytes`;
-const SCREEN_OVER = `Lazy screen limit exceeded for nearby: ${SCREEN_GZIP} gzip bytes`;
-const SHARED_OVER = `Shared lazy allowance exceeded: ${SHARED_GZIP} gzip bytes`;
+const SCREEN_OVER = `Lazy screen limit exceeded for nearby: ${SCREEN_RAW} raw / ${SCREEN_GZIP} gzip bytes`;
+const ROUTE_OVER = `Lazy screen limit exceeded for route: ${SCREEN_RAW} raw / ${SCREEN_GZIP} gzip bytes`;
+const SHARED_OVER = `Shared lazy allowance exceeded: ${SHARED_RAW} raw / ${SHARED_GZIP} gzip bytes`;
 const unclassified = (...keys: string[]) =>
   `Unclassified lazy chunk, add it to the per-screen limits or the shared allowance (ADR-0023): ${keys.join(", ")}`;
 
@@ -50,7 +64,11 @@ const SPLIT = manifest({
     imports: ["_shared.js", "_common.js"],
     css: ["assets/lazy.css"],
   },
-  "src/theme/reveal.ts": { file: "assets/reveal.js", isDynamicEntry: true },
+  "src/theme/reveal.ts": {
+    file: "assets/reveal.js",
+    isDynamicEntry: true,
+    imports: ["_common.js"],
+  },
   "_common.js": { file: "assets/common.js", imports: [] },
 });
 
@@ -68,8 +86,10 @@ async function fixture(run: (root: string) => Promise<void>) {
 interface Sizes {
   readonly indexJs?: readonly [number, number];
   readonly indexCss?: readonly [number, number];
+  readonly screenJsRaw?: number;
   readonly screenJsGzip?: number;
   readonly screenCssGzip?: number;
+  readonly sharedRaw?: number;
   readonly sharedGzip?: number;
 }
 
@@ -77,8 +97,10 @@ interface Sizes {
 function build({
   indexJs = [1000, 400],
   indexCss = [10, 10],
+  screenJsRaw = 2000,
   screenJsGzip = 100,
   screenCssGzip = 30,
+  sharedRaw = 40,
   sharedGzip = 40,
 }: Sizes = {}): Asset[] {
   return [
@@ -86,20 +108,22 @@ function build({
     asset("assets/index.css", ...indexCss),
     asset("assets/shared.js", 500, 200),
     asset("assets/shared.css", 20, 20),
-    asset("assets/lazy.js", 2000, screenJsGzip),
+    asset("assets/lazy.js", screenJsRaw, screenJsGzip),
     asset("assets/lazy.css", 30, screenCssGzip),
-    asset("assets/reveal.js", 40, sharedGzip),
+    asset("assets/reveal.js", sharedRaw, sharedGzip),
     asset("assets/common.js", 50, 50),
   ];
 }
 
 const lineOf = (lines: readonly string[], start: string) => lines.find((l) => l.startsWith(start));
 
-test("the limits are pinned: first-visit JS 250000 / 80000 (unchanged), CSS 20000 / 6000, screen 30000, shared 12000", () => {
+test("the limits are pinned: first-visit JS 250000 / 80000 (unchanged), CSS 20000 / 6000, screen 120000 / 30000, shared 27000 / 12000", () => {
   expect(FIRST_VISIT_JS_BUDGET).toEqual({ raw: 250_000, gzip: 80_000 });
   expect(FIRST_VISIT_CSS_BUDGET).toEqual({ raw: 20_000, gzip: 6_000 });
-  expect([...LAZY_SCREEN_LIMITS]).toEqual([[SCREEN, { name: "nearby", gzip: 30_000 }]]);
-  expect(SHARED_LAZY_ALLOWANCE).toEqual({ gzip: 12_000 });
+  expect([...LAZY_SCREEN_LIMITS]).toEqual([
+    [SCREEN, { name: "nearby", raw: 120_000, gzip: 30_000 }],
+  ]);
+  expect(SHARED_LAZY_ALLOWANCE).toEqual({ raw: 27_000, gzip: 12_000 });
 });
 
 test("collectAssets lists nested JS and CSS largest first and ignores other files", () =>
@@ -185,8 +209,8 @@ test("evaluateBundle marks each file with its class, prints every total and pass
     "  assets/index.css: 10 raw; 10 gzip; first-visit",
     "First-visit JS: 1500 bytes raw; 600 bytes gzip (budget 250000 / 80000)",
     "First-visit CSS: 30 bytes raw; 30 bytes gzip (budget 20000 / 6000)",
-    "Lazy screen nearby: 130 bytes gzip (limit 30000; 0 percent used)",
-    "Shared lazy: 90 bytes gzip (allowance 12000; 1 percent used)",
+    "Lazy screen nearby: 2030 bytes raw (limit 120000; 1.7 percent used); 130 bytes gzip (limit 30000; 0.4 percent used)",
+    "Shared lazy: 90 bytes raw (allowance 27000; 0.3 percent used); 90 bytes gzip (allowance 12000; 0.8 percent used)",
   ]);
 });
 
@@ -266,98 +290,303 @@ describe("first-visit CSS limit", () => {
 });
 
 describe("per-screen limit", () => {
-  // lazy.js plus lazy.css make the screen: 30 of the CSS gzip is the default.
+  // lazy.js plus lazy.css make the screen: 30 of the CSS gzip and raw is the default.
   test("a screen over its gzip limit fails with the screen message alone", () => {
     const report = evaluateBundle(build({ screenJsGzip: SCREEN_GZIP }), SPLIT);
     expect(report.problems).toEqual([SCREEN_OVER]);
   });
 
-  test("the screen's CSS counts toward its limit", () => {
-    const report = evaluateBundle(build({ screenCssGzip: SCREEN_GZIP }), SPLIT);
-    expect(report.problems).toEqual([SCREEN_OVER]);
-  });
-
-  test("exactly at the limit passes, one byte over fails", () => {
-    const atLimit = build({ screenJsGzip: SCREEN_GZIP - 30 });
-    expect(evaluateBundle(atLimit, SPLIT).problems).toEqual([]);
-    const over = build({ screenJsGzip: SCREEN_GZIP - 29 });
+  test("a screen over its raw limit fails with the screen message alone, whatever its gzip", () => {
+    const big = build({ screenJsRaw: 900_000 });
+    expect(evaluateBundle(big, SPLIT).problems).toEqual([SCREEN_OVER]);
+    const over = build({ screenJsRaw: SCREEN_RAW });
     expect(evaluateBundle(over, SPLIT).problems).toEqual([SCREEN_OVER]);
   });
 
-  test("raw size alone does not fail a lazy chunk: only its gzip is limited", () => {
-    const big = build().map((a) => (a.path === "assets/lazy.js" ? asset(a.path, 900_000, 100) : a));
-    const report = evaluateBundle(big, SPLIT);
-    expect(report.problems).toEqual([]);
-    // First-visit lines do not move when a lazy chunk grows.
+  test("the screen's CSS counts toward its gzip and raw limits", () => {
+    const report = evaluateBundle(build({ screenCssGzip: SCREEN_GZIP }), SPLIT);
+    expect(report.problems).toEqual([SCREEN_OVER]);
+    const css = build().map((a) =>
+      a.path === "assets/lazy.css" ? asset(a.path, SCREEN_RAW, 30) : a,
+    );
+    expect(evaluateBundle(css, SPLIT).problems).toEqual([SCREEN_OVER]);
+  });
+
+  test("exactly at either limit passes, one byte over fails", () => {
+    // lazy.css adds 30 raw / 30 gzip to lazy.js.
+    const atGzip = build({ screenJsGzip: SCREEN_GZIP - 30 });
+    expect(evaluateBundle(atGzip, SPLIT).problems).toEqual([]);
+    expect(evaluateBundle(build({ screenJsGzip: SCREEN_GZIP - 29 }), SPLIT).problems).toEqual([
+      SCREEN_OVER,
+    ]);
+    const atRaw = build({ screenJsRaw: SCREEN_RAW - 30 });
+    expect(evaluateBundle(atRaw, SPLIT).problems).toEqual([]);
+    expect(evaluateBundle(build({ screenJsRaw: SCREEN_RAW - 29 }), SPLIT).problems).toEqual([
+      SCREEN_OVER,
+    ]);
+  });
+
+  test("a lazy chunk leaves the first-visit lines unchanged", () => {
     const small = evaluateBundle(build(), SPLIT).lines;
-    expect(lineOf(report.lines, "First-visit JS")).toBe(lineOf(small, "First-visit JS"));
-    expect(lineOf(report.lines, "First-visit CSS")).toBe(lineOf(small, "First-visit CSS"));
+    const grown = evaluateBundle(build({ screenJsRaw: SCREEN_RAW - 30 }), SPLIT).lines;
+    expect(lineOf(grown, "First-visit JS")).toBe(lineOf(small, "First-visit JS"));
+    expect(lineOf(grown, "First-visit CSS")).toBe(lineOf(small, "First-visit CSS"));
   });
 
-  test("a screen does not borrow from the shared allowance or the other way round", () => {
-    const sharedRoom = build({ sharedGzip: 0 });
-    expect(evaluateBundle(sharedRoom, SPLIT).problems).toEqual([]);
-    const both = build({ screenJsGzip: SCREEN_GZIP, sharedGzip: SHARED_GZIP });
-    expect(evaluateBundle(both, SPLIT).problems).toEqual([SCREEN_OVER, SHARED_OVER]);
+  test("a screen and the shared allowance each fail alone and neither borrows from the other", () => {
+    // Both exactly full (screen: lazy.css adds 30; shared: common.js adds 50 raw / 50 gzip).
+    const full = build({
+      screenJsRaw: SCREEN_RAW - 30,
+      screenJsGzip: SCREEN_GZIP - 30,
+      sharedRaw: SHARED_RAW - 50,
+      sharedGzip: SHARED_GZIP - 50,
+    });
+    expect(evaluateBundle(full, SPLIT).problems).toEqual([]);
+    const screenOver = full.map((a) =>
+      a.path === "assets/lazy.js" ? asset(a.path, a.raw, a.gzip + 1) : a,
+    );
+    expect(evaluateBundle(screenOver, SPLIT).problems).toEqual([SCREEN_OVER]);
+    const sharedOver = full.map((a) =>
+      a.path === "assets/reveal.js" ? asset(a.path, a.raw + 1, a.gzip) : a,
+    );
+    expect(evaluateBundle(sharedOver, SPLIT).problems).toEqual([SHARED_OVER]);
+    const both = evaluateBundle(
+      full.map((a) => (a.path === "assets/reveal.js" ? asset(a.path, a.raw, a.gzip + 1) : a)),
+      SPLIT,
+    );
+    expect(both.problems).toEqual([SHARED_OVER]);
   });
 
-  test("a screen absent from the build is simply not reported as over", () => {
+  test("a screen absent from the build reports zero use and passes", () => {
     const only = manifest({ "index.html": { file: "assets/index.js", isEntry: true } });
     const report = evaluateBundle([asset("assets/index.js", 100, 50)], only);
     expect(report.problems).toEqual([]);
     expect(report.lines).toContain(
-      "Lazy screen nearby: 0 bytes gzip (limit 30000; 0 percent used)",
+      "Lazy screen nearby: 0 bytes raw (limit 120000; 0.0 percent used); 0 bytes gzip (limit 30000; 0.0 percent used)",
+    );
+  });
+
+  test("each lazy line prints one decimal of percent used", () => {
+    const lines = evaluateBundle(
+      build({ screenJsRaw: 59_970, screenJsGzip: 14_970, sharedRaw: 13_450, sharedGzip: 5_950 }),
+      SPLIT,
+    ).lines;
+    expect(lines).toContain(
+      "Lazy screen nearby: 60000 bytes raw (limit 120000; 50.0 percent used); 15000 bytes gzip (limit 30000; 50.0 percent used)",
+    );
+    expect(lines).toContain(
+      "Shared lazy: 13500 bytes raw (allowance 27000; 50.0 percent used); 6000 bytes gzip (allowance 12000; 50.0 percent used)",
     );
   });
 });
 
+const own = (extra: Record<string, readonly [number, number]> = {}): Asset[] => {
+  const sizes: Record<string, readonly [number, number]> = {
+    "assets/index.js": [100, 50],
+    "assets/nearby.js": [100, 50],
+    "assets/nearby.css": [10, 10],
+    "assets/nearby-private.js": [100, 50],
+    "assets/route.js": [100, 50],
+    "assets/route-private.js": [100, 50],
+    "assets/both.js": [100, 50],
+    "assets/both.css": [10, 10],
+    ...extra,
+  };
+  return Object.entries(sizes).map(([path, [raw, gzip]]) => asset(path, raw, gzip));
+};
+
+describe("a screen owns the chunks only it imports; shared is what two roots reach", () => {
+  /** Nearby imports a private `_` chunk; Route imports a private one and one both import. */
+  const OWN = manifest({
+    "index.html": {
+      file: "assets/index.js",
+      isEntry: true,
+      dynamicImports: [SCREEN, ROUTE],
+    },
+    [SCREEN]: {
+      file: "assets/nearby.js",
+      imports: ["_nearby-private.js", "_both.js"],
+      css: ["assets/nearby.css"],
+    },
+    [ROUTE]: { file: "assets/route.js", imports: ["_route-private.js", "_both.js"] },
+    "_nearby-private.js": { file: "assets/nearby-private.js" },
+    "_route-private.js": { file: "assets/route-private.js" },
+    "_both.js": { file: "assets/both.js", css: ["assets/both.css"] },
+  });
+
+  test("a heavy private chunk fails ITS screen's limit, not the shared allowance", () => {
+    const heavy = own({ "assets/nearby-private.js": [100, SCREEN_GZIP] });
+    expect(evaluateBundle(heavy, OWN, null, TWO_SCREENS).problems).toEqual([SCREEN_OVER]);
+    const heavyRoute = own({ "assets/route-private.js": [SCREEN_RAW, 50] });
+    expect(evaluateBundle(heavyRoute, OWN, null, TWO_SCREENS).problems).toEqual([ROUTE_OVER]);
+  });
+
+  test("each file is listed under its owner; a chunk both screens import is shared", () => {
+    const lines = evaluateBundle(own(), OWN, null, TWO_SCREENS).lines;
+    expect(lines).toContain("  assets/nearby-private.js: 100 raw; 50 gzip; lazy (nearby)");
+    expect(lines).toContain("  assets/nearby.css: 10 raw; 10 gzip; lazy (nearby)");
+    expect(lines).toContain("  assets/route-private.js: 100 raw; 50 gzip; lazy (route)");
+    expect(lines).toContain("  assets/both.js: 100 raw; 50 gzip; lazy (shared)");
+    expect(lines).toContain("  assets/both.css: 10 raw; 10 gzip; lazy (shared)");
+  });
+
+  test("a chunk both screens import fails the shared allowance, not either screen", () => {
+    const heavy = own({ "assets/both.js": [100, SHARED_GZIP] });
+    expect(evaluateBundle(heavy, OWN, null, TWO_SCREENS).problems).toEqual([SHARED_OVER]);
+  });
+
+  test("a chunk a screen and a shared root both import is shared", () => {
+    const mixed = manifest({
+      "index.html": {
+        file: "assets/index.js",
+        isEntry: true,
+        dynamicImports: [SCREEN, "src/theme/reveal.ts"],
+      },
+      [SCREEN]: { file: "assets/nearby.js", imports: ["_x.js"] },
+      "src/theme/reveal.ts": { file: "assets/reveal.js", imports: ["_x.js"] },
+      "_x.js": { file: "assets/x.js" },
+    });
+    const files = [
+      asset("assets/index.js", 100, 50),
+      asset("assets/nearby.js", 100, 50),
+      asset("assets/reveal.js", 100, 50),
+      asset("assets/x.js", 100, 50),
+    ];
+    expect(evaluateBundle(files, mixed).lines).toContain(
+      "  assets/x.js: 100 raw; 50 gzip; lazy (shared)",
+    );
+  });
+
+  test("a file two screens list is shared, not won by the last screen", () => {
+    const twice = manifest({
+      "index.html": { file: "assets/index.js", isEntry: true, dynamicImports: [SCREEN, ROUTE] },
+      [SCREEN]: { file: "assets/nearby.js", css: ["assets/both.css"] },
+      [ROUTE]: { file: "assets/route.js", css: ["assets/both.css"] },
+    });
+    const files = [
+      asset("assets/index.js", 100, 50),
+      asset("assets/nearby.js", 100, 50),
+      asset("assets/route.js", 100, 50),
+      asset("assets/both.css", 10, SHARED_GZIP),
+    ];
+    const forward = evaluateBundle(files, twice, null, TWO_SCREENS);
+    expect(forward.lines).toContain(
+      `  assets/both.css: 10 raw; ${SHARED_GZIP} gzip; lazy (shared)`,
+    );
+    expect(forward.problems).toEqual([]);
+    const reversed = manifest({
+      "index.html": { file: "assets/index.js", isEntry: true, dynamicImports: [ROUTE, SCREEN] },
+      [ROUTE]: { file: "assets/route.js", css: ["assets/both.css"] },
+      [SCREEN]: { file: "assets/nearby.js", css: ["assets/both.css"] },
+    });
+    expect(evaluateBundle(files, reversed, null, TWO_SCREENS).lines).toContain(
+      `  assets/both.css: 10 raw; ${SHARED_GZIP} gzip; lazy (shared)`,
+    );
+    const over = files.map((a) =>
+      a.path === "assets/both.css" ? asset(a.path, 10, SHARED_GZIP + 1) : a,
+    );
+    expect(evaluateBundle(over, twice, null, TWO_SCREENS).problems).toEqual([SHARED_OVER]);
+  });
+
+  test("a shared chunk's own static imports are shared too", () => {
+    const chain = manifest({
+      "index.html": {
+        file: "assets/index.js",
+        isEntry: true,
+        dynamicImports: ["src/theme/reveal.ts"],
+      },
+      "src/theme/reveal.ts": { file: "assets/reveal.js", imports: ["_a.js"] },
+      "_a.js": { file: "assets/a.js", imports: ["_b.js"] },
+      "_b.js": { file: "assets/b.js" },
+    });
+    const files = [
+      asset("assets/index.js", 100, 50),
+      asset("assets/reveal.js", 1, 1),
+      asset("assets/a.js", 1, 1),
+      asset("assets/b.js", 1, SHARED_GZIP),
+    ];
+    const report = evaluateBundle(files, chain);
+    expect(report.lines).toContain("  assets/b.js: 1 raw; 12000 gzip; lazy (shared)");
+    expect(report.problems).toEqual([SHARED_OVER]);
+  });
+
+  test("an import cycle among lazy chunks terminates", () => {
+    const cycle = manifest({
+      "index.html": { file: "assets/index.js", isEntry: true, dynamicImports: [SCREEN] },
+      [SCREEN]: { file: "assets/nearby.js", imports: ["_a.js"] },
+      "_a.js": { file: "assets/a.js", imports: ["_b.js"] },
+      "_b.js": { file: "assets/b.js", imports: ["_a.js", SCREEN] },
+    });
+    const files = [
+      asset("assets/index.js", 100, 50),
+      asset("assets/nearby.js", 1, 1),
+      asset("assets/a.js", 1, 1),
+      asset("assets/b.js", 1, 1),
+    ];
+    expect(evaluateBundle(files, cycle).problems).toEqual([]);
+  });
+
+  test("a lazy chunk reaching a first-visit chunk does not take it from the first visit", () => {
+    const report = evaluateBundle(build(), SPLIT);
+    expect(report.lines).toContain("  assets/shared.js: 500 raw; 200 gzip; first-visit");
+    expect(lineOf(report.lines, "Lazy screen nearby")).toContain("2030 bytes raw");
+  });
+});
+
+const alone = (key: string, file: string, size: readonly [number, number]) => {
+  const one = manifest({
+    "index.html": { file: "assets/index.js", isEntry: true, dynamicImports: [key] },
+    [key]: { file, isDynamicEntry: true },
+  });
+  return evaluateBundle([asset("assets/index.js", 100, 50), asset(file, ...size)], one);
+};
+
 describe("shared lazy allowance", () => {
-  test("over the allowance fails with the shared message alone", () => {
+  test("over the raw allowance fails with the shared message alone", () => {
+    expect(evaluateBundle(build({ sharedRaw: SHARED_RAW }), SPLIT).problems).toEqual([SHARED_OVER]);
+  });
+
+  test("over the gzip allowance fails with the shared message alone", () => {
     const report = evaluateBundle(build({ sharedGzip: SHARED_GZIP }), SPLIT);
     expect(report.problems).toEqual([SHARED_OVER]);
   });
 
-  test("exactly at the allowance passes, one byte over fails", () => {
-    // common.js adds 50 gzip to reveal.js.
-    expect(evaluateBundle(build({ sharedGzip: SHARED_GZIP - 50 }), SPLIT).problems).toEqual([]);
-    expect(evaluateBundle(build({ sharedGzip: SHARED_GZIP - 49 }), SPLIT).problems).toEqual([
-      SHARED_OVER,
-    ]);
+  test("exactly at the allowance passes, one byte over either fails", () => {
+    // common.js adds 50 raw / 50 gzip to reveal.js.
+    const at = build({ sharedRaw: SHARED_RAW - 50, sharedGzip: SHARED_GZIP - 50 });
+    expect(evaluateBundle(at, SPLIT).problems).toEqual([]);
+    const gz = build({ sharedRaw: SHARED_RAW - 50, sharedGzip: SHARED_GZIP - 49 });
+    expect(evaluateBundle(gz, SPLIT).problems).toEqual([SHARED_OVER]);
+    const rw = build({ sharedRaw: SHARED_RAW - 49, sharedGzip: SHARED_GZIP - 50 });
+    expect(evaluateBundle(rw, SPLIT).problems).toEqual([SHARED_OVER]);
   });
 
-  test("the web-vitals chunk is shared whatever version its manifest key names", () => {
-    for (const version of ["6.2.3", "7.0.0"]) {
-      const key = `../../node_modules/.bun/web-vitals@${version}/node_modules/web-vitals/dist/web-vitals.js`;
-      const vitals = manifest({
-        "index.html": { file: "assets/index.js", isEntry: true, dynamicImports: [key] },
-        [key]: { file: "assets/web-vitals.js", isDynamicEntry: true },
-      });
-      const files = [asset("assets/index.js", 100, 50), asset("assets/web-vitals.js", 8000, 3000)];
-      const report = evaluateBundle(files, vitals);
-      expect(report.problems, version).toEqual([]);
-      expect(report.lines, version).toContain(
+  test("the web-vitals chunk is shared whatever version or install layout its key names", () => {
+    for (const key of [
+      "../../node_modules/.bun/web-vitals@6.2.3/node_modules/web-vitals/dist/web-vitals.js",
+      "../../node_modules/.bun/web-vitals@7.0.0/node_modules/web-vitals/dist/web-vitals.js",
+      "node_modules/web-vitals/dist/web-vitals.js",
+      "/abs/node_modules/web-vitals/dist/web-vitals.js",
+    ]) {
+      const report = alone(key, "assets/web-vitals.js", [8000, 3000]);
+      expect(report.problems, key).toEqual([]);
+      expect(report.lines, key).toContain(
         "  assets/web-vitals.js: 8000 raw; 3000 gzip; lazy (shared)",
       );
     }
   });
 
-  test("the maps adapter chunk is shared", () => {
-    const maps = manifest({
-      "index.html": {
-        file: "assets/index.js",
-        isEntry: true,
-        dynamicImports: ["src/adapters/maps/index.ts"],
-      },
-      "src/adapters/maps/index.ts": { file: "assets/maps.js", isDynamicEntry: true },
-    });
-    const report = evaluateBundle(
-      [asset("assets/index.js", 100, 50), asset("assets/maps.js", 5800, SHARED_GZIP + 1)],
-      maps,
-    );
-    expect(report.problems).toEqual([SHARED_OVER]);
+  test("the maps adapter and the reveal helper are shared roots, counted against the allowance", () => {
+    expect(
+      alone("src/adapters/maps/index.ts", "assets/m.js", [5800, SHARED_GZIP + 1]).problems,
+    ).toEqual([SHARED_OVER]);
+    expect(alone("src/theme/reveal.ts", "assets/r.js", [SHARED_RAW + 1, 10]).problems).toEqual([
+      SHARED_OVER,
+    ]);
   });
 });
 
+/** index.html, one lazy chunk under `key`, with its CSS. */
 const withNew = (key: string) =>
   manifest({
     "index.html": {
@@ -378,22 +607,64 @@ describe("fail closed on an unclassified chunk", () => {
   ];
 
   test("a lazy screen the limits do not name fails, whatever its size, with no listing", () => {
-    expect(evaluateBundle(files, withNew("src/features/route/Route.tsx"))).toEqual({
+    expect(evaluateBundle(files, withNew(ROUTE))).toEqual({
       lines: [],
-      problems: [unclassified("src/features/route/Route.tsx")],
+      problems: [unclassified(ROUTE)],
     });
   });
 
-  test("a feature chunk is not shared just because it is lazy or looks like a shared one", () => {
+  test("a feature chunk is not shared just because it is lazy or looks like a shared root", () => {
     for (const key of [
       "lazy.js",
       "src/features/nearby/Nearby.test.tsx",
       "src/features/nearby/Nearby.tsx.map",
+      "x/src/features/nearby/Nearby.tsx",
       "src/theme/reveal.tsx",
+      "src/theme/reveal.ts.map",
+      "x/src/theme/reveal.ts",
+      "src/adapters/maps/index.tsx",
+      "x/src/adapters/maps/index.ts",
+      "src/adapters/maps/index.ts/extra",
       "node_modules/other/dist/web-vitals.js",
+      "node_modules/other-web-vitals/dist/web-vitals.js",
+      "xnode_modules/web-vitals/dist/web-vitals.js",
+      "node_modules/web-vitals/dist/web-vitals.js.map",
+      "node_modules/web-vitals/dist/web-vitals.mjs",
+      "node_modules/web-vitals/lib/web-vitals.js",
       "src/_hidden.js",
+      "_common.js",
     ])
       expect(evaluateBundle(files, withNew(key)).problems, key).toEqual([unclassified(key)]);
+  });
+
+  test("a Rollup common chunk no screen or shared root reaches is unclassified, not shared", () => {
+    const orphan = manifest({
+      "index.html": { file: "assets/index.js", isEntry: true, dynamicImports: [SCREEN] },
+      [SCREEN]: { file: "assets/nearby.js" },
+      "_lonely.js": { file: "assets/lonely.js" },
+    });
+    const three = [
+      asset("assets/index.js", 100, 50),
+      asset("assets/nearby.js", 1, 1),
+      asset("assets/lonely.js", 1, 1),
+    ];
+    expect(evaluateBundle(three, orphan).problems).toEqual([unclassified("_lonely.js")]);
+  });
+
+  test("chunks only an unclassified chunk reaches are unclassified too, in manifest order", () => {
+    const chain = manifest({
+      "index.html": { file: "assets/index.js", isEntry: true, dynamicImports: [ROUTE] },
+      [ROUTE]: { file: "assets/route.js", imports: ["_private.js"] },
+      "_private.js": { file: "assets/private.js" },
+    });
+    const three = [
+      asset("assets/index.js", 100, 50),
+      asset("assets/route.js", 1, 1),
+      asset("assets/private.js", 1, 1),
+    ];
+    expect(evaluateBundle(three, chain).problems).toEqual([unclassified(ROUTE, "_private.js")]);
+    // Once the screen is named, its private chunk is its own.
+    expect(evaluateBundle(three, chain, null, TWO_SCREENS).problems).toEqual([]);
   });
 
   test("every unclassified key is named, in manifest order", () => {
@@ -446,6 +717,16 @@ describe("fail closed on an unclassified chunk", () => {
       "src/styles/fonts/f.woff2": { file: "assets/f.woff2", src: "src/styles/fonts/f.woff2" },
     });
     expect(evaluateBundle([asset("assets/index.js", 100, 50)], withFont).problems).toEqual([]);
+  });
+
+  test("a lazy chunk with only a CSS file is classified by its key like any other", () => {
+    const cssOnly = manifest({
+      "index.html": { file: "assets/index.js", isEntry: true, dynamicImports: [ROUTE] },
+      [ROUTE]: { file: "assets/route.woff2", css: ["assets/route.css"] },
+    });
+    const two = [asset("assets/index.js", 100, 50), asset("assets/route.css", 1, 1)];
+    expect(evaluateBundle(two, cssOnly).problems).toEqual([unclassified(ROUTE)]);
+    expect(evaluateBundle(two, cssOnly, null, TWO_SCREENS).problems).toEqual([]);
   });
 });
 
@@ -550,10 +831,10 @@ test("bundleMain reads the manifest from disk: exit 0 within budget, 1 over (out
       /^First-visit CSS: \d+ bytes raw; \d+ bytes gzip \(budget \d+ \/ \d+\)$/u,
     );
     expect(lines.at(-2)).toMatch(
-      /^Lazy screen nearby: \d+ bytes gzip \(limit \d+; \d+ percent used\)$/u,
+      /^Lazy screen nearby: \d+ bytes raw \(limit \d+; \d+\.\d percent used\); \d+ bytes gzip \(limit \d+; \d+\.\d percent used\)$/u,
     );
     expect(lines.at(-1)).toMatch(
-      /^Shared lazy: \d+ bytes gzip \(allowance \d+; \d+ percent used\)$/u,
+      /^Shared lazy: \d+ bytes raw \(allowance \d+; \d+\.\d percent used\); \d+ bytes gzip \(allowance \d+; \d+\.\d percent used\)$/u,
     );
     // Highly compressible, so only raw is exceeded.
     await writeFile(join(root, "assets", "index.js"), "x".repeat(FIRST_VISIT_JS_BUDGET.raw + 1));
@@ -634,12 +915,6 @@ test("a file the manifest names but the disk lacks fails with the missing-file m
   expect(evaluateBundle(noEntry, SPLIT).problems).toEqual([MANIFEST_FAILURE]);
 });
 
-test("each lazy line prints the percent of its limit used, rounded", () => {
-  const lines = evaluateBundle(build({ screenJsGzip: 14_970, sharedGzip: 5_950 }), SPLIT).lines;
-  expect(lines).toContain("Lazy screen nearby: 15000 bytes gzip (limit 30000; 50 percent used)");
-  expect(lines).toContain("Shared lazy: 6000 bytes gzip (allowance 12000; 50 percent used)");
-});
-
 test("a diamond: a static chunk with CSS shared by the entry's chain and a lazy importer counts once", () => {
   const diamond = manifest({
     "index.html": {
@@ -678,7 +953,7 @@ test("a diamond: a static chunk with CSS shared by the entry's chain and a lazy 
   expect(report.lines).toContain("  assets/shared.css: 50 raw; 5 gzip; first-visit");
 });
 
-test("a file two lazy chunks list is counted once, in the screen's bucket", () => {
+test("a file a screen and a shared root both list is counted once, in shared", () => {
   const twice = manifest({
     "index.html": {
       file: "assets/index.js",
@@ -695,9 +970,9 @@ test("a file two lazy chunks list is counted once, in the screen's bucket", () =
     asset("assets/both.css", 10, 7),
   ];
   const lines = evaluateBundle(assets, twice).lines;
-  expect(lines).toContain("  assets/both.css: 10 raw; 7 gzip; lazy (nearby)");
-  expect(lines).toContain("Lazy screen nearby: 8 bytes gzip (limit 30000; 0 percent used)");
-  expect(lines).toContain("Shared lazy: 1 bytes gzip (allowance 12000; 0 percent used)");
+  expect(lines).toContain("  assets/both.css: 10 raw; 7 gzip; lazy (shared)");
+  expect(lineOf(lines, "Lazy screen nearby")).toContain("1 bytes raw");
+  expect(lineOf(lines, "Shared lazy")).toContain("11 bytes raw");
 });
 
 test("METRO-105 a classic head script from public/ counts as first-visit JS and is not an orphan", () => {

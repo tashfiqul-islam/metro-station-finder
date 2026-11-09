@@ -1,10 +1,10 @@
 # ADR-0020: Budget the first visit, cap all files, and load features lazily
 
-- Status: Accepted
+- Status: Accepted (the combined first-visit limit and the all-files ceiling are superseded by ADR-0023)
 - Date: 2026-11-08
 - Ticket and specification: METRO-104 (Plane); no separate specification, the ticket's owner decision of 2026-11-08 (gate policy, approved with "ok") is the contract.
 
-> Amended by [ADR-0023](0023-bundle-budget-model.md) (METRO-116, 2026-11-09): the first-visit limit is split into JS (250,000 / 80,000, unchanged) and CSS, and the all-files ceiling is replaced by a per-screen limit and a shared lazy allowance, with unclassified chunks failing. The text below is the record of the original decision.
+> Partly superseded by [ADR-0023](0023-bundle-budget-model.md) (METRO-116, 2026-11-09): the first-visit limit is split into JS (250,000 / 80,000, unchanged) and CSS, and the all-files ceiling is replaced by per-screen limits and a shared lazy allowance, with unclassified chunks failing. Wherever the text below speaks of the ceiling, read ADR-0023. The first-visit set, the manifest rules and `lazyFeature` stand.
 
 ## Context
 
@@ -31,7 +31,7 @@ We will apply the existing limits, 250,000 raw and 80,000 gzip, to the first-vis
 - Residual bias, size Unverified: registration waits for load, then up to 1 s of idle, then the chunk fetch. A session hidden before that sends nothing for that page view, and background tabs throttle timers, so quick bounces are under-counted and the data skews toward longer visits. Real-user metrics now register after idle. The observers read buffered entries, so LCP and CLS history is kept, but an input that happens before registration cannot finalise LCP early; LCP is then sent when the page is hidden. The vitals e2e now waits for the chunk before its simulated hide, because a page already hidden when the library starts drops earlier entries.
 - Unverified: the effect of the late chunk on real users' reported LCP, INP and CLS; the lab check cannot show it. Browsers without `requestIdleCallback` use the timer, not measured here. The real-browser failure and recovery path of the lazy helper (cached failed imports, a stale page after a deploy) is not exercised by a browser test; the unit tests mock the loader and the reload.
 - Known minor: the pending `<output>` can flash on a fast load; accepted rather than adding a show delay.
-- Preload gap: Vite's preload helper loads a dynamic chunk's dependencies only when the dynamic import runs, so the first-visit set equals the first page load for the current build. A future build with a service worker, a second `isEntry` file (it counts toward the ceiling only) or extra preload links would need the first-visit rule revisited.
+- Preload gap: Vite's preload helper loads a dynamic chunk's dependencies only when the dynamic import runs, so the first-visit set equals the first page load for the current build. A future build with a service worker, a second `isEntry` file (it counted toward the ceiling only; under ADR-0023 it would be unclassified and fail the gate) or extra preload links would need the first-visit rule revisited.
 - `modulePreload` interplay: Vite adds a preload helper to the entry for dynamic imports. This change keeps the default (`build.modulePreload` on); turning it off saved about 0.5 KB in ADR-0019's measurement on an earlier build, but also drops preloading for future lazy routes.
 
 ## Alternatives considered
