@@ -1299,3 +1299,42 @@ test("METRO-120 place search failing while focus is on the page takes no focus, 
   expect(document.activeElement).toBe(document.body);
   expect(document.activeElement).not.toBe(now);
 });
+
+/** A search field that, as it leaves, hands focus to the page's first button (focus already has a new home). */
+function FocusHandingSearch(props: PlaceSearchProps) {
+  useEffect(
+    () => () => {
+      document.querySelector("button")?.focus();
+    },
+    [],
+  );
+  return (
+    <fieldset aria-labelledby={props.labelId}>
+      <input aria-label="fake search box" />
+    </fieldset>
+  );
+}
+
+const handingMaps: MapsAdapter = { Provider: FakeProvider, PlaceSearch: FocusHandingSearch };
+
+test("METRO-114 the library failing leaves focus alone when it already moved to another control as the field left", () => {
+  render(<NearestStation maps={handingMaps} />);
+  act(() => screen.getByRole("textbox", { name: "fake search box" }).focus());
+  publish({ status: "unavailable" });
+  const button = screen.getByRole("button", { name: copy.locateButton });
+  expect(document.activeElement).toBe(button);
+  expect(document.activeElement).not.toBe(document.querySelector(".notice[data-size=sm]"));
+});
+
+test("METRO-120 place search failing leaves focus alone when it already moved to another control as the action left", async () => {
+  geolocation((_success, failure) => failure(timeout));
+  render(<NearestStation maps={handingMaps} />);
+  pressLocate();
+  const group = await screen.findByRole("group", { name: copy.unavailable.search });
+  act(() => within(group).getByRole("button", { name: copy.searchLabel }).focus());
+  publish({ status: "unavailable" });
+  const now = screen.getByRole("group", { name: copy.unavailable.pick });
+  expect(document.activeElement).not.toBe(now);
+  expect(document.activeElement).not.toBe(document.body);
+  expect(document.activeElement?.tagName).toBe("BUTTON");
+});

@@ -37,7 +37,7 @@ We will move the API and web test projects to Vitest (stages 1 and 2 below) and 
 `bun test` stays in `check` for every project not yet moved, so no test file runs under neither runner.
 
 - **Versions.** The newest Vitest the release cooldown allows when each ticket starts, pinned exactly (the spike passed on 4.1.12 and 5.1.0), with the plugin and both coverage packages pinned to match.
-- **Gate.** The per-file gate for lines and functions stays (amended 2026-11-08, METRO-94: Bun-run files now need 100 percent, the Vitest app thresholds stay 90). A 90 percent per-file branch threshold is added in the stage that moves a project. "No threshold is weakened" means no existing number is lowered; it does not mean the new branch gate passes today (see Consequences).
+- **Gate.** The per-file gate for lines and functions stays (amended 2026-11-08, METRO-94: Bun-run files now need 100 percent, the Vitest app thresholds stay 90; amended METRO-126: the Vitest app thresholds are now 100 on statements, lines, functions and branches per file). A 90 percent per-file branch threshold is added in the stage that moves a project. "No threshold is weakened" means no existing number is lowered; it does not mean the new branch gate passes today (see Consequences).
 - **Order.** Randomised with a printed seed (`sequence.shuffle`), no fixed seed, no retries.
 - **Imports.** Test files import from `vitest` (globals stay off) so the `jest/*` rules see them.
 - **E2E.** Playwright is unchanged.

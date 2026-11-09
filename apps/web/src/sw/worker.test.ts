@@ -425,6 +425,19 @@ describe("cacheFirst", () => {
     }
   });
 
+  test("METRO-126 an answer with no content-type is not HTML, so a hashed asset is stored", async () => {
+    const caches = await withCurrent();
+    // A byte body has no default content-type, unlike a string body.
+    const bare = basic(new Response(new Uint8Array([110, 101, 116]), { status: 200 }));
+    expect(bare.headers.has("content-type")).toBe(false);
+    const response = await cacheFirst(
+      depsWith(() => Promise.resolve(bare), caches),
+      asset,
+    );
+    expect(await response.text()).toBe("net");
+    expect(keysOf(caches)).toEqual(["/assets/app-2.js"]);
+  });
+
   test("a file outside /assets/ is fetched but not stored", async () => {
     const caches = await withCurrent();
     await cacheFirst(
