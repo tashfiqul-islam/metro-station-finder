@@ -411,7 +411,7 @@ test("METRO-114 a rough fix asks for no route, and neither does a rough fix with
   expect(world.load).not.toHaveBeenCalled();
   geolocation((success) => success(fakePosition(23.8, 90.4, Number.NaN)));
   fireEvent.click(screen.getByRole("button", { name: copy.tryAgain }));
-  await screen.findByText(copy.roughUnknown);
+  await screen.findByText(copy.roughUnknown.search);
   expect(walk).not.toHaveBeenCalled();
   expect(world.load).not.toHaveBeenCalled();
 });
@@ -578,8 +578,8 @@ test("METRO-113 denied: a labelled group with the search action, focus on that f
   geolocation((_success, failure) => failure(denied));
   render(<NearestStation maps={fakeMaps} />);
   fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
-  const group = await screen.findByRole("group", { name: copy.denied });
-  expect(group.textContent).toContain(copy.denied);
+  const group = await screen.findByRole("group", { name: copy.denied.search });
+  expect(group.textContent).toContain(copy.denied.search);
   const action = within(group).getByRole("button", { name: copy.searchLabel });
   expect(document.activeElement).toBe(action);
   // Denied offers no Try again: the browser will not ask again.
@@ -590,7 +590,7 @@ test("METRO-113 denied: a labelled group with the search action, focus on that f
   // Focus moved, so the notice is not also an alert (no double announcement).
   expect(screen.queryByRole("alert")).toBeNull();
   pickPlace(NEAR_MOTIJHEEL);
-  expect(screen.queryByText(copy.denied)).toBeNull();
+  expect(screen.queryByText(copy.denied.search)).toBeNull();
   expect(heading("Motijheel")).toBeTruthy();
 });
 
@@ -599,7 +599,7 @@ test("METRO-113 denied with Maps unavailable has no action: focus goes to the no
   geolocation((_success, failure) => failure(denied));
   render(<NearestStation maps={fakeMaps} />);
   fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
-  const group = await screen.findByRole("group", { name: copy.denied });
+  const group = await screen.findByRole("group", { name: copy.denied.pick });
   expect(within(group).queryByRole("button")).toBeNull();
   expect(document.activeElement).toBe(group);
 });
@@ -608,7 +608,7 @@ test("METRO-113 a timeout and a missing API show the unavailable copy with Try a
   geolocation((_success, failure) => failure(timeout));
   render(<NearestStation maps={fakeMaps} />);
   fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
-  const group = await screen.findByRole("group", { name: copy.unavailable });
+  const group = await screen.findByRole("group", { name: copy.unavailable.search });
   const retry = within(group).getByRole("button", { name: copy.tryAgain });
   expect(document.activeElement).toBe(retry);
   const search = within(group).getByRole("button", { name: copy.searchLabel });
@@ -630,12 +630,12 @@ test("METRO-113 Try again asks again, keeps focus on a control and the second an
   retry.focus();
   fireEvent.click(retry);
   // The notice that held focus is gone; focus stays on the stable button, not on <body>.
-  expect(screen.queryByRole("group", { name: copy.unavailable })).toBeNull();
+  expect(screen.queryByRole("group", { name: copy.unavailable.search })).toBeNull();
   expect(document.activeElement).toBe(screen.getByRole("button", { name: copy.locateButton }));
   expect(successes).toHaveLength(2);
   act(() => successes[1]?.(fakePosition(23.87, 90.367, 20)));
   expect(await screen.findByRole("heading", { level: 2, name: "Uttara North" })).toBeTruthy();
-  expect(screen.queryByRole("group", { name: copy.unavailable })).toBeNull();
+  expect(screen.queryByRole("group", { name: copy.unavailable.search })).toBeNull();
 });
 
 test("METRO-113 locating: an output status with the looping mark and the handoff text, the button stays focusable", () => {
@@ -701,7 +701,7 @@ test("METRO-113 a locating that never answers ends as unavailable after the watc
       await vi.advanceTimersByTimeAsync(WATCHDOG_MS);
     });
     expect(locatingStatus().textContent).toBe("");
-    const group = screen.getByRole("group", { name: copy.unavailable });
+    const group = screen.getByRole("group", { name: copy.unavailable.search });
     expect(document.activeElement).toBe(within(group).getByRole("button", { name: copy.tryAgain }));
   } finally {
     vi.useRealTimers();
@@ -743,7 +743,7 @@ test("METRO-113 a station pick clears a stale notice", async () => {
   geolocation((_success, failure) => failure(denied));
   const view = render(<NearestStation maps={fakeMaps} />);
   fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
-  await screen.findByRole("group", { name: copy.denied });
+  await screen.findByRole("group", { name: copy.denied.search });
   view.rerender(<NearestStation maps={fakeMaps} pickSeq={1} />);
   expect(document.querySelector(".notice")).toBeNull();
 });
@@ -917,7 +917,7 @@ test("METRO-88 a place chosen after a position fix wins, and a denial after a pl
   await act(async () => {
     await Promise.resolve();
   });
-  expect(screen.queryByText(copy.denied)).toBeNull();
+  expect(screen.queryByText(copy.denied.search)).toBeNull();
   expect(heading("Uttara North")).toBeTruthy();
 });
 
@@ -997,7 +997,7 @@ test("METRO-103 a coarse fix shows the rough-location notice, no station, no pin
   const onLocation = vi.fn();
   render(<NearestStation maps={fakeMaps} onLocation={onLocation} />);
   fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
-  const group = await screen.findByRole("group", { name: copy.roughKnown("about 25 km") });
+  const group = await screen.findByRole("group", { name: copy.roughKnown("about 25 km").search });
   expect(group.textContent).toContain("with an error of about 25 km");
   expect(document.activeElement).toBe(within(group).getByRole("button", { name: copy.tryAgain }));
   expect(screen.queryByRole("heading", { name: copy.resultHeading })).toBeNull();
@@ -1017,7 +1017,7 @@ test("METRO-103 a fix with unknown accuracy is treated as rough, with copy that 
     fixWithAccuracy(unknown);
     render(<NearestStation maps={fakeMaps} />);
     fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
-    expect(await screen.findByRole("group", { name: copy.roughUnknown })).toBeTruthy();
+    expect(await screen.findByRole("group", { name: copy.roughUnknown.search })).toBeTruthy();
     expect(screen.queryByRole("heading", { name: copy.resultHeading })).toBeNull();
   }
 });
@@ -1058,7 +1058,9 @@ test("METRO-103 a rough fix clears an earlier result, and a place chosen afterwa
   render(<NearestStation maps={fakeMaps} />);
   pickPlace(NEAR_MOTIJHEEL);
   fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
-  expect(await screen.findByRole("group", { name: copy.roughKnown("about 25 km") })).toBeTruthy();
+  expect(
+    await screen.findByRole("group", { name: copy.roughKnown("about 25 km").search }),
+  ).toBeTruthy();
   expect(screen.queryByRole("heading", { name: "Motijheel" })).toBeNull();
   pickPlace(NEAR_UTTARA_NORTH);
   expect(document.querySelector(".notice")).toBeNull();
@@ -1069,11 +1071,11 @@ test("METRO-103 a failed locate after a rough one drops the rough copy", async (
   fixWithAccuracy(25_000);
   render(<NearestStation maps={fakeMaps} />);
   fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
-  await screen.findByText(copy.roughKnown("about 25 km"));
+  await screen.findByText(copy.roughKnown("about 25 km").search);
   geolocation((_success, failure) => failure(denied));
   fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
-  expect(await screen.findByRole("group", { name: copy.denied })).toBeTruthy();
-  expect(screen.queryByText(copy.roughKnown("about 25 km"))).toBeNull();
+  expect(await screen.findByRole("group", { name: copy.denied.search })).toBeTruthy();
+  expect(screen.queryByText(copy.roughKnown("about 25 km").search)).toBeNull();
 });
 
 test("METRO-103 a GPS-grade fix of 100 m is never called rough, even at a bisector", async () => {
@@ -1089,7 +1091,7 @@ test("METRO-103 an invalid position is the empty state, never the rough copy", a
   render(<NearestStation maps={fakeMaps} />);
   fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
   expect(await screen.findByText(copy.empty)).toBeTruthy();
-  expect(screen.queryByText(copy.roughKnown("about 25 km"))).toBeNull();
+  expect(screen.queryByText(copy.roughKnown("about 25 km").search)).toBeNull();
   expect(screen.queryByRole("alert")).toBeNull();
 });
 
@@ -1106,7 +1108,7 @@ test("METRO-113 a rough fix that arrives while the user types does not take focu
   expect(document.activeElement).toBe(input);
   act(() => fixCallbacks[0]?.(fakePosition(23.87, 90.367, 25_000)));
   const alert = await screen.findByRole("alert");
-  expect(alert.textContent).toContain(copy.roughKnown("about 25 km"));
+  expect(alert.textContent).toContain(copy.roughKnown("about 25 km").search);
   expect(document.activeElement).toBe(input);
   expect(onSettle).toHaveBeenCalledTimes(1);
 });
@@ -1125,7 +1127,7 @@ test("METRO-103 an earlier in-flight route can never appear after a rough fix cl
   pickPlace(NEAR_UTTARA_NORTH);
   expect(walk).toHaveBeenCalledTimes(1);
   fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
-  await screen.findByText(copy.roughKnown("about 25 km"));
+  await screen.findByText(copy.roughKnown("about 25 km").search);
   await act(async () => {
     resolvers[0]?.(route(1234, 900));
     await Promise.resolve();
@@ -1146,7 +1148,7 @@ test("METRO-113 a late denial while the user types does not take focus but is an
   const input = screen.getByLabelText("fake search box");
   act(() => input.focus());
   act(() => fixCallbacks[0]?.(denied));
-  expect((await screen.findByRole("alert")).textContent).toContain(copy.denied);
+  expect((await screen.findByRole("alert")).textContent).toContain(copy.denied.search);
   expect(document.activeElement).toBe(input);
 });
 
@@ -1166,7 +1168,7 @@ test("METRO-113 locating and every notice or result ask the sheet to settle at h
   geolocation((_success, failure) => failure(timeout));
   render(<NearestStation maps={fakeMaps} onSettle={onSettle} />);
   fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
-  await screen.findByRole("group", { name: copy.unavailable });
+  await screen.findByRole("group", { name: copy.unavailable.search });
   // Locating, then the error.
   expect(onSettle).toHaveBeenCalledTimes(2);
   pickPlace(NEAR_MOTIJHEEL);
@@ -1182,4 +1184,99 @@ test("METRO-114 typing in the place search tells the screen, focus alone does no
   expect(engage).not.toHaveBeenCalled();
   fireEvent.input(box, { target: { value: "mot" } });
   expect(engage).toHaveBeenCalledTimes(1);
+});
+
+// METRO-120: a notice's suggested next step names only what is available right now.
+const NOTICE_CASES = [
+  {
+    name: "denied",
+    arrange: (): void => geolocation((_success, failure) => failure(denied)),
+    variants: copy.denied,
+    retry: false,
+  },
+  {
+    name: "unavailable",
+    arrange: (): void => geolocation((_success, failure) => failure(timeout)),
+    variants: copy.unavailable,
+    retry: true,
+  },
+  {
+    name: "rough",
+    arrange: (): void => fixWithAccuracy(25_000),
+    variants: copy.roughKnown("about 25 km"),
+    retry: true,
+  },
+  {
+    name: "rough-unknown",
+    arrange: (): void => fixWithAccuracy(Number.NaN),
+    variants: copy.roughUnknown,
+    retry: true,
+  },
+] as const;
+
+for (const item of NOTICE_CASES) {
+  test(`METRO-120 ${item.name} with place search available: search step, search action, focus on the first action`, async () => {
+    item.arrange();
+    render(<NearestStation maps={fakeMaps} />);
+    pressLocate();
+    const group = await screen.findByRole("group", { name: item.variants.search });
+    expect(group.textContent).toBe(
+      item.variants.search + (item.retry ? copy.tryAgain : "") + copy.searchLabel,
+    );
+    const first = within(group).getAllByRole("button")[0];
+    expect(document.activeElement).toBe(first);
+    expect(first?.textContent).toBe(item.retry ? copy.tryAgain : copy.searchLabel);
+    expect(within(group).getByRole("button", { name: copy.searchLabel })).toBeTruthy();
+  });
+
+  test(`METRO-120 ${item.name} with place search unavailable: pick step, no search action, focus follows`, async () => {
+    world.status = "unavailable";
+    item.arrange();
+    render(<NearestStation maps={fakeMaps} />);
+    pressLocate();
+    const group = await screen.findByRole("group", { name: item.variants.pick });
+    expect(group.textContent).toBe(item.variants.pick + (item.retry ? copy.tryAgain : ""));
+    expect(group.textContent).not.toMatch(/search/iu);
+    expect(within(group).queryByRole("button", { name: copy.searchLabel })).toBeNull();
+    // Try again first when there is one; denied has no action, so the notice itself takes focus.
+    expect(document.activeElement).toBe(
+      item.retry ? within(group).getByRole("button", { name: copy.tryAgain }) : group,
+    );
+  });
+}
+
+test("METRO-120 no connection: the notice names picking a station until the connection returns", async () => {
+  setOnline(false);
+  try {
+    geolocation((_success, failure) => failure(denied));
+    render(<NearestStation maps={fakeMaps} />);
+    pressLocate();
+    const group = await screen.findByRole("group", { name: copy.denied.pick });
+    expect(within(group).queryByRole("button")).toBeNull();
+    // The online event while the notice shows: the text and the action follow, and stay true.
+    setOnline(true);
+    act(() => {
+      window.dispatchEvent(new Event("online"));
+    });
+    const back = screen.getByRole("group", { name: copy.denied.search });
+    expect(back.textContent).toBe(copy.denied.search + copy.searchLabel);
+    expect(screen.queryByText(copy.denied.pick)).toBeNull();
+    expect(screen.getByText(copy.searchLabel, { selector: "label" })).toBeTruthy();
+  } finally {
+    setOnline(null);
+  }
+});
+
+test("METRO-120 place search failing while a notice shows swaps its step, drops the action and keeps focus in the notice", async () => {
+  geolocation((_success, failure) => failure(timeout));
+  render(<NearestStation maps={fakeMaps} />);
+  pressLocate();
+  const group = await screen.findByRole("group", { name: copy.unavailable.search });
+  const action = within(group).getByRole("button", { name: copy.searchLabel });
+  act(() => action.focus());
+  publish({ status: "unavailable" });
+  const now = screen.getByRole("group", { name: copy.unavailable.pick });
+  expect(within(now).queryByRole("button", { name: copy.searchLabel })).toBeNull();
+  expect(screen.queryByText(copy.unavailable.search)).toBeNull();
+  expect(document.activeElement).toBe(now);
 });

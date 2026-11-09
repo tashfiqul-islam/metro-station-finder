@@ -78,12 +78,21 @@ interface SliceProps {
   readonly pickSeq?: number;
 }
 
-function noticeText(notice: Notice): string {
-  if (notice.kind === "denied") return copy.denied;
-  if (notice.kind === "unavailable") return copy.unavailable;
-  return notice.meters === null
-    ? copy.roughUnknown
-    : copy.roughKnown(formatAccuracy(notice.meters));
+/**
+ * The notice text. Its suggested next step names only what is available right now (METRO-120): searching for a
+ * place while place search is available, picking a station while it is not. Recomputed on every render, so the
+ * text follows the connection coming back or going away while the notice is showing.
+ */
+function noticeText(notice: Notice, searchAvailable: boolean): string {
+  const variants =
+    notice.kind === "denied"
+      ? copy.denied
+      : notice.kind === "unavailable"
+        ? copy.unavailable
+        : notice.meters === null
+          ? copy.roughUnknown
+          : copy.roughKnown(formatAccuracy(notice.meters));
+  return searchAvailable ? variants.search : variants.pick;
 }
 
 function Slice({
@@ -153,6 +162,19 @@ function Slice({
     searchHadFocus.current = false;
     if (document.activeElement === null || document.activeElement === document.body) {
       searchNotice.current?.focus();
+    }
+  }, [searchAvailable]);
+
+  // Place search went away while a location notice showed (METRO-120): its "Search for a place" action leaves with
+  // it. If focus was on that action it fell to the page; the notice takes it, so the keyboard user is not lost.
+  const noticeShowing = useRef(false);
+  useEffect(() => {
+    noticeShowing.current = notice !== null;
+  });
+  useEffect(() => {
+    if (searchAvailable || !noticeShowing.current) return;
+    if (document.activeElement === null || document.activeElement === document.body) {
+      document.getElementById("location-notice-text")?.closest<HTMLElement>(".notice")?.focus();
     }
   }, [searchAvailable]);
 
@@ -245,7 +267,7 @@ function Slice({
           <LocationNotice
             tone={notice.kind === "denied" ? "bad" : "warn"}
             icon={notice.kind === "denied" ? locateOffIcon : alertIcon}
-            text={noticeText(notice)}
+            text={noticeText(notice, searchAvailable)}
             takeFocus={notice.focus}
             actions={
               notice.kind === "denied" ? (
