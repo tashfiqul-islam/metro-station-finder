@@ -144,7 +144,10 @@ test.describe("offline shell on the real server", () => {
     });
     await open(page);
     expect(before).not.toContain("/sw.js");
+    // Nor is the registration chunk fetched before load: the first visit downloads none of it.
+    expect(before.filter((path) => /\/assets\/register-/u.test(path))).toEqual([]);
     await shellReady(page);
+    expect(after.some((path) => /\/assets\/register-/u.test(path))).toBe(true);
     // Firefox does not report the worker script request to Playwright at all (Repo-verified: the list holds
     // only the page's own chunks), so this half of the check is Chromium and WebKit only.
     if (browserName !== "firefox") expect(after).toContain("/sw.js");
@@ -306,6 +309,11 @@ function serve(deploy: Holder): Promise<{ server: Server; base: string }> {
       response.writeHead(204).end();
       return;
     }
+    // A 200 from the API, so "never cached" is tested with a response that a careless cache would keep.
+    if (request.method === "GET" && path === "/api/ping") {
+      response.writeHead(200, { "content-type": "text/plain" }).end("pong");
+      return;
+    }
     if (body === undefined) {
       response.writeHead(404, { "content-type": "text/plain" }).end("missing");
       return;
@@ -391,6 +399,41 @@ test.describe("update flow", () => {
     const [name] = await cacheNames(page);
     return name ?? "";
   }
+
+  test.describe("API answers", () => {
+    // The fetch that fails with the network gone is logged by the browser as a failed resource, on purpose.
+    test.use({ allowedConsoleError: /Failed to load resource/u });
+
+    test("METRO-106 a 200 from /api/* is never cached and never answered from the cache with the network gone", async ({
+      page,
+      context,
+      browserName,
+    }) => {
+      await installed(page);
+      const online = await page.evaluate(async () => {
+        const response = await fetch("/api/ping");
+        return [response.status, await response.text()];
+      });
+      expect(online).toEqual([200, "pong"]);
+      const keys = await page.evaluate(async (prefix) => {
+        const found: string[] = [];
+        for (const name of (await caches.keys()).filter((key) => key.startsWith(prefix))) {
+          for (const request of await (await caches.open(name)).keys()) found.push(request.url);
+        }
+        return found;
+      }, CACHE_PREFIX);
+      expect(keys.length).toBeGreaterThan(10);
+      expect(keys.filter((key) => key.includes("/api/"))).toEqual([]);
+      await goOffline(context, browserName);
+      const offline = await page.evaluate(() =>
+        fetch("/api/ping").then(
+          (response) => response.status,
+          () => "network error",
+        ),
+      );
+      expect(offline).toBe("network error");
+    });
+  });
 
   test("METRO-106 every browser: with the network gone the cached app reloads and the picker, map, fares and line list work", async ({
     page,

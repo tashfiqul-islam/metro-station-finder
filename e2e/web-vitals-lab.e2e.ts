@@ -122,6 +122,12 @@ function report(measurement: VitalsMeasurement): ReturnType<typeof evaluateVital
 }
 
 test.describe("lab web vitals (METRO-44 part C)", () => {
+  // METRO-106: the lab measures the first visit with the offline shell worker allowed (the project default
+  // blocks it), so the registration code and the precache that follow load and idle are in the measured page.
+  // Nothing here asks for a Google request (the worker is not controlling Playwright route stubs in WebKit,
+  // and this spec is Chromium only, but the rule holds anyway).
+  test.use({ serviceWorkers: "allow" });
+
   test("METRO-44 / loads within LCP 2500 ms and CLS 0.1", async ({ page }) => {
     await load(page);
     const verdict = report(await measure(page));
