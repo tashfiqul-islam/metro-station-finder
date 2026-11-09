@@ -6,8 +6,6 @@ function subscribe(onChange: () => void): () => void {
 }
 
 const read = (): boolean => navigator.onLine;
-// Rendered without a browser (no window), search is assumed available; the real app always has one.
-const readServer = (): boolean => true;
 
 /**
  * Whether the browser reports a connection (`navigator.onLine`), read at every render and re-read when the
@@ -18,5 +16,5 @@ const readServer = (): boolean => true;
  * visibly); one that says it has no connection is believed: place search is not offered.
  */
 export function useOnline(): boolean {
-  return useSyncExternalStore(subscribe, read, readServer);
+  return useSyncExternalStore(subscribe, read);
 }

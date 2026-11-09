@@ -577,6 +577,17 @@ export interface LiveRun {
   /** Console messages that name the Content Security Policy. */
   readonly cspMessages: readonly string[];
   readonly placesRequests: number;
+  /**
+   * Requests to any Google host seen after the page loaded and before the first focus of the place search
+   * (METRO-114: the Maps script waits for that focus). Expected 0; more fails the run.
+   */
+  readonly googleBeforeFocus: number;
+  /**
+   * Whether keyboard focus was on the Google widget (its host or inside it) right after the widget replaced the
+   * plain input that had focus; null when it could not be read. Information only (Unverified: whether `focus()`
+   * on Google's host reaches its inner input).
+   */
+  readonly focusInWidget: boolean | null;
   /** Places requests already seen when the Tab walk finished, before any click or typing (expected 0). */
   readonly placesDuringTabWalk: number;
   readonly routesRequests: number;
@@ -597,6 +608,7 @@ export function liveReport(run: LiveRun): { lines: string[]; pass: boolean } {
     accessibility.failure === null &&
     messages.length === 0 &&
     versionOk &&
+    run.googleBeforeFocus === 0 &&
     run.stationShown &&
     run.routeShown &&
     run.failedStep === null;
@@ -604,6 +616,8 @@ export function liveReport(run: LiveRun): { lines: string[]; pass: boolean } {
     `Maps version: ${run.version ?? "unknown"}`,
     `CSP messages: ${messages.length}`,
     ...messages.map((message) => `  CSP: ${message}`),
+    `Google requests before the first focus: ${run.googleBeforeFocus} (expected 0)`,
+    `Focus in the widget after the swap: ${run.focusInWidget === null ? "not read" : run.focusInWidget ? "yes" : "no"}`,
     `Places requests (host places.googleapis.com): ${run.placesRequests}`,
     `Places requests during the Tab walk: ${run.placesDuringTabWalk} (expected 0)`,
     `Routes requests (host routes.googleapis.com): ${run.routesRequests}`,

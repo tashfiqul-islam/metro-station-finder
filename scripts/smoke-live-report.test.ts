@@ -30,6 +30,8 @@ const accessibility = {
 };
 
 const base = {
+  googleBeforeFocus: 0,
+  focusInWidget: true,
   placesDuringTabWalk: 0,
   accessibility,
   version: "3.66.2",
@@ -63,6 +65,8 @@ test("a clean run passes and prints only counts, the version and the verdict", (
   expect(lines).toEqual([
     "Maps version: 3.66.2",
     "CSP messages: 0",
+    "Google requests before the first focus: 0 (expected 0)",
+    "Focus in the widget after the swap: yes",
     "Places requests (host places.googleapis.com): 3",
     "Places requests during the Tab walk: 0 (expected 0)",
     "Routes requests (host routes.googleapis.com): 1",
@@ -920,5 +924,24 @@ test("a description longer than the cap prints 1000+ and never its text", () => 
     }).lines,
   ).toContain(
     "  Combobox description: before typing present but different (length 1000+), after typing not reported",
+  );
+});
+
+test("METRO-114 a Google request before the first focus fails the run and is printed", () => {
+  const { lines, pass } = liveReport({ ...base, googleBeforeFocus: 1 });
+  expect(pass).toBe(false);
+  expect(lines).toContain("Google requests before the first focus: 1 (expected 0)");
+  expect(liveReport(base).lines).toContain(
+    "Google requests before the first focus: 0 (expected 0)",
+  );
+});
+
+test("METRO-114 the focus after the swap is information, never a failure", () => {
+  expect(liveReport(base).lines).toContain("Focus in the widget after the swap: yes");
+  const lost = liveReport({ ...base, focusInWidget: false });
+  expect(lost.lines).toContain("Focus in the widget after the swap: no");
+  expect(lost.pass).toBe(true);
+  expect(liveReport({ ...base, focusInWidget: null }).lines).toContain(
+    "Focus in the widget after the swap: not read",
   );
 });
