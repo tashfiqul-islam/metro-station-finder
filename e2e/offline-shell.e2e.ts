@@ -238,12 +238,16 @@ test.describe("offline shell on the real server", () => {
       expect(manifest[0]).toBe(200);
       expect(String(manifest[1])).not.toContain("html");
       expect(manifest[2]).toBe("{");
+      // The failing navigation runs in its own tab: a browser error page cannot be navigated away from at once.
+      const probe = await context.newPage();
+      workerMayControl(probe);
       let failed = false;
       try {
-        await page.goto("/robots.txt");
+        await probe.goto("/robots.txt");
       } catch {
         failed = true;
       }
+      await probe.close();
       expect(failed, "a navigation to /robots.txt offline must fail, not show the app").toBe(true);
       // And an app path still opens the page.
       await page.goto("/some/page");
@@ -427,6 +431,39 @@ function second(
 const updateRegion = (page: Page): Locator =>
   page.locator(".toast-region").getByRole("status").filter({ hasText: "A new version is ready." });
 
+/**
+ * The page has finished its own loading: the idle web-vitals chunk is in and the network is quiet. Chromium can
+ * leave a waiting worker waiting when a request reaches the old worker while it is being stopped for the
+ * takeover (Repo-verified under CPU load, ADR-0024: about one Reload press in four failed to take over when
+ * the page was still loading chunks, none of 32 once it was quiet). A person pressing Reload on a settled page
+ * is the case these tests are about; waits on observable state, never a sleep.
+ */
+async function quiet(page: Page): Promise<void> {
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        performance.getEntriesByType("resource").some((entry) => /web-vitals-/u.test(entry.name)),
+      ),
+    )
+    .toBe(true);
+  await page.waitForLoadState("networkidle");
+}
+
+/**
+ * Stops the browser's service worker processes, as the browser does itself after about half a minute idle. Before
+ * a Reload press this removes a race that only exists in this tool chain: a request restarts the old worker while
+ * it is being stopped for the takeover, and the restarted worker then hangs (cause Unverified; the debugger
+ * attach to a restarted worker is the suspect). Chromium only. Never before going offline: in Playwright 1.64.1
+ * `setOffline` hangs when a worker is stopped.
+ */
+async function stopWorkers(page: Page): Promise<void> {
+  if (page.context().browser()?.browserType().name() !== "chromium") return;
+  const session = await page.context().newCDPSession(page);
+  await session.send("ServiceWorker.enable");
+  await session.send("ServiceWorker.stopAllWorkers");
+  await session.detach();
+}
+
 async function checkForUpdate(page: Page): Promise<void> {
   await page.evaluate(async () => {
     const registration = await navigator.serviceWorker.getRegistration();
@@ -461,11 +498,13 @@ test.describe("update flow", () => {
     else await context.setOffline(true);
   }
 
-  async function installed(page: Page): Promise<string> {
+  async function installed(page: Page, idle = false): Promise<string> {
     await open(page, host.base);
     await shellReady(page);
     // The page's registration code has run (it mounts the empty status region), so it listens for updates.
     await expect(page.locator(".toast-region [role=status]")).toHaveCount(1);
+    await quiet(page);
+    if (idle) await stopWorkers(page);
     expect(await versionMarker(page)).toBeNull();
     const [name] = await cacheNames(page);
     return name ?? "";
@@ -521,7 +560,7 @@ test.describe("update flow", () => {
     context,
     browserName,
   }) => {
-    const v1 = await installed(page);
+    const v1 = await installed(page, true);
     deploy.current = second(first);
     await checkForUpdate(page);
     // The new worker installed and waits; the page runs on the version it loaded, and its cache is untouched.
@@ -592,7 +631,7 @@ test.describe("update flow", () => {
     page,
   }) => {
     test.slow(); // three deploys, two reloads
-    const v1 = await installed(page);
+    const v1 = await installed(page, true);
     deploy.current = second(first);
     await checkForUpdate(page);
     await expect(updateRegion(page)).toBeVisible();
@@ -602,6 +641,8 @@ test.describe("update flow", () => {
     ]);
     await expect.poll(() => cacheNames(page)).toHaveLength(2);
     expect(await cacheNames(page)).toContain(v1);
+    await quiet(page);
+    await stopWorkers(page);
     // A third deploy, applied the same way: the first version's cache goes, the second's stays.
     deploy.current = second(first, { marker: "deploy-v3", version: "eeeeeeeeeeee" });
     await checkForUpdate(page);
@@ -627,6 +668,8 @@ test.describe("update flow", () => {
     workerMayControl(other);
     await open(other, host.base);
     await expect(other.locator(".toast-region [role=status]")).toHaveCount(1);
+    await quiet(other);
+    await stopWorkers(page);
     const vitals = [...first.files.keys()].find((path) =>
       /^\/assets\/web-vitals-.*\.js$/u.test(path),
     );
