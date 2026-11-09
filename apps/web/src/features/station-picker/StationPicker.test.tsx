@@ -475,3 +475,33 @@ test("METRO-112 opening the list scrolls the field with its list into view (near
     Reflect.deleteProperty(Element.prototype, "scrollIntoView");
   }
 });
+
+// METRO-118: a click on an option keeps focus in the field (still `:focus-visible`), so the heading is focused
+// with a request for no ring; Enter asks for the ring.
+test("METRO-118 focuses the heading with a ring after Enter and without one after a click on an option", () => {
+  const focus = vi.spyOn(HTMLElement.prototype, "focus");
+  setup();
+  fireEvent.change(box(), { target: { value: "motijheel" } });
+  fireEvent.keyDown(box(), { key: "Enter" });
+  const motijheel = screen.getByRole("heading", { level: 2, name: "Motijheel" });
+  const lastCall = (target: HTMLElement): FocusOptions | undefined => {
+    let found: FocusOptions | undefined;
+    for (const [index, self] of focus.mock.contexts.entries()) {
+      if (self === target) found = focus.mock.calls[index]?.[0];
+    }
+    return found;
+  };
+  expect(lastCall(motijheel)).toEqual({ focusVisible: true });
+
+  fireEvent.change(box(), { target: { value: "uttara north" } });
+  // A real mouse or touch click reports detail 1 or more.
+  fireEvent.click(must(listbox().querySelector<HTMLElement>("[role=option]")), { detail: 1 });
+  const uttara = screen.getByRole("heading", { level: 2, name: "Uttara North" });
+  expect(lastCall(uttara)).toEqual({ focusVisible: false });
+
+  // A virtual click (screen reader, switch access, voice control) reports detail 0 and keeps the ring.
+  fireEvent.change(box(), { target: { value: "farmgate" } });
+  fireEvent.click(must(listbox().querySelector<HTMLElement>("[role=option]")), { detail: 0 });
+  const farmgate = screen.getByRole("heading", { level: 2, name: "Farmgate" });
+  expect(lastCall(farmgate)).toEqual({ focusVisible: true });
+});
