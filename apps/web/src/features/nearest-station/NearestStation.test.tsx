@@ -1280,3 +1280,19 @@ test("METRO-120 place search failing while a notice shows swaps its step, drops 
   expect(screen.queryByText(copy.unavailable.search)).toBeNull();
   expect(document.activeElement).toBe(now);
 });
+
+test("METRO-120 place search failing while focus is on the page takes no focus, even with a notice showing", async () => {
+  geolocation((_success, failure) => failure(timeout));
+  render(<NearestStation maps={fakeMaps} />);
+  pressLocate();
+  const group = await screen.findByRole("group", { name: copy.unavailable.search });
+  const action = within(group).getByRole("button", { name: copy.searchLabel });
+  // The action had focus, then the user clicked the blank page: focus is on the body.
+  act(() => action.focus());
+  act(() => action.blur());
+  expect(document.activeElement).toBe(document.body);
+  publish({ status: "unavailable" });
+  const now = screen.getByRole("group", { name: copy.unavailable.pick });
+  expect(document.activeElement).toBe(document.body);
+  expect(document.activeElement).not.toBe(now);
+});

@@ -66,10 +66,10 @@ The key is read at build time. `bun run build` has none unless the owner's root 
 | empty                   | `findNearestStation` returns no result                     | "No station could be found for that location"                                | `status`          |
 | geolocation denied      | permission denied                                          | "Location is turned off. Search for a place instead."                        | `alert`, focused  |
 | geolocation unavailable | position unavailable, timeout, no API                      | "Your position could not be found. Search for a place instead."              | `alert`, focused  |
-| Maps or Places failure  | no key, script, auth or `fetchFields` failure, `gmp-error` | "Place search is unavailable. You can still use your location."              | `alert`           |
+| Maps or Places failure  | no key, script, auth or `fetchFields` failure, `gmp-error` | "Place search is unavailable right now. Pick a station instead."             | `alert`           |
 | Routes failure          | `computeRoutes` rejects or returns no route                | "The walking route is unavailable. The station and fare are still correct."  | `alert`           |
 
-All copy is fixed in `features/nearest-station/copy.ts`; `error.message` and stacks are never rendered or logged. The "Search for a place instead." in the rows above is the form shown while place search is available; while it is not, the last sentence is "Pick a station instead." (rule at the end of this file, METRO-120).
+All copy is fixed in `features/nearest-station/copy.ts`; `error.message` and stacks are never rendered or logged. The denied and unavailable rows above, and the two rough-location notices below, each have two forms (METRO-120): the "Search for a place instead." ending shown here applies while place search is available; while it is not, the last sentence is "Pick a station instead." and the "Search for a place" action is left out (rule at the end of this file).
 
 ### Data flow
 
@@ -231,10 +231,10 @@ METRO-114 changes when Google is asked, not the rules above. The place search is
 
 ## A notice names only a next step that is available (METRO-120, 2026-11-09)
 
-Design-system rule, for every notice and message in the app: the next step it suggests must name something the user can do right now. A notice never points at a control or feature that the screen itself says is unavailable.
+Design-system rule for any notice that suggests a next step: the step must name something the user can do right now, and a notice never points at a control or feature that the screen itself says is unavailable. Enforced today by `copy.test.ts`, which scans only `features/nearest-station/copy.ts` and `features/station-picker/copy.ts`; copy written elsewhere (the shell, the error fallback) is covered by review.
 
 - Place search is unavailable when the browser reports no connection, there is no key, or the Maps script failed to load (`searchAvailable` in `NearestStation.tsx`). While it is, the location notices (denied, unavailable, rough, rough-unknown) end with "Pick a station instead." and their "Search for a place" action is left out; while it is available they end with "Search for a place instead." and offer the action.
 - Copy: each such notice is a `{ search, pick }` pair in `copy.ts` (type `NoticeVariants`), the two sharing everything before the last sentence. A new notice that suggests a step adds a pair, never a bare string; `copy.test.ts` fails a `pick` text that mentions search and a plain string that suggests an "instead" step other than picking a station.
-- Focus: the first action takes focus; denied has no action while search is unavailable, so the notice itself takes focus (METRO-113). If place search goes away while a notice shows and focus was on the removed action, the notice takes focus.
+- Focus: the first action takes focus; denied has no action while search is unavailable, so the notice itself takes focus (METRO-113). If place search goes away while a notice shows and focus was on the removed action, the notice takes focus; focus anywhere else (the blank page included) is left alone.
 - Live: the text is derived at render from availability, so the `online` event while a notice shows changes its step and action in place. The notice is a labelled group, not a live region, so that change is not announced; the status notice about place search below it is the live region (Unverified with a screen reader).
 - Strings and their source: the Copy for owner confirmation table in [METRO-120 evidence](../evidence/metro-120.md).

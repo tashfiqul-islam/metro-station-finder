@@ -167,12 +167,12 @@ function Slice({
 
   // Place search went away while a location notice showed (METRO-120): its "Search for a place" action leaves with
   // it. If focus was on that action it fell to the page; the notice takes it, so the keyboard user is not lost.
-  const noticeShowing = useRef(false);
+  // Only when that action really had focus (a ref set by its focus and blur): a user who clicked the blank page
+  // keeps focus there. A blur from the element leaving the page is ignored (it is no longer connected).
+  const actionHadFocus = useRef(false);
   useEffect(() => {
-    noticeShowing.current = notice !== null;
-  });
-  useEffect(() => {
-    if (searchAvailable || !noticeShowing.current) return;
+    if (searchAvailable || !actionHadFocus.current) return;
+    actionHadFocus.current = false;
     if (document.activeElement === null || document.activeElement === document.body) {
       document.getElementById("location-notice-text")?.closest<HTMLElement>(".notice")?.focus();
     }
@@ -211,6 +211,7 @@ function Slice({
     const mine = latestAction.current;
     const pickAtStart = pickNow.current;
     engagedWithSearch.current = false;
+    actionHadFocus.current = false;
     // Try again unmounts the notice that held focus: keep focus on the stable button.
     if (document.activeElement?.closest(".notice")) locateButton.current?.focus();
     setNotice(null);
@@ -240,7 +241,17 @@ function Slice({
   // With place search unavailable (the library failed or has no key) there is nothing to move to, so the action
   // is left out and the notice keeps Try again (or, for denied, nothing: the notice itself takes focus).
   const searchLink = !searchAvailable ? null : (
-    <button type="button" className="btn btn--quiet btn--sm" onClick={focusSearch}>
+    <button
+      type="button"
+      className="btn btn--quiet btn--sm"
+      onClick={focusSearch}
+      onFocus={() => {
+        actionHadFocus.current = true;
+      }}
+      onBlur={(event) => {
+        if (event.currentTarget.isConnected) actionHadFocus.current = false;
+      }}
+    >
       <Icon icon={searchIcon} size={16} />
       {copy.searchLabel}
     </button>
