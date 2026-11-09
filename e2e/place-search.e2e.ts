@@ -325,7 +325,8 @@ test.describe("place search that cannot start (METRO-114)", () => {
       await expect(smallNotice(page)).toContainText(NOTICE);
       await locate(page).click();
       const group = page.getByRole("group", {
-        name: "Your position could not be found. Search for a place instead.",
+        // METRO-120: with place search gone the notice's step is the available one.
+        name: "Your position could not be found. Pick a station instead.",
       });
       await expect(group.getByRole("button", { name: "Try again" })).toBeFocused();
       await expect(group.getByRole("button", { name: "Search for a place" })).toHaveCount(0);

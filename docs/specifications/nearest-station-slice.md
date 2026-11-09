@@ -69,7 +69,7 @@ The key is read at build time. `bun run build` has none unless the owner's root 
 | Maps or Places failure  | no key, script, auth or `fetchFields` failure, `gmp-error` | "Place search is unavailable. You can still use your location."              | `alert`           |
 | Routes failure          | `computeRoutes` rejects or returns no route                | "The walking route is unavailable. The station and fare are still correct."  | `alert`           |
 
-All copy is fixed in `features/nearest-station/copy.ts`; `error.message` and stacks are never rendered or logged.
+All copy is fixed in `features/nearest-station/copy.ts`; `error.message` and stacks are never rendered or logged. The "Search for a place instead." in the rows above is the form shown while place search is available; while it is not, the last sentence is "Pick a station instead." (rule at the end of this file, METRO-120).
 
 ### Data flow
 
@@ -228,3 +228,13 @@ What the result settles:
 See the [runbook](../agents/maps-live-check-runbook.md) and [METRO-102 evidence](../evidence/metro-102.md).
 
 METRO-114 changes when Google is asked, not the rules above. The place search is a plain input until its first focus; the Maps script loads on the first focus or the first walking route, and nothing from Google loads with the page. A good device fix and a chosen place each request one walking route ("about ... est."); a rough fix, a picked station, a re-render and a theme change request none, and a result replaced before its route is requested never requests it. With no connection, no key or a failed load the label, hint and field are replaced by one notice, and the plain input returns when the browser reports the connection back. Details and evidence: [METRO-114 evidence](../evidence/metro-114.md).
+
+## A notice names only a next step that is available (METRO-120, 2026-11-09)
+
+Design-system rule, for every notice and message in the app: the next step it suggests must name something the user can do right now. A notice never points at a control or feature that the screen itself says is unavailable.
+
+- Place search is unavailable when the browser reports no connection, there is no key, or the Maps script failed to load (`searchAvailable` in `NearestStation.tsx`). While it is, the location notices (denied, unavailable, rough, rough-unknown) end with "Pick a station instead." and their "Search for a place" action is left out; while it is available they end with "Search for a place instead." and offer the action.
+- Copy: each such notice is a `{ search, pick }` pair in `copy.ts` (type `NoticeVariants`), the two sharing everything before the last sentence. A new notice that suggests a step adds a pair, never a bare string; `copy.test.ts` fails a `pick` text that mentions search and a plain string that suggests an "instead" step other than picking a station.
+- Focus: the first action takes focus; denied has no action while search is unavailable, so the notice itself takes focus (METRO-113). If place search goes away while a notice shows and focus was on the removed action, the notice takes focus.
+- Live: the text is derived at render from availability, so the `online` event while a notice shows changes its step and action in place. The notice is a labelled group, not a live region, so that change is not announced; the status notice about place search below it is the live region (Unverified with a screen reader).
+- Strings and their source: the Copy for owner confirmation table in [METRO-120 evidence](../evidence/metro-120.md).
