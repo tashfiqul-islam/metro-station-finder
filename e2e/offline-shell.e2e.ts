@@ -326,6 +326,7 @@ test.describe("offline shell on the real server", () => {
       });
       await cdp.send("ServiceWorker.enable");
       await expect.poll(() => running.size).toBeGreaterThan(0);
+      expect(running.size, "exactly one worker version exists").toBe(1);
       const [versionId = ""] = [...running.keys()];
       expect(versionId).not.toBe("");
       await cdp.send("ServiceWorker.stopWorker", { versionId });
@@ -339,6 +340,10 @@ test.describe("offline shell on the real server", () => {
         });
         await fetch("/api/other");
       });
+      // A round trip on the same session: events reach a session in order, so any "running" event the requests
+      // caused arrives before this answer, and re-enabling reports every version's current status.
+      await cdp.send("ServiceWorker.enable");
+      expect(running.size).toBe(1);
       expect(running.get(versionId)).toBe("stopped");
       // Control: a shell file does go through the worker, which starts it again, so "stopped" above was observable.
       await page.evaluate(async () => (await fetch("/theme-boot.js")).status);
