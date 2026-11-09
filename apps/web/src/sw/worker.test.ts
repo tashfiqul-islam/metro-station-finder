@@ -554,6 +554,50 @@ describe("attach", () => {
     expect(calls.claim).toBe(1);
   });
 
+  test("install sends /api/* straight to the network where the browser can route, and an install without the API or with a refused rule still succeeds", async () => {
+    const rules: unknown[] = [];
+    const { scope, caches, fire } = fakeScope(installFetcher);
+    attach(scope, config);
+    const routed = waitEvent();
+    fire("install", {
+      ...routed.event,
+      addRoutes: (rule: unknown) => {
+        rules.push(rule);
+        return Promise.resolve();
+      },
+    });
+    await Promise.all(routed.work);
+    expect(rules).toEqual([{ condition: { urlPattern: "/api/*" }, source: "network" }]);
+    expect(caches.stores.get(cacheName(config))?.size).toBe(config.precache.length + 1);
+    // A refused rule (a TypeError thrown at once, or a rejected promise) never fails the install.
+    for (const refuse of [
+      (): Promise<void> => {
+        throw new TypeError("invalid rule");
+      },
+      (): Promise<void> => Promise.reject(new TypeError("invalid rule")),
+    ]) {
+      const refused = waitEvent();
+      fire("install", { ...refused.event, addRoutes: refuse });
+      await expect(Promise.all(refused.work)).resolves.toBeDefined();
+    }
+  });
+
+  test("the kill switch registers no routes", async () => {
+    const { scope, fire } = fakeScope();
+    attach(scope, { ...config, kill: true });
+    const rules: unknown[] = [];
+    const install = waitEvent();
+    fire("install", {
+      ...install.event,
+      addRoutes: (rule: unknown) => {
+        rules.push(rule);
+        return Promise.resolve();
+      },
+    });
+    await Promise.all(install.work);
+    expect(rules).toEqual([]);
+  });
+
   test("Data Saver in the worker scope skips the precache", async () => {
     const { scope, caches, fire } = fakeScope(noNetwork, true);
     attach(scope, config);

@@ -1,4 +1,6 @@
-import { axeBuilder, expect, test } from "./fixtures";
+import type { Page } from "@playwright/test";
+
+import { animationsSettled, axeBuilder, expect, test } from "./fixtures";
 import { expectTabReachesEveryControl, linksAreTabbable } from "./keyboard";
 
 /** Two 16 px buttons touching: fails WCAG 2.2 SC 2.5.8 Target Size (Minimum), axe rule `target-size`. */
@@ -38,6 +40,58 @@ test.describe("axe configuration (METRO-41)", () => {
     await page.setContent(NO_LANDMARK);
     const results = await axeBuilder(page).analyze();
     expect(results.violations.map((violation) => violation.id)).toContain("landmark-one-main");
+  });
+});
+
+/** Black text on white; the script below fades it in from nearly invisible, which axe reads as low contrast. */
+const FADING =
+  "<!doctype html><html lang='en'><head><title>t</title></head><body style='background:#fff'><main><h1>t</h1>" +
+  "<p id='p' style='color:#000'>Fading text</p></main></body></html>";
+const fade = (page: Page, options: KeyframeAnimationOptions, pause = false): Promise<void> =>
+  page.evaluate(
+    ({ timing, paused }) => {
+      const animation = document.getElementById("p")?.animate({ opacity: [0.05, 1] }, timing);
+      if (paused) animation?.pause();
+    },
+    { timing: options, paused: pause },
+  );
+const fadeState = (page: Page): Promise<string> =>
+  page.evaluate(() => document.getAnimations()[0]?.playState ?? "none");
+
+test.describe("animations settle before axe (METRO-125)", () => {
+  test("METRO-125 a running finite animation is waited for, so axe sees the settled colours", async ({
+    page,
+  }) => {
+    await page.setContent(FADING);
+    // Created paused and resumed in one step, so "running" is read at the moment of resuming, not after a delay a
+    // stalled machine could stretch; 3 s outlasts a stall and still ends inside the wait's 5 s bound.
+    await fade(page, { duration: 3000, fill: "forwards" }, true);
+    expect(await fadeState(page)).toBe("paused");
+    expect(
+      await page.evaluate(() => {
+        const animation = document.getAnimations()[0];
+        animation?.play();
+        return animation?.playState;
+      }),
+    ).toBe("running");
+    const results = await axeBuilder(page).analyze();
+    expect(await fadeState(page)).toBe("finished");
+    expect(results.violations.map((violation) => violation.id)).not.toContain("color-contrast");
+  });
+
+  test("METRO-125 a paused finite animation does not hang the wait", async ({ page }) => {
+    await page.setContent(FADING);
+    await fade(page, { duration: 1500, fill: "forwards" }, true);
+    expect(await fadeState(page)).toBe("paused");
+    await animationsSettled(page);
+    expect(await fadeState(page)).toBe("paused");
+  });
+
+  test("METRO-125 an infinite animation does not hang the wait", async ({ page }) => {
+    await page.setContent(FADING);
+    await fade(page, { duration: 1500, iterations: Infinity });
+    await animationsSettled(page);
+    expect(await fadeState(page)).toBe("running");
   });
 });
 
