@@ -41,12 +41,12 @@ export const copy = {
       "Your device could not say how precisely it found your position. The nearest station could be wrong, so none is shown. Search for a place instead.",
     pick: "Your device could not say how precisely it found your position. The nearest station could be wrong, so none is shown. Pick a station instead.",
   },
-  // METRO-114: the handoff's fixed string, with its "ln." read as "right now". The no-connection variant is new:
-  // the handoff's "You’re offline. Stations and fares still work." claims offline use (METRO-106, and the
-  // built-output test of METRO-112 forbids that word in shipped scripts), so it says what is true now.
+  // METRO-114: the handoff's fixed string, with its "ln." read as "right now". The no-connection string is the
+  // handoff's own. It claims offline use, so it waited for the offline shell worker (METRO-106, ADR-0024); the
+  // built-output test of METRO-112 now allows that claim in this one place, and only with the worker built.
   searchUnavailable: "Place search is unavailable right now. Pick a station instead.",
   searchNoConnection:
-    "No internet connection. Place search returns when you reconnect. Pick a station instead.",
+    "You’re offline. Stations and fares still work. Place search returns when you reconnect. Pick a station instead.",
   resultHeading: "Nearest station",
   empty: "No station could be found for that location.",
   // METRO-113: a location result. The distance is an estimate: the device position is a circle, not a point.

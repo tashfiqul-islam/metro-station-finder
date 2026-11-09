@@ -34,12 +34,13 @@ export const LAZY_SCREEN_LIMITS: ReadonlyMap<string, ScreenLimit> = new Map([
 
 /**
  * One allowance for everything lazy that no single screen owns: the shared roots below and every chunk two
- * or more roots import. Measured 18,225 raw / 8,121 gzip; 27,000 / 12,000 leaves 48 percent over each.
+ * or more roots import. Measured 20,435 raw / 9,179 gzip with the service worker registration chunk (METRO-106,
+ * 2,164 / 1,041 of it); 27,000 / 12,000 leaves 32 percent raw and 31 percent gzip.
  */
 export const SHARED_LAZY_ALLOWANCE = { raw: 27_000, gzip: 12_000 } as const;
 
 /**
- * Lazy roots that are not screens, by manifest key: the reveal helper, the Maps adapter and web-vitals. The
+ * Lazy roots that are not screens, by manifest key: the reveal helper, the Maps adapter, the service worker registration and web-vitals. The
  * web-vitals key is `../../node_modules/.bun/web-vitals@<version>/node_modules/web-vitals/dist/web-vitals.js`
  * under Vite 8 with Bun's isolated install; the pattern ignores the version and any directory layout before
  * `web-vitals/dist`. A key in another format matches nothing, so the chunk is unclassified and fails closed.
@@ -47,6 +48,7 @@ export const SHARED_LAZY_ALLOWANCE = { raw: 27_000, gzip: 12_000 } as const;
 const SHARED_LAZY_ROOTS: readonly RegExp[] = [
   /^src\/theme\/reveal\.ts$/u,
   /^src\/adapters\/maps\/index\.ts$/u,
+  /^src\/sw\/register\.ts$/u,
   /(?:^|\/)node_modules\/(?:.+\/)?web-vitals\/dist\/web-vitals\.js$/u,
 ];
 
@@ -75,6 +77,25 @@ export const HEAD_SCRIPTS = ["theme-boot.js"] as const;
 /** One fixed message when `index.html` loads a head script that is not in the build. */
 export const HEAD_SCRIPT_MISSING =
   "A script that index.html loads from public/ is missing from the build";
+
+/**
+ * The offline shell worker, written beside `index.html` by `scripts/sw-plugin.ts` (METRO-106, ADR-0024). Like the
+ * head scripts it is an exact-name file from outside the Vite manifest, so it is not an orphan; unlike them it is
+ * never on the first-visit path (the page registers it after load and idle). It has its own bucket and limit.
+ * One that nothing built is simply not counted; one the app registers but the build lacks fails closed
+ * (`WORKER_MISSING`).
+ */
+export const WORKER_SCRIPTS = ["sw.js"] as const;
+
+/** The worker bucket: sized from the measured 3,824 raw / 1,730 gzip with about 55 percent raw margin. */
+export const WORKER_LIMIT = { raw: 6_000, gzip: 2_800 } as const;
+
+/** One fixed message when the built app registers `/sw.js` but the build has no such file. */
+export const WORKER_MISSING = "The app registers /sw.js but the build has no sw.js";
+
+/** The registration call the app makes, as it appears in a minified chunk. */
+export const WORKER_REGISTRATION_MODULE = '"src/sw/register.ts"';
+export const WORKER_REGISTRATION = /register\(\s*[`"']\/sw\.js[`"']/u;
 
 export const MANIFEST_PATH = ".vite/manifest.json";
 /** One fixed message for every way the first-visit set cannot be computed. */
@@ -253,6 +274,7 @@ export function evaluateBundle(
   manifestText: string | null,
   indexHtml: string | null = null,
   model: LazyModel = LAZY_MODEL,
+  registersWorker = false,
 ): BudgetReport {
   if (total(assets).raw === 0)
     return { lines: [], problems: ["No production JS/CSS artifacts found"] };
@@ -262,11 +284,13 @@ export function evaluateBundle(
   const heads = HEAD_SCRIPTS.filter((script) => onDisk.has(script));
   if (HEAD_SCRIPTS.some((script) => !onDisk.has(script) && indexHtml?.includes(`src="/${script}"`)))
     return { lines: [], problems: [HEAD_SCRIPT_MISSING] };
+  const workers = WORKER_SCRIPTS.filter((script) => onDisk.has(script));
+  if (registersWorker && workers.length === 0) return { lines: [], problems: [WORKER_MISSING] };
   const files = chunks === null ? null : new Set([...chunks, ...heads]);
   if (manifest === null || files === null || [...files].some((file) => !onDisk.has(file)))
     return { lines: [], problems: [MANIFEST_FAILURE] };
   // Every emitted file must be known to the manifest, as a chunk `file` or in a `css` list.
-  const listed = new Set<string>(heads);
+  const listed = new Set<string>([...heads, ...workers]);
   for (const chunk of manifest.values()) {
     listed.add(chunk.file);
     for (const file of chunk.css) listed.add(file);
@@ -282,7 +306,11 @@ export function evaluateBundle(
   sorted.sort((a, b) => b.raw - a.raw || a.path.localeCompare(b.path));
   const lines = ["Production JS/CSS files, largest first (raw / gzip bytes):"];
   for (const { path, raw, gzip } of sorted) {
-    const kind = files.has(path) ? "first-visit" : `lazy (${classes.get(path) ?? SHARED})`;
+    const kind = files.has(path)
+      ? "first-visit"
+      : workers.some((worker) => worker === path)
+        ? "worker"
+        : `lazy (${classes.get(path) ?? SHARED})`;
     lines.push(`  ${path}: ${raw} raw; ${gzip} gzip; ${kind}`);
   }
   const first = assets.filter((asset) => files.has(asset.path));
@@ -315,6 +343,14 @@ export function evaluateBundle(
     problems.push(
       `Shared lazy allowance exceeded: ${SHARED_LAZY_ALLOWANCE.raw} raw / ${SHARED_LAZY_ALLOWANCE.gzip} gzip bytes`,
     );
+  if (workers.length > 0) {
+    const worker = total(sorted.filter((asset) => workers.some((name) => name === asset.path)));
+    lines.push(bucketLine("Worker", "limit", worker, WORKER_LIMIT));
+    if (worker.raw > WORKER_LIMIT.raw || worker.gzip > WORKER_LIMIT.gzip)
+      problems.push(
+        `Worker limit exceeded: ${WORKER_LIMIT.raw} raw / ${WORKER_LIMIT.gzip} gzip bytes`,
+      );
+  }
   return { lines, problems };
 }
 
@@ -322,7 +358,20 @@ export async function bundleMain(args: readonly string[]): Promise<number> {
   const root = resolve(args[0] ?? "apps/web/dist/client");
   const manifest = await readFile(join(root, MANIFEST_PATH), "utf8").catch(() => null);
   const indexHtml = await readFile(join(root, "index.html"), "utf8").catch(() => null);
-  const report = evaluateBundle(await collectAssets(root), manifest, indexHtml);
+  const assets = await collectAssets(root);
+  // The app registers the worker if any built chunk (not the worker itself) makes the registration call.
+  const scripts = assets.filter(
+    (asset) => asset.path.endsWith(".js") && !WORKER_SCRIPTS.some((name) => name === asset.path),
+  );
+  const sources = await Promise.all(
+    scripts.map(async (asset) => readFile(join(root, asset.path), "utf8")),
+  );
+  // Fail closed: the registration module being built at all means the app registers a worker, however the
+  // minifier wrote the call, so a text match is only the second signal.
+  const registersWorker =
+    (manifest?.includes(WORKER_REGISTRATION_MODULE) ?? false) ||
+    sources.some((source) => WORKER_REGISTRATION.test(source));
+  const report = evaluateBundle(assets, manifest, indexHtml, LAZY_MODEL, registersWorker);
   for (const line of report.lines) console.log(line);
   for (const problem of report.problems) console.error(problem);
   return report.problems.length === 0 ? 0 : 1;

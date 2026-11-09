@@ -156,13 +156,32 @@ const STUB_SCRIPT = `
 
 const keep = (item: unknown): unknown => item;
 
+/**
+ * Pages a service worker may control (METRO-106, ADR-0024). Playwright route stubs are not applied to such a page
+ * in every browser (WebKit let the real Maps script through), so the helpers that touch the place search, whose
+ * first focus loads Google, refuse to run on one. A structural guard, not a convention.
+ */
+const withWorker = new WeakSet<Page>();
+export function workerMayControl(page: Page): void {
+  withWorker.add(page);
+}
+function noGoogleHere(page: Page): void {
+  if (withWorker.has(page)) {
+    throw new Error("The place search must not be touched on a page a service worker may control");
+  }
+}
+
 /** The plain input before the first focus: named by the visible label (exact, case-sensitive). */
-export const plainSearch = (page: Page) =>
-  page.getByRole("textbox", { name: "Search for a place", exact: true });
+export const plainSearch = (page: Page) => {
+  noGoogleHere(page);
+  return page.getByRole("textbox", { name: "Search for a place", exact: true });
+};
 
 /** Google's widget input once swapped in, under the name the owner probe measured (the stub copies it). */
-export const widgetSearch = (page: Page) =>
-  page.getByRole("textbox", { name: MEASURED_GOOGLE_NAME, exact: true });
+export const widgetSearch = (page: Page) => {
+  noGoogleHere(page);
+  return page.getByRole("textbox", { name: MEASURED_GOOGLE_NAME, exact: true });
+};
 
 /**
  * Types a query the way a user does: into the plain input (the first focus loads the stub, which swaps the

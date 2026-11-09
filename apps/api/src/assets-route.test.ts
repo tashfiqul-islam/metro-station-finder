@@ -126,3 +126,43 @@ test("METRO-31 other methods on /assets/* return a 405 envelope with Allow and n
   expect(parseErrorEnvelope(await response.json()).error.code).toBe("method_not_allowed");
   expect(called).toBe(false);
 });
+
+function worker(): Response {
+  return new Response("self.addEventListener('fetch', () => {})", {
+    headers: {
+      "content-type": "text/javascript",
+      "cache-control": "public, max-age=0, must-revalidate",
+    },
+  });
+}
+
+test("METRO-106 /sw.js passes a real worker through with its own revalidating Cache-Control, not immutable", async () => {
+  const response = await createApp().request("/sw.js", {}, envWith(worker));
+  expect(response.status).toBe(200);
+  expect(response.headers.get("content-type")).toBe("text/javascript");
+  expect(response.headers.get("cache-control")).toBe("public, max-age=0, must-revalidate");
+  expect(response.headers.get("x-content-type-options")).toBe("nosniff");
+});
+
+test("METRO-106 /sw.js turns the SPA index.html fallback into an uncached 404 envelope", async () => {
+  const response = await createApp().request(
+    "/sw.js",
+    {},
+    envWith(() => html()),
+  );
+  expect(response.status).toBe(404);
+  expect(response.headers.get("cache-control")).toBe("no-store");
+  expect(parseErrorEnvelope(await response.json()).error.code).toBe("not_found");
+});
+
+test("METRO-106 other methods on /sw.js return a 405 envelope and never reach the fetcher", async () => {
+  let called = false;
+  const env = envWith(() => {
+    called = true;
+    return worker();
+  });
+  const response = await createApp().request("/sw.js", { method: "POST" }, env);
+  expect(response.status).toBe(405);
+  expect(response.headers.get("allow")).toBe("GET, HEAD");
+  expect(called).toBe(false);
+});

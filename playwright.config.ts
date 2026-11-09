@@ -22,7 +22,15 @@ export default defineConfig({
   forbidOnly: true,
   reporter: [["list"], ["html", { open: "never", outputFolder: "playwright-report" }]],
   outputDir: "test-results",
-  use: { baseURL: origin, trace: "retain-on-failure", screenshot: "only-on-failure" },
+  // Service workers are blocked unless a spec opts in with `test.use({ serviceWorkers: "allow" })` (METRO-106,
+  // `e2e/offline-shell.e2e.ts` and the lab web-vitals spec): a registered worker after idle would add requests
+  // to journeys that assert exact request lists, and would carry state between tests of one context.
+  use: {
+    baseURL: origin,
+    trace: "retain-on-failure",
+    screenshot: "only-on-failure",
+    serviceWorkers: "block",
+  },
   projects: ["true", "1"].includes(process.env["CI"] ?? "") ? projects : projects.slice(0, 1),
   webServer: {
     // The built app, served by `vite preview` with the Worker running in workerd. The web app is rebuilt

@@ -8,7 +8,7 @@ import {
   type VitalsMeasurement,
 } from "../scripts/vitals-lab";
 import { expect, test } from "./fixtures";
-import { installMapsStub } from "./maps-stub";
+import { installMapsStub, workerMayControl } from "./maps-stub";
 
 /**
  * Lab web-vitals check (METRO-44 part C): the built app, served as every other journey is served, with the
@@ -105,6 +105,7 @@ async function measure(page: Page): Promise<VitalsMeasurement> {
 
 async function load(page: Page): Promise<void> {
   await observe(page);
+  workerMayControl(page);
   await installMapsStub(page);
   await page.goto("/", { waitUntil: "load" });
   await expect(
@@ -122,6 +123,12 @@ function report(measurement: VitalsMeasurement): ReturnType<typeof evaluateVital
 }
 
 test.describe("lab web vitals (METRO-44 part C)", () => {
+  // METRO-106: the lab measures the first visit with the offline shell worker allowed (the project default
+  // blocks it), so the registration code and the precache that follow load and idle are in the measured page.
+  // Nothing here asks for a Google request (the worker is not controlling Playwright route stubs in WebKit,
+  // and this spec is Chromium only, but the rule holds anyway).
+  test.use({ serviceWorkers: "allow" });
+
   test("METRO-44 / loads within LCP 2500 ms and CLS 0.1", async ({ page }) => {
     await load(page);
     const verdict = report(await measure(page));

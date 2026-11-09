@@ -402,16 +402,35 @@ test.describe("station picker", () => {
       .filter((entry) => marker.test(readFileSync(join(entry.parentPath, entry.name), "utf8")))
       .map((entry) => entry.name);
     expect(found).toEqual([]);
-    // No user-visible offline claim ships before the offline cache of METRO-106 (owner ruling): comments are
-    // stripped from the build, so any "offline" in a built script is a string.
-    const claims = names
-      .filter(
-        (entry) =>
-          /\.(js|html)$/u.test(entry.name) &&
-          /offline/iu.test(readFileSync(join(entry.parentPath, entry.name), "utf8")),
-      )
-      .map((entry) => entry.name);
-    expect(claims).toEqual([]);
+    // METRO-112 forbade the word in every built script until the offline shell worker of METRO-106 existed
+    // (owner ruling). It exists now, so the claim may appear, but exactly in one place and only with the
+    // worker in the build: comments are stripped, so any "offline" in a built script is a user-visible string.
+    // This still fails on any other claim: a second file, a second sentence, or the sentence without the worker.
+    const claims = names.filter(
+      (entry) =>
+        /\.(js|html)$/u.test(entry.name) &&
+        /offline/iu.test(readFileSync(join(entry.parentPath, entry.name), "utf8")),
+    );
+    expect(claims.map((entry) => entry.name)).toHaveLength(1);
+    const [claimFile] = claims;
+    const claimText = readFileSync(
+      join(claimFile?.parentPath ?? "", claimFile?.name ?? ""),
+      "utf8",
+    );
+    expect(claimFile?.name).toMatch(/^Nearby-.*\.js$/u);
+    expect(claimText.match(/offline/giu)).toHaveLength(1);
+    expect(claimText).toContain(
+      "You’re offline. Stations and fares still work. Place search returns when you reconnect. Pick a station instead.",
+    );
+    // Backed by the worker: sw.js is built beside index.html, precaches the shell, and the app registers it.
+    const worker = readFileSync(join(dist, "client", "sw.js"), "utf8");
+    expect(worker).toContain("metro-shell-");
+    expect(worker).toContain("precache");
+    const registration = names.find((entry) => /^register-.*\.js$/u.test(entry.name));
+    expect(registration).toBeDefined();
+    expect(
+      readFileSync(join(registration?.parentPath ?? "", registration?.name ?? ""), "utf8"),
+    ).toContain("/sw.js");
     // Control: the check reads real files (the lazy screen's chunk is among them) and its pattern can match.
     expect(names.some((entry) => /^Nearby-.*\.js$/u.test(entry.name))).toBe(true);
     expect(marker.test('<span class="tag--sample mock-only">Sample data</span>')).toBe(true);

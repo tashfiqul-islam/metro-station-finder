@@ -19,7 +19,7 @@ import type { StubOptions } from "./maps-stub";
  */
 const NOTICE = "Place search is unavailable right now. Pick a station instead.";
 const NO_CONNECTION =
-  "No internet connection. Place search returns when you reconnect. Pick a station instead.";
+  "You’re offline. Stations and fares still work. Place search returns when you reconnect. Pick a station instead.";
 const HINT = "Suggestions favor places in Dhaka.";
 const ROUTE_TEXT = "about 1.2 km, 15 min · est.";
 const GOOD_FIX = { lat: 23.87, lng: 90.367, accuracy: 20 } as const;
@@ -290,8 +290,8 @@ test.describe("place search that cannot start (METRO-114)", () => {
     // Back to normal: the first focus loads the stub.
     await plainSearch(page).focus();
     await expect(widgetSearch(page)).toBeVisible();
-    // The words of the notice carry no claim about use without a connection.
-    expect(NO_CONNECTION.toLowerCase()).not.toContain("offline");
+    // The notice is the handoff's own sentence; its claim is backed by the offline shell worker (METRO-106).
+    expect(NO_CONNECTION).toContain("Stations and fares still work");
   });
 
   test.describe("when the Maps script cannot load", () => {

@@ -1,7 +1,7 @@
 {
   "name": "Metro Station Finder",
   "short_name": "Metro",
-  "description": "Find the nearest Dhaka MRT Line 6 station, the walk to it and the fare.",
+  "description": "Find the nearest Dhaka MRT Line 6 station, the walk to it and the fare. Stations and fares work offline.",
   "id": "/",
   "start_url": "/",
   "scope": "/",

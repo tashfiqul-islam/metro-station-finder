@@ -11,6 +11,8 @@ import {
   MANIFEST_FAILURE,
   MANIFEST_STALE,
   SHARED_LAZY_ALLOWANCE,
+  WORKER_LIMIT,
+  WORKER_MISSING,
   bundleMain,
   collectAssets,
   evaluateBundle,
@@ -597,6 +599,15 @@ describe("shared lazy allowance", () => {
     }
   });
 
+  test("the service worker registration chunk is a shared root (METRO-106), counted against the allowance and not left unclassified", () => {
+    const report = alone("src/sw/register.ts", "assets/register.js", [2164, 1041]);
+    expect(report.problems).toEqual([]);
+    expect(report.lines).toContain("  assets/register.js: 2164 raw; 1041 gzip; lazy (shared)");
+    expect(
+      alone("src/sw/register.ts", "assets/register.js", [SHARED_RAW + 1, 10]).problems,
+    ).toEqual([SHARED_OVER]);
+  });
+
   test("the maps adapter and the reveal helper are shared roots, counted against the allowance", () => {
     expect(
       alone("src/adapters/maps/index.ts", "assets/m.js", [5800, SHARED_GZIP + 1]).problems,
@@ -1063,3 +1074,129 @@ test("METRO-105 bundleMain reads index.html: a loaded head script missing from t
       console.log = log;
     }
   }));
+
+async function disk(root: string, chunk: string, worker: boolean) {
+  await mkdir(join(root, ".vite"));
+  await writeFile(
+    join(root, ".vite", "manifest.json"),
+    manifest({ "index.html": { file: "assets/index.js", isEntry: true } }),
+  );
+  await writeFile(join(root, "assets", "index.js"), chunk);
+  if (worker) await writeFile(join(root, "sw.js"), "self.addEventListener('fetch',()=>{});\n");
+}
+
+async function runGate(root: string) {
+  const log = console.log;
+  const error = console.error;
+  const lines: string[] = [];
+  const errors: string[] = [];
+  console.log = (line: string) => void lines.push(line);
+  console.error = (line: string) => void errors.push(line);
+  try {
+    return { code: await bundleMain([root]), lines, errors };
+  } finally {
+    console.log = log;
+    console.error = error;
+  }
+}
+
+describe("the offline shell worker bucket (METRO-106)", () => {
+  const WORKER_OVER = `Worker limit exceeded: ${WORKER_LIMIT.raw} raw / ${WORKER_LIMIT.gzip} gzip bytes`;
+
+  test("the worker limit is pinned: 6000 raw / 2800 gzip", () => {
+    expect(WORKER_LIMIT).toEqual({ raw: 6_000, gzip: 2_800 });
+  });
+
+  test("sw.js is not an orphan, is labelled worker, is never first-visit, prints its own line and leaves the other buckets alone", () => {
+    const base = evaluateBundle(build(), SPLIT);
+    const report = evaluateBundle([...build(), asset("sw.js", 3000, 1200)], SPLIT);
+    expect(report.problems).toEqual([]);
+    expect(report.lines).toContain("  sw.js: 3000 raw; 1200 gzip; worker");
+    expect(report.lines.at(-1)).toBe(
+      "Worker: 3000 bytes raw (limit 6000; 50.0 percent used); 1200 bytes gzip (limit 2800; 42.9 percent used)",
+    );
+    // Every other line is the base build's, unchanged: not first-visit, not lazy (shared), not in a screen.
+    expect(
+      report.lines.filter((line) => !line.includes("sw.js") && !line.startsWith("Worker")),
+    ).toEqual(base.lines);
+    expect(evaluateBundle(build(), SPLIT).lines.some((line) => line.startsWith("Worker"))).toBe(
+      false,
+    );
+  });
+
+  test("over the raw or the gzip limit fails with the worker message alone", () => {
+    expect(
+      evaluateBundle([...build(), asset("sw.js", WORKER_LIMIT.raw + 1, 10)], SPLIT).problems,
+    ).toEqual([WORKER_OVER]);
+    expect(
+      evaluateBundle([...build(), asset("sw.js", 10, WORKER_LIMIT.gzip + 1)], SPLIT).problems,
+    ).toEqual([WORKER_OVER]);
+    expect(
+      evaluateBundle([...build(), asset("sw.js", WORKER_LIMIT.raw, WORKER_LIMIT.gzip)], SPLIT)
+        .problems,
+    ).toEqual([]);
+  });
+
+  test("a stray worker-like file is still an orphan", () => {
+    for (const name of ["sw2.js", "service-worker.js", "assets/sw.js"]) {
+      expect(evaluateBundle([...build(), asset(name, 10, 10)], SPLIT), name).toEqual({
+        lines: [],
+        problems: [MANIFEST_STALE],
+      });
+    }
+  });
+
+  test("a registered worker that the build lacks fails closed; a present or an unregistered one passes", () => {
+    const lacking = evaluateBundle(build(), SPLIT, null, LAZY_MODEL, true);
+    expect(lacking).toEqual({ lines: [], problems: [WORKER_MISSING] });
+    expect(
+      evaluateBundle([...build(), asset("sw.js", 10, 10)], SPLIT, null, LAZY_MODEL, true).problems,
+    ).toEqual([]);
+    expect(evaluateBundle(build(), SPLIT, null, LAZY_MODEL, false).problems).toEqual([]);
+  });
+
+  test("bundleMain: a built chunk that registers /sw.js with no sw.js on disk exits 1 with the fixed message", () =>
+    fixture(async (root) => {
+      await disk(root, 'navigator.serviceWorker.register(`/sw.js`,{scope:"/"});\n', false);
+      const result = await runGate(root);
+      expect(result.code).toBe(1);
+      expect(result.errors).toEqual([WORKER_MISSING]);
+    }));
+
+  test("bundleMain: with sw.js built it exits 0 and prints the worker line", () =>
+    fixture(async (root) => {
+      await disk(root, 'navigator.serviceWorker.register("/sw.js",{scope:"/"});\n', true);
+      const result = await runGate(root);
+      expect(result.code).toBe(0);
+      expect(result.lines.at(-1)).toMatch(
+        /^Worker: \d+ bytes raw \(limit 6000; \d+\.\d percent used\); \d+ bytes gzip \(limit 2800; \d+\.\d percent used\)$/u,
+      );
+    }));
+
+  test("bundleMain: the registration module in the manifest means a worker is expected, however the call is written", () =>
+    fixture(async (root) => {
+      await disk(
+        root,
+        "const u = ['/sw', '.js'].join(''); navigator.serviceWorker.register(u);",
+        false,
+      );
+      await writeFile(
+        join(root, ".vite", "manifest.json"),
+        manifest({
+          "index.html": { file: "assets/index.js", isEntry: true },
+          "src/sw/register.ts": { file: "assets/register.js", isDynamicEntry: true },
+        }),
+      );
+      const result = await runGate(root);
+      expect(result.code).toBe(1);
+      expect(result.errors).toEqual([WORKER_MISSING]);
+    }));
+
+  test("bundleMain: a chunk that only mentions /sw.js (text, a different call) does not count as registering, and sw.js itself does not either", () =>
+    fixture(async (root) => {
+      await disk(root, 'console.log("fetch /sw.js yourself"); foo.register(1,"/sw.js");\n', false);
+      expect((await runGate(root)).code).toBe(0);
+      await writeFile(join(root, "sw.js"), 'navigator.serviceWorker.register("/sw.js");\n');
+      expect((await runGate(root)).code).toBe(0);
+    }));
+});

@@ -31,3 +31,11 @@ test("METRO-77 a missing /assets/* file is a 404 error envelope through the real
   expect(response.status).toBe(404);
   expect(parseErrorEnvelope(await response.json()).error.code).toBe("not_found");
 });
+
+test("METRO-106 a missing /sw.js is a 404 error envelope through the real Worker entry, never index.html (ADR-0024)", async () => {
+  const response = await exports.default.fetch("https://metro.test/sw.js");
+  expect(response.status).toBe(404);
+  expect(response.headers.get("content-type")).not.toContain("text/html");
+  expect(response.headers.get("cache-control")).toBe("no-store");
+  expect(parseErrorEnvelope(await response.json()).error.code).toBe("not_found");
+});
