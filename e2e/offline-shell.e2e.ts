@@ -212,37 +212,43 @@ test.describe("offline shell on the real server", () => {
     expect(keys.filter((key) => /secret|some\/path/u.test(key))).toEqual([]);
   });
 
-  test("METRO-106 offline, a file path is not answered with the page: robots.txt fails, the precached manifest is its own file", async ({
-    page,
-    context,
-    browserName,
-  }) => {
-    test.skip(browserName === "firefox", FIREFOX_OFFLINE);
-    await open(page);
-    await shellReady(page);
-    await context.setOffline(true);
-    // A precached file keeps its own type: the manifest, not the HTML shell.
-    const manifest = await page.evaluate(async () => {
-      const response = await fetch("/manifest.webmanifest");
-      return [
-        response.status,
-        response.headers.get("content-type"),
-        (await response.text()).slice(0, 1),
-      ];
+  // WebKit logs the refused navigation to /robots.txt as a console error of its own; nothing else is allowed.
+  test.describe("file paths offline", () => {
+    test.use({
+      allowedConsoleError: /Failed to load resource: WebKit encountered an internal error/u,
     });
-    expect(manifest[0]).toBe(200);
-    expect(String(manifest[1])).not.toContain("html");
-    expect(manifest[2]).toBe("{");
-    let failed = false;
-    try {
-      await page.goto("/robots.txt");
-    } catch {
-      failed = true;
-    }
-    expect(failed, "a navigation to /robots.txt offline must fail, not show the app").toBe(true);
-    // And an app path still opens the page.
-    await page.goto("/some/page");
-    await expect(combo(page)).toBeVisible();
+    test("METRO-106 offline, a file path is not answered with the page: robots.txt fails, the precached manifest is its own file", async ({
+      page,
+      context,
+      browserName,
+    }) => {
+      test.skip(browserName === "firefox", FIREFOX_OFFLINE);
+      await open(page);
+      await shellReady(page);
+      await context.setOffline(true);
+      // A precached file keeps its own type: the manifest, not the HTML shell.
+      const manifest = await page.evaluate(async () => {
+        const response = await fetch("/manifest.webmanifest");
+        return [
+          response.status,
+          response.headers.get("content-type"),
+          (await response.text()).slice(0, 1),
+        ];
+      });
+      expect(manifest[0]).toBe(200);
+      expect(String(manifest[1])).not.toContain("html");
+      expect(manifest[2]).toBe("{");
+      let failed = false;
+      try {
+        await page.goto("/robots.txt");
+      } catch {
+        failed = true;
+      }
+      expect(failed, "a navigation to /robots.txt offline must fail, not show the app").toBe(true);
+      // And an app path still opens the page.
+      await page.goto("/some/page");
+      await expect(combo(page)).toBeVisible();
+    });
   });
 
   test("METRO-106 the place-search helpers refuse a page the worker may control", async ({
@@ -585,6 +591,7 @@ test.describe("update flow", () => {
   test("METRO-106 only the previous version's cache is kept: after a third deploy the first is gone", async ({
     page,
   }) => {
+    test.slow(); // three deploys, two reloads
     const v1 = await installed(page);
     deploy.current = second(first);
     await checkForUpdate(page);
@@ -614,6 +621,7 @@ test.describe("update flow", () => {
     page,
     context,
   }) => {
+    test.slow(); // two tabs
     await installed(page);
     const other = await context.newPage();
     workerMayControl(other);
@@ -695,6 +703,8 @@ test.describe("update flow", () => {
     await combo(page).fill("motijheel");
     await combo(page).press("Enter");
     await expect(page.getByRole("article")).toContainText("Motijheel");
+    // A reload that interrupts a font download is logged by Firefox as an error: let the fonts finish first.
+    await page.evaluate(async () => document.fonts.ready.then(() => true));
     await page.reload();
     await expect(combo(page)).toBeVisible();
   });
