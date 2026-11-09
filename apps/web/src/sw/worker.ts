@@ -60,6 +60,10 @@ export interface WorkerScope {
 interface WaitEvent {
   waitUntil(work: Promise<unknown>): void;
 }
+/** The install event where the Service Worker static routing API exists (Chromium; other engines may lack it). */
+interface InstallEvent extends WaitEvent {
+  addRoutes?(rules: unknown): Promise<void>;
+}
 interface FetchEvent {
   readonly request: Request;
   respondWith(response: Promise<Response>): void;
@@ -226,6 +230,21 @@ export async function cacheFirst(deps: Deps, request: Request): Promise<Response
 }
 
 /**
+ * Sends `/api/*` straight to the network, with no fetch event and so no worker start, where the browser has the
+ * static routing API. The worker leaves those requests alone anyway (`route`), but each one still woke it: the
+ * web-vitals beacon sent on a person's first input reached a worker Chromium was stopping for a takeover, which
+ * restarted it, and the waiting worker then stayed waiting (Repo-verified, docs/evidence/metro-125.md). A browser
+ * without the API, or a refused rule, keeps the old behaviour: the fetch handler passes the request through.
+ */
+async function routeApiToNetwork(event: InstallEvent): Promise<void> {
+  try {
+    await event.addRoutes?.({ condition: { urlPattern: "/api/*" }, source: "network" });
+  } catch {
+    // Unsupported or refused: the install must not fail over an optimisation.
+  }
+}
+
+/**
  * The kill switch: no caches, no registration. Open pages are not reloaded: every page registers `/sw.js` again
  * after load, so a reload would loop for as long as the kill build is deployed.
  */
@@ -249,8 +268,12 @@ export function attach(scope: WorkerScope, config: WorkerConfig): void {
     config,
   };
   const shell = new Set(config.precache);
-  scope.addEventListener("install", (event: WaitEvent) => {
-    event.waitUntil(config.kill ? scope.skipWaiting() : installShell(deps));
+  scope.addEventListener("install", (event: InstallEvent) => {
+    event.waitUntil(
+      config.kill
+        ? scope.skipWaiting()
+        : Promise.all([installShell(deps), routeApiToNetwork(event)]),
+    );
   });
   scope.addEventListener("activate", (event: WaitEvent) => {
     event.waitUntil(

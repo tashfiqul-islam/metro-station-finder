@@ -1,3 +1,5 @@
+import { fileURLToPath } from "node:url";
+
 import { defineProject } from "vitest/config";
 
 import { sharedTestOptions } from "../../vitest.shared.ts";
@@ -12,6 +14,8 @@ export default defineProject({
     environment: "happy-dom",
     // Unit tests must never see a real Maps key from the shell or a `.env` file: blank means "no key".
     env: { VITE_GOOGLE_MAPS_API_KEY: "" },
+    // Absolute: scripts/test-order.test.ts merges this config with a fixture root, where a relative path breaks.
+    setupFiles: [fileURLToPath(new URL("./vitest.setup.ts", import.meta.url))],
     include: ["src/**/*.test.{ts,tsx}"],
   },
 });

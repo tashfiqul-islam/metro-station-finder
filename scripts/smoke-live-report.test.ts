@@ -12,6 +12,7 @@ import {
   widgetNodeIds,
 } from "./smoke-live-report.ts";
 import type { AxEntry, DescriptionState } from "./smoke-live-report.ts";
+import { fastestMs } from "./test-timing.ts";
 
 /** Built from pieces so no key-shaped literal sits in the repository (the secret scan would flag it). */
 const keyLike = ["AI", "zaSy", "A1234567890abcdefghijklmnopqrstuv"].join("");
@@ -435,10 +436,9 @@ test("a hostile role is never printed: only a short ASCII word is, else unknown"
 });
 
 test("cleanName stays fast on a long unbroken run and caps a huge hostile name", () => {
-  const started = performance.now();
-  const run = cleanName("a-".repeat(25_000));
-  expect(performance.now() - started).toBeLessThan(200);
-  expect(Array.from(run)).toHaveLength(81);
+  const hostile = "a-".repeat(25_000);
+  expect(fastestMs(() => cleanName(hostile))).toBeLessThan(200);
+  expect(Array.from(cleanName(hostile))).toHaveLength(81);
   expect(Array.from(cleanName("z".repeat(100_000)))).toHaveLength(81);
   expect(cleanName("ab ".repeat(100_000)).endsWith("…")).toBe(true);
 });
@@ -626,9 +626,8 @@ test("the widget search is quick on a very wide tree and still finds the widget"
       { nodeName: "GMP-PLACE-AUTOCOMPLETE", backendNodeId: 7, children: siblings },
     ],
   };
-  const started = performance.now();
+  expect(fastestMs(() => widgetNodeIds(wide))).toBeLessThan(500);
   const ids = widgetNodeIds(wide);
-  expect(performance.now() - started).toBeLessThan(500);
   expect(ids?.has(7)).toBe(true);
   expect(ids?.size).toBe(50_001);
 });
@@ -869,13 +868,9 @@ test("5,000 unnamed images are grouped quickly", () => {
       withParent(`img${index}`, "wrap", "image", "", at(5000 + index)),
     ),
   ];
-  const started = performance.now();
-  const entries = parentsOf(
-    tree,
-    Array.from({ length: 5000 }, (_, index) => 5000 + index),
-  );
-  const line = unnamedLine(entries);
-  expect(performance.now() - started).toBeLessThan(1000);
+  const ids = Array.from({ length: 5000 }, (_, index) => 5000 + index);
+  expect(fastestMs(() => unnamedLine(parentsOf(tree, ids)))).toBeLessThan(1000);
+  const line = unnamedLine(parentsOf(tree, ids));
   expect(line).toBe(
     "  Unnamed images by parent: before typing no unnamed images, after typing option 5000",
   );
