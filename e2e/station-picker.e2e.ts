@@ -411,8 +411,26 @@ test.describe("station picker", () => {
         /\.(js|html)$/u.test(entry.name) &&
         /offline/iu.test(readFileSync(join(entry.parentPath, entry.name), "utf8")),
     );
-    expect(claims.map((entry) => entry.name)).toHaveLength(1);
-    const [claimFile] = claims;
+    // METRO-122 (ticket-specified update, not a loosening): index.html is the one other file that may say it, and
+    // only as the owner-approved alt text of the share image (og:image:alt and twitter:image:alt), each with
+    // exactly the allowed sentence. Every other file, and every other place in index.html, still fails.
+    const ALLOWED_SENTENCE = "Stations and fares work offline.";
+    const pages = claims.filter((entry) => entry.name === "index.html");
+    expect(pages).toHaveLength(1);
+    const pageText = readFileSync(join(pages[0]?.parentPath ?? "", "index.html"), "utf8");
+    expect(pageText.match(/offline/giu)).toHaveLength(2);
+    for (const property of ["og:image:alt", "twitter:image:alt"]) {
+      const tag = new RegExp(
+        `<meta\\s+(?:property|name)="${property}"\\s+content="([^"]*)"`,
+        "u",
+      ).exec(pageText);
+      expect(tag?.[1]?.match(/offline/giu), property).toHaveLength(1);
+      expect(tag?.[1], property).toContain(ALLOWED_SENTENCE);
+    }
+    expect(pageText.replaceAll(ALLOWED_SENTENCE, "")).not.toMatch(/offline/iu);
+    const scriptClaims = claims.filter((entry) => entry.name !== "index.html");
+    expect(scriptClaims.map((entry) => entry.name)).toHaveLength(1);
+    const [claimFile] = scriptClaims;
     const claimText = readFileSync(
       join(claimFile?.parentPath ?? "", claimFile?.name ?? ""),
       "utf8",
