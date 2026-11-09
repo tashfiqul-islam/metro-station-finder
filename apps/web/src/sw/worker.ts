@@ -5,10 +5,11 @@
  * without its query string, so a position or place text can never be stored.
  */
 
+import { SKIP_WAITING } from "./message";
+
 export const CACHE_PREFIX = "metro-shell-";
 /** The cached page for every navigation: the app is one screen at every path (AppRoutes). */
 export const SHELL_KEY = "/";
-export const SKIP_WAITING = "skip-waiting";
 const NETWORK_WAIT_MS = 3000;
 
 export interface WorkerConfig {

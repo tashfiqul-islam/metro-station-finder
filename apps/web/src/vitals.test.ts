@@ -244,3 +244,14 @@ test("METRO-44 a failed send is swallowed and reports nothing", async () => {
   await Promise.resolve();
   expect(error).not.toHaveBeenCalled();
 });
+
+test("METRO-106 sendVital sends nothing while the browser reports no connection, and sends again when it returns", () => {
+  const fetcher = vi.fn(() => Promise.resolve(new Response(null, { status: 204 })));
+  vi.stubGlobal("fetch", fetcher);
+  vi.stubGlobal("navigator", { onLine: false });
+  sendVital(expectPayload(metric()));
+  expect(fetcher).not.toHaveBeenCalled();
+  vi.stubGlobal("navigator", { onLine: true });
+  sendVital(expectPayload(metric()));
+  expect(fetcher).toHaveBeenCalledOnce();
+});
