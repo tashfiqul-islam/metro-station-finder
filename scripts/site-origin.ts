@@ -15,8 +15,9 @@ export const OG_IMAGE_PATH = "/og/og-default.png";
 /** The marker `index.html` uses for the origin. */
 export const ORIGIN_TOKEN = "%SITE_ORIGIN%";
 
-/** The page with every origin token replaced. */
-export const withSiteOrigin = (html: string): string => html.replaceAll(ORIGIN_TOKEN, SITE_ORIGIN);
+/** The page with every origin token replaced. A replacer function keeps any dollar sign in the origin literal. */
+export const withSiteOrigin = (html: string): string =>
+  html.replaceAll(ORIGIN_TOKEN, () => SITE_ORIGIN);
 
 /** Vite plugin: replaces the token before Vite's own HTML processing, in build and in dev. */
 export function siteOriginPlugin() {

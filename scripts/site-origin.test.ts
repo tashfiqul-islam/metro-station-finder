@@ -45,6 +45,20 @@ describe("the site origin constant", () => {
   });
 });
 
+describe("the Vite config registers the plugin (METRO-122)", () => {
+  // Importing the config would load Vite, Babel and the Cloudflare plugin (and pull the whole file into the
+  // Bun coverage gate), so the registration is read from the source; the built page is checked in
+  // `e2e/brand-assets.e2e.ts`.
+  const config = readFileSync(join(root, "apps/web/vite.config.ts"), "utf8");
+
+  test("imports siteOriginPlugin and lists it first in plugins, before React", () => {
+    expect(config).toContain('import { siteOriginPlugin } from "../../scripts/site-origin.ts";');
+    const list = /plugins: \[\s*(?:\/\/[^\n]*\s*)*siteOriginPlugin\(\),\s*react\(\)/u;
+    expect(config).toMatch(list);
+    expect(config.match(/siteOriginPlugin\(\)/gu)).toHaveLength(1);
+  });
+});
+
 describe("index.html share and canonical tags (METRO-122)", () => {
   test("the template writes no origin of its own: only the token, so there is one source", () => {
     expect(template).not.toMatch(/https?:\/\//u);

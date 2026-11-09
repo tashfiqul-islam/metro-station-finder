@@ -3,9 +3,10 @@ import { describe, expect, test, vi } from "vitest";
 import { route, attach, type WorkerConfig, type WorkerScope } from "./worker";
 
 /**
- * METRO-122: the Open Graph share image is for link-preview crawlers, so the shell worker must neither
- * precache it nor answer a request for it. This file is separate from `worker.test.ts` on purpose: it pins
- * only this one path and leaves the worker's general cases where they are.
+ * METRO-122: the Open Graph share image is for link-preview crawlers. These tests prove only the worker side:
+ * for a path that is not in the precache, `route()` passes and the fetch handler stays out of the way. The
+ * precache list here is a fixture; that the build really leaves `og/og-default.png` out of the real list is
+ * pinned in `scripts/sw-plugin.test.ts` (`shellPaths`), not here.
  */
 const ORIGIN = "https://metro.test";
 const SHARE = `${ORIGIN}/og/og-default.png`;
@@ -16,7 +17,7 @@ const config: WorkerConfig = {
 };
 const shell = new Set(config.precache);
 
-describe("the share image is not handled by the shell worker (METRO-122)", () => {
+describe("a share image path outside the precache is not handled by the shell worker (METRO-122)", () => {
   test("route passes it, as an image request and as a top-level navigation", () => {
     expect(route({ method: "GET", mode: "no-cors", url: SHARE }, ORIGIN, shell)).toBe("pass");
     expect(route({ method: "GET", mode: "navigate", url: SHARE }, ORIGIN, shell)).toBe("pass");
