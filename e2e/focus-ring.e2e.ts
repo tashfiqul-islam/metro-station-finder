@@ -75,6 +75,48 @@ test.describe("focus ring after script-moved focus (METRO-118)", () => {
     expect(await ring(resultName(page))).toEqual({ outline: false, shadow: false });
   });
 
+  // Real use: the user types with the keyboard, then points. The listbox keeps focus in the text field (a
+  // mousedown on an option is cancelled), so the field is still `:focus-visible` when script moves focus.
+  test("METRO-118 typing a station then clicking or tapping the option draws no ring on the heading", async ({
+    page,
+  }, info) => {
+    await open(page);
+    await press(combo(page), info);
+    await page.keyboard.type("motijheel");
+    await press(page.getByRole("listbox", { name: "Stations" }).getByRole("option").first(), info);
+    await expect(resultName(page)).toBeFocused();
+    await animationsEnded(page);
+    expect(await ring(resultName(page))).toEqual({ outline: false, shadow: false });
+  });
+
+  test("METRO-118 typing in the picker then pressing Use my location with the pointer draws no ring on the heading", async ({
+    page,
+  }, info) => {
+    await stubGeolocation(page, NEAR_UTTARA_NORTH);
+    await open(page);
+    await press(combo(page), info);
+    await page.keyboard.type("moti");
+    // Close the list first: in WebKit a press that starts while the open list is dismissing lands on the
+    // panel, not the button (the layout moves between mousedown and mouseup; measured, pre-existing, unrelated).
+    await page.keyboard.press("Escape");
+    await press(locate(page), info);
+    await expect(resultName(page)).toBeFocused();
+    await animationsEnded(page);
+    expect(await ring(resultName(page))).toEqual({ outline: false, shadow: false });
+  });
+
+  test("METRO-118 typing a station then pressing Enter draws a ring on the heading", async ({
+    page,
+  }) => {
+    await open(page);
+    await combo(page).focus();
+    await page.keyboard.type("motijheel");
+    await page.keyboard.press("Enter");
+    await expect(resultName(page)).toBeFocused();
+    await animationsEnded(page);
+    expect((await ring(resultName(page))).outline).toBe(true);
+  });
+
   test("METRO-118 Use my location from the keyboard moves focus to the heading and draws a ring", async ({
     page,
   }) => {
