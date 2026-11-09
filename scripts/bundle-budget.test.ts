@@ -526,6 +526,27 @@ describe("a screen owns the chunks only it imports; shared is what two roots rea
     expect(evaluateBundle(files, cycle).problems).toEqual([]);
   });
 
+  test("a lazy chunk that lists a first-visit CSS file does not count it against its screen", () => {
+    const lists = manifest({
+      "index.html": {
+        file: "assets/index.js",
+        isEntry: true,
+        css: ["assets/index.css"],
+        dynamicImports: [SCREEN],
+      },
+      [SCREEN]: { file: "assets/lazy.js", imports: ["index.html"], css: ["assets/index.css"] },
+    });
+    const files = [
+      asset("assets/index.js", 100, 50),
+      asset("assets/index.css", 40, 20),
+      asset("assets/lazy.js", 1, 1),
+    ];
+    const report = evaluateBundle(files, lists);
+    expect(report.lines).toContain("  assets/index.css: 40 raw; 20 gzip; first-visit");
+    expect(lineOf(report.lines, "Lazy screen nearby")).toContain("1 bytes raw");
+    expect(lineOf(report.lines, "First-visit CSS")).toContain("40 bytes raw");
+  });
+
   test("a lazy chunk reaching a first-visit chunk does not take it from the first visit", () => {
     const report = evaluateBundle(build(), SPLIT);
     expect(report.lines).toContain("  assets/shared.js: 500 raw; 200 gzip; first-visit");
@@ -625,6 +646,8 @@ describe("fail closed on an unclassified chunk", () => {
       "src/adapters/maps/index.tsx",
       "x/src/adapters/maps/index.ts",
       "src/adapters/maps/index.ts/extra",
+      "src/adapters/maps/indexxts",
+      "src/theme/revealxts",
       "node_modules/other/dist/web-vitals.js",
       "node_modules/other-web-vitals/dist/web-vitals.js",
       "xnode_modules/web-vitals/dist/web-vitals.js",

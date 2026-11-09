@@ -212,7 +212,7 @@ function classifyLazy(manifest: Manifest, first: ReadonlySet<string>, model: Laz
     const pending = [root];
     for (let key = pending.pop(); key !== undefined; key = pending.pop()) {
       const chunk = manifest.get(key);
-      if (chunk === undefined || first.has(chunk.file)) continue;
+      if (chunk === undefined) continue;
       reached.add(key);
       for (const file of [chunk.file, ...chunk.css]) {
         if (!isCode(file) || first.has(file)) continue;
