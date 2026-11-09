@@ -94,6 +94,7 @@ export const WORKER_LIMIT = { raw: 6_000, gzip: 2_800 } as const;
 export const WORKER_MISSING = "The app registers /sw.js but the build has no sw.js";
 
 /** The registration call the app makes, as it appears in a minified chunk. */
+export const WORKER_REGISTRATION_MODULE = '"src/sw/register.ts"';
 export const WORKER_REGISTRATION = /register\(\s*[`"']\/sw\.js[`"']/u;
 
 export const MANIFEST_PATH = ".vite/manifest.json";
@@ -365,7 +366,11 @@ export async function bundleMain(args: readonly string[]): Promise<number> {
   const sources = await Promise.all(
     scripts.map(async (asset) => readFile(join(root, asset.path), "utf8")),
   );
-  const registersWorker = sources.some((source) => WORKER_REGISTRATION.test(source));
+  // Fail closed: the registration module being built at all means the app registers a worker, however the
+  // minifier wrote the call, so a text match is only the second signal.
+  const registersWorker =
+    (manifest?.includes(WORKER_REGISTRATION_MODULE) ?? false) ||
+    sources.some((source) => WORKER_REGISTRATION.test(source));
   const report = evaluateBundle(assets, manifest, indexHtml, LAZY_MODEL, registersWorker);
   for (const line of report.lines) console.log(line);
   for (const problem of report.problems) console.error(problem);

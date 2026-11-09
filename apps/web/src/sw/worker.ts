@@ -102,7 +102,8 @@ async function fetchShellFile(deps: Deps, path: string): Promise<Response> {
   // Hashed files may come from the HTTP cache; the unhashed ones must be fresh or a version could mix.
   const cache = path.startsWith("/assets/") ? "default" : "reload";
   const response = await deps.fetch(path, { cache, credentials: "same-origin" });
-  if (response.status !== 200 || isHtml(response) !== (path === SHELL_KEY)) {
+  // A redirected response cannot answer a navigation (Chrome refuses it), so it must not be stored as the shell.
+  if (response.status !== 200 || response.redirected || isHtml(response) !== (path === SHELL_KEY)) {
     throw new Error("shell file not cacheable");
   }
   return response;

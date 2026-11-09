@@ -1173,6 +1173,25 @@ describe("the offline shell worker bucket (METRO-106)", () => {
       );
     }));
 
+  test("bundleMain: the registration module in the manifest means a worker is expected, however the call is written", () =>
+    fixture(async (root) => {
+      await disk(
+        root,
+        "const u = ['/sw', '.js'].join(''); navigator.serviceWorker.register(u);",
+        false,
+      );
+      await writeFile(
+        join(root, ".vite", "manifest.json"),
+        manifest({
+          "index.html": { file: "assets/index.js", isEntry: true },
+          "src/sw/register.ts": { file: "assets/register.js", isDynamicEntry: true },
+        }),
+      );
+      const result = await runGate(root);
+      expect(result.code).toBe(1);
+      expect(result.errors).toEqual([WORKER_MISSING]);
+    }));
+
   test("bundleMain: a chunk that only mentions /sw.js (text, a different call) does not count as registering, and sw.js itself does not either", () =>
     fixture(async (root) => {
       await disk(root, 'console.log("fetch /sw.js yourself"); foo.register(1,"/sw.js");\n', false);

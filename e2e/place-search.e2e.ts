@@ -19,7 +19,7 @@ import type { StubOptions } from "./maps-stub";
  */
 const NOTICE = "Place search is unavailable right now. Pick a station instead.";
 const NO_CONNECTION =
-  "You’re offline. Stations and fares still work. Place search returns when you reconnect.";
+  "You’re offline. Stations and fares still work. Place search returns when you reconnect. Pick a station instead.";
 const HINT = "Suggestions favor places in Dhaka.";
 const ROUTE_TEXT = "about 1.2 km, 15 min · est.";
 const GOOD_FIX = { lat: 23.87, lng: 90.367, accuracy: 20 } as const;

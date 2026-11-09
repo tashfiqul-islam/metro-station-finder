@@ -237,7 +237,7 @@ test("METRO-114 offline at render shows the offline notice from the start and no
     expect(screen.getByText(copy.searchNoConnection)).toBeTruthy();
     // The handoff's own sentence; it claims offline use, which the shell worker now backs (METRO-106).
     expect(copy.searchNoConnection).toBe(
-      "You’re offline. Stations and fares still work. Place search returns when you reconnect.",
+      "You’re offline. Stations and fares still work. Place search returns when you reconnect. Pick a station instead.",
     );
     expect(screen.queryByText(copy.searchLabel)).toBeNull();
     expect(document.querySelector("[data-fake-search]")).toBeNull();

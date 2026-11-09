@@ -420,7 +420,7 @@ test.describe("station picker", () => {
     expect(claimFile?.name).toMatch(/^Nearby-.*\.js$/u);
     expect(claimText.match(/offline/giu)).toHaveLength(1);
     expect(claimText).toContain(
-      "You’re offline. Stations and fares still work. Place search returns when you reconnect.",
+      "You’re offline. Stations and fares still work. Place search returns when you reconnect. Pick a station instead.",
     );
     // Backed by the worker: sw.js is built beside index.html, precaches the shell, and the app registers it.
     const worker = readFileSync(join(dist, "client", "sw.js"), "utf8");

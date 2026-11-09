@@ -174,6 +174,10 @@ describe("installShell", () => {
   test.each([
     ["a 404", () => script("x", 404)],
     ["an HTML answer where a script is expected (the SPA fallback)", () => page()],
+    [
+      "a redirected answer (a navigation cannot be answered from one)",
+      () => Object.defineProperty(script(), "redirected", { value: true }),
+    ],
   ])("fails the install on %s so the old worker stays", async (_name, answer) => {
     const fetcher = (input: string | Request): Promise<Response> =>
       Promise.resolve(input === "/assets/app-1.js" ? answer() : installFetcher(input));

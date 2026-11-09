@@ -46,7 +46,7 @@ export const copy = {
   // built-output test of METRO-112 now allows that claim in this one place, and only with the worker built.
   searchUnavailable: "Place search is unavailable right now. Pick a station instead.",
   searchNoConnection:
-    "You’re offline. Stations and fares still work. Place search returns when you reconnect.",
+    "You’re offline. Stations and fares still work. Place search returns when you reconnect. Pick a station instead.",
   resultHeading: "Nearest station",
   empty: "No station could be found for that location.",
   // METRO-113: a location result. The distance is an estimate: the device position is a circle, not a point.
