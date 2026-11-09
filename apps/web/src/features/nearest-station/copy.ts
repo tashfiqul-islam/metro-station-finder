@@ -1,3 +1,9 @@
+/** One notice in both forms (METRO-120): `search` only while place search is available, `pick` otherwise. */
+export interface NoticeVariants {
+  readonly search: string;
+  readonly pick: string;
+}
+
 /** All user-visible copy of the nearest-station feature (English only for now). Fixed text: never an error message. */
 export const copy = {
   heading: "Nearest Metro station",
@@ -15,13 +21,26 @@ export const copy = {
   locating: "Finding your position",
   locatingSub: "This can take a few seconds indoors.",
   tryAgain: "Try again",
-  denied: "Location is turned off. Search for a place instead.",
-  unavailable: "Your position could not be found. Search for a place instead.",
+  // METRO-120: a notice's suggested next step names only what is available right now. Each location notice has
+  // two variants, picked by whether place search is available: `search` while it is, `pick` while it is not.
+  denied: {
+    search: "Location is turned off. Search for a place instead.",
+    pick: "Location is turned off. Pick a station instead.",
+  },
+  unavailable: {
+    search: "Your position could not be found. Search for a place instead.",
+    pick: "Your position could not be found. Pick a station instead.",
+  },
   // METRO-103: shown instead of a station when the device located the user too roughly to name one.
-  roughKnown: (size: string): string =>
-    `Your device found your position only roughly, with an error of ${size}. The nearest station could be wrong, so none is shown. Search for a place instead.`,
-  roughUnknown:
-    "Your device could not say how precisely it found your position. The nearest station could be wrong, so none is shown. Search for a place instead.",
+  roughKnown: (size: string): NoticeVariants => ({
+    search: `Your device found your position only roughly, with an error of ${size}. The nearest station could be wrong, so none is shown. Search for a place instead.`,
+    pick: `Your device found your position only roughly, with an error of ${size}. The nearest station could be wrong, so none is shown. Pick a station instead.`,
+  }),
+  roughUnknown: {
+    search:
+      "Your device could not say how precisely it found your position. The nearest station could be wrong, so none is shown. Search for a place instead.",
+    pick: "Your device could not say how precisely it found your position. The nearest station could be wrong, so none is shown. Pick a station instead.",
+  },
   // METRO-114: the handoff's fixed string, with its "ln." read as "right now". The no-connection variant is new:
   // the handoff's "You’re offline. Stations and fares still work." claims offline use (METRO-106, and the
   // built-output test of METRO-112 forbids that word in shipped scripts), so it says what is true now.
