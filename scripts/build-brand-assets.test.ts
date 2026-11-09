@@ -10,6 +10,7 @@ import {
   LOCK_FILE,
   MANIFEST,
   MANIFEST_JSON,
+  MANIFEST_OFFLINE_CLAIM,
   PNG_JOBS,
   PUBLIC_DIR,
   ROBOTS_TXT,
@@ -248,13 +249,27 @@ describe("the manifest", () => {
     ]);
   });
 
-  test("rejects a service worker member and any offline claim", () => {
+  test("rejects a service worker member, and allows the offline claim in one sentence of the description only", () => {
+    const CLAIM = "manifest makes an offline claim other than its description sentence";
     expect(
       manifestProblems(mutated((draft) => (draft["serviceworker"] = { src: "/sw.js" }))),
     ).toContain("manifest names a service worker (METRO-106)");
+    // METRO-106: the committed manifest carries exactly the pinned sentence and passes.
+    expect(MANIFEST.description).toContain(MANIFEST_OFFLINE_CLAIM);
+    expect(manifestProblems(JSON.parse(MANIFEST_JSON))).toEqual([]);
+    // Any other wording of the claim, a second mention, or the word in another member still fails.
     expect(
       manifestProblems(mutated((draft) => (draft["description"] = "Works Offline"))),
-    ).toContain("manifest makes an offline claim");
+    ).toContain(CLAIM);
+    expect(
+      manifestProblems(
+        mutated((draft) => (draft["description"] = `${MANIFEST_OFFLINE_CLAIM} Works offline.`)),
+      ),
+    ).toContain(CLAIM);
+    expect(manifestProblems(mutated((draft) => (draft["name"] = "Offline Metro")))).toContain(
+      CLAIM,
+    );
+    expect(manifestProblems(mutated((draft) => (draft["description"] = 7)))).not.toContain(CLAIM);
   });
 
   test("rejects bad icons: path, shape, type, purpose and the missing required ones", () => {

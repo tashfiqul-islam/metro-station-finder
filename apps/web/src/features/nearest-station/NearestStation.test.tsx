@@ -235,7 +235,10 @@ test("METRO-114 offline at render shows the offline notice from the start and no
   try {
     render(<NearestStation maps={fakeMaps} />);
     expect(screen.getByText(copy.searchNoConnection)).toBeTruthy();
-    expect(copy.searchNoConnection).not.toMatch(/offline|still work/iu);
+    // The handoff's own sentence; it claims offline use, which the shell worker now backs (METRO-106).
+    expect(copy.searchNoConnection).toBe(
+      "You’re offline. Stations and fares still work. Place search returns when you reconnect.",
+    );
     expect(screen.queryByText(copy.searchLabel)).toBeNull();
     expect(document.querySelector("[data-fake-search]")).toBeNull();
     setOnline(true);

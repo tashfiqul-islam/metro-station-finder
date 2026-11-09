@@ -105,7 +105,7 @@ describe("route", () => {
       "https://maps.googleapis.com/maps/api/js",
       "https://places.googleapis.com/v1/places:searchText",
       "https://routes.googleapis.com/x",
-      "https://maps.gstatic.com/a.png",
+      "https://maps.gstatic.com/mapfiles/a",
       "https://evil.test/assets/app-1.js",
     ]) {
       expect(route({ method: "GET", mode: "cors", url }, ORIGIN, shell)).toBe("pass");

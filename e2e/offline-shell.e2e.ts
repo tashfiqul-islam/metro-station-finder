@@ -110,7 +110,9 @@ async function offlineJourney(page: Page, reportsOffline: boolean): Promise<void
   // Place search is replaced by the notice; no field, so no place text can be typed or sent. Only where the
   // browser itself reports being offline (a stopped server does not change `navigator.onLine`).
   if (reportsOffline) {
-    await expect(page.locator(".notice[data-size='sm']")).toContainText("No internet connection");
+    await expect(page.locator(".notice[data-size='sm']")).toContainText(
+      "Stations and fares still work",
+    );
     await expect(plainSearch(page)).toHaveCount(0);
   }
   // Nothing left the page for the API or Google: the page's own files came from the worker's cache.

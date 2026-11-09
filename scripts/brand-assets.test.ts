@@ -64,7 +64,7 @@ describe("brand assets on disk (METRO-107)", () => {
     }
   });
 
-  test("the offline share image is not shipped (it waits for METRO-106)", () => {
+  test("the offline share image is still not shipped: it needs an outlined-text master and the production origin (METRO-106 evidence)", () => {
     expect(walk(publicDir).filter((file) => file.startsWith("og/"))).toEqual([]);
   });
 
@@ -90,10 +90,25 @@ describe("brand assets on disk (METRO-107)", () => {
     expect(imageSize(bytes("favicon.ico"))?.sizes.map((size) => size.width)).toEqual([16, 32, 48]);
   });
 
-  test("no shipped text asset or master claims offline use", () => {
-    for (const file of ["manifest.webmanifest", "robots.txt", "favicon.svg"]) {
+  test("the offline claim appears only in the manifest description, and only because the worker is in the build", () => {
+    for (const file of ["robots.txt", "favicon.svg"]) {
       expect(readFileSync(join(publicDir, file), "utf8"), file).not.toMatch(/offline/iu);
     }
+    // The manifest carries exactly one mention, the pinned sentence (manifestProblems enforces the wording).
+    const text = readFileSync(join(publicDir, "manifest.webmanifest"), "utf8");
+    expect(text.match(/offline/giu)).toHaveLength(1);
+    // Backed by the worker: its source, its build step and its registration all exist in the repository.
+    for (const file of [
+      "apps/web/src/sw/worker.ts",
+      "apps/web/src/sw/sw.ts",
+      "apps/web/src/sw/register.ts",
+      "scripts/sw-plugin.ts",
+    ]) {
+      expect(statSync(join(root, file)).size, file).toBeGreaterThan(0);
+    }
+    expect(readFileSync(join(root, "apps/web/vite.config.ts"), "utf8")).toContain(
+      "serviceWorkerPlugin",
+    );
     for (const entry of readdirSync(brandDir).filter((name) => name.endsWith(".svg"))) {
       expect(readFileSync(join(brandDir, entry), "utf8"), entry).not.toMatch(/offline/iu);
     }

@@ -69,17 +69,21 @@ export const ROBOTS_TXT =
   "User-agent: *\nAllow: /\n# Add after deploy: Sitemap: <absolute URL of /sitemap.xml>\n";
 
 /**
- * The web app manifest. No `serviceworker` member and no offline claim: the offline service worker is
- * METRO-106 and the manifest says only what ships today. No `screenshots` member: the handoff screenshots
+ * The web app manifest. No `serviceworker` member (the manifest has none). One offline claim, in `description`
+ * and exactly `MANIFEST_OFFLINE_CLAIM`: the offline shell worker of METRO-106 (ADR-0023) now backs it; before
+ * that the manifest made none. No `screenshots` member: the handoff screenshots
  * show screens that do not exist yet, so they return after METRO-105 and the first slices. `theme_color`
  * (#0B7A84, the brand teal, for the installed app's chrome) and `background_color` (#F2F6F6, the light page
  * colour, for the splash) come from the approved handoff; they differ from the page `theme-color` tags in
  * index.html, which follow the page background tokens (#F2F6F6 light, #060A0A dark).
  */
+/** The one offline sentence the manifest may carry; `manifestProblems` rejects any other mention. */
+export const MANIFEST_OFFLINE_CLAIM = "Stations and fares work offline.";
+
 export const MANIFEST = {
   name: "Metro Station Finder",
   short_name: "Metro",
-  description: "Find the nearest Dhaka MRT Line 6 station, the walk to it and the fare.",
+  description: `Find the nearest Dhaka MRT Line 6 station, the walk to it and the fare. ${MANIFEST_OFFLINE_CLAIM}`,
   id: "/",
   start_url: "/",
   scope: "/",
@@ -402,7 +406,10 @@ export function manifestProblems(data: unknown): string[] {
   }
   if (data["display"] !== "standalone") problems.push("display is not standalone");
   if ("serviceworker" in data) problems.push("manifest names a service worker (METRO-106)");
-  if (/offline/iu.test(JSON.stringify(data))) problems.push("manifest makes an offline claim");
+  const mentions = JSON.stringify(data).match(/offline/giu)?.length ?? 0;
+  const description = typeof data["description"] === "string" ? data["description"] : "";
+  if (mentions > 1 || (mentions === 1 && !description.includes(MANIFEST_OFFLINE_CLAIM)))
+    problems.push("manifest makes an offline claim other than its description sentence");
   const icons = members(data, "icons");
   const seen = new Set<string>();
   for (const icon of icons) {
