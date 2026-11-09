@@ -82,6 +82,12 @@ async function settle(page: Page): Promise<void> {
   );
 }
 
+/** Axe after the notice has finished rising in: a half-faded notice reads as a contrast failure. */
+async function expectAxeClean(page: Page): Promise<void> {
+  await settle(page);
+  expect((await axeBuilder(page).analyze()).violations.map((v) => v.id)).toEqual([]);
+}
+
 test.describe("a notice's next step is available right now (METRO-120)", () => {
   test.afterEach(async ({ page }) => {
     await settle(page);
@@ -101,7 +107,7 @@ test.describe("a notice's next step is available right now (METRO-120)", () => {
       await expect(
         item.retry ? group.getByRole("button", { name: "Try again" }) : search,
       ).toBeFocused();
-      expect((await axeBuilder(page).analyze()).violations.map((v) => v.id)).toEqual([]);
+      await expectAxeClean(page);
     });
 
     test(`METRO-120 ${item.name} with place search unavailable (no connection): pick step, no search action, focus follows`, async ({
@@ -122,7 +128,7 @@ test.describe("a notice's next step is available right now (METRO-120)", () => {
       // The notice below says the same thing about place search: one story, not two.
       await expect(smallNotice(page)).toContainText("Pick a station instead.");
       await expect(page.getByText(SEARCH)).toHaveCount(0);
-      expect((await axeBuilder(page).analyze()).violations.map((v) => v.id)).toEqual([]);
+      await expectAxeClean(page);
     });
   }
 
@@ -141,7 +147,7 @@ test.describe("a notice's next step is available right now (METRO-120)", () => {
     await expect(group.getByRole("button", { name: "Search for a place" })).toBeVisible();
     await expect(page.getByText(PICK)).toHaveCount(0);
     await expect(plainSearch(page)).toBeVisible();
-    expect((await axeBuilder(page).analyze()).violations.map((v) => v.id)).toEqual([]);
+    await expectAxeClean(page);
   });
 
   test.describe("when the Maps script cannot load", () => {
@@ -165,7 +171,7 @@ test.describe("a notice's next step is available right now (METRO-120)", () => {
       await expect(after).toBeVisible();
       await expect(after.getByRole("button", { name: "Search for a place" })).toHaveCount(0);
       await expect(page.getByText(SEARCH)).toHaveCount(0);
-      expect((await axeBuilder(page).analyze()).violations.map((v) => v.id)).toEqual([]);
+      await expectAxeClean(page);
     });
   });
 });
