@@ -264,3 +264,16 @@ test("METRO-106 offline, no registration is attempted and no region is mounted",
   expect(container.registered).toEqual([]);
   expect(document.querySelector("[role=status]")).toBeNull();
 });
+
+test("METRO-106 Reload tells the registration's waiting worker, not a stale reference to an older one (WebKit)", async () => {
+  const { container, env, timers } = setup();
+  const stale = new FakeWorker();
+  const current = new FakeWorker();
+  container.registration.waiting = stale;
+  await registerWorker(container, env);
+  container.registration.waiting = current;
+  fire(timers, 100);
+  region()?.querySelector<HTMLButtonElement>("button.toast__action")?.click();
+  expect(current.messages).toEqual([{ type: "skip-waiting" }]);
+  expect(stale.messages).toEqual([]);
+});

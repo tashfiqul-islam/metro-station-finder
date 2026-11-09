@@ -77,7 +77,12 @@ function mountRegion(document: Document): HTMLElement {
   return region;
 }
 
-function fillPrompt(env: Env, region: HTMLElement, worker: WorkerLike): void {
+function fillPrompt(
+  env: Env,
+  region: HTMLElement,
+  registration: RegistrationLike,
+  offered: WorkerLike,
+): void {
   const { document } = env;
   const toast = document.createElement("div");
   toast.className = "toast";
@@ -100,7 +105,8 @@ function fillPrompt(env: Env, region: HTMLElement, worker: WorkerLike): void {
   reload.addEventListener("click", () => {
     reloading = true;
     reload.hidden = true;
-    worker.postMessage({ type: SKIP_WAITING }, []);
+    // The registration's waiting worker is the one to tell; the object seen when it installed is the fallback.
+    (registration.waiting ?? offered).postMessage({ type: SKIP_WAITING }, []);
     env.later(() => {
       text.textContent = swCopy.failed;
       dismiss.focus();
@@ -133,7 +139,7 @@ export async function registerWorker(
     if (offered || container.controller === null) return;
     offered = true;
     env.later(() => {
-      fillPrompt(env, region, worker);
+      fillPrompt(env, region, registration, worker);
     }, FILL_DELAY_MS);
   };
   if (registration.waiting !== null) offer(registration.waiting);
