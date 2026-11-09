@@ -112,12 +112,12 @@ kbd {
 
 /* Only the two error fallbacks (sections) force a ring on script focus (METRO-58); a result heading rings
    by :focus-visible alone, so a tap leaves none (METRO-118). */
-section[tabindex="-1"]:focus {
+section:focus {
   outline: 3px solid var(--color-focus);
   outline-offset: var(--focus-offset);
 }
 @media (forced-colors: active) {
-  section[tabindex="-1"]:focus {
+  section:focus {
     outline-color: Highlight;
   }
 }
