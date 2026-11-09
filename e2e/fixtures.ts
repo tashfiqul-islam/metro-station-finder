@@ -89,7 +89,7 @@ export async function animationsSettled(page: Page): Promise<void> {
         .every(
           (animation) =>
             animation.effect?.getComputedTiming().iterations === Infinity ||
-            (animation.playState !== "running" && animation.playState !== "pending"),
+            (animation.playState !== "running" && !animation.pending),
         ),
     undefined,
     { timeout: 5000 },
