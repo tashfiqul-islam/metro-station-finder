@@ -35,9 +35,12 @@ export function StationPicker({
   /** Counts picks, so choosing the same station again still moves focus to the heading. */
   const [picks, setPicks] = useState(0);
   const heading = useRef<HTMLHeadingElement>(null);
+  /** How the last pick was made. A click on an option keeps focus in the field (still `:focus-visible`). */
+  const source = useRef<"keyboard" | "pointer">("keyboard");
 
   useEffect(() => {
-    if (picks > 0) heading.current?.focus();
+    // After a tap or click the heading must not inherit the field's ring (METRO-118); after Enter it keeps it.
+    if (picks > 0) heading.current?.focus({ focusVisible: source.current === "keyboard" });
   }, [picks]);
 
   return (
@@ -45,7 +48,8 @@ export function StationPicker({
       <StationCombobox
         stations={baselineDataset.stations}
         onEngage={() => setSnap("full")}
-        onSelect={(station) => {
+        onSelect={(station, how) => {
+          source.current = how;
           setPicked(station);
           setPicks((count) => count + 1);
           setSnap("half");

@@ -40,7 +40,7 @@ We will style with plain CSS and custom-property tokens, with no new dependency,
 
 - Handle row 44 px, not 32 px (owner decision).
 - `components.css` is split into the files above (same rules); the patterns-sheet and `.mock-only` rules are dropped as not part of the app.
-- `base.css` also keeps the programmatic-focus ring of the earlier `focus.css` (a 3 px ring on `[tabindex="-1"]:focus`, which the error fallback needs) and makes `select` inherit the font; the View Transition rules are in `base.css`.
+- `base.css` also keeps the forced ring of the earlier `focus.css` for the two error fallbacks only (a 3 px ring on `section:focus`; amended by METRO-118, it was `[tabindex="-1"]:focus` and drew on a result heading after a tap) and makes `select` inherit the font; the View Transition rules are in `base.css`.
 - `theme-boot.js` is rewritten with the same behaviour (arrow function, `const`, optional catch binding). A blocked store removes the attribute, as the handoff's does.
 - The command-palette trigger and shortcut hint are not built; the header has an `actions` slot for them. The map region is a slot; no map is drawn. The slice does not show the taka sign yet (its copy says "BDT"), so `Price` is provided and tested only.
 - The landing slice is lazy (above), which the handoff did not consider.
