@@ -48,7 +48,13 @@ Entry delta: 0 raw / +2 gzip (the hash-named chunk list, as in METRO-113 and MET
 
 ## Verification record
 
-Commands run and not run are listed in the pull request. The results recorded here are filled from the runs after the final commit.
+Run under `mise exec --` (Bun 1.4.4, Node 26.13.0) with `MISE_GLOBAL_CONFIG_FILE` set to an empty file:
+
+- `bun run check`: pass (Vitest 52 files, 423 tests; `tsc -b` clean; branch coverage gate unchanged), run before the two e2e-only and docs-only commits that follow the code commit.
+- `bun run build` and `bun run bundle:check`: pass, numbers above (base measured by restoring `copy.ts` and `NearestStation.tsx` from `061d771`, building, then restoring).
+- `CI=true bun run smoke` (all four projects): 610 passed, 19 skipped, 0 failed, on the final commit. An earlier full run had three failures: two were my new specs running axe while a notice was still rising in (fixed by settling first, commit "settle the notice before axe"); one was `location.e2e.ts` "every state passes axe" in WebKit timing out at 30 s under four parallel workers (it passes alone in 12 to 15 s and passed in the later full run; an existing load-sensitive test, not edited).
+- Port 4173 was held by other agents' servers at times; runs waited for it to be free and never touched another process.
+- Not run: `smoke:live` (real Google, owner-run), manual screen-reader checks, `bun run scan` (no dependency or secret change), the CI workflow itself.
 
 ## Unverified
 
