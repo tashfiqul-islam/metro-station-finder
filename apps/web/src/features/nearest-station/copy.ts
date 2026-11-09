@@ -11,7 +11,6 @@ export const copy = {
   locateButton: "Use my location",
   consent:
     "Your position and the place you choose are not sent to our server. What you type in the search goes to Google to suggest places. Your position goes to Google only to work out the walking route.",
-  loadingSearch: "Loading place search…",
   // METRO-113: the handoff's locating status (nearby-locating.light.html): a title and one line under it.
   locating: "Finding your position",
   locatingSub: "This can take a few seconds indoors.",
@@ -23,13 +22,19 @@ export const copy = {
     `Your device found your position only roughly, with an error of ${size}. The nearest station could be wrong, so none is shown. Search for a place instead.`,
   roughUnknown:
     "Your device could not say how precisely it found your position. The nearest station could be wrong, so none is shown. Search for a place instead.",
-  searchUnavailable: "Place search is unavailable. You can still use your location.",
+  // METRO-114: the handoff's fixed strings, with its "ln." read as "right now". The offline variant drops the
+  // handoff's "Stations and fares still work": no user-facing copy claims offline use (METRO-106).
+  searchUnavailable: "Place search is unavailable right now. Pick a station instead.",
+  searchOffline: "You’re offline. Place search returns when you reconnect. Pick a station instead.",
   resultHeading: "Nearest station",
   empty: "No station could be found for that location.",
   // METRO-113: a location result. The distance is an estimate: the device position is a circle, not a point.
   distanceAbout: "about",
   distanceLabel: "straight-line distance · est.",
   walking: "Walking route",
+  // METRO-114: the route is an estimate too ("about ... est."), like the straight-line distance above it.
+  walkEstimate: (distance: string, minutes: string): string =>
+    `about ${distance}, ${minutes} · est.`,
   routeLoading: "Finding the walking route…",
   routeUnavailable: "The walking route is unavailable. The station and fare are still correct.",
   alsoNearby: "Also nearby",

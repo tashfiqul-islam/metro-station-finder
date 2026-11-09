@@ -11,7 +11,7 @@ import { directionsIcon, externalIcon } from "../station-picker/picker-icons";
 import { directionsUrl, fareRange, stopLabel } from "../station-picker/station-facts";
 import { alsoNearby } from "./also-nearby";
 import { copy } from "./copy";
-import { formatEstimate, formatIsoDate, formatMinutes, formatWalkingDistance } from "./format";
+import { formatEstimate, formatIsoDate, formatMinutes } from "./format";
 import { useWalkingRoute } from "./walking-route";
 
 import "../../styles/components/common.css";
@@ -19,33 +19,25 @@ import "../../styles/components/nearby.css";
 
 const { stations, fares } = baselineDataset;
 
-/** Where the origin came from: the device (no walking route yet, METRO-113) or a place the user searched for. */
-export type LocationSource = "device" | "place";
-
 interface LocationResultProps {
   readonly origin: Coordinate;
-  readonly source: LocationSource;
   /** Whether the result heading takes focus when this mounts (false when a late result lands while typing). */
   readonly focus: boolean;
 }
 
 /**
- * The one location result (METRO-113): the nearest station to the origin, the straight-line distance as a
- * labelled estimate, the fare range with the footnote built from `datasetProvenance.fares`, the Directions link
- * (the station's own coordinate only, no origin, ADR-0009) and the two next-nearest stations. A device position
- * asks for no walking route: that area is absent, not an error (the route slice adds it). A searched place keeps
- * the walking route it had. The parent mounts a new one per result, so the heading takes focus once per result.
+ * The one location result (METRO-113, METRO-114): the nearest station to the origin, the straight-line distance as
+ * a labelled estimate, the fare range with the footnote built from `datasetProvenance.fares`, the Directions link
+ * (the station's own coordinate only, no origin, ADR-0009) and the two next-nearest stations. The walking route is
+ * requested once, here, for this result: the parent mounts this only for a good device fix or a chosen place, never
+ * for a rough position or a picked station. If the route fails the result stays with a fixed message. The parent
+ * mounts a new one per result, so the heading takes focus once per result.
  */
-export function LocationResult({ origin, source, focus }: LocationResultProps): ReactElement {
-  const { status, routes } = useMaps();
+export function LocationResult({ origin, focus }: LocationResultProps): ReactElement {
+  const maps = useMaps();
   const nearest = findNearestStation(stations, origin);
   const found = nearest.kind === "nearest" ? nearest : null;
-  const route = useWalkingRoute(
-    routes,
-    status,
-    source === "place" ? origin : null,
-    found?.station ?? null,
-  );
+  const route = useWalkingRoute(maps, origin, found?.station ?? null);
   /** Stable, so focus moves when the heading mounts and not on every render. */
   const focusHeading = useCallback(
     (node: HTMLElement | null): void => {
@@ -94,13 +86,16 @@ export function LocationResult({ origin, source, focus }: LocationResultProps): 
               <span className="metric__label">{copy.distanceLabel}</span>
             </div>
           </div>
-          {source === "place" && route.phase !== "idle" ? (
+          {route.phase !== "idle" ? (
             <p className="result__walk">
               <span className="metric__about">{copy.walking}: </span>
               <output>
                 {route.phase === "loading" && copy.routeLoading}
                 {route.phase === "success" &&
-                  `${formatWalkingDistance(route.route.distance)}, ${formatMinutes(route.route.durationSeconds)}`}
+                  copy.walkEstimate(
+                    formatEstimate(route.route.distance / 1000),
+                    formatMinutes(route.route.durationSeconds),
+                  )}
               </output>
               {route.phase === "failure" && (
                 <span className="ns-alert-inline" role="alert">

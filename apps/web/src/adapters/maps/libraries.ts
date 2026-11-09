@@ -10,27 +10,48 @@ export interface LoaderDeps<Places, Routes> {
 }
 
 /**
- * Loads the Maps JavaScript API once. The first call sets the options (key and pinned version) and imports
+ * Loads the Maps JavaScript API once, when the first caller asks (METRO-114: never at page load). The first call sets the options (key and pinned version) and imports
  * the `places` and `routes` libraries together, so one script request serves both; every later call, a
  * StrictMode re-run or a remount returns the same promise. A failure is kept, not retried: a page reload is
  * the retry, because each attempt is another request to Google.
  */
+export interface Loader<Places, Routes> {
+  readonly load: (apiKey: string) => Promise<{ readonly places: Places; readonly routes: Routes }>;
+  /**
+   * Forgets a failed load so the next `load` tries again. Called only when the connection returns (METRO-114);
+   * options are set once, because the Google loader ignores a second `setOptions`.
+   */
+  readonly reset: () => void;
+}
+
 export function createLoader<Places, Routes>(
   deps: LoaderDeps<Places, Routes>,
-): (apiKey: string) => Promise<{ readonly places: Places; readonly routes: Routes }> {
+): Loader<Places, Routes> {
   let loading: Promise<{ readonly places: Places; readonly routes: Routes }> | undefined;
-  return (apiKey) => {
-    loading ??= (async () => {
-      deps.setOptions({ key: apiKey, v: MAPS_VERSION });
-      const [places, routes] = await Promise.all([deps.places(), deps.routes()]);
-      return { places, routes };
-    })();
-    return loading;
+  let optionsSet = false;
+  return {
+    load: (apiKey) => {
+      loading ??= (async () => {
+        if (!optionsSet) {
+          optionsSet = true;
+          deps.setOptions({ key: apiKey, v: MAPS_VERSION });
+        }
+        const [places, routes] = await Promise.all([deps.places(), deps.routes()]);
+        return { places, routes };
+      })();
+      return loading;
+    },
+    reset: () => {
+      loading = undefined;
+    },
   };
 }
 
-export const loadLibraries = createLoader({
+const loader = createLoader({
   setOptions,
   places: () => importLibrary("places"),
   routes: () => importLibrary("routes"),
 });
+
+export const loadLibraries = loader.load;
+export const resetLibraries = loader.reset;

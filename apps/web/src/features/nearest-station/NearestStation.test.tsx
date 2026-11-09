@@ -1,7 +1,7 @@
 import type { Coordinate } from "@metro/core";
 import * as Core from "@metro/core";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { StrictMode, useEffect, useMemo } from "react";
+import { StrictMode, useEffect, useMemo, useSyncExternalStore } from "react";
 import type { ReactNode } from "react";
 import { afterAll, afterEach, beforeAll, expect, test, vi } from "vitest";
 
@@ -17,6 +17,7 @@ import { copy } from "./copy";
 import { WATCHDOG_MS } from "./geolocate";
 import { fakePosition, fakePositionError } from "./geolocation-fakes";
 import { NearestStation } from "./NearestStation";
+import { ROUTE_WATCHDOG_MS } from "./walking-route";
 
 const override = vi.hoisted(() => ({ fare: null as unknown }));
 
@@ -35,6 +36,7 @@ const NEAR_MOTIJHEEL: Coordinate = { lat: 23.728, lng: 90.419 };
 
 const world = {
   status: "ready" as MapsStatus,
+  load: vi.fn(),
   service: null as RouteService | null,
   searchProps: null as PlaceSearchProps | null,
 };
@@ -50,9 +52,33 @@ function FakePlaceSearch(props: PlaceSearchProps) {
   );
 }
 
+const listeners = new Set<() => void>();
+let version = 0;
+
+/** Changes the published Maps state while the screen is mounted (the libraries arriving late, say). */
+function publish(next: { status?: MapsStatus; service?: RouteService | null }): void {
+  if (next.status !== undefined) world.status = next.status;
+  if (next.service !== undefined) world.service = next.service;
+  version += 1;
+  act(() => {
+    for (const listener of listeners) listener();
+  });
+}
+
 /** Publishes the test's chosen Maps state the way the real provider does. */
 function FakeProvider({ children }: { readonly children: ReactNode }) {
-  const value = useMemo(() => ({ status: world.status, routes: world.service }), []);
+  const seen = useSyncExternalStore(
+    (listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    () => version,
+  );
+  const value = useMemo(
+    () => ({ status: world.status, routes: world.service, load: world.load }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `seen` is the signal that the world changed
+    [seen],
+  );
   return <MapsContext value={value}>{children}</MapsContext>;
 }
 
@@ -86,6 +112,7 @@ beforeAll(() => {
 afterEach(() => {
   cleanup();
   world.status = "ready";
+  world.load = vi.fn();
   world.service = null;
   world.searchProps = null;
   override.fare = null;
@@ -142,15 +169,24 @@ function must<T>(value: T | null | undefined): T {
   return value;
 }
 
+/** The locating status: the one `output` (the place-search notice is a separate status region). */
+const locatingStatus = (): HTMLElement => must(document.querySelector("output"));
+
 /** The estimate shown in the result: "about" then a figure then "straight-line distance · est.". */
 const distanceText = (): string => must(document.querySelector(".metric__value")).textContent;
+
+const good = (): void => geolocation((success) => success(fakePosition(23.87, 90.367, 20)));
+const pressLocate = (): void => {
+  fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
+};
+const ROUTE_TEXT = "about 1.2 km, 15 min · est.";
 
 test("METRO-88 a selected place shows the nearest station, the labelled estimate and the walking route", async () => {
   const walk = vi.fn<RouteService["walk"]>(() => Promise.resolve(route(1234, 900)));
   world.service = routeService(walk);
   render(<NearestStation maps={fakeMaps} />);
   pickPlace(NEAR_UTTARA_NORTH);
-  expect(await screen.findByText("1.23 km, 15 min")).toBeTruthy();
+  expect(await screen.findByText(ROUTE_TEXT)).toBeTruthy();
   const station = heading("Uttara North");
   expect(station.getAttribute("tabindex")).toBe("-1");
   expect(document.activeElement).toBe(station);
@@ -163,47 +199,220 @@ test("METRO-88 a selected place shows the nearest station, the labelled estimate
   expect(screen.queryByRole("alert")).toBeNull();
 });
 
-test("METRO-88 the route shows loading while the routes library is not ready", () => {
+test("METRO-88 the route shows loading while the routes library is not ready, and asks for it once", () => {
+  world.status = "idle";
   render(<NearestStation maps={fakeMaps} />);
+  expect(world.load).not.toHaveBeenCalled();
   pickPlace(NEAR_UTTARA_NORTH);
   expect(screen.getByText(copy.routeLoading)).toBeTruthy();
   expect(heading("Uttara North")).toBeTruthy();
+  expect(world.load).toHaveBeenCalledExactlyOnceWith();
 });
 
-test("METRO-88 with Maps unavailable there is no search control, only the fixed copy", () => {
+test("METRO-114 Maps unavailable: the label, hint and field are gone and only the notice shows", () => {
   world.status = "unavailable";
   render(<NearestStation maps={fakeMaps} />);
   expect(screen.getByText(copy.searchUnavailable)).toBeTruthy();
+  expect(screen.queryByText(copy.searchLabel)).toBeNull();
+  expect(screen.queryByText(copy.searchHint)).toBeNull();
   expect(document.querySelector("[data-fake-search]")).toBeNull();
+  expect(screen.queryByRole("textbox")).toBeNull();
+  // A status region, mounted from the start, not an alert: it is part of the page, not an interruption.
+  expect(screen.queryByRole("alert")).toBeNull();
+  expect(screen.getByText(copy.searchUnavailable).closest("output")).not.toBeNull();
 });
 
-test("METRO-113 a device fix shows the station and the fare range, and no walking route area at all", async () => {
-  world.status = "unavailable";
-  geolocation((success) => success(fakePosition(23.87, 90.367)));
+function setOnline(value: boolean | null): void {
+  if (value === null) Reflect.deleteProperty(navigator, "onLine");
+  else Object.defineProperty(navigator, "onLine", { configurable: true, value });
+}
+
+test("METRO-114 offline at render shows the offline notice from the start and no field, then restores on online", () => {
+  setOnline(false);
+  try {
+    render(<NearestStation maps={fakeMaps} />);
+    expect(screen.getByText(copy.searchOffline)).toBeTruthy();
+    expect(copy.searchOffline).not.toMatch(/still work|works? offline/iu);
+    expect(screen.queryByText(copy.searchLabel)).toBeNull();
+    expect(document.querySelector("[data-fake-search]")).toBeNull();
+    setOnline(true);
+    act(() => {
+      window.dispatchEvent(new Event("online"));
+    });
+    expect(screen.queryByText(copy.searchOffline)).toBeNull();
+    expect(screen.getByText(copy.searchLabel)).toBeTruthy();
+    expect(document.querySelector("[data-fake-search]")).not.toBeNull();
+    // And back: the offline event hides it again.
+    setOnline(false);
+    act(() => {
+      window.dispatchEvent(new Event("offline"));
+    });
+    expect(screen.getByText(copy.searchOffline)).toBeTruthy();
+    expect(document.querySelector("[data-fake-search]")).toBeNull();
+  } finally {
+    setOnline(null);
+  }
+});
+
+test("METRO-114 the label is a real label for the plain input and the hint is visible", () => {
   render(<NearestStation maps={fakeMaps} />);
-  fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
-  expect(await screen.findByRole("heading", { level: 2, name: "Uttara North" })).toBeTruthy();
-  // The route area is absent, not an error: not even with Maps unavailable (which fails a requested route).
-  expect(screen.queryByText(copy.routeUnavailable)).toBeNull();
-  expect(screen.queryByText(copy.routeLoading)).toBeNull();
-  expect(document.querySelector(".result__walk")).toBeNull();
-  // The only alert is the fixed search notice; no route or location alert.
-  expect(screen.getAllByRole("alert").map((a) => a.textContent)).toEqual([copy.searchUnavailable]);
+  const label = screen.getByText(copy.searchLabel);
+  expect(label.tagName).toBe("LABEL");
+  expect(label.getAttribute("for")).toBe("place-input");
+  expect(screen.getByText(copy.searchHint)).toBeTruthy();
+  expect(world.searchProps?.hintId).toBe("place-hint");
 });
 
-test("METRO-113 a device fix never asks the route service for anything", async () => {
+test("METRO-114 the library failing after the user focused the field moves focus to the notice", () => {
+  render(<NearestStation maps={fakeMaps} />);
+  const box = screen.getByRole("textbox", { name: "fake search box" });
+  act(() => box.focus());
+  expect(document.activeElement).toBe(box);
+  // The field is removed under the focus; jsdom-like DOMs drop focus to the body.
+  publish({ status: "unavailable" });
+  const notice = must(document.querySelector<HTMLElement>(".notice[data-size=sm]"));
+  expect(notice.textContent).toContain(copy.searchUnavailable);
+  expect(document.activeElement).toBe(notice);
+});
+
+test("METRO-114 the library failing when focus was elsewhere takes no focus", () => {
+  render(<NearestStation maps={fakeMaps} />);
+  const button = screen.getByRole("button", { name: copy.locateButton });
+  act(() => button.focus());
+  publish({ status: "unavailable" });
+  expect(document.activeElement).toBe(button);
+});
+
+test("METRO-114 a good device fix asks for exactly one walking route and shows it as an estimate", async () => {
   const walk = vi.fn<RouteService["walk"]>(() => Promise.resolve(route(1234, 900)));
   world.service = routeService(walk);
-  geolocation((success) => success(fakePosition(23.87, 90.367, 20)));
+  good();
   render(<NearestStation maps={fakeMaps} />);
-  fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
-  await screen.findByRole("heading", { level: 2, name: "Uttara North" });
-  expect(walk).not.toHaveBeenCalled();
-  expect(screen.queryByText("1.23 km, 15 min")).toBeNull();
-  // Control: the same service is used for a searched place.
-  pickPlace(NEAR_MOTIJHEEL);
-  expect(await screen.findByText("1.23 km, 15 min")).toBeTruthy();
+  pressLocate();
+  expect(await screen.findByText(ROUTE_TEXT)).toBeTruthy();
   expect(walk).toHaveBeenCalledTimes(1);
+  const [from, to] = walk.mock.calls[0] ?? [];
+  expect(from).toEqual({ lat: 23.87, lng: 90.367 });
+  expect(to).toEqual(Core.baselineDataset.stations[0]?.coordinate);
+  expect(screen.getByText(copy.walking + ":")).toBeTruthy();
+});
+
+test("METRO-114 a re-render, StrictMode and a theme change add no walking route request", async () => {
+  const walk = vi.fn<RouteService["walk"]>(() => Promise.resolve(route(1234, 900)));
+  world.service = routeService(walk);
+  good();
+  const view = render(
+    <StrictMode>
+      <NearestStation maps={fakeMaps} />
+    </StrictMode>,
+  );
+  pressLocate();
+  await screen.findByText(ROUTE_TEXT);
+  const before = walk.mock.calls.length;
+  // StrictMode may run the effect twice in development; the count is of the settled result.
+  document.documentElement.setAttribute("data-theme", "dark");
+  view.rerender(
+    <StrictMode>
+      <NearestStation maps={fakeMaps} />
+    </StrictMode>,
+  );
+  publish({});
+  await act(async () => {});
+  expect(walk.mock.calls.length).toBe(before);
+  document.documentElement.removeAttribute("data-theme");
+});
+
+test("METRO-114 exactly one request: the settled count is one without StrictMode", async () => {
+  const walk = vi.fn<RouteService["walk"]>(() => Promise.resolve(route(1234, 900)));
+  world.service = routeService(walk);
+  good();
+  render(<NearestStation maps={fakeMaps} />);
+  pressLocate();
+  await screen.findByText(ROUTE_TEXT);
+  publish({});
+  await act(async () => {});
+  expect(walk).toHaveBeenCalledTimes(1);
+});
+
+test("METRO-114 a rough fix asks for no route, and neither does a rough fix with unknown accuracy", async () => {
+  const walk = vi.fn<RouteService["walk"]>(() => Promise.resolve(route(1234, 900)));
+  world.service = routeService(walk);
+  geolocation((success) => success(fakePosition(23.8, 90.4, 25_000)));
+  render(<NearestStation maps={fakeMaps} />);
+  pressLocate();
+  await screen.findByRole("group", { name: /found your position only roughly/u });
+  expect(walk).not.toHaveBeenCalled();
+  expect(world.load).not.toHaveBeenCalled();
+  geolocation((success) => success(fakePosition(23.8, 90.4, Number.NaN)));
+  fireEvent.click(screen.getByRole("button", { name: copy.tryAgain }));
+  await screen.findByText(copy.roughUnknown);
+  expect(walk).not.toHaveBeenCalled();
+  expect(world.load).not.toHaveBeenCalled();
+});
+
+test("METRO-114 a failed route for a device fix keeps the station and the fare with the fixed copy", async () => {
+  world.service = routeService(() => Promise.reject(new Error("key=abc lat=23.87")));
+  good();
+  render(<NearestStation maps={fakeMaps} />);
+  pressLocate();
+  expect(await screen.findByText(copy.routeUnavailable)).toBeTruthy();
+  expect(heading("Uttara North")).toBeTruthy();
+  expect(document.querySelector(".result__fare")).not.toBeNull();
+  expect(document.body.textContent).not.toContain("key=abc");
+});
+
+test("METRO-114 Maps unavailable fails the requested route visibly and keeps the result", async () => {
+  world.status = "unavailable";
+  good();
+  render(<NearestStation maps={fakeMaps} />);
+  pressLocate();
+  expect(await screen.findByText(copy.routeUnavailable)).toBeTruthy();
+  expect(heading("Uttara North")).toBeTruthy();
+});
+
+test("METRO-114 a result replaced before the libraries arrive never makes its route request", async () => {
+  const walk = vi.fn<RouteService["walk"]>(() => Promise.resolve(route(1234, 900)));
+  world.status = "loading";
+  good();
+  render(<NearestStation maps={fakeMaps} />);
+  pressLocate();
+  await screen.findByRole("heading", { level: 2, name: "Uttara North" });
+  expect(screen.getByText(copy.routeLoading)).toBeTruthy();
+  // The user chooses a place instead (the one current result): the device result unmounts.
+  pickPlace(NEAR_MOTIJHEEL);
+  publish({ status: "ready", service: routeService(walk) });
+  await screen.findByText(ROUTE_TEXT);
+  // Only the place's route was requested.
+  expect(walk).toHaveBeenCalledTimes(1);
+  expect(walk.mock.calls[0]?.[0]).toEqual(NEAR_MOTIJHEEL);
+});
+
+test("METRO-114 a route that never answers ends as the fixed failure after the watchdog, and a late answer is ignored", async () => {
+  vi.useFakeTimers();
+  try {
+    let answer: ((value: WalkingRoute) => void) | null = null;
+    world.service = routeService(
+      () =>
+        new Promise<WalkingRoute>((resolve) => {
+          answer = resolve;
+        }),
+    );
+    render(<NearestStation maps={fakeMaps} />);
+    pickPlace(NEAR_UTTARA_NORTH);
+    expect(screen.getByText(copy.routeLoading)).toBeTruthy();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(ROUTE_WATCHDOG_MS + 1);
+    });
+    expect(screen.getByText(copy.routeUnavailable)).toBeTruthy();
+    await act(async () => {
+      answer?.(route(1234, 900));
+      await Promise.resolve();
+    });
+    expect(screen.queryByText(ROUTE_TEXT)).toBeNull();
+    expect(heading("Uttara North")).toBeTruthy();
+  } finally {
+    vi.useRealTimers();
+  }
 });
 
 test("METRO-88 a failed route request shows fixed copy and keeps the station and fare", async () => {
@@ -283,11 +492,11 @@ test("METRO-88 an invalid location is the empty state", () => {
   expect(screen.queryByRole("link", { name: /Directions/u })).toBeNull();
 });
 
-test("METRO-88 while Maps loads the search shows a loading message", () => {
+test("METRO-114 while Maps loads the plain field stays: there is no loading message", () => {
   world.status = "loading";
   render(<NearestStation maps={fakeMaps} />);
-  expect(screen.getByText(copy.loadingSearch)).toBeTruthy();
   expect(document.querySelector("[data-fake-search]")).not.toBeNull();
+  expect(screen.getByText(copy.searchLabel)).toBeTruthy();
 });
 
 test("METRO-88 a search failure shows fixed copy, location still works and a later place clears it", () => {
@@ -372,7 +581,7 @@ test("METRO-113 locating: an output status with the looping mark and the handoff
   // aria-disabled, not disabled: the button keeps focus and its place in the order while it works.
   expect(button.disabled).toBe(false);
   expect(button.getAttribute("aria-disabled")).toBe("true");
-  const status = screen.getByRole("status");
+  const status = locatingStatus();
   expect(status.textContent).toContain(copy.locating);
   expect(status.textContent).toContain(copy.locatingSub);
   expect(status.querySelector("svg.mark--searching")?.getAttribute("aria-hidden")).toBe("true");
@@ -382,11 +591,11 @@ test("METRO-113 locating: an output status with the looping mark and the handoff
 test("METRO-113 the status region is mounted and empty before locating, and the same node fills", () => {
   geolocation(() => {});
   render(<NearestStation maps={fakeMaps} />);
-  const status = screen.getByRole("status");
+  const status = locatingStatus();
   expect(status.textContent).toBe("");
   expect(status.className).toBe("visually-hidden");
   fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
-  expect(screen.getByRole("status")).toBe(status);
+  expect(locatingStatus()).toBe(status);
   expect(status.textContent).toContain(copy.locating);
   expect(status.className).toBe("status");
 });
@@ -421,11 +630,11 @@ test("METRO-113 a locating that never answers ends as unavailable after the watc
     geolocation(() => {});
     render(<NearestStation maps={fakeMaps} />);
     fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
-    expect(screen.getByRole("status").textContent).toContain(copy.locating);
+    expect(locatingStatus().textContent).toContain(copy.locating);
     await act(async () => {
       await vi.advanceTimersByTimeAsync(WATCHDOG_MS);
     });
-    expect(screen.getByRole("status").textContent).toBe("");
+    expect(locatingStatus().textContent).toBe("");
     const group = screen.getByRole("group", { name: copy.unavailable });
     expect(document.activeElement).toBe(within(group).getByRole("button", { name: copy.tryAgain }));
   } finally {
@@ -444,7 +653,7 @@ test("METRO-113 a station pick cancels a locating in flight: a late fix is ignor
     <NearestStation maps={fakeMaps} onLocation={onLocation} onSettle={onSettle} />,
   );
   fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
-  expect(screen.getByRole("status").textContent).toContain(copy.locating);
+  expect(locatingStatus().textContent).toContain(copy.locating);
   expect(onSettle).toHaveBeenCalledTimes(1);
   const other = document.body.appendChild(document.createElement("button"));
   other.focus();
@@ -452,7 +661,7 @@ test("METRO-113 a station pick cancels a locating in flight: a late fix is ignor
     <NearestStation maps={fakeMaps} onLocation={onLocation} onSettle={onSettle} pickSeq={1} />,
   );
   // The status is gone at once; the answer arrives later and changes nothing.
-  expect(screen.getByRole("status").textContent).toBe("");
+  expect(locatingStatus().textContent).toBe("");
   await act(async () => {
     successes[0]?.(fakePosition(NEAR_UTTARA_NORTH.lat, NEAR_UTTARA_NORTH.lng));
     await Promise.resolve();
@@ -531,7 +740,8 @@ test("METRO-113 the locating status is the only status of its concern and holds 
   geolocation(() => {});
   render(<NearestStation maps={fakeMaps} />);
   fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
-  const statuses = screen.getAllByRole("status");
+  // The place-search notice has its own (empty) status region; only the locating one has text.
+  const statuses = screen.getAllByRole("status").filter((node) => node.textContent !== "");
   expect(statuses).toHaveLength(1);
   expect(within(must(statuses[0])).queryByRole("button")).toBeNull();
 });
@@ -572,13 +782,13 @@ test("METRO-88 a stale route answer for an earlier place is never shown for a la
     resolvers[0]?.(route(111, 600));
     await Promise.resolve();
   });
-  expect(screen.queryByText(/111 m/u)).toBeNull();
+  expect(screen.queryByText(/about 110 m/u)).toBeNull();
   expect(screen.getByText(copy.routeLoading)).toBeTruthy();
   await act(async () => {
     resolvers[1]?.(route(222, 120));
     await Promise.resolve();
   });
-  expect(screen.getByText("222 m, 2 min")).toBeTruthy();
+  expect(screen.getByText("about 220 m, 2 min · est.")).toBeTruthy();
 });
 
 test("METRO-88 a late route failure for an earlier place is ignored", async () => {

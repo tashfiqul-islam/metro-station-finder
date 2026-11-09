@@ -4,6 +4,8 @@ import type { ReactNode } from "react";
 import { afterAll, afterEach, beforeAll, expect, test, vi } from "vitest";
 
 import { mapsAdapter } from "../../adapters/maps";
+import { MapsContext, PLACE_INPUT_ID } from "../../adapters/maps/context";
+import type { MapsAdapter } from "../../adapters/maps/context";
 import { AppShell } from "../../shell/AppShell";
 import { fakePosition } from "../nearest-station/geolocation-fakes";
 import { Nearby } from "./Nearby";
@@ -19,18 +21,30 @@ afterAll(() => {
   Reflect.deleteProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT");
 });
 
+function noop(): void {}
+
+/** A ready adapter with a plain stand-in for the search, so the page order can be checked (no key in tests). */
+const readyMaps: MapsAdapter = {
+  Provider: ({ children }) => (
+    <MapsContext value={{ status: "ready", routes: null, load: noop }}>{children}</MapsContext>
+  ),
+  PlaceSearch: () => <input id={PLACE_INPUT_ID} aria-label="stand-in search" />,
+};
+
 /** The screen inside the shell the way `AppRoutes` wires it: the map goes up through `setMap`. */
 function Harness({
   mounted = true,
   initialSnap,
+  maps = mapsAdapter,
 }: {
+  readonly maps?: MapsAdapter;
   readonly mounted?: boolean;
   readonly initialSnap?: "peek" | "half" | "full";
 }) {
   const [map, setMap] = useState<ReactNode>(null);
   return (
     <AppShell map={map} {...(initialSnap === undefined ? {} : { initialSnap })}>
-      {mounted ? <Nearby maps={mapsAdapter} setMap={setMap} /> : null}
+      {mounted ? <Nearby maps={maps} setMap={setMap} /> : null}
     </AppShell>
   );
 }
@@ -127,7 +141,11 @@ const sheet = (): string =>
   screen.getByRole("button", { name: /^Resize panel\./u }).getAttribute("aria-label") ?? "";
 /** The locating status (the shell has its own, for the panel size). */
 const locatingStatus = (): HTMLElement =>
-  must(screen.getAllByRole("status").find((node) => !node.textContent.startsWith("Panel")));
+  must(
+    screen
+      .getAllByRole("status")
+      .find((node) => node.tagName === "OUTPUT" && !node.textContent.startsWith("Panel")),
+  );
 /** Lets the map's passive effect run: `findBy*` can resolve before it. */
 async function flush(): Promise<void> {
   await act(async () => {});
@@ -229,7 +247,7 @@ test("METRO-113 a rough fix leaves a picked station as the current result", asyn
 
 test("METRO-113 the page order is Use my location, then the place search, then Or pick a station, then the result", async () => {
   geolocation(20);
-  render(<Harness />);
+  render(<Harness maps={readyMaps} />);
   fireEvent.click(locate());
   const result = await screen.findByRole("heading", { level: 2, name: "Uttara North" });
   const label = must(document.getElementById("place-label"));
@@ -298,7 +316,8 @@ test("METRO-113 a station pick clears a stale notice on the screen", async () =>
   await screen.findByRole("group", { name: /found your position only roughly/u });
   pick("farm");
   await flush();
-  expect(document.querySelector(".notice")).toBeNull();
+  // The location notice is gone (the small place-search notice is a different one: no key in tests).
+  expect(document.querySelector(".notice:not([data-size])")).toBeNull();
   expect(resultHeadings()).toEqual(["Farmgate"]);
 });
 
