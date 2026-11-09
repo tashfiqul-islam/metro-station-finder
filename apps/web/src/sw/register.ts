@@ -28,6 +28,7 @@ export interface WorkerLike {
   addEventListener(type: "statechange", listener: () => void): void;
 }
 export interface RegistrationLike {
+  readonly active: unknown;
   readonly waiting: WorkerLike | null;
   readonly installing: WorkerLike | null;
   addEventListener(type: "updatefound", listener: () => void): void;
@@ -135,8 +136,7 @@ export async function registerWorker(
   const region = mountRegion(env.document);
   let offered = false;
   const offer = (worker: WorkerLike): void => {
-    // Without a controller this is the first install, not an update: nothing to offer.
-    if (offered || container.controller === null) return;
+    if (offered) return;
     offered = true;
     env.later(() => {
       fillPrompt(env, region, registration, worker);
@@ -145,8 +145,12 @@ export async function registerWorker(
   if (registration.waiting !== null) offer(registration.waiting);
   registration.addEventListener("updatefound", () => {
     const installing = registration.installing;
+    // Read when the worker is found, before it can activate: a registration with no active worker is on its
+    // first install, which needs no prompt. `container.controller` is not used because a first install claims the
+    // page and WebKit can report "installed" after that claim (Repo-verified: a false prompt on the first visit).
+    const isUpdate = registration.active !== null;
     installing?.addEventListener("statechange", () => {
-      if (installing.state === "installed") offer(installing);
+      if (isUpdate && installing.state === "installed") offer(installing);
     });
   });
   // A page left open for days (an installed app) checks again whenever it is shown.

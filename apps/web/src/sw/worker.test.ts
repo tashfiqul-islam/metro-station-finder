@@ -465,3 +465,26 @@ describe("attach", () => {
     fire("push", {});
   });
 });
+
+const failingAsset = (input: string | Request): Promise<Response> =>
+  urlOf(input) === "/assets/app-1.js" ? Promise.resolve(script("x", 404)) : installFetcher(input);
+const rejectsWithText = (): Promise<Response> => Promise.reject("down");
+
+describe("failed install leaves no half-filled cache", () => {
+  test("METRO-106 the cache of a version whose install failed is deleted, the others untouched, and the failure is kept", async () => {
+    const caches = fakeCaches();
+    await caches.open(`${CACHE_PREFIX}older`);
+    await expect(installShell(depsWith(failingAsset, caches))).rejects.toThrow(
+      "shell file not cacheable",
+    );
+    expect([...caches.stores.keys()]).toEqual([`${CACHE_PREFIX}older`]);
+  });
+
+  test("METRO-106 a rejection that is not an Error still fails the install with a fixed message", async () => {
+    const caches = fakeCaches();
+    await expect(installShell(depsWith(rejectsWithText, caches))).rejects.toThrow(
+      "shell file not cacheable",
+    );
+    expect(caches.stores.size).toBe(0);
+  });
+});

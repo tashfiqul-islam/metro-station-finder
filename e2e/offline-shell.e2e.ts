@@ -567,21 +567,28 @@ test.describe("update flow", () => {
   }) => {
     const v1 = await installed(page);
     deploy.current = second(first, { broken: ["/assets/never-built.js"] });
+    // Record the new worker's states from the page, so "it failed" is observed (redundant), not assumed.
+    await page.evaluate(async () => {
+      const registration = await navigator.serviceWorker.getRegistration();
+      const states: string[] = [];
+      Reflect.set(window, "__states", states);
+      registration?.addEventListener("updatefound", () => {
+        states.push("updatefound");
+        const worker = registration.installing;
+        worker?.addEventListener("statechange", () => states.push(worker.state));
+      });
+    });
     await checkForUpdate(page);
-    // The install fails (404 in the list), so the new worker never waits and there is no prompt.
+    // The install fails (404 in the list): the new worker becomes redundant, never installed.
     await expect
-      .poll(() =>
-        page.evaluate(async () => {
-          const registration = await navigator.serviceWorker.getRegistration();
-          return [
-            registration?.installing?.state ?? "none",
-            registration?.waiting?.state ?? "none",
-          ];
-        }),
-      )
-      .toEqual(["none", "none"]);
+      .poll(() => page.evaluate(() => String(Reflect.get(window, "__states"))))
+      .toContain("redundant");
+    expect(await page.evaluate(() => String(Reflect.get(window, "__states")))).not.toContain(
+      "installed",
+    );
+    // Its half-filled cache is removed; v1 keeps its own.
+    await expect.poll(() => cacheNames(page)).toEqual([v1]);
     await expect(updateRegion(page)).toHaveCount(0);
-    expect(await cacheNames(page)).toContain(v1);
     await goOffline(context, browserName);
     await page.reload();
     expect(await versionMarker(page)).toBeNull();

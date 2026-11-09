@@ -104,9 +104,18 @@ async function fetchShellFile(deps: Deps, path: string): Promise<Response> {
 /** Installs the shell into this version's cache. Rejecting fails the install, so the old worker stays. */
 export async function installShell(deps: Deps): Promise<void> {
   const cache = await deps.caches.open(cacheName(deps.config));
-  await Promise.all(
+  // Every file settles before the verdict, so no put is still running when a failed cache is deleted.
+  const results = await Promise.allSettled(
     deps.config.precache.map(async (path) => cache.put(path, await fetchShellFile(deps, path))),
   );
+  const failure = results.find(
+    (result): result is PromiseRejectedResult => result.status === "rejected",
+  );
+  if (failure !== undefined) {
+    // A half-filled cache would be served as this version if the same worker installed again.
+    await deps.caches.delete(cacheName(deps.config));
+    throw failure.reason instanceof Error ? failure.reason : new Error("shell file not cacheable");
+  }
 }
 
 /** Deletes the caches of every other version (or all of them, for the kill switch). */

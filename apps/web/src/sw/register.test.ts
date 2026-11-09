@@ -26,6 +26,7 @@ class FakeWorker implements WorkerLike {
 }
 
 class FakeRegistration implements RegistrationLike {
+  active: unknown = {};
   waiting: WorkerLike | null = null;
   installing: WorkerLike | null = null;
   updates = 0;
@@ -118,7 +119,7 @@ test("METRO-106 the region falls back to the body when the shell has no toast re
 
 test("METRO-106 the first install (no controller yet) offers nothing", async () => {
   const { container, env, timers } = setup();
-  container.controller = null;
+  container.registration.active = null;
   await registerWorker(container, env);
   const worker = new FakeWorker();
   container.registration.found(worker);
@@ -276,4 +277,17 @@ test("METRO-106 Reload tells the registration's waiting worker, not a stale refe
   region()?.querySelector<HTMLButtonElement>("button.toast__action")?.click();
   expect(current.messages).toEqual([{ type: "skip-waiting" }]);
   expect(stale.messages).toEqual([]);
+});
+
+test("METRO-106 a first install whose 'installed' event arrives after the page was claimed offers nothing (WebKit order)", async () => {
+  const { container, env, timers } = setup();
+  container.registration.active = null;
+  await registerWorker(container, env);
+  // The claim makes a controller appear before the page hears that the worker is installed.
+  container.controller = {};
+  const worker = new FakeWorker();
+  container.registration.found(worker);
+  worker.become("installed");
+  expect(timers).toEqual([]);
+  expect(region()?.childElementCount).toBe(0);
 });
