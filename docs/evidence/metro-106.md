@@ -64,7 +64,7 @@ Lab web vitals (Repo-verified, `e2e/web-vitals-lab.e2e.ts`, Chromium, the worker
 
 ## Smoke
 
-SMOKE_RESULT
+`CI=true bun run smoke --shuffle`, Chromium, Firefox, WebKit and Pixel 7 Chromium, on the final code (after merging `177ece1`): 635 passed, 22 skipped, 0 failed, no retries (4.8 minutes). The 22 skips are the 19 browser-specific skips of the base plus the three Firefox skips of this ticket (`setOffline`, reason on each test). Earlier full runs of the same suite had one or two failures each, all in the Reload tests of this spec (the Chromium takeover race, see Findings) before the settle-and-stop step, and two existing heavy specs on a loaded machine. Targeted stress (12 workers, Chromium and Pixel 7, 10 repeats of the whole spec) with the final code: 4 failures in 340, all in the Reload tests. `bun run bundle:check` and `bun run check` pass on the final code. Port 4173 was held by other sessions several times; I waited for it each time and never stopped another session's server.
 
 ## Existing tests edited (and why)
 
