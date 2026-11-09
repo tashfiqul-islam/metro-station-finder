@@ -48,3 +48,19 @@ test("METRO-106 a chunk that cannot load, or a registration that fails, is dropp
   log.mockRestore();
   warn.mockRestore();
 });
+
+test("METRO-106 the default loader imports the real registration module, which does nothing without worker support", async () => {
+  // happy-dom has no navigator.serviceWorker: registration returns quietly and mounts nothing.
+  const tasks: (() => void)[] = [];
+  startServiceWorker(true, (run) => {
+    tasks.push(run);
+  });
+  tasks[0]?.();
+  await vi.waitFor(() => {
+    expect(document.querySelector("[role=status]")).toBeNull();
+  });
+  await new Promise((resolve) => {
+    setTimeout(resolve, 50);
+  });
+  expect(document.querySelector("[role=status]")).toBeNull();
+});

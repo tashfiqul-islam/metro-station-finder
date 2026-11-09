@@ -9,7 +9,7 @@ import { SKIP_WAITING } from "./message";
 
 export const CACHE_PREFIX = "metro-shell-";
 /** The cached page for every navigation: the app is one screen at every path (AppRoutes). */
-export const SHELL_KEY = "/";
+const SHELL_KEY = "/";
 const NETWORK_WAIT_MS = 3000;
 
 export interface WorkerConfig {
@@ -30,8 +30,8 @@ export interface CachesLike {
   keys(): Promise<string[]>;
   delete(name: string): Promise<boolean>;
 }
-export type Fetcher = (input: string | Request, init?: RequestInit) => Promise<Response>;
-export type Wait = (task: () => void, ms: number) => void;
+type Fetcher = (input: string | Request, init?: RequestInit) => Promise<Response>;
+type Wait = (task: () => void, ms: number) => void;
 
 export interface Deps {
   readonly caches: CachesLike;

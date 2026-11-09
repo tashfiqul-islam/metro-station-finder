@@ -58,8 +58,8 @@ export async function listFiles(root: string, directory = root): Promise<string[
 export function shellPaths(files: readonly string[]): string[] {
   const paths = files
     .filter((file) => !NOT_SHELL.has(file) && !file.endsWith(".map") && file !== "index.html")
-    .map((file) => `/${file}`)
-    .toSorted();
+    .map((file) => `/${file}`);
+  paths.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
   return files.includes("index.html") ? ["/", ...paths] : paths;
 }
 

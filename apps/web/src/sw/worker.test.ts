@@ -120,7 +120,7 @@ describe("route", () => {
 describe("installShell", () => {
   test("stores every shell file under its path in this version's cache", async () => {
     const caches = fakeCaches();
-    const fetcher = vi.fn((input: string | Request) =>
+    const fetcher = vi.fn((input: string | Request, _init?: RequestInit) =>
       Promise.resolve(input === "/" ? page() : script(urlOf(input))),
     );
     await installShell(depsWith(fetcher, caches));
@@ -411,8 +411,9 @@ describe("attach", () => {
     send("https://maps.googleapis.com/maps/api/js", "no-cors");
     expect(answers).toHaveLength(2);
     // The first answer is the network race: let its 3 s timer be recorded but never fired.
-    expect(await (await answers[0]).text()).toBe("net");
-    expect(await (await answers[1]).text()).toBe("boot");
+    const [network, cached] = await Promise.all(answers);
+    expect(await network?.text()).toBe("net");
+    expect(await cached?.text()).toBe("boot");
   });
 
   test("the wait for the network is scheduled on the worker's own timer", async () => {
