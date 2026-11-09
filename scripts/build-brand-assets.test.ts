@@ -72,9 +72,9 @@ function fakeRasteriser(difference = 0): Rasteriser & { closed: number; rendered
   const state = {
     closed: 0,
     rendered: [] as string[],
-    render(svg: string, size: number): Promise<Uint8Array> {
-      state.rendered.push(`${size}:${svg}`);
-      return Promise.resolve(fakePng(size, size, encode(svg)));
+    render(svg: string, size: number, height = size): Promise<Uint8Array> {
+      state.rendered.push(`${size}x${height}:${svg}`);
+      return Promise.resolve(fakePng(size, height, encode(svg)));
     },
     largestDifference(a: Uint8Array, b: Uint8Array): Promise<number> {
       if (a.length !== b.length) return Promise.resolve(-1);
@@ -141,6 +141,15 @@ describe("sized", () => {
     expect(sized('<svg width="16.5" height="16.5"/>', 32)).toBe('<svg width="32" height="32"/>');
   });
 
+  test("sets a different height for a non-square output", () => {
+    expect(sized('<svg width="1200" height="630"/>', 1200, 630)).toBe(
+      '<svg width="1200" height="630"/>',
+    );
+    expect(sized('<svg width="24" height="24"/>', 600, 315)).toBe(
+      '<svg width="600" height="315"/>',
+    );
+  });
+
   test("throws a fixed error when the master has no width and height pair", () => {
     expect(() => sized('<svg viewBox="0 0 24 24"/>', 64)).toThrow(NO_SIZE_PAIR);
   });
@@ -161,13 +170,19 @@ describe("buildAssets", () => {
         "icons/icon-maskable-512.png",
         "icons/icon-monochrome-512.png",
         "manifest.webmanifest",
+        "og/og-default.png",
         "robots.txt",
       ]),
     );
     expect(new TextDecoder().decode(files.get("manifest.webmanifest"))).toBe(MANIFEST_JSON);
     expect(new TextDecoder().decode(files.get("robots.txt"))).toBe(ROBOTS_TXT);
     expect(new TextDecoder().decode(files.get("favicon.svg"))).toBe(svgFor("favicon.svg"));
-    expect(rasteriser.rendered).toContain(`180:${sized(svgFor("apple-touch-icon.svg"), 180)}`);
+    expect(rasteriser.rendered).toContain(`180x180:${sized(svgFor("apple-touch-icon.svg"), 180)}`);
+    // The share image is the one non-square job: drawn at 1200 x 630, validated at that size.
+    expect(rasteriser.rendered).toContain(`1200x630:${sized(svgFor("og-default.svg"), 1200, 630)}`);
+    expect(imageSize(files.get("og/og-default.png") ?? new Uint8Array())?.sizes).toEqual([
+      { width: 1200, height: 630 },
+    ]);
     expect(rasteriser.rendered).toHaveLength(PNG_JOBS.length + ICO_JOBS.length);
     const ico = files.get("favicon.ico") ?? new Uint8Array();
     expect(imageSize(ico)?.sizes.map((size) => size.width)).toEqual([16, 32, 48]);
@@ -195,14 +210,24 @@ describe("buildAssets", () => {
     );
     const onlyIcoWrong = {
       ...fakeRasteriser(),
-      render: (svg: string, size: number) =>
+      render: (svg: string, size: number, height = size) =>
         Promise.resolve(
-          size <= 48 ? fakePng(size + 1, size, encode(svg)) : fakePng(size, size, encode(svg)),
+          size <= 48 ? fakePng(size + 1, size, encode(svg)) : fakePng(size, height, encode(svg)),
         ),
     };
     await expectRejection(
       buildAssets(onlyIcoWrong, (name) => Promise.resolve(svgFor(name))),
       "favicon.ico image 16 was not rendered as a 16x16 PNG",
+    );
+    // A square 1200x1200 for the share image is as wrong as a wrong size: the 1200x630 shape is checked.
+    const squareShare = {
+      ...fakeRasteriser(),
+      render: (svg: string, size: number, height = size) =>
+        Promise.resolve(fakePng(size, height === 630 ? size : height, encode(svg))),
+    };
+    await expectRejection(
+      buildAssets(squareShare, (name) => Promise.resolve(svgFor(name))),
+      "og/og-default.png was not rendered as a 1200x630 PNG",
     );
   });
 });
@@ -433,6 +458,7 @@ describe("brandMain", () => {
         "icon-monochrome.svg",
         "mark-micro.svg",
         "mark-small.svg",
+        "og-default.svg",
       ]);
     });
   });
@@ -442,11 +468,11 @@ describe("brandMain", () => {
       const lines: string[] = [];
       const deps = { root, rasteriser: fakeRasteriser(), log: (line: string) => lines.push(line) };
       expect(await brandMain(["--write"], deps)).toBe(0);
-      expect(lines).toEqual([`Wrote 10 files to ${PUBLIC_DIR} and ${LOCK_FILE}`]);
+      expect(lines).toEqual([`Wrote 11 files to ${PUBLIC_DIR} and ${LOCK_FILE}`]);
       expect(imageSize(await readFile(join(root, PUBLIC_DIR, "favicon.ico")))?.format).toBe("ico");
       lines.length = 0;
       expect(await brandMain(["--check"], deps)).toBe(0);
-      expect(lines).toEqual(["10 generated files match the masters"]);
+      expect(lines).toEqual(["11 generated files match the masters"]);
     });
   });
 

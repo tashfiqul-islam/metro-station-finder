@@ -35,7 +35,7 @@ const manifest: unknown = JSON.parse(readFileSync(join(publicDir, "manifest.webm
 
 /**
  * Size cap per shipped file, in bytes: about 20 percent above the committed size, so a re-export that
- * balloons fails, and a new file in public/ must be listed here on purpose (no stray og image, no font).
+ * balloons fails, and a new file in public/ must be listed here on purpose (no stray image, no font).
  */
 const CAPS: Record<string, number> = {
   _headers: 2_000,
@@ -51,6 +51,8 @@ const CAPS: Record<string, number> = {
   // METRO-105: third-party notices (fonts, icons) and the pre-paint theme script; fonts stay in src/, hashed.
   "licenses.txt": 14_500,
   "manifest.webmanifest": 2_000,
+  // METRO-122: the 1200 x 630 share image (503,569 bytes committed; a link preview needs well under 5 MB).
+  "og/og-default.png": 600_000,
   "robots.txt": 200,
   "theme-boot.js": 600,
 };
@@ -64,8 +66,8 @@ describe("brand assets on disk (METRO-107)", () => {
     }
   });
 
-  test("the offline share image is still not shipped: it needs an outlined-text master and the production origin (METRO-106 evidence)", () => {
-    expect(walk(publicDir).filter((file) => file.startsWith("og/"))).toEqual([]);
+  test("the only file under og/ is the share image, generated from its outlined-text master (METRO-122)", () => {
+    expect(walk(publicDir).filter((file) => file.startsWith("og/"))).toEqual(["og/og-default.png"]);
   });
 
   test("the manifest on disk is the one the script writes, and is valid", () => {
@@ -145,10 +147,46 @@ describe("brand assets on disk (METRO-107)", () => {
     ]);
   });
 
+  test("the share image is 1200 x 630, the size its og:image:width and og:image:height declare", () => {
+    expect(PNG_JOBS.filter((job) => job.height !== undefined)).toEqual([
+      { out: "og/og-default.png", source: "og-default.svg", size: 1200, height: 630 },
+    ]);
+    expect(imageSize(bytes("og/og-default.png"))?.sizes).toEqual([{ width: 1200, height: 630 }]);
+  });
+
+  test("the share image master is 1200 x 630 vector shapes only, in the approved palette (METRO-122)", () => {
+    const svg = readFileSync(join(brandDir, "og-default.svg"), "utf8");
+    expect(svg).toContain('width="1200" height="630" viewBox="0 0 1200 630"');
+    // Text is outlined paths, and nothing is fetched, filtered, masked or referenced.
+    expect(svg).not.toMatch(
+      /<(?:text|tspan|image|use|filter|mask|pattern|foreignObject|style|script|font)[\s>]|xlink|data:|url\((?!#)/iu,
+    );
+    // Every colour is a token (#060A0A #F2F3F5 #9AA0AB #3FD5C8 #8CC8FF #1D6FB8 #141619 #075760 #101215),
+    // the preview pane #1A1D21, or one of the three documented non-tokens (#020404 #000000 #FFFFFF).
+    const allowed = new Set([
+      "#060A0A",
+      "#F2F3F5",
+      "#9AA0AB",
+      "#3FD5C8",
+      "#8CC8FF",
+      "#1D6FB8",
+      "#141619",
+      "#075760",
+      "#101215",
+      "#1A1D21",
+      "#020404",
+      "#000000",
+      "#FFFFFF",
+    ]);
+    const used = new Set((svg.match(/#[0-9A-Fa-f]{3,8}\b/gu) ?? []).map((c) => c.toUpperCase()));
+    expect([...used].filter((colour) => !allowed.has(colour))).toEqual([]);
+    expect(svg).not.toMatch(/offline/iu);
+  });
+
   test("every generated PNG exists at its declared pixel size", () => {
     for (const job of PNG_JOBS) {
       expect(imageSize(bytes(job.out))?.sizes, job.out).toEqual([
-        { width: job.size, height: job.size },
+        { width: job.size, height: job.height ?? job.size },
       ]);
     }
   });
@@ -194,6 +232,8 @@ describe("index.html head (METRO-107)", () => {
     )) {
       expect(statSync(join(publicDir, (href ?? "").slice(1))).isFile(), href).toBe(true);
     }
+    // The only absolute URLs are the canonical, og:url and og:image tags, written as the origin token that
+    // `scripts/site-origin.ts` fills in (checked in `scripts/site-origin.test.ts`); the page itself names none.
     expect(html).not.toMatch(/(?:src|href|content)="https?:\/\//u);
   });
 

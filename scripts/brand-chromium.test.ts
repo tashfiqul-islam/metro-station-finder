@@ -51,6 +51,16 @@ describe("chromiumRasteriser", () => {
     ]);
   });
 
+  test("renders a non-square SVG at its own width and height", async () => {
+    const { browser, calls } = fakeBrowser(0);
+    const rasteriser = await chromiumRasteriser({ launch: () => Promise.resolve(browser) });
+    await rasteriser.render("<svg/>", 1200, 630);
+    expect(calls[0]).toBe("viewport 1200x630");
+    expect(calls[2]).toBe(
+      'screenshot {"omitBackground":true,"clip":{"x":0,"y":0,"width":1200,"height":630}}',
+    );
+  });
+
   test("asks the page for the largest difference, passing both images as base64", async () => {
     const { browser, calls } = fakeBrowser(4);
     const rasteriser = await chromiumRasteriser({ launch: () => Promise.resolve(browser) });

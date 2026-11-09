@@ -98,6 +98,13 @@ test("METRO-106 the large, maskable and monochrome icons are not precached; the 
   expect(paths).toEqual(["/", "/apple-touch-icon.png", "/icons/icon-192.png"]);
 });
 
+test("METRO-122 the share image is never part of the offline shell", () => {
+  expect(shellPaths(["index.html", "og/og-default.png", "icons/icon-192.png"])).toEqual([
+    "/",
+    "/icons/icon-192.png",
+  ]);
+});
+
 test("METRO-106 shellPaths without a page lists files only, and never sw.js itself", () => {
   expect(shellPaths(["sw.js", "a.txt"])).toEqual(["/a.txt"]);
 });
