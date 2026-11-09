@@ -78,12 +78,21 @@ interface SliceProps {
   readonly pickSeq?: number;
 }
 
-function noticeText(notice: Notice): string {
-  if (notice.kind === "denied") return copy.denied;
-  if (notice.kind === "unavailable") return copy.unavailable;
-  return notice.meters === null
-    ? copy.roughUnknown
-    : copy.roughKnown(formatAccuracy(notice.meters));
+/**
+ * The notice text. Its suggested next step names only what is available right now (METRO-120): searching for a
+ * place while place search is available, picking a station while it is not. Recomputed on every render, so the
+ * text follows the connection coming back or going away while the notice is showing.
+ */
+function noticeText(notice: Notice, searchAvailable: boolean): string {
+  const variants =
+    notice.kind === "denied"
+      ? copy.denied
+      : notice.kind === "unavailable"
+        ? copy.unavailable
+        : notice.meters === null
+          ? copy.roughUnknown
+          : copy.roughKnown(formatAccuracy(notice.meters));
+  return searchAvailable ? variants.search : variants.pick;
 }
 
 function Slice({
@@ -156,6 +165,23 @@ function Slice({
     }
   }, [searchAvailable]);
 
+  // Place search went away while a location notice showed (METRO-120): its "Search for a place" action leaves with
+  // it. If focus was on that action it fell to the page; the notice takes it, so the keyboard user is not lost.
+  // Only when that action really had focus as it was removed (its ref cleanup records that): a user who clicked
+  // the blank page keeps focus there. A flag set while search is available is dropped after each commit.
+  const actionHadFocus = useRef(false);
+  useEffect(() => {
+    if (searchAvailable) {
+      actionHadFocus.current = false;
+      return;
+    }
+    if (!actionHadFocus.current) return;
+    actionHadFocus.current = false;
+    if (document.activeElement === null || document.activeElement === document.body) {
+      document.getElementById("location-notice-text")?.closest<HTMLElement>(".notice")?.focus();
+    }
+  });
+
   function show(origin: Coordinate, source: LocationSource): void {
     // A late device fix never pulls focus (or the sheet) out of the search box the user is typing in.
     const focus = !(source === "device" && engagedWithSearch.current);
@@ -189,6 +215,7 @@ function Slice({
     const mine = latestAction.current;
     const pickAtStart = pickNow.current;
     engagedWithSearch.current = false;
+    actionHadFocus.current = false;
     // Try again unmounts the notice that held focus: keep focus on the stable button.
     if (document.activeElement?.closest(".notice")) locateButton.current?.focus();
     setNotice(null);
@@ -218,7 +245,18 @@ function Slice({
   // With place search unavailable (the library failed or has no key) there is nothing to move to, so the action
   // is left out and the notice keeps Try again (or, for denied, nothing: the notice itself takes focus).
   const searchLink = !searchAvailable ? null : (
-    <button type="button" className="btn btn--quiet btn--sm" onClick={focusSearch}>
+    <button
+      type="button"
+      className="btn btn--quiet btn--sm"
+      onClick={focusSearch}
+      ref={(node) => {
+        // The cleanup runs as React detaches the button, before the node leaves the page, so activeElement is
+        // still the button if it had focus.
+        return () => {
+          if (document.activeElement === node) actionHadFocus.current = true;
+        };
+      }}
+    >
       <Icon icon={searchIcon} size={16} />
       {copy.searchLabel}
     </button>
@@ -245,7 +283,7 @@ function Slice({
           <LocationNotice
             tone={notice.kind === "denied" ? "bad" : "warn"}
             icon={notice.kind === "denied" ? locateOffIcon : alertIcon}
-            text={noticeText(notice)}
+            text={noticeText(notice, searchAvailable)}
             takeFocus={notice.focus}
             actions={
               notice.kind === "denied" ? (

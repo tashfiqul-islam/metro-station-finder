@@ -49,7 +49,7 @@ function Pending(): ReactNode {
  *
  * Accessibility: like a route change, the failure takes focus (a `tabIndex={-1}` region named by the fixed
  * text, which is read once when focus lands) and has NO `role="alert"`; an alert plus moved focus can
- * announce the same text twice. The visible focus ring comes from `base.css` (`[tabindex="-1"]:focus`).
+ * announce the same text twice. The visible focus ring comes from `base.css` (`section:focus`, forced on script focus; METRO-118).
  */
 class FeatureBoundary<P extends object> extends Component<Props<P>, State> {
   override state: State = { failed: false, foreign: null };

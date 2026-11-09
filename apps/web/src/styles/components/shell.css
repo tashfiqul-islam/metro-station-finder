@@ -199,8 +199,8 @@
   padding: 4px 18px 32px;
   scroll-padding-bottom: 96px;
 }
-/* tabindex="-1" keeps Firefox from making the scroller its own Tab stop; a click on it must not draw the
-   programmatic-focus ring of base.css around the whole panel. */
+/* tabindex="-1" keeps Firefox from making the scroller its own Tab stop; a click on it must not draw a ring
+   around the whole panel (`:focus-visible` can match it after a key press). */
 .panel__scroll:focus {
   outline: none;
 }
