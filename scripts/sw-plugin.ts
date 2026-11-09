@@ -3,7 +3,7 @@ import { readdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 /**
- * Build step of the offline shell worker (METRO-106, ADR-0023): after the client build is on disk it lists
+ * Build step of the offline shell worker (METRO-106, ADR-0024): after the client build is on disk it lists
  * the shell, checks the list against Vite's manifest, derives the version from the content and writes
  * `sw.js` beside `index.html`. The worker source itself (`apps/web/src/sw/`) is bundled by the caller,
  * which injects `bundle`, so this module stays free of Vite and testable with a plain directory.
@@ -24,6 +24,12 @@ export interface WorkerConfig {
 const NOT_SHELL = new Set([
   "sw.js",
   "favicon.ico",
+  // The large, maskable and monochrome PNG icons are only read by an install prompt, online (METRO-106 review):
+  // about 250 KB the offline shell does not need. `icons/icon-192.png` and `apple-touch-icon.png` stay.
+  "icons/icon-512.png",
+  "icons/icon-maskable-192.png",
+  "icons/icon-maskable-512.png",
+  "icons/icon-monochrome-512.png",
   "_headers",
   ".assetsignore",
   "robots.txt",
@@ -32,6 +38,8 @@ const NOT_SHELL = new Set([
   ".dev.vars",
 ]);
 const NOT_SHELL_DIRECTORIES = new Set([".vite"]);
+
+const PLACEHOLDER_VERSION = "000000000000";
 
 /** Fixed message: the file list never goes into it. */
 export const SHELL_MISMATCH =
@@ -103,7 +111,7 @@ export function versionOf(entries: readonly (readonly [string, Uint8Array])[]): 
 export interface WorkerBuild {
   /** Bundles `apps/web/src/sw/sw.ts` with the config baked in; returns the script text. */
   readonly bundle: (config: WorkerConfig) => Promise<string>;
-  /** Build the kill-switch worker instead of the shell worker (ADR-0023). */
+  /** Build the kill-switch worker instead of the shell worker (ADR-0024). */
   readonly kill: boolean;
 }
 
@@ -121,7 +129,17 @@ export async function writeWorker(root: string, build: WorkerBuild): Promise<Wor
         [path, await readFile(join(root, path === "/" ? "index.html" : path.slice(1)))] as const,
     ),
   );
-  const config: WorkerConfig = { version: versionOf(entries), precache, kill: build.kill };
+  // The version covers the worker's own bytes too: a release that changes only the worker logic (or switches
+  // the kill flag) must not reuse the cache name of the worker that is live. The bundle contains its version,
+  // so it is built once with a fixed placeholder, hashed, and built again with the real one.
+  const text = new TextEncoder();
+  const draft = await build.bundle({ version: PLACEHOLDER_VERSION, precache, kill: build.kill });
+  const version = versionOf([
+    ...entries,
+    ["worker", text.encode(draft)],
+    ["kill", text.encode(String(build.kill))],
+  ]);
+  const config: WorkerConfig = { version, precache, kill: build.kill };
   await writeFile(join(root, "sw.js"), await build.bundle(config));
   return config;
 }

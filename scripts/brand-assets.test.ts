@@ -97,17 +97,14 @@ describe("brand assets on disk (METRO-107)", () => {
     // The manifest carries exactly one mention, the pinned sentence (manifestProblems enforces the wording).
     const text = readFileSync(join(publicDir, "manifest.webmanifest"), "utf8");
     expect(text.match(/offline/giu)).toHaveLength(1);
-    // Backed by the worker: its source, its build step and its registration all exist in the repository.
-    for (const file of [
-      "apps/web/src/sw/worker.ts",
-      "apps/web/src/sw/sw.ts",
-      "apps/web/src/sw/register.ts",
-      "scripts/sw-plugin.ts",
-    ]) {
-      expect(statSync(join(root, file)).size, file).toBeGreaterThan(0);
-    }
+    // Backed by the worker, wired end to end: the build step is a Vite plugin, the app starts the registration.
+    // (The earlier version of this test only checked that the worker files exist, which proved nothing; the real
+    // proof that the worker is built and registered is the built-output test in `e2e/station-picker.e2e.ts`.)
     expect(readFileSync(join(root, "apps/web/vite.config.ts"), "utf8")).toContain(
-      "serviceWorkerPlugin",
+      "serviceWorkerPlugin({",
+    );
+    expect(readFileSync(join(root, "apps/web/src/main.tsx"), "utf8")).toContain(
+      "startServiceWorker();",
     );
     for (const entry of readdirSync(brandDir).filter((name) => name.endsWith(".svg"))) {
       expect(readFileSync(join(brandDir, entry), "utf8"), entry).not.toMatch(/offline/iu);

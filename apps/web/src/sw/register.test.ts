@@ -67,6 +67,7 @@ interface Setup {
   timers: { task: () => void; ms: number }[];
   reloads: number[];
   online: { value: boolean };
+  onlineTasks: (() => void)[];
 }
 
 function setup(): Setup {
@@ -74,14 +75,16 @@ function setup(): Setup {
   const timers: Setup["timers"] = [];
   const reloads: number[] = [];
   const online = { value: true };
+  const onlineTasks: (() => void)[] = [];
   const env: Env = {
     container,
     document,
     reload: () => reloads.push(1),
     later: (task, ms) => timers.push({ task, ms }),
     online: () => online.value,
+    whenOnline: (task) => onlineTasks.push(task),
   };
-  return { container, env, timers, reloads, online };
+  return { container, env, timers, reloads, online, onlineTasks };
 }
 
 beforeEach(() => {
@@ -101,6 +104,10 @@ const fire = (timers: Setup["timers"], ms: number): void => {
   for (const timer of timers.filter((item) => item.ms === ms)) timer.task();
 };
 const region = (): Element | null => document.querySelector(".toast-region [role=status]");
+const action = (): HTMLButtonElement | null | undefined =>
+  region()?.querySelector<HTMLButtonElement>("button.toast__action");
+const close = (): HTMLButtonElement | null | undefined =>
+  region()?.querySelector<HTMLButtonElement>("button[aria-label=Dismiss]");
 
 test("METRO-106 registers /sw.js with root scope and no HTTP caching of the worker, and mounts an empty status region", async () => {
   const { container, env } = setup();
@@ -117,7 +124,7 @@ test("METRO-106 the region falls back to the body when the shell has no toast re
   expect(document.body.querySelector(":scope > [role=status]")).not.toBeNull();
 });
 
-test("METRO-106 the first install (no controller yet) offers nothing", async () => {
+test("METRO-106 the first install (no active worker when found) offers nothing", async () => {
   const { container, env, timers } = setup();
   container.registration.active = null;
   await registerWorker(container, env);
@@ -128,7 +135,22 @@ test("METRO-106 the first install (no controller yet) offers nothing", async () 
   expect(region()?.childElementCount).toBe(0);
 });
 
-test("METRO-106 an update that installs while a worker controls the page fills the prompt after the region was mounted empty", async () => {
+test("METRO-106 a first install whose 'installed' event arrives after the page was claimed offers nothing (WebKit order)", async () => {
+  const { container, env, timers } = setup();
+  container.registration.active = null;
+  container.controller = null;
+  await registerWorker(container, env);
+  const worker = new FakeWorker();
+  container.registration.found(worker);
+  // The claim makes a controller appear (a change from none) before the page hears the worker is installed.
+  container.controller = {};
+  container.takeOver();
+  worker.become("installed");
+  expect(timers).toEqual([]);
+  expect(region()?.childElementCount).toBe(0);
+});
+
+test("METRO-106 an update that installs while a worker is active fills the prompt after the region was mounted empty", async () => {
   const { container, env, timers } = setup();
   await registerWorker(container, env);
   const worker = new FakeWorker();
@@ -142,44 +164,98 @@ test("METRO-106 an update that installs while a worker controls the page fills t
   fire(timers, 100);
   expect(region()?.textContent).toContain(swCopy.ready);
   expect(region()?.querySelectorAll("button")).toHaveLength(2);
-  expect(region()?.querySelector("button[aria-label=Dismiss]")).not.toBeNull();
+  expect(close()).not.toBeNull();
 });
 
 test("METRO-106 a worker already waiting at registration is offered too", async () => {
   const { container, env, timers } = setup();
-  const waiting = new FakeWorker();
-  container.registration.waiting = waiting;
+  container.registration.waiting = new FakeWorker();
   await registerWorker(container, env);
   fire(timers, 100);
   expect(region()?.textContent).toContain(swCopy.ready);
 });
 
-test("METRO-106 Reload sends only the skip-waiting message, and the page reloads once the new worker has taken over", async () => {
+test("METRO-106 Reload messages the registration's waiting worker, moves focus to Dismiss at once, says Updating, and the page reloads once the worker has taken over", async () => {
   const { container, env, timers, reloads } = setup();
   const waiting = new FakeWorker();
   container.registration.waiting = waiting;
   await registerWorker(container, env);
   fire(timers, 100);
-  // A takeover that nobody asked for (the first install claiming the page) does not reload.
-  container.takeOver();
-  expect(reloads).toEqual([]);
-  region()?.querySelector<HTMLButtonElement>("button.toast__action")?.click();
+  // A takeover that nobody asked for in a page that had no controller does not reload.
+  action()?.focus();
+  expect(document.activeElement).toBe(action());
+  action()?.click();
   expect(waiting.messages).toEqual([{ type: "skip-waiting" }]);
+  // Focus is not left on a button that just disappeared, and the polite status says what is going on.
+  expect(action()?.hidden).toBe(true);
+  expect(document.activeElement).toBe(close());
+  expect(region()?.textContent).toContain(swCopy.updating);
   expect(reloads).toEqual([]);
   container.takeOver();
   expect(reloads).toEqual([1]);
 });
 
-test("METRO-106 when the new worker never takes over, the prompt says so (fixed text) and puts focus on Dismiss", async () => {
+test("METRO-106 when the new worker never takes over, the status says so in fixed words and focus stays on Dismiss", async () => {
   const { container, env, timers } = setup();
   container.registration.waiting = new FakeWorker();
   await registerWorker(container, env);
   fire(timers, 100);
-  region()?.querySelector<HTMLButtonElement>("button.toast__action")?.click();
-  expect(region()?.querySelector("button.toast__action")?.hasAttribute("hidden")).toBe(true);
+  action()?.click();
   fire(timers, 5000);
   expect(region()?.textContent).toContain(swCopy.failed);
-  expect(document.activeElement?.getAttribute("aria-label")).toBe("Dismiss");
+  expect(region()?.textContent).not.toContain(swCopy.updating);
+  expect(document.activeElement).toBe(close());
+});
+
+test("METRO-106 Reload tells the waiting worker the registration holds now, not a stale reference to an older one (WebKit)", async () => {
+  const { container, env, timers } = setup();
+  const stale = new FakeWorker();
+  const current = new FakeWorker();
+  container.registration.waiting = stale;
+  await registerWorker(container, env);
+  container.registration.waiting = current;
+  fire(timers, 100);
+  action()?.click();
+  expect(current.messages).toEqual([{ type: "skip-waiting" }]);
+  expect(stale.messages).toEqual([]);
+});
+
+test("METRO-106 Reload after another tab already applied the update only reloads, and tells no worker", async () => {
+  const { container, env, timers, reloads } = setup();
+  const waiting = new FakeWorker();
+  container.registration.waiting = waiting;
+  await registerWorker(container, env);
+  fire(timers, 100);
+  container.registration.waiting = null; // another tab pressed Reload: the worker is active now
+  action()?.click();
+  expect(reloads).toEqual([1]);
+  expect(waiting.messages).toEqual([]);
+});
+
+test("METRO-106 a tab that did not press Reload hears the takeover and is offered the reload instead of running old pages under a new worker", async () => {
+  const { container, env, timers, reloads } = setup();
+  await registerWorker(container, env);
+  container.takeOver(); // another tab applied the update
+  expect(reloads).toEqual([]);
+  expect(timers.map((timer) => timer.ms)).toEqual([100]);
+  fire(timers, 100);
+  expect(region()?.textContent).toContain(swCopy.ready);
+  action()?.click();
+  expect(reloads).toEqual([1]);
+  // Offered once: a second takeover does not stack another prompt.
+  container.takeOver();
+  expect(region()?.querySelectorAll(".toast")).toHaveLength(1);
+});
+
+test("METRO-106 a page that was uncontrolled when it loaded does not treat its first claim as an update, but a later takeover is one", async () => {
+  const { container, env, timers } = setup();
+  container.controller = null;
+  await registerWorker(container, env);
+  container.controller = {};
+  container.takeOver(); // the first install claims the page
+  expect(timers).toEqual([]);
+  container.takeOver(); // a later takeover by another tab's update
+  expect(timers.map((timer) => timer.ms)).toEqual([100]);
 });
 
 test("METRO-106 Dismiss removes the prompt and returns focus to the panel; the worker still waits", async () => {
@@ -188,9 +264,8 @@ test("METRO-106 Dismiss removes the prompt and returns focus to the panel; the w
   container.registration.waiting = waiting;
   await registerWorker(container, env);
   fire(timers, 100);
-  const dismiss = region()?.querySelector<HTMLButtonElement>("button[aria-label=Dismiss]");
-  dismiss?.focus();
-  dismiss?.click();
+  close()?.focus();
+  close()?.click();
   expect(region()?.childElementCount).toBe(0);
   expect(document.activeElement).toBe(document.querySelector(".panel__scroll"));
   expect(waiting.messages).toEqual([]);
@@ -204,7 +279,7 @@ test("METRO-106 Dismiss without focus inside the prompt leaves focus alone", asy
   const outside = document.createElement("button");
   document.body.append(outside);
   outside.focus();
-  region()?.querySelector<HTMLButtonElement>("button[aria-label=Dismiss]")?.click();
+  close()?.click();
   expect(document.activeElement).toBe(outside);
 });
 
@@ -248,7 +323,7 @@ test("METRO-106 with the browser's own container the defaults register, reload a
     // The default reload is location.reload(); the takeover path is covered above with a fake.
     const reload = vi.fn();
     vi.stubGlobal("location", { reload });
-    region()?.querySelector<HTMLButtonElement>("button.toast__action")?.click();
+    action()?.click();
     container.takeOver();
     expect(reload).toHaveBeenCalledOnce();
     await vi.advanceTimersByTimeAsync(5000);
@@ -258,36 +333,31 @@ test("METRO-106 with the browser's own container the defaults register, reload a
   }
 });
 
-test("METRO-106 offline, no registration is attempted and no region is mounted", async () => {
-  const { container, env, online } = setup();
+test("METRO-106 offline, nothing is registered now; the registration runs once, when the connection returns", async () => {
+  const { container, env, online, onlineTasks } = setup();
   online.value = false;
   await registerWorker(container, env);
   expect(container.registered).toEqual([]);
   expect(document.querySelector("[role=status]")).toBeNull();
+  expect(onlineTasks).toHaveLength(1);
+  online.value = true;
+  onlineTasks[0]?.();
+  await vi.waitFor(() => {
+    expect(container.registered).toHaveLength(1);
+  });
+  expect(document.querySelectorAll("[role=status]")).toHaveLength(1);
 });
 
-test("METRO-106 Reload tells the registration's waiting worker, not a stale reference to an older one (WebKit)", async () => {
-  const { container, env, timers } = setup();
-  const stale = new FakeWorker();
-  const current = new FakeWorker();
-  container.registration.waiting = stale;
-  await registerWorker(container, env);
-  container.registration.waiting = current;
-  fire(timers, 100);
-  region()?.querySelector<HTMLButtonElement>("button.toast__action")?.click();
-  expect(current.messages).toEqual([{ type: "skip-waiting" }]);
-  expect(stale.messages).toEqual([]);
-});
-
-test("METRO-106 a first install whose 'installed' event arrives after the page was claimed offers nothing (WebKit order)", async () => {
-  const { container, env, timers } = setup();
-  container.registration.active = null;
-  await registerWorker(container, env);
-  // The claim makes a controller appear before the page hears that the worker is installed.
-  container.controller = {};
-  const worker = new FakeWorker();
-  container.registration.found(worker);
-  worker.become("installed");
-  expect(timers).toEqual([]);
-  expect(region()?.childElementCount).toBe(0);
+test("METRO-106 the default online hook listens for the window's online event once", async () => {
+  const container = new FakeContainer();
+  vi.stubGlobal("navigator", { serviceWorker: container, onLine: false });
+  await registerWorker();
+  expect(container.registered).toEqual([]);
+  vi.stubGlobal("navigator", { serviceWorker: container, onLine: true });
+  window.dispatchEvent(new Event("online"));
+  await vi.waitFor(() => {
+    expect(container.registered).toHaveLength(1);
+  });
+  window.dispatchEvent(new Event("online"));
+  expect(container.registered).toHaveLength(1);
 });

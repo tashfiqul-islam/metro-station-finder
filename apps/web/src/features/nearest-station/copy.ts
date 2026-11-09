@@ -23,7 +23,7 @@ export const copy = {
   roughUnknown:
     "Your device could not say how precisely it found your position. The nearest station could be wrong, so none is shown. Search for a place instead.",
   // METRO-114: the handoff's fixed string, with its "ln." read as "right now". The no-connection string is the
-  // handoff's own. It claims offline use, so it waited for the offline shell worker (METRO-106, ADR-0023); the
+  // handoff's own. It claims offline use, so it waited for the offline shell worker (METRO-106, ADR-0024); the
   // built-output test of METRO-112 now allows that claim in this one place, and only with the worker built.
   searchUnavailable: "Place search is unavailable right now. Pick a station instead.",
   searchNoConnection:

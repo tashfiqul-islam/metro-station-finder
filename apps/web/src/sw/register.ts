@@ -1,19 +1,21 @@
 import { SKIP_WAITING } from "./message";
 
 /**
- * Registration and the update prompt of the offline shell worker (METRO-106, ADR-0023). This module is a lazy
+ * Registration and the update prompt of the offline shell worker (METRO-106, ADR-0024). This module is a lazy
  * chunk, loaded by `start.ts` after the page has loaded and is idle, so it never touches the first visit.
  *
  * Update flow: a new worker installs and then WAITS. The page keeps running on the version it loaded, with
  * that version's cached files; a prompt offers "Reload". Only that press (a message from this page) lets the
- * new worker take over, and the page reloads once it has. Ignoring the prompt is safe: the waiting worker
- * takes over on the next visit after every tab is closed, and an online visit always loads the newest page
- * (network first), so nobody is stranded on an old shell. All copy is fixed; no error is ever shown.
+ * new worker take over, and the page reloads once it has. Another tab that was open on the old version hears
+ * the takeover (`controllerchange`) and gets the same prompt, whose Reload then only reloads. Ignoring the
+ * prompt is safe: the waiting worker takes over on the next visit after every tab is closed. A dismissed
+ * prompt is not offered again in that page view. All copy is fixed; no error is ever shown.
  */
 export const swCopy = {
   ready: "A new version is ready.",
   reload: "Reload",
   dismiss: "Dismiss",
+  updating: "Updating…",
   failed: "The update could not be applied. Close the app and open it again.",
 } as const;
 
@@ -48,6 +50,8 @@ export interface Env {
   readonly reload: () => void;
   readonly later: (task: () => void, ms: number) => void;
   readonly online: () => boolean;
+  /** Runs `task` once, when the browser reports the connection is back. */
+  readonly whenOnline: (task: () => void) => void;
 }
 
 const defaultEnv = (container: ContainerLike): Env => ({
@@ -60,6 +64,9 @@ const defaultEnv = (container: ContainerLike): Env => ({
     setTimeout(task, ms);
   },
   online: () => navigator.onLine,
+  whenOnline: (task) => {
+    addEventListener("online", task, { once: true });
+  },
 });
 
 function button(document: Document, className: string, text: string): HTMLButtonElement {
@@ -78,12 +85,15 @@ function mountRegion(document: Document): HTMLElement {
   return region;
 }
 
-function fillPrompt(
-  env: Env,
-  region: HTMLElement,
-  registration: RegistrationLike,
-  offered: WorkerLike,
-): void {
+interface Session {
+  readonly env: Env;
+  readonly registration: RegistrationLike;
+  /** True once this page pressed Reload: only then may its `controllerchange` reload it. */
+  initiated: boolean;
+}
+
+function fillPrompt(session: Session, region: HTMLElement): void {
+  const { env, registration } = session;
   const { document } = env;
   const toast = document.createElement("div");
   toast.className = "toast";
@@ -98,19 +108,22 @@ function fillPrompt(
   cross.textContent = "×";
   dismiss.append(cross);
 
-  let reloading = false;
-  env.container.addEventListener("controllerchange", () => {
-    // The first install also takes control; only the press on Reload may reload the page.
-    if (reloading) env.reload();
-  });
   reload.addEventListener("click", () => {
-    reloading = true;
+    // The registration's waiting worker is the one to tell. None waiting means another tab already applied
+    // the update, so this page only has to reload.
+    const waiting = registration.waiting;
+    if (waiting === null) {
+      env.reload();
+      return;
+    }
+    session.initiated = true;
+    waiting.postMessage({ type: SKIP_WAITING }, []);
+    // Hiding the focused button would drop focus to the page: move it to Dismiss and say what is happening.
+    text.textContent = swCopy.updating;
     reload.hidden = true;
-    // The registration's waiting worker is the one to tell; the object seen when it installed is the fallback.
-    (registration.waiting ?? offered).postMessage({ type: SKIP_WAITING }, []);
+    dismiss.focus();
     env.later(() => {
       text.textContent = swCopy.failed;
-      dismiss.focus();
     }, TAKEOVER_WAIT_MS);
   });
   dismiss.addEventListener("click", () => {
@@ -122,7 +135,10 @@ function fillPrompt(
   region.append(toast);
 }
 
-/** Registers `/sw.js` and wires the update prompt. Resolves quietly when registration is not possible. */
+/**
+ * Registers `/sw.js` and wires the update prompt. Resolves quietly when registration is not possible. Offline
+ * it waits for the `online` event instead, so a page opened without a network still learns of updates later.
+ */
 export async function registerWorker(
   container: ContainerLike | undefined = "serviceWorker" in navigator
     ? navigator.serviceWorker
@@ -130,19 +146,32 @@ export async function registerWorker(
   env: Env | undefined = container === undefined ? undefined : defaultEnv(container),
 ): Promise<void> {
   if (container === undefined || env === undefined) return;
-  // Offline, a worker already controls the page (or none can be fetched): checking for a new one waits.
-  if (!env.online()) return;
+  if (!env.online()) {
+    env.whenOnline(() => {
+      registerWorker(container, env).catch(() => null);
+    });
+    return;
+  }
+  let hadController = container.controller !== null;
   const registration = await container.register("/sw.js", { scope: "/", updateViaCache: "none" });
   const region = mountRegion(env.document);
+  const session: Session = { env, registration, initiated: false };
   let offered = false;
-  const offer = (worker: WorkerLike): void => {
+  const offer = (): void => {
     if (offered) return;
     offered = true;
     env.later(() => {
-      fillPrompt(env, region, registration, worker);
+      fillPrompt(session, region);
     }, FILL_DELAY_MS);
   };
-  if (registration.waiting !== null) offer(registration.waiting);
+  container.addEventListener("controllerchange", () => {
+    // The first install also takes control (no controller before): that is not an update. A page that had a
+    // controller and did not press Reload itself is running old HTML under a new worker: offer the reload.
+    if (session.initiated) env.reload();
+    else if (hadController) offer();
+    hadController = true;
+  });
+  if (registration.waiting !== null) offer();
   registration.addEventListener("updatefound", () => {
     const installing = registration.installing;
     // Read when the worker is found, before it can activate: a registration with no active worker is on its
@@ -150,7 +179,7 @@ export async function registerWorker(
     // page and WebKit can report "installed" after that claim (Repo-verified: a false prompt on the first visit).
     const isUpdate = registration.active !== null;
     installing?.addEventListener("statechange", () => {
-      if (isUpdate && installing.state === "installed") offer(installing);
+      if (isUpdate && installing.state === "installed") offer();
     });
   });
   // A page left open for days (an installed app) checks again whenever it is shown.

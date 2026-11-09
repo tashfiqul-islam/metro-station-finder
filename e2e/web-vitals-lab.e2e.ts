@@ -8,7 +8,7 @@ import {
   type VitalsMeasurement,
 } from "../scripts/vitals-lab";
 import { expect, test } from "./fixtures";
-import { installMapsStub } from "./maps-stub";
+import { installMapsStub, workerMayControl } from "./maps-stub";
 
 /**
  * Lab web-vitals check (METRO-44 part C): the built app, served as every other journey is served, with the
@@ -105,6 +105,7 @@ async function measure(page: Page): Promise<VitalsMeasurement> {
 
 async function load(page: Page): Promise<void> {
   await observe(page);
+  workerMayControl(page);
   await installMapsStub(page);
   await page.goto("/", { waitUntil: "load" });
   await expect(

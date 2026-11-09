@@ -18,7 +18,7 @@
     "not_found_handling": "single-page-application",
     "binding": "ASSETS",
     // /assets/* and /sw.js go through the Worker only so a missing file is a 404, not the SPA index.html
-    // (ADR-0011, ADR-0023).
+    // (ADR-0011, ADR-0024).
     "run_worker_first": ["/api/*", "/assets/*", "/sw.js"],
   },
   // Per-pull-request preview Workers: build with CLOUDFLARE_ENV=preview and deploy with --name

@@ -5,10 +5,10 @@ import { extname, join } from "node:path";
 import type { BrowserContext, Locator, Page } from "@playwright/test";
 
 import { axeBuilder, expect, test } from "./fixtures";
-import { installMapsStub, plainSearch } from "./maps-stub";
+import { installMapsStub, plainSearch, workerMayControl } from "./maps-stub";
 
 /**
- * METRO-106 (ADR-0023): the offline app shell, in the real build. The first group runs against the same
+ * METRO-106 (ADR-0024): the offline app shell, in the real build. The first group runs against the same
  * server as every journey (Worker, `_headers`, the enforced CSP); the update group runs against a small
  * static server over the same `dist/client` so a second "deploy" can be swapped in. No Google request is
  * made: `installMapsStub` answers or aborts them, and the worker never intercepts another origin.
@@ -24,6 +24,7 @@ const leftTheMachine = new WeakMap<Page, string[]>();
 test.beforeEach(({ page }) => {
   const seen: string[] = [];
   leftTheMachine.set(page, seen);
+  workerMayControl(page);
   page.on("request", (request) => {
     if (!/^(http:\/\/127\.0\.0\.1:|data:|blob:|about:)/u.test(request.url()))
       seen.push(request.url());
@@ -113,7 +114,7 @@ async function offlineJourney(page: Page, reportsOffline: boolean): Promise<void
     await expect(page.locator(".notice[data-size='sm']")).toContainText(
       "Stations and fares still work",
     );
-    await expect(plainSearch(page)).toHaveCount(0);
+    await expect(page.getByRole("textbox")).toHaveCount(0);
   }
   // Nothing left the page for the API or Google: the page's own files came from the worker's cache.
   const origin = new URL(page.url()).origin;
@@ -209,6 +210,45 @@ test.describe("offline shell on the real server", () => {
       [],
     );
     expect(keys.filter((key) => /secret|some\/path/u.test(key))).toEqual([]);
+  });
+
+  test("METRO-106 offline, a file path is not answered with the page: robots.txt fails, the precached manifest is its own file", async ({
+    page,
+    context,
+    browserName,
+  }) => {
+    test.skip(browserName === "firefox", FIREFOX_OFFLINE);
+    await open(page);
+    await shellReady(page);
+    await context.setOffline(true);
+    // A precached file keeps its own type: the manifest, not the HTML shell.
+    const manifest = await page.evaluate(async () => {
+      const response = await fetch("/manifest.webmanifest");
+      return [
+        response.status,
+        response.headers.get("content-type"),
+        (await response.text()).slice(0, 1),
+      ];
+    });
+    expect(manifest[0]).toBe(200);
+    expect(String(manifest[1])).not.toContain("html");
+    expect(manifest[2]).toBe("{");
+    let failed = false;
+    try {
+      await page.goto("/robots.txt");
+    } catch {
+      failed = true;
+    }
+    expect(failed, "a navigation to /robots.txt offline must fail, not show the app").toBe(true);
+    // And an app path still opens the page.
+    await page.goto("/some/page");
+    await expect(combo(page)).toBeVisible();
+  });
+
+  test("METRO-106 the place-search helpers refuse a page the worker may control", async ({
+    page,
+  }) => {
+    expect(() => plainSearch(page)).toThrow("must not be touched");
   });
 
   // The probes below post to the API and read an unknown API path: the 4xx answers are the point.
@@ -337,15 +377,38 @@ function serve(deploy: Holder): Promise<{ server: Server; base: string }> {
 const V2_MARKER = "deploy-v2";
 
 /** A second deploy: new page marker, a new worker version, optionally without some of the v1 files. */
-function second(first: Deploy, options: { gone?: string[]; broken?: string[] } = {}): Deploy {
+function second(
+  first: Deploy,
+  options: {
+    gone?: string[];
+    broken?: string[];
+    /** The page marker and worker version of this deploy (default: the second one). */
+    marker?: string;
+    version?: string;
+    /** A worker that ignores the page's skip-waiting message, so the takeover never happens. */
+    inert?: boolean;
+    /** The kill-switch build of the worker. */
+    kill?: boolean;
+  } = {},
+): Deploy {
   const files = new Map(first.files);
   const html = (first.files.get("/index.html") ?? Buffer.alloc(0)).toString("utf8");
   files.set(
     "/index.html",
-    Buffer.from(html.replace("</head>", `<meta name="build" content="${V2_MARKER}"></head>`)),
+    Buffer.from(
+      html.replace(
+        "</head>",
+        `<meta name="build" content="${options.marker ?? V2_MARKER}"></head>`,
+      ),
+    ),
   );
   const worker = (first.files.get("/sw.js") ?? Buffer.alloc(0)).toString("utf8");
-  let next = worker.replace(/(version:\s*[`"'])([0-9a-f]{12})/u, "$1ffffffffffff");
+  let next = worker.replace(
+    /(version:\s*[`"'])([0-9a-f]{12})/u,
+    `$1${options.version ?? "ffffffffffff"}`,
+  );
+  if (options.inert === true) next = next.replace("skip-waiting", "ignored-message");
+  if (options.kill === true) next = next.replace("kill:!1", "kill:!0");
   for (const path of options.gone ?? []) {
     next = next.replace(new RegExp(`[\`"']${path.replaceAll(".", "\\.")}[\`"'],?`, "u"), "");
   }
@@ -395,6 +458,8 @@ test.describe("update flow", () => {
   async function installed(page: Page): Promise<string> {
     await open(page, host.base);
     await shellReady(page);
+    // The page's registration code has run (it mounts the empty status region), so it listens for updates.
+    await expect(page.locator(".toast-region [role=status]")).toHaveCount(1);
     expect(await versionMarker(page)).toBeNull();
     const [name] = await cacheNames(page);
     return name ?? "";
@@ -445,7 +510,7 @@ test.describe("update flow", () => {
     await offlineJourney(page, browserName !== "firefox");
   });
 
-  test("METRO-106 a new deploy waits behind a prompt; Reload by keyboard swaps it in, deletes the old cache and still works offline", async ({
+  test("METRO-106 a new deploy waits behind a prompt; Reload by keyboard swaps it in, keeps the previous cache and still works offline", async ({
     page,
     context,
     browserName,
@@ -505,8 +570,9 @@ test.describe("update flow", () => {
     await expect(page.getByRole("application", { name: MAP_NAME, exact: true })).toBeVisible();
     expect(await versionMarker(page)).toBe(V2_MARKER);
     await expect(updateRegion(page)).toHaveCount(0);
-    await expect.poll(() => cacheNames(page)).toHaveLength(1);
-    expect(await cacheNames(page)).not.toContain(v1);
+    // The previous version's cache is kept for tabs still running it; the new one is there.
+    await expect.poll(() => cacheNames(page)).toHaveLength(2);
+    expect(await cacheNames(page)).toContain(v1);
     // And the new version works with the network off.
     await goOffline(context, browserName);
     await page.reload();
@@ -514,6 +580,123 @@ test.describe("update flow", () => {
     await combo(page).fill("motijheel");
     await combo(page).press("Enter");
     await expect(page.getByRole("article")).toContainText("Motijheel");
+  });
+
+  test("METRO-106 only the previous version's cache is kept: after a third deploy the first is gone", async ({
+    page,
+  }) => {
+    const v1 = await installed(page);
+    deploy.current = second(first);
+    await checkForUpdate(page);
+    await expect(updateRegion(page)).toBeVisible();
+    await Promise.all([
+      page.waitForEvent("load"),
+      updateRegion(page).getByRole("button", { name: "Reload" }).click(),
+    ]);
+    await expect.poll(() => cacheNames(page)).toHaveLength(2);
+    expect(await cacheNames(page)).toContain(v1);
+    // A third deploy, applied the same way: the first version's cache goes, the second's stays.
+    deploy.current = second(first, { marker: "deploy-v3", version: "eeeeeeeeeeee" });
+    await checkForUpdate(page);
+    await expect(updateRegion(page)).toBeVisible();
+    await Promise.all([
+      page.waitForEvent("load"),
+      updateRegion(page).getByRole("button", { name: "Reload" }).click(),
+    ]);
+    await expect.poll(() => cacheNames(page)).toHaveLength(2);
+    const names = await cacheNames(page);
+    expect(names).not.toContain(v1);
+    expect(names).toContain("metro-shell-ffffffffffff");
+    expect(names).toContain("metro-shell-eeeeeeeeeeee");
+  });
+
+  test("METRO-106 a second tab on the old version keeps its lazy files after the first tab applied the update, and is offered the reload", async ({
+    page,
+    context,
+  }) => {
+    await installed(page);
+    const other = await context.newPage();
+    workerMayControl(other);
+    await open(other, host.base);
+    await expect(other.locator(".toast-region [role=status]")).toHaveCount(1);
+    const vitals = [...first.files.keys()].find((path) =>
+      /^\/assets\/web-vitals-.*\.js$/u.test(path),
+    );
+    const removed = vitals ?? "";
+    expect(removed).not.toBe("");
+    deploy.current = second(first, { gone: [removed] });
+    await checkForUpdate(page);
+    await expect(updateRegion(page)).toBeVisible();
+    await Promise.all([
+      page.waitForEvent("load"),
+      updateRegion(page).getByRole("button", { name: "Reload" }).click(),
+    ]);
+    expect(await versionMarker(page)).toBe(V2_MARKER);
+    // The other tab still runs v1's page under the v2 worker. The network now answers 404 for a file only v1
+    // has; the kept v1 cache answers it, so the tab's next lazy import does not fail.
+    await expect(updateRegion(other)).toBeVisible();
+    expect(await versionMarker(other)).toBeNull();
+    const status = await other.evaluate(async (path) => (await fetch(path)).status, removed);
+    expect(status).toBe(200);
+    // Its prompt now only reloads: the update was applied by the other tab.
+    await Promise.all([
+      other.waitForEvent("load"),
+      updateRegion(other).getByRole("button", { name: "Reload" }).click(),
+    ]);
+    expect(await versionMarker(other)).toBe(V2_MARKER);
+    await other.close();
+  });
+
+  test("METRO-106 a worker that cannot take over: focus moves to Dismiss at once, the status says Updating, axe passes, and fixed failure words follow", async ({
+    page,
+  }) => {
+    await installed(page);
+    deploy.current = second(first, { inert: true });
+    await checkForUpdate(page);
+    await expect(updateRegion(page)).toBeVisible();
+    await updateRegion(page).getByRole("button", { name: "Reload" }).focus();
+    await page.keyboard.press("Enter");
+    // During the window: focus is on a visible control, not on the page, and the polite status changed.
+    await expect(page.locator(".toast-region")).toContainText("Updating…");
+    expect(await page.evaluate(() => document.activeElement?.getAttribute("aria-label"))).toBe(
+      "Dismiss",
+    );
+    expect(
+      await axeBuilder(page)
+        .analyze()
+        .then((results) => results.violations),
+    ).toEqual([]);
+    await expect(page.locator(".toast-region")).toContainText(
+      "The update could not be applied. Close the app and open it again.",
+      { timeout: 10_000 },
+    );
+    expect(await page.evaluate(() => document.activeElement?.getAttribute("aria-label"))).toBe(
+      "Dismiss",
+    );
+    expect(await versionMarker(page)).toBeNull();
+  });
+
+  test("METRO-106 the kill-switch build removes a live worker and its caches, and the page keeps working", async ({
+    page,
+  }) => {
+    await installed(page);
+    deploy.current = second(first, { kill: true, version: "dddddddddddd" });
+    await checkForUpdate(page);
+    await expect
+      .poll(() =>
+        page.evaluate(async () => {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          const names = (await caches.keys()).filter((name) => name.startsWith("metro-shell-"));
+          return `${registrations.length} registrations, ${names.length} caches`;
+        }),
+      )
+      .toBe("0 registrations, 0 caches");
+    // No reload is forced; the open page still works, and so does a fresh load with no worker.
+    await combo(page).fill("motijheel");
+    await combo(page).press("Enter");
+    await expect(page.getByRole("article")).toContainText("Motijheel");
+    await page.reload();
+    await expect(combo(page)).toBeVisible();
   });
 
   test("METRO-106 Dismiss keeps the page on v1, returns focus to the panel, and leaves the new worker waiting for the next visit", async ({
@@ -533,7 +716,7 @@ test.describe("update flow", () => {
     await combo(page).press("Enter");
     await expect(page.getByRole("article")).toContainText("Uttara");
     // Dismissing does not apply the update: the new worker still waits, behind the old one, and v1 keeps its cache.
-    // That it takes over on the next visit, once no page uses v1, is the browser's own rule (ADR-0023).
+    // That it takes over on the next visit, once no page uses v1, is the browser's own rule (ADR-0024).
     expect(await cacheNames(page)).toContain(v1);
     expect(await cacheNames(page)).toHaveLength(2);
     const states = await page.evaluate(async () => {

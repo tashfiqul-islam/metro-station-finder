@@ -30,7 +30,7 @@ export const HEAD_SCRIPT_MISSING =
   "A script that index.html loads from public/ is missing from the build";
 
 /**
- * The offline shell worker, written beside `index.html` by `scripts/sw-plugin.ts` (METRO-106, ADR-0023). It is a
+ * The offline shell worker, written beside `index.html` by `scripts/sw-plugin.ts` (METRO-106, ADR-0024). It is a
  * separate small build, so it is not in the Vite manifest and not an orphan. It is never on the first-visit path
  * (the page registers it after load and idle), so it counts toward the all-files ceiling only.
  */

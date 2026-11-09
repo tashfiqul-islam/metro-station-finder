@@ -30,6 +30,10 @@ async function fixture(
     "assets/x-b2.js": "c",
     "assets/font-c3.woff2": "d",
     "icons/icon-192.png": "e",
+    "icons/icon-512.png": "big",
+    "icons/icon-maskable-192.png": "m1",
+    "icons/icon-maskable-512.png": "m2",
+    "icons/icon-monochrome-512.png": "mono",
     "theme-boot.js": "f",
     "favicon.ico": "i",
     "manifest.webmanifest": "{}",
@@ -57,6 +61,9 @@ const failureOf = (work: Promise<unknown>): Promise<string> =>
     (error: unknown) => (error instanceof Error ? error.message : "not an error"),
   );
 
+const changedLogic = (config: WorkerConfig): Promise<string> =>
+  Promise.resolve(`// worker v2\nconst SW_CONFIG=${JSON.stringify(config)};`);
+
 const bundle = (config: WorkerConfig): Promise<string> =>
   Promise.resolve(`// worker\nconst SW_CONFIG=${JSON.stringify(config)};`);
 
@@ -76,6 +83,19 @@ test("METRO-106 shellPaths: the page first as /, then built and public files, ne
   } finally {
     await rm(root, { recursive: true, force: true });
   }
+});
+
+test("METRO-106 the large, maskable and monochrome icons are not precached; the 192 icon is", () => {
+  const paths = shellPaths([
+    "index.html",
+    "icons/icon-192.png",
+    "icons/icon-512.png",
+    "icons/icon-maskable-192.png",
+    "icons/icon-maskable-512.png",
+    "icons/icon-monochrome-512.png",
+    "apple-touch-icon.png",
+  ]);
+  expect(paths).toEqual(["/", "/apple-touch-icon.png", "/icons/icon-192.png"]);
 });
 
 test("METRO-106 shellPaths without a page lists files only, and never sw.js itself", () => {
@@ -138,6 +158,30 @@ test("METRO-106 writeWorker passes the kill flag through", async () => {
   const root = await fixture();
   try {
     expect((await writeWorker(root, { bundle, kill: true })).kill).toBe(true);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("METRO-106 the version covers the worker's own bytes and the kill flag, not only the shell files", async () => {
+  const root = await fixture();
+  try {
+    const normal = await writeWorker(root, { bundle, kill: false });
+    // Same shell files, different worker logic: another cache name.
+    const logic = await writeWorker(root, { bundle: changedLogic, kill: false });
+    expect(logic.version).not.toBe(normal.version);
+    // Same files and logic, kill build: another cache name again.
+    const kill = await writeWorker(root, { bundle, kill: true });
+    expect(kill.version).not.toBe(normal.version);
+    // The bundle is built twice: once with a placeholder to hash it, once with the real version.
+    const seen: string[] = [];
+    const spy = (config: WorkerConfig): Promise<string> => {
+      seen.push(config.version);
+      return bundle(config);
+    };
+    const again = await writeWorker(root, { bundle: spy, kill: false });
+    expect(again.version).toBe(normal.version);
+    expect(seen).toEqual(["000000000000", normal.version]);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

@@ -1,6 +1,6 @@
 # METRO-106 evidence: offline app shell
 
-Date: 2026-11-09. Base: `061d771` (`feature/metro-rebuild`, merge of METRO-114). Head: the tip of `ticket/metro-106-offline-shell` in the pull request. Windows 11, Bun 1.4.4, Node 26.13.0, Playwright 1.64.1 (Chromium, Firefox, WebKit, Pixel 7 Chromium). Decision record: [ADR-0023](../adr/0023-offline-app-shell.md). Labels: Repo-verified, Context7-verified, Web-verified, Unverified.
+Date: 2026-11-09. Base: `061d771` (`feature/metro-rebuild`, merge of METRO-114). Head: the tip of `ticket/metro-106-offline-shell` in the pull request. Windows 11, Bun 1.4.4, Node 26.13.0, Playwright 1.64.1 (Chromium, Firefox, WebKit, Pixel 7 Chromium). Decision record: [ADR-0024](../adr/0024-offline-app-shell.md). Labels: Repo-verified, Context7-verified, Web-verified, Unverified.
 
 ## First-visit budget (Repo-verified, `bun run build` then `bun run bundle:check`)
 

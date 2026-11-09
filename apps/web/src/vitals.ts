@@ -42,7 +42,7 @@ export type Send = (payload: WebVitalPayload) => void;
  * acceptable and nothing may be logged.
  */
 export const sendVital: Send = (payload) => {
-  // No connection: the sample is dropped rather than queued or retried (METRO-106, ADR-0023).
+  // No connection: the sample is dropped rather than queued or retried (METRO-106, ADR-0024).
   if (!navigator.onLine) return;
   fetch(VITALS_PATH, {
     method: "POST",

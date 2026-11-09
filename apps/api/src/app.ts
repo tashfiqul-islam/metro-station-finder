@@ -115,7 +115,7 @@ export function createApp(log: Logger = consoleLogger, register: (app: ApiApp) =
   // missing file with the SPA's index.html (200), and _headers would mark that immutable. Only a real
   // asset may pass; an HTML answer under /assets/ is a miss. That includes any .html or .htm file
   // placed under /assets/ on purpose: it is indistinguishable from the SPA fallback and is a 404.
-  // `/sw.js` follows the same rule (METRO-106, ADR-0023): were it missing, the SPA fallback would answer with
+  // `/sw.js` follows the same rule (METRO-106, ADR-0024): were it missing, the SPA fallback would answer with
   // index.html as a 200, and a browser must see a miss, not HTML, when it checks for a new worker.
   for (const path of WORKER_FIRST_ASSETS) {
     app.get(path, async (context) => {

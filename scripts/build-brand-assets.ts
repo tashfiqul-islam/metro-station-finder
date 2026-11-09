@@ -70,7 +70,7 @@ export const ROBOTS_TXT =
 
 /**
  * The web app manifest. No `serviceworker` member (the manifest has none). One offline claim, in `description`
- * and exactly `MANIFEST_OFFLINE_CLAIM`: the offline shell worker of METRO-106 (ADR-0023) now backs it; before
+ * and exactly `MANIFEST_OFFLINE_CLAIM`: the offline shell worker of METRO-106 (ADR-0024) now backs it; before
  * that the manifest made none. No `screenshots` member: the handoff screenshots
  * show screens that do not exist yet, so they return after METRO-105 and the first slices. `theme_color`
  * (#0B7A84, the brand teal, for the installed app's chrome) and `background_color` (#F2F6F6, the light page
