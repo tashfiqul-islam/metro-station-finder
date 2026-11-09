@@ -36,7 +36,28 @@
 .place-slot__widget {
   display: block;
   width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
   color-scheme: inherit;
+}
+/* The widget host fills the slot, so its suggestion popup is as wide as the panel's content (Google draws the popup itself). */
+.place-slot__widget gmp-place-autocomplete {
+  display: block;
+  width: 100%;
+}
+.place-slot__input {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  padding: 0 12px;
+  font-size: var(--fs-16);
+  color: var(--color-fg);
+}
+.place-slot__input[hidden] {
+  display: none;
 }
 .place-slot__mock {
   display: flex;

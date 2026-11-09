@@ -226,3 +226,5 @@ What the result settles:
 - Whether the real element showed a visible hint text of its own: Unverified (the run printed no visual check). Whether a screen reader announces the combobox description: Unverified.
 
 See the [runbook](../agents/maps-live-check-runbook.md) and [METRO-102 evidence](../evidence/metro-102.md).
+
+METRO-114 changes when Google is asked, not the rules above. The place search is a plain input until its first focus; the Maps script loads on the first focus or the first walking route, and nothing from Google loads with the page. A good device fix and a chosen place each request one walking route ("about ... est."); a rough fix, a picked station, a re-render and a theme change request none, and a result replaced before its route is requested never requests it. With no connection, no key or a failed load the label, hint and field are replaced by one notice, and the plain input returns when the browser reports the connection back. Details and evidence: [METRO-114 evidence](../evidence/metro-114.md).

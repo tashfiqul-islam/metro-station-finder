@@ -16,6 +16,10 @@ import { GOOGLE_HOSTS, expect } from "./fixtures";
 export interface StubOptions {
   /** Abort the Maps script itself (a blocked or failed load). */
   readonly scriptFails?: boolean;
+  /** Hold the Maps script back this long before answering (METRO-114: typing before the load completes). */
+  readonly scriptDelayMs?: number;
+  /** `computeRoutes` answers only after this long (a route in flight while the result is replaced). */
+  readonly routeDelayMs?: number;
   /** `fetchFields` rejects with an error whose message carries a coordinate. */
   readonly fetchFails?: boolean;
   /** `computeRoutes` rejects with an error whose message carries a key. */
@@ -45,6 +49,20 @@ const STUB_SCRIPT = `
       super();
       this.options = options;
     }
+    // The fake assumes the best case for the real widget: the host forwards focus to its inner input. Whether
+    // Google's host does is Unverified (the live check prints whether typing reached it).
+    focus() {
+      const input = this.querySelector("input");
+      if (input) input.focus();
+    }
+    get value() {
+      const input = this.querySelector("input");
+      return input ? input.value : "";
+    }
+    set value(text) {
+      const input = this.querySelector("input");
+      if (input) input.value = text ?? "";
+    }
     connectedCallback() {
       if (this.querySelector("input")) return;
       const input = document.createElement("input");
@@ -58,8 +76,7 @@ const STUB_SCRIPT = `
         input.setAttribute("aria-describedby", hint.id);
         this.append(hint);
       }
-      input.addEventListener("keydown", (event) => {
-        if (event.key !== "Enter") return;
+      const choose = () => {
         const text = input.value.toLowerCase();
         const spot = Object.keys(spots).find((name) => text.includes(name));
         const location = spot ? spots[spot] : spots.motijheel;
@@ -73,10 +90,46 @@ const STUB_SCRIPT = `
         const selection = new Event("gmp-select");
         selection.placePrediction = { toPlace: () => place };
         this.dispatchEvent(selection);
+      };
+      input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") choose();
       });
-      this.append(input);
+      // A stand-in for the suggestion popup: a listbox as wide as the host, under the input, drawn with
+      // CSSOM (a style attribute would break the enforced CSP). Real Google draws its own popup in its shadow
+      // root, so this proves our containers do not clip or cover a popup, not what Google's looks like.
+      const popup = document.createElement("ul");
+      popup.setAttribute("role", "listbox");
+      popup.setAttribute("aria-label", "Suggestions");
+      popup.hidden = true;
+      for (const label of ["First suggestion", "Second suggestion", "Third suggestion"]) {
+        const option = document.createElement("li");
+        option.setAttribute("role", "option");
+        option.setAttribute("aria-selected", "false");
+        option.textContent = label;
+        option.addEventListener("mousedown", (event) => {
+          event.preventDefault();
+          choose();
+        });
+        popup.append(option);
+      }
+      popup.className = "fake-ac-popup";
+      input.addEventListener("input", () => {
+        popup.hidden = input.value === "";
+      });
+      this.classList.add("fake-ac");
+      this.append(input, popup);
     }
   }
+  // Styles come from a constructable stylesheet: no <style> element and no style attribute, so the app's own
+  // "no inline style" assertions stay meaningful with the stub present.
+  const sheet = new CSSStyleSheet();
+  sheet.replaceSync(
+    ".fake-ac{position:relative;display:block;width:100%}" +
+      ".fake-ac-popup{position:absolute;top:100%;left:0;right:0;z-index:5;margin:0;padding:4px;list-style:none;" +
+      "background:#fff;color:#000;border:1px solid #767676;box-sizing:border-box}" +
+      ".fake-ac-popup[hidden]{display:none}",
+  );
+  document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
   customElements.define("fake-place-autocomplete", FakeAutocomplete);
   const libraries = {
     core: {},
@@ -86,6 +139,9 @@ const STUB_SCRIPT = `
       Route: {
         computeRoutes: async (request) => {
           state.routes.push(request);
+          if (state.options.routeDelayMs) {
+            await new Promise((resolve) => setTimeout(resolve, state.options.routeDelayMs));
+          }
           if (state.options.routeFails) throw new Error("secret key=abc");
           return { routes: [{ distanceMeters: 1234, durationMillis: 900000 }] };
         },
@@ -99,6 +155,33 @@ const STUB_SCRIPT = `
 `;
 
 const keep = (item: unknown): unknown => item;
+
+/** The plain input before the first focus: named by the visible label (exact, case-sensitive). */
+export const plainSearch = (page: Page) =>
+  page.getByRole("textbox", { name: "Search for a place", exact: true });
+
+/** Google's widget input once swapped in, under the name the owner probe measured (the stub copies it). */
+export const widgetSearch = (page: Page) =>
+  page.getByRole("textbox", { name: MEASURED_GOOGLE_NAME, exact: true });
+
+/**
+ * Types a query the way a user does: into the plain input (the first focus loads the stub, which swaps the
+ * widget in and carries the text over), then Enter in the widget selects. Waits for the swap, so the
+ * keypress goes to the widget and never to the plain input.
+ */
+export async function searchForPlace(page: Page, text: string): Promise<void> {
+  const widget = widgetSearch(page);
+  // The widget is already in place when the libraries were loaded earlier (a good fix needs them for its route):
+  // then there is no plain input to type into.
+  if (await widget.isVisible()) {
+    await widget.fill(text);
+  } else {
+    await plainSearch(page).fill(text);
+    await expect(widget).toBeVisible();
+    await expect(widget).toHaveValue(text);
+  }
+  await widget.press("Enter");
+}
 
 export interface MapsStub {
   /** Hosts of Google requests the stub aborted (host names only, never a URL or key). */
@@ -119,6 +202,9 @@ export async function installMapsStub(page: Page, options: StubOptions = {}): Pr
   });
   await page.route("https://maps.googleapis.com/maps/api/js*", async (route) => {
     scriptUrls.push(route.request().url());
+    if (options.scriptDelayMs !== undefined) {
+      await new Promise((resolve) => setTimeout(resolve, options.scriptDelayMs));
+    }
     if (options.scriptFails === true) {
       await route.abort();
       return;

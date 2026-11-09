@@ -6,8 +6,11 @@ import {
   MEASURED_GOOGLE_NAME,
   expectNoCoordinateInApi,
   installMapsStub,
+  plainSearch,
+  searchForPlace,
   stubGeolocation,
   trackApiRequests,
+  widgetSearch,
 } from "./maps-stub";
 import type { StubOptions } from "./maps-stub";
 
@@ -31,11 +34,9 @@ async function shellControls(page: Page): Promise<number> {
   return home + (width < 768 ? 4 : 1);
 }
 
-async function searchFor(page: Page, text: string) {
-  const search = page.getByRole("textbox", { name: MEASURED_GOOGLE_NAME, exact: true });
-  await search.fill(text);
-  await search.press("Enter");
-}
+// METRO-114: the field starts as a plain input; the first focus swaps Google's widget in (see place-search.e2e.ts).
+const searchFor = searchForPlace;
+const ROUTE_TEXT = "about 1.2 km, 15 min · est.";
 
 const station = (page: Page, name: string) => page.getByRole("heading", { level: 2, name });
 
@@ -44,14 +45,12 @@ test.describe("nearest station from a searched place (METRO-88)", () => {
     page,
   }) => {
     const stub = await openSlice(page);
-    await expect(
-      page.getByRole("group", { name: "Search for a place", exact: true }),
-    ).toBeVisible();
+    await expect(plainSearch(page)).toBeVisible();
     await searchFor(page, "motijheel");
 
     await expect(station(page, "Motijheel")).toBeFocused();
     await expect(page.getByText("straight-line distance · est.")).toBeVisible();
-    await expect(page.getByText("1.23 km, 15 min")).toBeVisible();
+    await expect(page.getByText(ROUTE_TEXT)).toBeVisible();
     // METRO-113: the destination picker is gone; the result shows the fare range and its footnote.
     const fare = page.locator(".result__fare");
     await expect(fare).toContainText("Single fare from here");
@@ -82,7 +81,7 @@ test.describe("nearest station from a searched place (METRO-88)", () => {
   }) => {
     await openSlice(page);
     await searchFor(page, "motijheel");
-    await expect(page.getByText("1.23 km, 15 min")).toBeVisible();
+    await expect(page.getByText(ROUTE_TEXT)).toBeVisible();
     const styling = await page.evaluate(() => ({
       stylesheets: document.styleSheets.length,
       linked: document.querySelectorAll('link[rel="stylesheet"]').length,
@@ -107,7 +106,7 @@ test.describe("nearest station from a searched place (METRO-88)", () => {
     const stub = await openSlice(page);
     const apiRequests = trackApiRequests(page);
     await searchFor(page, "uttara");
-    await expect(page.getByText("1.23 km, 15 min")).toBeVisible();
+    await expect(page.getByText(ROUTE_TEXT)).toBeVisible();
     await expectNoCoordinateInApi(page, apiRequests);
     expect(stub.blocked).toEqual([]);
   });
@@ -131,7 +130,7 @@ test.describe("nearest station from a searched place (METRO-88)", () => {
     await expect(notice).toHaveCount(0);
   });
 
-  test("METRO-88 A9 the device position finds the station without a place search, a route or an /api coordinate", async ({
+  test("METRO-114 the device position finds the station and asks Google for one walking route, never our /api", async ({
     page,
   }) => {
     await stubGeolocation(page, { lat: 23.87, lng: 90.367 });
@@ -140,15 +139,16 @@ test.describe("nearest station from a searched place (METRO-88)", () => {
     await page.getByRole("button", { name: "Use my location" }).click();
     await expect(station(page, "Uttara North")).toBeFocused();
     await expect(page.getByText("straight-line distance · est.")).toBeVisible();
-    // METRO-113: a device fix asks for no walking route; the route area is absent, not an error.
-    await expect(page.locator(".result__walk")).toHaveCount(0);
+    // A good fix asks for exactly one route, shown as an estimate; no place search was needed.
+    await expect(page.getByText(ROUTE_TEXT)).toBeVisible();
     await expect(page.getByText("The walking route is unavailable.", { exact: false })).toHaveCount(
       0,
     );
     await expectNoCoordinateInApi(page, apiRequests);
     const calls = await stub.calls();
     expect(calls.fetchFields).toEqual([]);
-    expect(calls.routes).toEqual([]);
+    expect(calls.routes).toHaveLength(1);
+    expect(calls.scriptUrls).toHaveLength(1);
   });
 
   test.describe("a rough device location (METRO-103)", () => {
@@ -167,15 +167,17 @@ test.describe("nearest station from a searched place (METRO-88)", () => {
       await expect(page.locator(".result")).toHaveCount(0);
       await expect(page.getByText("straight-line distance · est.")).toHaveCount(0);
       await expectNoCoordinateInApi(page, apiRequests);
+      // A rough fix asks for no route, and so nothing was loaded from Google at all.
       expect((await stub.calls()).routes).toEqual([]);
+      expect((await stub.calls()).scriptUrls).toEqual([]);
       // The place search keeps working and replaces the warning with a result.
       await searchFor(page, "motijheel");
-      await expect(page.getByText("1.23 km, 15 min")).toBeVisible();
+      await expect(page.getByText(ROUTE_TEXT)).toBeVisible();
       await expect(page.getByRole("alert")).toHaveCount(0);
       await expect(notice).toHaveCount(0);
     });
 
-    test("METRO-103 a precise fix of about 20 m gives the station and, since METRO-113, no route", async ({
+    test("METRO-103 a precise fix of about 20 m gives the station and, since METRO-114, one route", async ({
       page,
     }) => {
       await stubGeolocation(page, { lat: 23.87, lng: 90.367, accuracy: 20 });
@@ -183,7 +185,8 @@ test.describe("nearest station from a searched place (METRO-88)", () => {
       await page.getByRole("button", { name: "Use my location" }).click();
       await expect(station(page, "Uttara North")).toBeVisible();
       await expect(page.getByRole("alert")).toHaveCount(0);
-      expect((await stub.calls()).routes).toEqual([]);
+      await expect(page.getByText(ROUTE_TEXT)).toBeVisible();
+      expect((await stub.calls()).routes).toHaveLength(1);
     });
   });
 
@@ -194,9 +197,10 @@ test.describe("nearest station from a searched place (METRO-88)", () => {
       await stubGeolocation(page, { lat: 23.728, lng: 90.419 });
       await openSlice(page, { fetchFails: true });
       await searchFor(page, "motijheel");
+      // The field stays (a failed selection is not an unavailable library); the fixed copy is an alert.
       const alert = page.getByRole("alert");
       await expect(alert).toHaveText(
-        "Place search is unavailable. You can still use your location.",
+        "Place search is unavailable right now. Pick a station instead.",
       );
       await expect(page.locator("body")).not.toContainText("secret");
       await page.getByRole("button", { name: "Use my location" }).click();
@@ -223,20 +227,26 @@ test.describe("nearest station from a searched place (METRO-88)", () => {
   test.describe("when the Maps script cannot load", () => {
     test.use({ allowedConsoleError: /Failed to load resource|ERR_FAILED/u });
 
-    test("METRO-88 fixed copy shows, and location still finds the station without any route area", async ({
+    test("METRO-114 a good fix keeps its station and fare, the route fails visibly, and the place search is replaced by its notice", async ({
       page,
     }) => {
       await stubGeolocation(page, { lat: 23.87, lng: 90.367 });
       await openSlice(page, { scriptFails: true });
-      await expect(page.getByRole("alert")).toHaveText(
-        "Place search is unavailable. You can still use your location.",
-      );
+      // Nothing was asked of Google yet, so the plain field is still there.
+      await expect(plainSearch(page)).toBeVisible();
       await page.getByRole("button", { name: "Use my location" }).click();
       await expect(station(page, "Uttara North")).toBeVisible();
-      // METRO-113: there is no route area for a device fix, so there is nothing to fail.
+      // The route needed the script, the script failed: the result stays with the fixed copy.
+      await expect(page.getByRole("alert")).toHaveText(
+        "The walking route is unavailable. The station and fare are still correct.",
+      );
+      await expect(page.locator(".result__fare")).toContainText("Single fare from here");
+      // The same failure makes place search unavailable: the field, label and hint are gone, the notice stays.
       await expect(
-        page.getByText("The walking route is unavailable.", { exact: false }),
-      ).toHaveCount(0);
+        page.getByText("Place search is unavailable right now. Pick a station instead."),
+      ).toBeVisible();
+      await expect(plainSearch(page)).toHaveCount(0);
+      await expect(page.getByText("Suggestions favor places in Dhaka.")).toHaveCount(0);
     });
   });
 
@@ -244,36 +254,58 @@ test.describe("nearest station from a searched place (METRO-88)", () => {
     page,
   }) => {
     await openSlice(page);
-    await expect(
-      page.getByRole("textbox", { name: MEASURED_GOOGLE_NAME, exact: true }),
-    ).toBeVisible();
+    // The first focus swaps the widget in, which would change the control list in the middle of the walk, so
+    // the swap happens first (the plain phase has its own walk below).
+    await plainSearch(page).focus();
+    await expect(widgetSearch(page)).toBeVisible();
+    // Leave the field, so its unfocused look is what the walk records.
+    await page.evaluate(() => {
+      if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+    });
     // The location button, the search input and the picker's combobox (METRO-112), after the shell's controls:
     // the Home link, the theme button, plus the three sheet-handle controls where the sheet is drawn.
     // The line map adds four tab stops (METRO-111): the map and its three zoom buttons, after the panel's content.
     const shell = (await shellControls(page)) + 4;
     await expectTabReachesEveryControl(page, { expected: shell + 3 });
     await searchFor(page, "motijheel");
-    await expect(page.getByText("1.23 km, 15 min")).toBeVisible();
+    await expect(page.getByText(ROUTE_TEXT)).toBeVisible();
     // METRO-113: the result adds only its Directions link (counted where this browser Tabs to links); the
     // destination select of METRO-88 is gone.
     const link = (await linksAreTabbable(page)) ? 1 : 0;
     await expectTabReachesEveryControl(page, { expected: shell + 3 + link });
   });
 
+  test("METRO-114 A6 in the plain phase the keyboard reaches the plain input, which draws a focus indicator", async ({
+    page,
+  }) => {
+    // The script is held back for the whole walk, so the plain input stays in place while Tab passes it.
+    await openSlice(page, { scriptDelayMs: 25_000 });
+    await expect(plainSearch(page)).toBeVisible();
+    const shell = (await shellControls(page)) + 4;
+    await expectTabReachesEveryControl(page, { expected: shell + 3 });
+    await expect(plainSearch(page)).toBeVisible();
+  });
+
   test("METRO-101 stub wiring: the hint, the description option and aria-describedby we control", async ({
     page,
   }) => {
     await openSlice(page);
-    const search = page.getByRole("textbox", { name: MEASURED_GOOGLE_NAME, exact: true });
+    // Before the first focus the plain input is named by the visible label and described by the visible hint.
+    const plain = plainSearch(page);
+    await expect(plain).toHaveAccessibleDescription("Suggestions favor places in Dhaka.");
+    await expect(page.locator("#place-hint")).toHaveText("Suggestions favor places in Dhaka.");
+    const visible = (await page.locator("#place-label").innerText()).toLowerCase();
+    await plain.focus();
+    const search = widgetSearch(page);
+    await expect(search).toBeVisible();
     // The stub sets the measured name itself, so this proves our visible text is contained in that name,
     // not that the real widget exposes it (only the owner-run smoke:live does).
-    const visible = (await page.locator("#place-label").innerText()).toLowerCase();
     const name = ((await search.getAttribute("aria-label")) ?? "").toLowerCase();
+    expect(name).toBe(MEASURED_GOOGLE_NAME.toLowerCase());
     expect(name).toContain(visible);
     // The visible hint is handed to the widget as its description (stub of the documented option).
-    await expect(page.locator("#place-hint")).toHaveText("Suggestions favor places in Dhaka.");
     await expect(search).toHaveAccessibleDescription("Suggestions favor places in Dhaka.");
-    // The group around the widget carries the visible label; keyboard order is unchanged (see A6).
+    // The group around the widget carries the visible label.
     await expect(
       page.getByRole("group", { name: "Search for a place", exact: true }),
     ).toBeVisible();
@@ -291,10 +323,9 @@ test.describe("nearest station from a searched place (METRO-88)", () => {
           - heading "Where are you?" [level=2]
           - button "Use my location"
           - paragraph: /Your position and the place you choose are not sent to our server.*/
-          - paragraph: Search for a place
+          - text: Search for a place
           - paragraph: Suggestions favor places in Dhaka.
-          - group "Search for a place":
-            - textbox "Search For a Place"
+          - textbox "Search for a place"
     `);
   });
 });

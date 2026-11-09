@@ -31,6 +31,8 @@ import type { AccessibilityRun, AxEntry, LiveRun, TabEnd } from "./smoke-live-re
 const web = fileURLToPath(new URL("../apps/web", import.meta.url));
 const vite = fileURLToPath(new URL("../node_modules/vite/bin/vite.js", import.meta.url));
 const origin = "http://127.0.0.1:4173";
+/** Hosts the page may only reach after the first focus of the place search (METRO-114). */
+const GOOGLE_HOST = /(^|\.)(googleapis|gstatic|google|googleusercontent)\.com$/u;
 /** A neighbourhood name, not an address or a person's place. */
 const QUERY = "Motijheel";
 
@@ -130,6 +132,8 @@ async function main(): Promise<boolean> {
     version: null,
     cspMessages: [],
     placesRequests: 0,
+    googleBeforeFocus: 0,
+    focusAfterSwap: null,
     placesDuringTabWalk: 0,
     routesRequests: 0,
     stationShown: false,
@@ -149,21 +153,46 @@ async function main(): Promise<boolean> {
       const text = message.text();
       if (text.includes("Content Security Policy")) csp.push(text);
     });
+    let focused = false;
     page.on("request", (request: Request) => {
       const { host } = new URL(request.url());
       if (host === "places.googleapis.com") run.placesRequests += 1;
       if (host === "routes.googleapis.com") run.routesRequests += 1;
+      // METRO-114: nothing from Google before the place search is first focused.
+      if (!focused && GOOGLE_HOST.test(host)) run.googleBeforeFocus += 1;
     });
     let step = "open the page";
     try {
       await page.goto(`${origin}/`);
+      step = "open the page and find the plain place search input";
+      // METRO-114: the field starts as a plain input and nothing from Google has loaded. Give the page time to
+      // settle, then count what reached Google before the first focus (expected 0).
+      const plain = page.getByRole("textbox", { name: "Search for a place", exact: true });
+      await plain.waitFor({ state: "visible", timeout: 30_000 });
+      await page.waitForTimeout(2000);
+      focused = true;
       step =
-        "wait for the place search element (is VITE_GOOGLE_MAPS_API_KEY set, and did Maps load?)";
+        "wait for the place search element (is VITE_GOOGLE_MAPS_API_KEY set, and did Maps load after the first focus?)";
+      // The first focus loads Maps and Places and swaps the widget in, keeping focus.
+      await plain.focus();
       // Google's PlaceAutocompleteElement keeps its input in a shadow root that is probably closed
       // (Unverified), so no locator can reach the input. Drive the host element like a user instead:
       // a click focuses the inner input, then the keyboard types into it.
       const host = page.locator("gmp-place-autocomplete").first();
       await host.waitFor({ state: "attached", timeout: 30_000 });
+      // Focus kept after the swap?
+      // Read now, before the Tab walk and the click move focus. The page can see inside the host only through an
+      // open shadow root; a closed one reads as "host-only".
+      const active: unknown = await page.evaluate(`(() => {
+        const el = document.activeElement;
+        if (el === null || el.tagName !== "GMP-PLACE-AUTOCOMPLETE") return "elsewhere";
+        const inner = el.shadowRoot === null ? null : el.shadowRoot.activeElement;
+        return inner !== null && inner.tagName === "INPUT" ? "inner-input" : "host-only";
+      })()`);
+      run.focusAfterSwap =
+        active === "inner-input" || active === "host-only" || active === "elsewhere"
+          ? active
+          : null;
       // Read right away, so the version prints even when a later step fails.
       const version: unknown = await page.evaluate("window.google?.maps?.version ?? null");
       run.version = typeof version === "string" ? version : null;
@@ -227,10 +256,12 @@ async function main(): Promise<boolean> {
       await page.keyboard.press("ArrowDown");
       await page.keyboard.press("Enter");
       step = "show the nearest station";
-      await page.getByText("Straight-line distance").waitFor({ timeout: 30_000 });
+      await page.getByText("straight-line distance · est.").waitFor({ timeout: 30_000 });
       run.stationShown = true;
       step = "show the walking route";
-      await page.getByText(/\d+(\.\d+)? (m|km), \d+ min/u).waitFor({ timeout: 30_000 });
+      await page
+        .getByText(/about \d+(\.\d+)? (m|km), \d+ min · est\./u)
+        .waitFor({ timeout: 30_000 });
       run.routeShown = true;
     } catch {
       run.failedStep = step;

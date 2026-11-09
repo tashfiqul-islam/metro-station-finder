@@ -20,7 +20,10 @@ test("METRO-93 the app renders the nearest-station slice with the real adapter a
     await screen.findByRole("heading", { level: 1, name: "Nearest Metro station" }),
   ).toBeTruthy();
   // No build-time key in tests: the visible "maps unavailable" state, and nothing loads from Google.
-  expect(screen.getByRole("alert").textContent).toContain("Place search is unavailable");
+  expect(
+    screen.getByText(/Place search is unavailable right now/u).closest("output"),
+  ).not.toBeNull();
+  expect(screen.queryByText("Search for a place")).toBeNull();
   // One main landmark (the shell's panel) holds the slice.
   expect(screen.getAllByRole("main")).toHaveLength(1);
   expect(screen.getByRole("main").contains(screen.getByRole("heading", { level: 1 }))).toBe(true);

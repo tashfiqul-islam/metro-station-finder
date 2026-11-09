@@ -1,22 +1,24 @@
-import { act, cleanup, render } from "@testing-library/react";
+import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { StrictMode } from "react";
 import { afterAll, afterEach, beforeAll, expect, test, vi } from "vitest";
 
-import { PlacesContext } from "./context";
+import { MapsContext, PLACE_INPUT_ID, PlacesContext } from "./context";
 import type { PlaceSearchProps } from "./context";
 import { PLACE_FIELDS, PlaceSearch } from "./place-search";
 
-const library = { ready: false, made: [] as unknown[] };
+const library = { ready: false, made: [] as unknown[], load: vi.fn() };
 
 const bias = { center: { lat: 23.8, lng: 90.4 }, radiusMeters: 25_000 };
 
 /** A stand-in for `google.maps.places.PlaceAutocompleteElement`: an element that records its options. */
 class FakeAutocomplete extends HTMLElement {
   readonly options: unknown;
+  value: string | null = null;
   constructor(options: unknown) {
     super();
     this.options = options;
     this.setAttribute("data-fake-autocomplete", "");
+    this.setAttribute("tabindex", "0");
     library.made.push(this);
   }
 }
@@ -31,9 +33,13 @@ function enable(): void {
 
 function Wrapped(props: PlaceSearchProps) {
   return (
-    <PlacesContext value={library.ready ? places : null}>
-      <PlaceSearch {...props} />
-    </PlacesContext>
+    <MapsContext
+      value={{ status: library.ready ? "ready" : "idle", routes: null, load: library.load }}
+    >
+      <PlacesContext value={library.ready ? places : null}>
+        <PlaceSearch {...props} />
+      </PlacesContext>
+    </MapsContext>
   );
 }
 
@@ -68,6 +74,7 @@ function mount() {
   const view = render(
     <Wrapped
       labelId="label"
+      hintId="hint"
       description="a hint"
       bias={bias}
       onPlace={onPlace}
@@ -89,6 +96,7 @@ afterEach(() => {
   cleanup();
   library.ready = false;
   library.made.length = 0;
+  library.load.mockReset();
 });
 afterAll(() => {
   Reflect.deleteProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT");
@@ -98,10 +106,79 @@ test("METRO-88 only the Essentials location field is requested", () => {
   expect(PLACE_FIELDS).toEqual(["location"]);
 });
 
-test("METRO-88 renders a group named by the label and no element until the places library is ready", () => {
+test("METRO-114 starts as a plain input described by the hint, with no group and no widget", () => {
   const { view } = mount();
-  expect(view.container.querySelector("fieldset")?.getAttribute("aria-labelledby")).toBe("label");
+  const input = view.container.querySelector("input");
+  expect(input?.id).toBe(PLACE_INPUT_ID);
+  expect(input?.getAttribute("aria-describedby")).toBe("hint");
+  expect(input?.hidden).toBe(false);
+  expect(view.container.querySelector("fieldset")).toBeNull();
   expect(library.made).toHaveLength(0);
+  expect(library.load).not.toHaveBeenCalled();
+});
+
+test("METRO-114 only the first focus asks for the libraries; rendering and typing do not", () => {
+  const { view } = mount();
+  const input = view.container.querySelector("input");
+  if (input === null) throw new Error("no input");
+  fireEvent.change(input, { target: { value: "mot" } });
+  expect(library.load).not.toHaveBeenCalled();
+  act(() => input.focus());
+  expect(library.load).toHaveBeenCalledTimes(1);
+});
+
+function rerenderReady(view: ReturnType<typeof mount>["view"]): void {
+  enable();
+  view.rerender(
+    <Wrapped
+      labelId="label"
+      hintId="hint"
+      description="a hint"
+      bias={bias}
+      onPlace={vi.fn()}
+      onFailure={vi.fn()}
+    />,
+  );
+}
+
+test("METRO-114 when the library arrives the widget takes the typed text, focus and a caret at the end", () => {
+  const { view } = mount();
+  const input = view.container.querySelector("input");
+  if (input === null) throw new Error("no input");
+  act(() => input.focus());
+  // Typed before the load completed: the plain input kept accepting text.
+  fireEvent.change(input, { target: { value: "Motijheel" } });
+  rerenderReady(view);
+  const element = made();
+  expect(element.isConnected).toBe(true);
+  expect(Reflect.get(element, "value")).toBe("Motijheel");
+  expect(input.hidden).toBe(true);
+  expect(view.container.querySelector("fieldset")?.getAttribute("aria-labelledby")).toBe("label");
+  // Focus follows the swap: the plain input had it.
+  expect(document.activeElement).toBe(element);
+});
+
+test("METRO-114 the swap does not steal focus from a user who moved on, and sets no value when nothing was typed", () => {
+  const { view } = mount();
+  const input = view.container.querySelector("input");
+  if (input === null) throw new Error("no input");
+  const elsewhere = document.createElement("button");
+  document.body.append(elsewhere);
+  act(() => input.focus());
+  act(() => elsewhere.focus());
+  rerenderReady(view);
+  expect(document.activeElement).toBe(elsewhere);
+  expect(Reflect.get(made(), "value")).toBeNull();
+  elsewhere.remove();
+});
+
+test("METRO-114 unmounting the widget restores the plain input", () => {
+  const { view } = mount();
+  rerenderReady(view);
+  const input = view.container.querySelector("input");
+  expect(input?.hidden).toBe(true);
+  view.unmount();
+  expect(input?.hidden).toBe(false);
 });
 
 test("METRO-88 creates one Dhaka-biased element restricted to Bangladesh", () => {
@@ -247,6 +324,7 @@ test("METRO-88 StrictMode leaves exactly one element in the DOM", () => {
     <StrictMode>
       <Wrapped
         labelId="label"
+        hintId="hint"
         description="a hint"
         bias={bias}
         onPlace={vi.fn()}

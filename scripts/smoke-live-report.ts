@@ -571,12 +571,34 @@ function accessibilityLines(run: AccessibilityRun | null): {
   return { lines, failure };
 }
 
+export type FocusAfterSwap = "inner-input" | "host-only" | "elsewhere";
+
+const FOCUS_LINES: Readonly<Record<FocusAfterSwap, string>> = {
+  "inner-input": "on the inner input (read through an open shadow root)",
+  "host-only":
+    "on the widget host; the inner input is not readable (closed shadow root) or not focused",
+  elsewhere: "not on the widget",
+};
+
 export interface LiveRun {
   /** `google.maps.version` read from the page, or null when it could not be read. */
   readonly version: string | null;
   /** Console messages that name the Content Security Policy. */
   readonly cspMessages: readonly string[];
   readonly placesRequests: number;
+  /**
+   * Requests to any Google host seen after the page loaded and before the first focus of the place search
+   * (METRO-114: the Maps script waits for that focus). Expected 0; more fails the run.
+   */
+  readonly googleBeforeFocus: number;
+  /**
+   * Where keyboard focus was right after the widget replaced the plain input that had focus, read before any
+   * click: `inner-input` (the host's shadow root is open and its input holds focus), `host-only` (the host holds
+   * focus and the page cannot see further: a closed shadow root, or an inner input that did not take focus; the
+   * two look the same), `elsewhere`, or null when it could not be read. Information only (Unverified: whether
+   * `focus()` on Google's host reaches its inner input).
+   */
+  readonly focusAfterSwap: FocusAfterSwap | null;
   /** Places requests already seen when the Tab walk finished, before any click or typing (expected 0). */
   readonly placesDuringTabWalk: number;
   readonly routesRequests: number;
@@ -597,6 +619,7 @@ export function liveReport(run: LiveRun): { lines: string[]; pass: boolean } {
     accessibility.failure === null &&
     messages.length === 0 &&
     versionOk &&
+    run.googleBeforeFocus === 0 &&
     run.stationShown &&
     run.routeShown &&
     run.failedStep === null;
@@ -604,6 +627,8 @@ export function liveReport(run: LiveRun): { lines: string[]; pass: boolean } {
     `Maps version: ${run.version ?? "unknown"}`,
     `CSP messages: ${messages.length}`,
     ...messages.map((message) => `  CSP: ${message}`),
+    `Google requests before the first focus: ${run.googleBeforeFocus} (expected 0)`,
+    `Focus after the swap (read before any click): ${run.focusAfterSwap === null ? "not read" : FOCUS_LINES[run.focusAfterSwap]}`,
     `Places requests (host places.googleapis.com): ${run.placesRequests}`,
     `Places requests during the Tab walk: ${run.placesDuringTabWalk} (expected 0)`,
     `Routes requests (host routes.googleapis.com): ${run.routesRequests}`,

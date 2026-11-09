@@ -1,7 +1,8 @@
 import { useEffect, useEffectEvent, useRef } from "react";
 
-import { usePlaces } from "./context";
+import { PLACE_INPUT_ID, useMaps, usePlaces } from "./context";
 import type { PlaceSearchProps } from "./context";
+import { focusElement } from "./focus";
 
 /** The only field requested for a selected place: Essentials tier, no displayName, no address. */
 export const PLACE_FIELDS = ["location"];
@@ -26,30 +27,53 @@ function isSelection(event: Event): event is SelectEvent {
 }
 
 /**
- * The Google place search control. `PlaceAutocompleteElement` keeps the autocomplete session itself: one
- * selection ends one session and `fetchFields` carries its token. We call `fetchFields` once per
- * selection; if the user picks again while one is in flight, the earlier result is ignored (latest wins). The element lives in a shadow root and
- * has no documented property for its accessible name (METRO-101), so a labelled group wraps it and `description` carries the hint. Nothing from Google leaves this file
- * except a plain coordinate.
+ * The place search (METRO-114). It starts as a plain text input: no Google script and no Places request exist
+ * before the user first focuses it. The first focus asks the provider to load the Maps libraries
+ * (`useMaps().load`); when the Places library arrives, `PlaceAutocompleteElement` is created and takes the
+ * input's place. The typed text is carried over (`value`), focus follows when the input still had it, and the
+ * caret goes to the end. The plain input stays in the DOM (hidden) until then, so typing during the load is
+ * never lost.
+ *
+ * Billing: the element keeps the autocomplete session itself. Google's reference says that with
+ * `PlaceAutocompleteElement` the first `fetchFields` on the `Place` from `toPlace()` includes the session token
+ * automatically, and `fetchFields` ends the session (Context7-verified, 2026-11-09). We never create or pass a
+ * token: there is no documented way to hand one to the element, and one we made would not be the one it used.
+ * One selection = one `fetchFields` call here.
+ *
+ * Latest selection wins: a slower fetch for an earlier choice must not replace a later one. The element lives
+ * in a shadow root and has no documented property for its accessible name (METRO-101), so a labelled group
+ * wraps it and `description` carries the hint. Nothing from Google leaves this file except a plain coordinate.
  */
-export function PlaceSearch({ labelId, description, bias, onPlace, onFailure }: PlaceSearchProps) {
+export function PlaceSearch({
+  labelId,
+  hintId,
+  description,
+  bias,
+  onPlace,
+  onFailure,
+}: PlaceSearchProps) {
   const places = usePlaces();
+  const { load } = useMaps();
   const { lat, lng } = bias.center;
   const { radiusMeters } = bias;
+  const input = useRef<HTMLInputElement>(null);
   const host = useRef<HTMLFieldSetElement>(null);
   const place = useEffectEvent(onPlace);
   const fail = useEffectEvent(onFailure);
 
   useEffect(() => {
     const container = host.current;
-    if (places === null || container === null) return noop;
+    const plain = input.current;
+    if (places === null || container === null || plain === null) return noop;
+    // Read before the swap: the typed text and whether the plain input still has focus.
+    const typed = plain.value;
+    const hadFocus = document.activeElement === plain;
     const element = new places.PlaceAutocompleteElement({
       description,
       includedRegionCodes: REGION_CODES,
       locationBias: { center: { lat, lng }, radius: radiusMeters },
     });
     let alive = true;
-    // Latest selection wins: a slower fetch for an earlier choice must not replace a later one.
     let sequence = 0;
     const select = async (event: SelectEvent): Promise<void> => {
       sequence += 1;
@@ -76,13 +100,33 @@ export function PlaceSearch({ labelId, description, bias, onPlace, onFailure }: 
     element.addEventListener("gmp-select", onSelect);
     element.addEventListener("gmp-error", onError);
     container.append(element);
+    if (typed !== "") element.value = typed;
+    plain.hidden = true;
+    if (hadFocus) focusElement(element);
     return () => {
       alive = false;
       element.removeEventListener("gmp-select", onSelect);
       element.removeEventListener("gmp-error", onError);
       element.remove();
+      plain.hidden = false;
     };
   }, [places, description, lat, lng, radiusMeters]);
 
-  return <fieldset ref={host} aria-labelledby={labelId} />;
+  return (
+    <div className="place-slot">
+      <input
+        ref={input}
+        id={PLACE_INPUT_ID}
+        className="place-slot__input"
+        type="text"
+        autoComplete="off"
+        spellCheck={false}
+        aria-describedby={hintId}
+        onFocus={load}
+      />
+      {places !== null && (
+        <fieldset ref={host} className="place-slot__widget" aria-labelledby={labelId} />
+      )}
+    </div>
+  );
 }

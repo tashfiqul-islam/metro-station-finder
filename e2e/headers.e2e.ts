@@ -191,9 +191,9 @@ test.describe("security headers and caching (METRO-31)", () => {
     expect(consoleProblems([csp, notice], null, "webkit")).toEqual([`console.error: ${csp.text}`]);
   });
 
-  // Fail closed: a test that forgets the Maps stub must not reach Google. The slice loads the Maps script at
-  // once, so without a stub the fixture aborts that request and reports it, and this test fails by design
-  // (`test.fail`).
+  // Fail closed: a test that forgets the Maps stub must not reach Google. Since METRO-114 the slice loads the Maps
+  // script only when something asks (the first focus of the place search), so this test asks; without a stub
+  // the fixture aborts that request and reports it, and this test fails by design (`test.fail`).
   test("METRO-88 the fixture fails a test that reaches a Google host without a stub", async ({
     page,
   }) => {
@@ -202,6 +202,9 @@ test.describe("security headers and caching (METRO-31)", () => {
     await expect(
       page.getByRole("heading", { level: 1, name: "Nearest Metro station" }),
     ).toBeVisible();
+    const reached = page.waitForRequest(/^https:\/\/maps\.googleapis\.com\//u);
+    await page.getByRole("textbox", { name: "Search for a place", exact: true }).focus();
+    await reached;
   });
 
   // Proves the console-error fixture itself: with no `allowedConsoleError`, the same blocked image must
