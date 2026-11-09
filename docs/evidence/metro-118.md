@@ -68,7 +68,7 @@ Net change of the first-visit entry against the base: -16 raw / -10 gzip. Headro
 
 ## Accessibility
 
-Keyboard users and script focus after keyboard input still get the 2px `:focus-visible` ring (WCAG 2.4.7). Tab order, focus order and the size of the ring are unchanged, and nothing was added that could cover a focused control (2.4.11). The full smoke run includes `e2e/accessibility.e2e.ts` and the per-spec axe fixture, light and dark, all passing. `tokens` contrast tests are unchanged. A pointer user gets no ring on a heading that took focus after their own tap; that is the requested behaviour, and the heading is still announced by its focus. Whether a screen reader on a touch device reads the heading after focus moves (VoiceOver, TalkBack) is Unverified here.
+Keyboard users and script focus after keyboard input still get the 2px `:focus-visible` ring (WCAG 2.4.7). Tab order, focus order and the size of the ring are unchanged, and nothing was added that could cover a focused control (2.4.11). The full smoke run includes `e2e/accessibility.e2e.ts` and the per-spec axe fixture, light and dark, all passing. `tokens` contrast tests are unchanged. A pointer user gets no ring on a heading that took focus after their own tap; that is the requested behaviour, and the heading is still announced by its focus. A virtual click on a picker option (screen reader, switch access, voice control) reports `event.detail === 0`; the combobox treats it as a keyboard pick, so those users keep the ring (Vitest pins detail 0 as `focusVisible: true` and detail 1 as `false`). Playwright `click()` and `tap()` report detail 1 or more, so the e2e cases cannot exercise this path. Whether a screen reader on a touch device reads the heading after focus moves (VoiceOver, TalkBack) is Unverified here.
 
 ## Commands run
 
@@ -104,3 +104,15 @@ MINOR
 3. Fixed. `focus-fallbacks.test.ts` guards the two focusable sections and the `base.css` selector. The forced 3px ring outranking the 2px `:focus-visible` ring on a section is stated above.
 4. Fixed in the text. `index.html` and `main.tsx` have no static fallback; `searchNotice` is stated as intended and not asserted in a browser (Unverified).
 5. Declared. The `toFixed` patch is duplicated from `error-fallback.e2e.ts` on purpose; reason above.
+
+### Second pass
+
+Second independent review of head `e96a37f` by the `independent-reviewer` agent `afcf49bbcf34bf856`. No Critical and no Important findings. Numbers follow that review's Minor list as relayed to the implementer; its findings 3 and the full text were not in the message, so they have no line here.
+
+- Minor 1. Fixed. A virtual click (`event.detail === 0`) now counts as a keyboard pick and keeps the ring; Vitest pins both values. See Accessibility.
+- Minor 2. Types inferred, not declared; `bun run typecheck` passes. No change.
+- Minor 4. Declared. The guard test is a regex over the source, so it is weak (a `section` whose attributes contain a `>` before `tabIndex` would be missed); acceptable for a guard that is also backed by the `base.css` selector assertion.
+- Minor 5. Declared. The WebKit pointer press that lands on the panel while the station list is open is now Plane ticket METRO-124; it is not fixed here.
+- Minor 6. Relayed to the implementer as fixed or declared, without its text; no change beyond Minor 1 was made for it.
+
+After merging the new bundle gate (METRO-116, ADR-0023) the report reads: first-visit JS 235,420 / 74,159 (budget 250,000 / 80,000), first-visit CSS 14,125 / 3,965 (budget 20,000 / 6,000), Lazy screen nearby 90,970 raw (limit 120,000), Shared lazy 18,225 raw (allowance 27,000). The CSS entry is the same 14,125 as before the merge.

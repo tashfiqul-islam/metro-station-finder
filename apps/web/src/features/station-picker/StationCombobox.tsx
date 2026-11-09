@@ -231,7 +231,10 @@ export function StationCombobox({
               // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a native option cannot hold the roundel and the two-line text
               role="option"
               aria-selected={index === active}
-              onClick={() => choose(match.station, "pointer")}
+              // detail 0 is a virtual click (screen reader, switch, voice): those users keep the ring.
+              onClick={(event) =>
+                choose(match.station, event.detail === 0 ? "keyboard" : "pointer")
+              }
             >
               <span className="roundel roundel--md" data-stop={position} aria-hidden="true">
                 {stopLabel(position)}

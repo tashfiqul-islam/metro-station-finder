@@ -494,7 +494,14 @@ test("METRO-118 focuses the heading with a ring after Enter and without one afte
   expect(lastCall(motijheel)).toEqual({ focusVisible: true });
 
   fireEvent.change(box(), { target: { value: "uttara north" } });
-  fireEvent.click(must(listbox().querySelector<HTMLElement>("[role=option]")));
+  // A real mouse or touch click reports detail 1 or more.
+  fireEvent.click(must(listbox().querySelector<HTMLElement>("[role=option]")), { detail: 1 });
   const uttara = screen.getByRole("heading", { level: 2, name: "Uttara North" });
   expect(lastCall(uttara)).toEqual({ focusVisible: false });
+
+  // A virtual click (screen reader, switch access, voice control) reports detail 0 and keeps the ring.
+  fireEvent.change(box(), { target: { value: "farmgate" } });
+  fireEvent.click(must(listbox().querySelector<HTMLElement>("[role=option]")), { detail: 0 });
+  const farmgate = screen.getByRole("heading", { level: 2, name: "Farmgate" });
+  expect(lastCall(farmgate)).toEqual({ focusVisible: true });
 });
