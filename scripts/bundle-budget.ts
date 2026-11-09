@@ -3,19 +3,66 @@ import { join, relative, resolve } from "node:path";
 import { gzipSync } from "node:zlib";
 
 /**
- * The FIRST-VISIT limits: the entry chunk, every chunk it imports statically and the CSS of each (METRO-104,
- * ADR-0020). These are the numbers METRO-12 set for the whole build; they are unchanged and now apply to what
- * a first visit must load, so a lazy chunk does not count against them.
+ * First-visit JS limits: every JS file of the first visit (the entry chunk, the chunks it imports statically and
+ * the public head script). These are the numbers METRO-12 set for the whole build, unchanged since METRO-104
+ * (ADR-0020); METRO-116 (ADR-0023) only stops CSS from counting against them.
  */
-export const FIRST_VISIT_BUDGET = { raw: 250_000, gzip: 80_000 } as const;
+export const FIRST_VISIT_JS_BUDGET = { raw: 250_000, gzip: 80_000 } as const;
 
 /**
- * Ceiling for ALL emitted JS and CSS, lazy chunks included. A growth tripwire, not a load budget. Chosen on
- * 2026-11-08 from the measured all-files size after the web-vitals chunk moved out of the first visit
- * (about 249 KB raw / 79 KB gzip): 400,000 / 125,000 is about 1.6 times that, room for a few lazy features
- * while a runaway still fails the gate. Revisit when it is half used; do not raise it to pass.
+ * First-visit CSS limits (METRO-116, ADR-0023), sized from the measured 14,141 raw / 3,975 gzip with about 40
+ * percent raw and 50 percent gzip margin. The owner confirms them in the PR.
  */
-export const ALL_FILES_CEILING = { raw: 400_000, gzip: 125_000 } as const;
+export const FIRST_VISIT_CSS_BUDGET = { raw: 20_000, gzip: 6_000 } as const;
+
+/** A lazy screen: its dynamic-entry chunk, the chunks only it imports and their CSS share these limits. */
+export interface ScreenLimit {
+  readonly name: string;
+  readonly raw: number;
+  readonly gzip: number;
+}
+
+/**
+ * Lazy screens by Vite manifest key (the source path of the dynamic entry; stable, unlike the hashed file
+ * name). A new screen is added here with its own fixed limits, in the PR that adds it, with the owner's
+ * approval (ADR-0023). Nearby measures 90,842 raw / 22,798 gzip (JS 41,730 / 14,647, CSS 49,112 / 8,151);
+ * 120,000 / 30,000 leaves 32 percent over each.
+ */
+export const LAZY_SCREEN_LIMITS: ReadonlyMap<string, ScreenLimit> = new Map([
+  ["src/features/nearby/Nearby.tsx", { name: "nearby", raw: 120_000, gzip: 30_000 }],
+]);
+
+/**
+ * One allowance for everything lazy that no single screen owns: the shared roots below and every chunk two
+ * or more roots import. Measured 18,225 raw / 8,121 gzip; 27,000 / 12,000 leaves 48 percent over each.
+ */
+export const SHARED_LAZY_ALLOWANCE = { raw: 27_000, gzip: 12_000 } as const;
+
+/**
+ * Lazy roots that are not screens, by manifest key: the reveal helper, the Maps adapter and web-vitals. The
+ * web-vitals key is `../../node_modules/.bun/web-vitals@<version>/node_modules/web-vitals/dist/web-vitals.js`
+ * under Vite 8 with Bun's isolated install; the pattern ignores the version and any directory layout before
+ * `web-vitals/dist`. A key in another format matches nothing, so the chunk is unclassified and fails closed.
+ */
+const SHARED_LAZY_ROOTS: readonly RegExp[] = [
+  /^src\/theme\/reveal\.ts$/u,
+  /^src\/adapters\/maps\/index\.ts$/u,
+  /(?:^|\/)node_modules\/(?:.+\/)?web-vitals\/dist\/web-vitals\.js$/u,
+];
+
+/** Which lazy roots exist. Tests pass their own; the gate uses `LAZY_MODEL`. */
+export interface LazyModel {
+  readonly screens: ReadonlyMap<string, ScreenLimit>;
+  readonly sharedRoots: readonly RegExp[];
+}
+export const LAZY_MODEL: LazyModel = {
+  screens: LAZY_SCREEN_LIMITS,
+  sharedRoots: SHARED_LAZY_ROOTS,
+};
+
+/** Fixed prefix; the keys of the unclassified chunks follow, in manifest order. */
+export const UNCLASSIFIED_PREFIX =
+  "Unclassified lazy chunk, add it to the per-screen limits or the shared allowance (ADR-0023): ";
 
 /**
  * Classic scripts that `index.html` loads from `apps/web/public/` by their own name (METRO-105, ADR-0021).
@@ -137,15 +184,75 @@ export interface BudgetReport {
   readonly problems: string[];
 }
 
+const SHARED = "shared";
+const isCode = (file: string) => /\.(js|css)$/u.test(file);
+
 const total = (assets: readonly Asset[]) => ({
   raw: assets.reduce((sum, asset) => sum + asset.raw, 0),
   gzip: assets.reduce((sum, asset) => sum + asset.gzip, 0),
 });
 
+/**
+ * Class of each lazy JS/CSS file: a screen name or "shared". Each root (a screen or a shared root) owns its
+ * own file, its CSS and the static `imports` closure below it, minus first-visit files. A file reached from
+ * two or more roots is shared. Chunks no root reaches are returned as keys. `dynamicImports` are never
+ * followed: a dynamic entry is a root or it is unclassified.
+ */
+function classifyLazy(manifest: Manifest, first: ReadonlySet<string>, model: LazyModel) {
+  const owners = new Map<string, Set<string>>();
+  const bucketOf = new Map<string, string>();
+  const reached = new Set<string>();
+  for (const root of manifest.keys()) {
+    const bucket =
+      model.screens.get(root)?.name ??
+      (model.sharedRoots.some((rule) => rule.test(root)) ? SHARED : null);
+    if (bucket === null) continue;
+    bucketOf.set(root, bucket);
+    const seen = new Set<string>([root]);
+    const pending = [root];
+    for (let key = pending.pop(); key !== undefined; key = pending.pop()) {
+      const chunk = manifest.get(key);
+      if (chunk === undefined) continue;
+      reached.add(key);
+      for (const file of [chunk.file, ...chunk.css]) {
+        if (!isCode(file) || first.has(file)) continue;
+        owners.set(file, (owners.get(file) ?? new Set<string>()).add(root));
+      }
+      for (const next of chunk.imports) {
+        if (seen.has(next)) continue;
+        seen.add(next);
+        pending.push(next);
+      }
+    }
+  }
+  const classes = new Map<string, string>();
+  for (const [file, roots] of owners)
+    classes.set(file, roots.size === 1 ? (bucketOf.get([...roots][0] ?? "") ?? SHARED) : SHARED);
+  const unclassified = [...manifest]
+    .filter(
+      ([key, chunk]) =>
+        !reached.has(key) && [chunk.file, ...chunk.css].some((f) => isCode(f) && !first.has(f)),
+    )
+    .map(([key]) => key);
+  return { classes, unclassified };
+}
+
+const percent = (used: number, limit: number) => ((used * 100) / limit).toFixed(1);
+
+interface Size {
+  readonly raw: number;
+  readonly gzip: number;
+}
+
+/** One line per bucket: raw and gzip use against that bucket's limits. */
+const bucketLine = (label: string, noun: string, used: Size, limit: Size) =>
+  `${label}: ${used.raw} bytes raw (${noun} ${limit.raw}; ${percent(used.raw, limit.raw)} percent used); ${used.gzip} bytes gzip (${noun} ${limit.gzip}; ${percent(used.gzip, limit.gzip)} percent used)`;
+
 export function evaluateBundle(
   assets: readonly Asset[],
   manifestText: string | null,
   indexHtml: string | null = null,
+  model: LazyModel = LAZY_MODEL,
 ): BudgetReport {
   if (total(assets).raw === 0)
     return { lines: [], problems: ["No production JS/CSS artifacts found"] };
@@ -156,45 +263,57 @@ export function evaluateBundle(
   if (HEAD_SCRIPTS.some((script) => !onDisk.has(script) && indexHtml?.includes(`src="/${script}"`)))
     return { lines: [], problems: [HEAD_SCRIPT_MISSING] };
   const files = chunks === null ? null : new Set([...chunks, ...heads]);
-  if (files === null || [...files].some((file) => !onDisk.has(file)))
+  if (manifest === null || files === null || [...files].some((file) => !onDisk.has(file)))
     return { lines: [], problems: [MANIFEST_FAILURE] };
   // Every emitted file must be known to the manifest, as a chunk `file` or in a `css` list.
   const listed = new Set<string>(heads);
-  for (const chunk of manifest?.values() ?? []) {
+  for (const chunk of manifest.values()) {
     listed.add(chunk.file);
     for (const file of chunk.css) listed.add(file);
   }
   if (assets.some((asset) => !listed.has(asset.path)))
     return { lines: [], problems: [MANIFEST_STALE] };
+  // Fail closed: a lazy chunk no screen or shared root reaches has no limit, so it cannot pass.
+  const { classes, unclassified } = classifyLazy(manifest, files, model);
+  if (unclassified.length > 0)
+    return { lines: [], problems: [UNCLASSIFIED_PREFIX + unclassified.join(", ")] };
 
   const sorted = [...assets];
   sorted.sort((a, b) => b.raw - a.raw || a.path.localeCompare(b.path));
   const lines = ["Production JS/CSS files, largest first (raw / gzip bytes):"];
-  for (const { path, raw, gzip } of sorted)
-    lines.push(`  ${path}: ${raw} raw; ${gzip} gzip; ${files.has(path) ? "first-visit" : "lazy"}`);
-  const first = total(assets.filter((asset) => files.has(asset.path)));
-  const all = total(assets);
+  for (const { path, raw, gzip } of sorted) {
+    const kind = files.has(path) ? "first-visit" : `lazy (${classes.get(path) ?? SHARED})`;
+    lines.push(`  ${path}: ${raw} raw; ${gzip} gzip; ${kind}`);
+  }
+  const first = assets.filter((asset) => files.has(asset.path));
+  const js = total(first.filter((asset) => asset.path.endsWith(".js")));
+  const css = total(first.filter((asset) => asset.path.endsWith(".css")));
   lines.push(
-    `First-visit JS/CSS: ${first.raw} bytes raw; ${first.gzip} bytes gzip (budget ${FIRST_VISIT_BUDGET.raw} / ${FIRST_VISIT_BUDGET.gzip})`,
-    `All JS/CSS: ${all.raw} bytes raw; ${all.gzip} bytes gzip (ceiling ${ALL_FILES_CEILING.raw} / ${ALL_FILES_CEILING.gzip})`,
+    `First-visit JS: ${js.raw} bytes raw; ${js.gzip} bytes gzip (budget ${FIRST_VISIT_JS_BUDGET.raw} / ${FIRST_VISIT_JS_BUDGET.gzip})`,
+    `First-visit CSS: ${css.raw} bytes raw; ${css.gzip} bytes gzip (budget ${FIRST_VISIT_CSS_BUDGET.raw} / ${FIRST_VISIT_CSS_BUDGET.gzip})`,
   );
-  const usedRaw = all.raw / ALL_FILES_CEILING.raw;
-  const usedGzip = all.gzip / ALL_FILES_CEILING.gzip;
-  lines.push(
-    `Ceiling used: ${Math.round(usedRaw * 100)} percent raw; ${Math.round(usedGzip * 100)} percent gzip`,
-  );
-  if (Math.max(usedRaw, usedGzip) > 0.5)
-    lines.push(
-      "Note: all files use more than half of the ceiling. Growth tripwire: revisit the ceiling (ADR-0020).",
-    );
   const problems: string[] = [];
-  if (first.raw > FIRST_VISIT_BUDGET.raw || first.gzip > FIRST_VISIT_BUDGET.gzip)
+  if (js.raw > FIRST_VISIT_JS_BUDGET.raw || js.gzip > FIRST_VISIT_JS_BUDGET.gzip)
     problems.push(
-      `Bundle budget exceeded for the first visit: ${FIRST_VISIT_BUDGET.raw} raw / ${FIRST_VISIT_BUDGET.gzip} gzip bytes`,
+      `Bundle budget exceeded for the first visit JS: ${FIRST_VISIT_JS_BUDGET.raw} raw / ${FIRST_VISIT_JS_BUDGET.gzip} gzip bytes`,
     );
-  if (all.raw > ALL_FILES_CEILING.raw || all.gzip > ALL_FILES_CEILING.gzip)
+  if (css.raw > FIRST_VISIT_CSS_BUDGET.raw || css.gzip > FIRST_VISIT_CSS_BUDGET.gzip)
     problems.push(
-      `Bundle ceiling exceeded for all files: ${ALL_FILES_CEILING.raw} raw / ${ALL_FILES_CEILING.gzip} gzip bytes`,
+      `Bundle budget exceeded for the first visit CSS: ${FIRST_VISIT_CSS_BUDGET.raw} raw / ${FIRST_VISIT_CSS_BUDGET.gzip} gzip bytes`,
+    );
+  const usedBy = (name: string) =>
+    total(sorted.filter((asset) => classes.get(asset.path) === name));
+  for (const { name, raw, gzip } of model.screens.values()) {
+    const used = usedBy(name);
+    lines.push(bucketLine(`Lazy screen ${name}`, "limit", used, { raw, gzip }));
+    if (used.raw > raw || used.gzip > gzip)
+      problems.push(`Lazy screen limit exceeded for ${name}: ${raw} raw / ${gzip} gzip bytes`);
+  }
+  const shared = usedBy(SHARED);
+  lines.push(bucketLine("Shared lazy", "allowance", shared, SHARED_LAZY_ALLOWANCE));
+  if (shared.raw > SHARED_LAZY_ALLOWANCE.raw || shared.gzip > SHARED_LAZY_ALLOWANCE.gzip)
+    problems.push(
+      `Shared lazy allowance exceeded: ${SHARED_LAZY_ALLOWANCE.raw} raw / ${SHARED_LAZY_ALLOWANCE.gzip} gzip bytes`,
     );
   return { lines, problems };
 }
