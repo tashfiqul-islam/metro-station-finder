@@ -22,10 +22,12 @@ export const copy = {
     `Your device found your position only roughly, with an error of ${size}. The nearest station could be wrong, so none is shown. Search for a place instead.`,
   roughUnknown:
     "Your device could not say how precisely it found your position. The nearest station could be wrong, so none is shown. Search for a place instead.",
-  // METRO-114: the handoff's fixed strings, with its "ln." read as "right now". The offline variant drops the
-  // handoff's "Stations and fares still work": no user-facing copy claims offline use (METRO-106).
+  // METRO-114: the handoff's fixed string, with its "ln." read as "right now". The no-connection variant is new:
+  // the handoff's "You’re offline. Stations and fares still work." claims offline use (METRO-106, and the
+  // built-output test of METRO-112 forbids that word in shipped scripts), so it says what is true now.
   searchUnavailable: "Place search is unavailable right now. Pick a station instead.",
-  searchOffline: "You’re offline. Place search returns when you reconnect. Pick a station instead.",
+  searchNoConnection:
+    "No internet connection. Place search returns when you reconnect. Pick a station instead.",
   resultHeading: "Nearest station",
   empty: "No station could be found for that location.",
   // METRO-113: a location result. The distance is an estimate: the device position is a circle, not a point.

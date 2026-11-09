@@ -69,6 +69,7 @@ export function Nearby({ maps, setMap }: NearbyProps): ReactElement {
     });
   }, []);
   const settle = useCallback((): void => setSnap("half"), [setSnap]);
+  const engageSearch = useCallback((): void => setSnap("full"), [setSnap]);
 
   return (
     <NearestStation
@@ -77,6 +78,7 @@ export function Nearby({ maps, setMap }: NearbyProps): ReactElement {
       pickSeq={picks}
       onLocation={onLocation}
       onSettle={settle}
+      onSearchEngage={engageSearch}
       after={
         <StationPicker
           current={current?.kind === "pick"}

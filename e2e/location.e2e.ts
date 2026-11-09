@@ -3,7 +3,7 @@ import type { Locator, Page } from "@playwright/test";
 import { isRecord } from "../scripts/guards";
 import { axeBuilder, expect, test } from "./fixtures";
 import { linksAreTabbable } from "./keyboard";
-import { installMapsStub, stubGeolocation } from "./maps-stub";
+import { installMapsStub, stubGeolocation, widgetSearch } from "./maps-stub";
 
 /**
  * METRO-113: "Use my location" and every location state, in the real build with the enforced CSP and the
@@ -89,7 +89,7 @@ test.describe("use my location (METRO-113)", () => {
     expect(animation).toBe("none");
   });
 
-  test("METRO-113 a good fix: one result with focus on its heading, the pin and highlight, Also nearby, no route area", async ({
+  test("METRO-113 a good fix: one result with focus on its heading, the pin and highlight, Also nearby, one walking route", async ({
     page,
   }) => {
     await stubGeolocation(page, NEAR_UTTARA_NORTH);
@@ -109,7 +109,8 @@ test.describe("use my location (METRO-113)", () => {
     );
     await expect(page.locator("svg.map .map__pin--hl")).toHaveCount(1);
     await expect(page.locator("svg.map .map__me")).toHaveCount(1);
-    await expect(page.locator(".result__walk")).toHaveCount(0);
+    // METRO-114: a good fix asks for one walking route and shows it as an estimate.
+    await expect(page.locator(".result__walk")).toContainText("about 1.2 km, 15 min · est.");
     await expect(page.getByText("The walking route is unavailable.")).toHaveCount(0);
     expect(await snap(page)).toBe("half");
     // One result: a single article, no ticket.
@@ -169,11 +170,12 @@ test.describe("use my location (METRO-113)", () => {
     await expect(notice.getByRole("button")).toHaveCount(1);
     await expect(page.getByRole("alert")).toHaveCount(0);
     expect(await snap(page)).toBe("half");
-    // Activating it moves focus into the search field (the stub's input stands for Google's).
+    // Activating it moves focus into the search field: the plain input takes it, asks for the script, and the
+    // widget (the stub's input stands for Google's) replaces it with focus kept. Only the stub is verified.
     await search.click();
-    await expect(
-      page.getByRole("textbox", { name: "Search For a Place", exact: true }),
-    ).toBeFocused();
+    await expect(widgetSearch(page)).toBeFocused();
+    // The sheet opens to full for typing (METRO-114), like the station picker.
+    expect(await snap(page)).toBe("full");
   });
 
   test("METRO-113 a station picked while locating cancels it: the status goes and the late answer changes nothing", async ({
@@ -320,8 +322,15 @@ test.describe("use my location (METRO-113)", () => {
         new Set(["id", "name", "navigationType", "rating", "value"]),
       );
     }
+    // METRO-114: the fix asks Google for its walking route, which loads the Maps script once (the stub answers it;
+    // the position itself is passed to the stubbed library call and is in no request, checked below).
+    const scripts = requests
+      .slice(before)
+      .filter((r) => r.url.startsWith("https://maps.googleapis.com/"));
+    expect(scripts).toHaveLength(1);
     const added = requests
       .slice(before)
+      .filter((r) => !r.url.startsWith("https://maps.googleapis.com/"))
       .filter((r) => new URL(r.url).pathname !== "/api/vitals")
       .filter(
         (r) =>
@@ -343,7 +352,7 @@ test.describe("use my location (METRO-113)", () => {
     ).toBe(true);
     const calls = await stub.calls();
     expect(calls.fetchFields).toEqual([]);
-    expect(calls.routes).toEqual([]);
+    expect(calls.routes).toHaveLength(1);
     expect(stub.blocked).toEqual([]);
   });
 
@@ -376,7 +385,9 @@ test.describe("use my location (METRO-113)", () => {
     const index = (text: string | RegExp): number =>
       stops.findIndex((stop) => (typeof text === "string" ? stop === text : text.test(stop)));
     const locateAt = index(/^Use my location/u);
-    const searchAt = index("Search For a Place");
+    // The plain input is named "Search for a place"; if the Tab walk focused it, the widget (stub name "Search For
+    // a Place") has replaced it by the next stop. Either way there is one stop for the search, matched ignoring case.
+    const searchAt = index(/^search for a place$/iu);
     const pickAt = index("Or pick a station");
     expect(locateAt, "Use my location").toBeGreaterThan(-1);
     expect(searchAt, "place search").toBeGreaterThan(locateAt);

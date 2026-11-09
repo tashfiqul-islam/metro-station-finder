@@ -4,8 +4,6 @@ import { PLACE_INPUT_ID, useMaps, usePlaces } from "./context";
 import type { PlaceSearchProps } from "./context";
 import { focusElement } from "./focus";
 
-import "../../styles/components/fields.css";
-
 /** The only field requested for a selected place: Essentials tier, no displayName, no address. */
 export const PLACE_FIELDS = ["location"];
 

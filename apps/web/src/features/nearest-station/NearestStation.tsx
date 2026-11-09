@@ -65,6 +65,11 @@ interface SliceProps {
   /** Locating began, a result appeared or a notice showed: the screen snaps its sheet to half. */
   readonly onSettle?: () => void;
   /**
+   * Focus entered the place search: the screen opens its sheet to full, so the suggestion popup has room above
+   * the fold (the station picker does the same, METRO-112). Not called again by the result that follows.
+   */
+  readonly onSearchEngage?: () => void;
+  /**
    * Counts station picks (the picker, METRO-112). A new pick cancels a Use my location in flight and clears a
    * notice: the pick is the user's latest choice, and a late fix must not replace it, take focus or move the
    * sheet.
@@ -80,7 +85,15 @@ function noticeText(notice: Notice): string {
     : copy.roughKnown(formatAccuracy(notice.meters));
 }
 
-function Slice({ maps, after, suppressed = false, onLocation, onSettle, pickSeq = 0 }: SliceProps) {
+function Slice({
+  maps,
+  after,
+  suppressed = false,
+  onLocation,
+  onSettle,
+  onSearchEngage,
+  pickSeq = 0,
+}: SliceProps) {
   const { status } = useMaps();
   const [locating, setLocating] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
@@ -290,7 +303,7 @@ function Slice({ maps, after, suppressed = false, onLocation, onSettle, pickSeq 
               </span>
               <div className="notice__body">
                 <p className="notice__text">
-                  {online ? copy.searchUnavailable : copy.searchOffline}
+                  {online ? copy.searchUnavailable : copy.searchNoConnection}
                 </p>
               </div>
             </div>
@@ -310,6 +323,7 @@ function Slice({ maps, after, suppressed = false, onLocation, onSettle, pickSeq 
               onFocus={() => {
                 engage();
                 searchHadFocus.current = true;
+                onSearchEngage?.();
               }}
               onBlur={(event) => {
                 if (event.relatedTarget !== null) searchHadFocus.current = false;

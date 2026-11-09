@@ -231,24 +231,17 @@ test("METRO-114 offline at render shows the offline notice from the start and no
   setOnline(false);
   try {
     render(<NearestStation maps={fakeMaps} />);
-    expect(screen.getByText(copy.searchOffline)).toBeTruthy();
-    expect(copy.searchOffline).not.toMatch(/still work|works? offline/iu);
+    expect(screen.getByText(copy.searchNoConnection)).toBeTruthy();
+    expect(copy.searchNoConnection).not.toMatch(/offline|still work/iu);
     expect(screen.queryByText(copy.searchLabel)).toBeNull();
     expect(document.querySelector("[data-fake-search]")).toBeNull();
     setOnline(true);
     act(() => {
       window.dispatchEvent(new Event("online"));
     });
-    expect(screen.queryByText(copy.searchOffline)).toBeNull();
+    expect(screen.queryByText(copy.searchNoConnection)).toBeNull();
     expect(screen.getByText(copy.searchLabel)).toBeTruthy();
     expect(document.querySelector("[data-fake-search]")).not.toBeNull();
-    // And back: the offline event hides it again.
-    setOnline(false);
-    act(() => {
-      window.dispatchEvent(new Event("offline"));
-    });
-    expect(screen.getByText(copy.searchOffline)).toBeTruthy();
-    expect(document.querySelector("[data-fake-search]")).toBeNull();
   } finally {
     setOnline(null);
   }

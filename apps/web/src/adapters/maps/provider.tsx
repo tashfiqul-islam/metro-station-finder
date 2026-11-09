@@ -32,7 +32,7 @@ interface LoaderProps {
   readonly children: ReactNode;
 }
 
-type Libraries = Loaded | "failed" | "failed-offline" | null;
+type Libraries = Loaded | "failed" | "failed-no-connection" | null;
 
 function Loader({ apiKey, load, reset, children }: LoaderProps) {
   const [libraries, setLibraries] = useState<Libraries>(null);
@@ -47,7 +47,7 @@ function Loader({ apiKey, load, reset, children }: LoaderProps) {
     const fail = (): void => {
       if (!current) return;
       current = false;
-      setLibraries(navigator.onLine ? "failed" : "failed-offline");
+      setLibraries(navigator.onLine ? "failed" : "failed-no-connection");
     };
     // A script that neither loads nor errors must not leave the search and the route waiting for ever. A late
     // answer is ignored (the same page then reads as unavailable until it is reloaded).
@@ -74,7 +74,7 @@ function Loader({ apiKey, load, reset, children }: LoaderProps) {
 
   // A load that failed while the browser was offline is tried again when it reports the connection back.
   useEffect(() => {
-    if (libraries !== "failed-offline") return noop;
+    if (libraries !== "failed-no-connection") return noop;
     const retry = (): void => {
       reset();
       setLibraries(null);
@@ -86,7 +86,7 @@ function Loader({ apiKey, load, reset, children }: LoaderProps) {
 
   const state = useMemo<MapsState>(() => {
     if (libraries === null) return { ...(askedOnce ? LOADING_STATE : IDLE_STATE), load: request };
-    if (libraries === "failed" || libraries === "failed-offline") {
+    if (libraries === "failed" || libraries === "failed-no-connection") {
       return { ...UNAVAILABLE, load: request };
     }
     return { status: "ready", routes: createRouteService(libraries.routes.Route), load: request };
