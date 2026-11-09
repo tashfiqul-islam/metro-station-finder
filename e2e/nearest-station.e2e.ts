@@ -37,8 +37,10 @@ async function searchFor(page: Page, text: string) {
   await search.press("Enter");
 }
 
+const station = (page: Page, name: string) => page.getByRole("heading", { level: 2, name });
+
 test.describe("nearest station from a searched place (METRO-88)", () => {
-  test("METRO-88 A1 A2 A3 a searched place shows the station, distances, walking route and fare", async ({
+  test("METRO-88 A1 A2 A3 a searched place shows the station, the estimate, the walking route and the fare range", async ({
     page,
   }) => {
     const stub = await openSlice(page);
@@ -47,15 +49,14 @@ test.describe("nearest station from a searched place (METRO-88)", () => {
     ).toBeVisible();
     await searchFor(page, "motijheel");
 
-    await expect(page.getByText("Motijheel", { exact: true }).first()).toBeVisible();
-    await expect(page.getByText("Straight-line distance")).toBeVisible();
+    await expect(station(page, "Motijheel")).toBeFocused();
+    await expect(page.getByText("straight-line distance · est.")).toBeVisible();
     await expect(page.getByText("1.23 km, 15 min")).toBeVisible();
-
-    const destination = page.getByRole("combobox", { name: "Destination station" });
-    const options = await destination.locator("option").allTextContents();
-    expect(options).not.toContain("Motijheel");
-    await destination.selectOption({ label: "Uttara North" });
-    await expect(page.getByText("Motijheel to Uttara North: BDT 100")).toBeVisible();
+    // METRO-113: the destination picker is gone; the result shows the fare range and its footnote.
+    const fare = page.locator(".result__fare");
+    await expect(fare).toContainText("Single fare from here");
+    await expect(fare).toContainText("20 taka");
+    await expect(fare).toContainText("100 taka");
     await expect(
       page.getByText(
         "Fares as of: DTCA notice dated 8 September 2022; last checked 5 November 2026.",
@@ -117,25 +118,37 @@ test.describe("nearest station from a searched place (METRO-88)", () => {
     await stubGeolocation(page, "denied");
     await openSlice(page);
     await page.getByRole("button", { name: "Use my location" }).click();
-    const alert = page.getByRole("alert");
-    await expect(alert).toHaveText("Location is turned off. Search for a place instead.");
-    await expect(alert).toBeFocused();
-    await searchFor(page, "uttara");
-    await expect(page.getByText("Uttara North", { exact: true }).first()).toBeVisible();
+    // METRO-113: focus moves to the notice's first action, so the notice is a labelled group, not also an alert.
+    const notice = page.getByRole("group", {
+      name: "Location is turned off. Search for a place instead.",
+    });
+    await expect(notice).toBeVisible();
+    await expect(notice.getByRole("button", { name: "Search for a place" })).toBeFocused();
     await expect(page.getByRole("alert")).toHaveCount(0);
+    await searchFor(page, "uttara");
+    await expect(station(page, "Uttara North")).toBeVisible();
+    await expect(page.getByRole("alert")).toHaveCount(0);
+    await expect(notice).toHaveCount(0);
   });
 
-  test("METRO-88 A9 the device position finds the station without a place search or an /api coordinate", async ({
+  test("METRO-88 A9 the device position finds the station without a place search, a route or an /api coordinate", async ({
     page,
   }) => {
     await stubGeolocation(page, { lat: 23.87, lng: 90.367 });
     const stub = await openSlice(page);
     const apiRequests = trackApiRequests(page);
     await page.getByRole("button", { name: "Use my location" }).click();
-    await expect(page.getByText("Uttara North", { exact: true }).first()).toBeVisible();
-    await expect(page.getByText("1.23 km, 15 min")).toBeVisible();
+    await expect(station(page, "Uttara North")).toBeFocused();
+    await expect(page.getByText("straight-line distance · est.")).toBeVisible();
+    // METRO-113: a device fix asks for no walking route; the route area is absent, not an error.
+    await expect(page.locator(".result__walk")).toHaveCount(0);
+    await expect(page.getByText("The walking route is unavailable.", { exact: false })).toHaveCount(
+      0,
+    );
     await expectNoCoordinateInApi(page, apiRequests);
-    expect((await stub.calls()).fetchFields).toEqual([]);
+    const calls = await stub.calls();
+    expect(calls.fetchFields).toEqual([]);
+    expect(calls.routes).toEqual([]);
   });
 
   test.describe("a rough device location (METRO-103)", () => {
@@ -146,32 +159,31 @@ test.describe("nearest station from a searched place (METRO-88)", () => {
       const stub = await openSlice(page);
       const apiRequests = trackApiRequests(page);
       await page.getByRole("button", { name: "Use my location" }).click();
-      const alert = page.getByRole("alert");
-      await expect(alert).toHaveText(
-        "Your device found your position only roughly, with an error of about 25 km. The nearest station could be wrong, so none is shown. Search for a place instead.",
+      const notice = page.getByRole("group", { name: /found your position only roughly/u });
+      await expect(notice).toHaveText(
+        /Your device found your position only roughly, with an error of about 25 km\. The nearest station could be wrong, so none is shown\. Search for a place instead\./u,
       );
-      await expect(alert).toBeFocused();
-      await expect(page.getByRole("heading", { name: /Nearest station/u })).toHaveCount(0);
-      await expect(page.getByRole("combobox", { name: "Destination station" })).toHaveCount(0);
-      await expect(page.getByText("Straight-line distance")).toHaveCount(0);
+      await expect(notice.getByRole("button", { name: "Try again" })).toBeFocused();
+      await expect(page.locator(".result")).toHaveCount(0);
+      await expect(page.getByText("straight-line distance · est.")).toHaveCount(0);
       await expectNoCoordinateInApi(page, apiRequests);
       expect((await stub.calls()).routes).toEqual([]);
       // The place search keeps working and replaces the warning with a result.
       await searchFor(page, "motijheel");
       await expect(page.getByText("1.23 km, 15 min")).toBeVisible();
       await expect(page.getByRole("alert")).toHaveCount(0);
+      await expect(notice).toHaveCount(0);
     });
 
-    test("METRO-103 a precise fix of about 20 m gives the usual station and route", async ({
+    test("METRO-103 a precise fix of about 20 m gives the station and, since METRO-113, no route", async ({
       page,
     }) => {
       await stubGeolocation(page, { lat: 23.87, lng: 90.367, accuracy: 20 });
       const stub = await openSlice(page);
       await page.getByRole("button", { name: "Use my location" }).click();
-      await expect(page.getByText("Uttara North", { exact: true }).first()).toBeVisible();
-      await expect(page.getByText("1.23 km, 15 min")).toBeVisible();
+      await expect(station(page, "Uttara North")).toBeVisible();
       await expect(page.getByRole("alert")).toHaveCount(0);
-      expect((await stub.calls()).routes).toHaveLength(1);
+      expect((await stub.calls()).routes).toEqual([]);
     });
   });
 
@@ -188,11 +200,8 @@ test.describe("nearest station from a searched place (METRO-88)", () => {
       );
       await expect(page.locator("body")).not.toContainText("secret");
       await page.getByRole("button", { name: "Use my location" }).click();
-      await expect(page.getByText("Motijheel", { exact: true }).first()).toBeVisible();
-      await page
-        .getByRole("combobox", { name: "Destination station" })
-        .selectOption({ label: "Uttara North" });
-      await expect(page.getByText("Motijheel to Uttara North: BDT 100")).toBeVisible();
+      await expect(station(page, "Motijheel")).toBeVisible();
+      await expect(page.locator(".result__fare")).toContainText("Single fare from here");
     });
   });
 
@@ -206,28 +215,28 @@ test.describe("nearest station from a searched place (METRO-88)", () => {
         "The walking route is unavailable. The station and fare are still correct.",
       );
       await expect(page.locator("body")).not.toContainText("secret");
-      await expect(page.getByText("Motijheel", { exact: true }).first()).toBeVisible();
-      await page
-        .getByRole("combobox", { name: "Destination station" })
-        .selectOption({ label: "Uttara North" });
-      await expect(page.getByText("Motijheel to Uttara North: BDT 100")).toBeVisible();
+      await expect(station(page, "Motijheel")).toBeVisible();
+      await expect(page.locator(".result__fare")).toContainText("Single fare from here");
     });
   });
 
   test.describe("when the Maps script cannot load", () => {
     test.use({ allowedConsoleError: /Failed to load resource|ERR_FAILED/u });
 
-    test("METRO-88 fixed copy shows, and location still finds the station", async ({ page }) => {
+    test("METRO-88 fixed copy shows, and location still finds the station without any route area", async ({
+      page,
+    }) => {
       await stubGeolocation(page, { lat: 23.87, lng: 90.367 });
       await openSlice(page, { scriptFails: true });
       await expect(page.getByRole("alert")).toHaveText(
         "Place search is unavailable. You can still use your location.",
       );
       await page.getByRole("button", { name: "Use my location" }).click();
-      await expect(page.getByText("Uttara North", { exact: true }).first()).toBeVisible();
+      await expect(station(page, "Uttara North")).toBeVisible();
+      // METRO-113: there is no route area for a device fix, so there is nothing to fail.
       await expect(
-        page.getByText("The walking route is unavailable. The station and fare are still correct."),
-      ).toBeVisible();
+        page.getByText("The walking route is unavailable.", { exact: false }),
+      ).toHaveCount(0);
     });
   });
 
@@ -238,15 +247,17 @@ test.describe("nearest station from a searched place (METRO-88)", () => {
     await expect(
       page.getByRole("textbox", { name: MEASURED_GOOGLE_NAME, exact: true }),
     ).toBeVisible();
-    // Search input and the location button (the destination select appears with the first result), after the
-    // shell's controls: the Home link, the theme button, plus the three sheet-handle controls where the sheet is drawn.
+    // The location button, the search input and the picker's combobox (METRO-112), after the shell's controls:
+    // the Home link, the theme button, plus the three sheet-handle controls where the sheet is drawn.
     // The line map adds four tab stops (METRO-111): the map and its three zoom buttons, after the panel's content.
     const shell = (await shellControls(page)) + 4;
-    // The station picker's combobox (METRO-112) is one more stop between the location button and the map.
     await expectTabReachesEveryControl(page, { expected: shell + 3 });
     await searchFor(page, "motijheel");
     await expect(page.getByText("1.23 km, 15 min")).toBeVisible();
-    await expectTabReachesEveryControl(page, { expected: shell + 4 });
+    // METRO-113: the result adds only its Directions link (counted where this browser Tabs to links); the
+    // destination select of METRO-88 is gone.
+    const link = (await linksAreTabbable(page)) ? 1 : 0;
+    await expectTabReachesEveryControl(page, { expected: shell + 3 + link });
   });
 
   test("METRO-101 stub wiring: the hint, the description option and aria-describedby we control", async ({
@@ -270,19 +281,20 @@ test.describe("nearest station from a searched place (METRO-88)", () => {
 
   test("METRO-88 idle page: accessibility tree of main", async ({ page }) => {
     await openSlice(page);
+    // METRO-113: the primary action comes first, then the consent line, then the place search (the handoff's
+    // order); before, the search came first.
     await expect(page.getByRole("main")).toMatchAriaSnapshot(`
       - main:
         - heading "Nearest Metro station" [level=1]
         - paragraph: Find the nearest Dhaka MRT Line 6 station, the walk to it and the fare.
         - region "Where are you?":
           - heading "Where are you?" [level=2]
+          - button "Use my location"
+          - paragraph: /Your position and the place you choose are not sent to our server.*/
           - paragraph: Search for a place
           - paragraph: Suggestions favor places in Dhaka.
           - group "Search for a place":
             - textbox "Search For a Place"
-          - paragraph:
-            - button "Use my location"
-          - paragraph: /Your position and the place you choose are not sent to our server.*/
     `);
   });
 });

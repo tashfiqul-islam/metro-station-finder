@@ -1,6 +1,6 @@
 import { expect, test, vi } from "vitest";
 
-import { locate } from "./geolocate";
+import { WATCHDOG_MS, locate } from "./geolocate";
 import { fakePosition, fakePositionError } from "./geolocation-fakes";
 
 type Success = (position: GeolocationPosition) => void;
@@ -19,7 +19,7 @@ test("METRO-88 a fix becomes a plain coordinate and the request uses the ADR-000
   });
   expect(geo.getCurrentPosition).toHaveBeenCalledTimes(1);
   expect(geo.getCurrentPosition.mock.calls[0]?.[2]).toEqual({
-    timeout: 10_000,
+    timeout: 8_000,
     maximumAge: 0,
     enableHighAccuracy: false,
   });
@@ -58,5 +58,62 @@ test("METRO-103 the accuracy radius is carried; NaN, infinite and negative are u
   expect(await read(0)).toBe(0);
   for (const bad of [Number.NaN, Infinity, -1]) {
     expect(await read(bad)).toBeUndefined();
+  }
+});
+
+test("METRO-113 a getCurrentPosition that throws is the unavailable outcome, with no error carried", async () => {
+  const geo = fakeGeo(() => {
+    throw new Error("synthetic: lat 23.0 lng 90.0");
+  });
+  expect(await locate(geo)).toEqual({ kind: "unavailable" });
+});
+
+test("METRO-113 a navigator.geolocation getter that throws is the unavailable outcome", async () => {
+  Object.defineProperty(navigator, "geolocation", {
+    configurable: true,
+    get: () => {
+      throw new Error("synthetic");
+    },
+  });
+  try {
+    expect(await locate()).toEqual({ kind: "unavailable" });
+  } finally {
+    Reflect.deleteProperty(navigator, "geolocation");
+  }
+});
+
+test("METRO-113 a browser that never calls back ends as unavailable after the 10 s watchdog, and a late fix is ignored", async () => {
+  vi.useFakeTimers();
+  try {
+    const held: { late: Success | null } = { late: null };
+    const geo = fakeGeo((success) => {
+      held.late = success;
+    });
+    const outcome = locate(geo);
+    let settled = false;
+    void outcome.then(() => {
+      settled = true;
+      return settled;
+    });
+    await vi.advanceTimersByTimeAsync(WATCHDOG_MS - 1);
+    expect(settled).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(await outcome).toEqual({ kind: "unavailable" });
+    // The late answer changes nothing: the promise already settled.
+    held.late?.(fakePosition(23.8, 90.4));
+    expect(await outcome).toEqual({ kind: "unavailable" });
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+test("METRO-113 an answer before the watchdog clears it (no timer is left running)", async () => {
+  vi.useFakeTimers();
+  try {
+    const geo = fakeGeo((success) => success(fakePosition(23.8, 90.4)));
+    expect((await locate(geo)).kind).toBe("position");
+    expect(vi.getTimerCount()).toBe(0);
+  } finally {
+    vi.useRealTimers();
   }
 });

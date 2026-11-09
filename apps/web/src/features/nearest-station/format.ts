@@ -5,6 +5,17 @@ export function formatKm(km: number): string {
   return `${km.toFixed(2)} km`;
 }
 
+/**
+ * A straight-line distance that is an estimate (the device position is a circle, not a point): metres to the
+ * nearest 10 below 1 km (never "0 m"), else kilometres with one decimal. The caller adds "about" and "est.".
+ */
+export function formatEstimate(km: number): string {
+  // Not a number (never from the dataset): no figure rather than "NaN m".
+  if (!Number.isFinite(km)) return "";
+  const tens = Math.max(10, Math.round((km * 1000) / 10) * 10);
+  return tens < 1000 ? `${tens} m` : `${(Math.round(km * 10) / 10).toFixed(1)} km`;
+}
+
 /** Whole metres below 1 km, else km with two decimals. */
 export function formatWalkingDistance(meters: number): string {
   // Round first, so 999.5 m reads "1.00 km" and never "1000 m".

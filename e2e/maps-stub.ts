@@ -196,10 +196,18 @@ export async function expectNoCoordinateInApi(
     expect(everything).not.toContain(fragment);
   }
 }
-/** Replaces the browser geolocation with a deterministic answer (permission denied, or a fixed fix). */
+/**
+ * Replaces the browser geolocation with a deterministic answer: permission denied, a position that is
+ * unavailable (also what a timeout reads as), a request that never answers (the locating state), or a fixed fix.
+ * `accuracy: -1` is a fix with no usable accuracy value (JSON cannot carry NaN into the page). Synthetic coordinates only.
+ */
 export async function stubGeolocation(
   page: Page,
-  answer: "denied" | { readonly lat: number; readonly lng: number; readonly accuracy?: number },
+  answer:
+    | "denied"
+    | "unavailable"
+    | "pending"
+    | { readonly lat: number; readonly lng: number; readonly accuracy?: number },
 ): Promise<void> {
   await page.addInitScript((given) => {
     const geolocation = {
@@ -207,8 +215,20 @@ export async function stubGeolocation(
         success: (position: unknown) => void,
         failure: (error: unknown) => void,
       ) => {
-        if (given === "denied") {
-          failure({ code: 1, PERMISSION_DENIED: 1, POSITION_UNAVAILABLE: 2, TIMEOUT: 3 });
+        if (given === "pending") {
+          // Never answers by itself; a test can answer later with `window.__answerLater()` (a precise fix).
+          Reflect.set(window, "__answerLater", () =>
+            success({ coords: { latitude: 23.87, longitude: 90.367, accuracy: 20 } }),
+          );
+          return;
+        }
+        if (given === "denied" || given === "unavailable") {
+          failure({
+            code: given === "denied" ? 1 : 2,
+            PERMISSION_DENIED: 1,
+            POSITION_UNAVAILABLE: 2,
+            TIMEOUT: 3,
+          });
         } else {
           // Default 20 m: a precise fix. Pass accuracy: 25_000 for the coarse desktop case (METRO-103).
           success({

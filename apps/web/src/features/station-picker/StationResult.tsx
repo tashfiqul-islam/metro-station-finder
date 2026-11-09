@@ -3,10 +3,10 @@ import type { Station } from "@metro/core";
 import type { ReactElement, Ref } from "react";
 
 import { Icon } from "../../icons/Icon";
-import { Price } from "../../ui/Price";
 import { copy as nearestCopy } from "../nearest-station/copy";
 import { formatIsoDate } from "../nearest-station/format";
 import { pickerCopy } from "./copy";
+import { FareRangeText } from "./FareRangeText";
 import { directionsIcon, externalIcon, pinIcon } from "./picker-icons";
 import { directionsUrl, fareRange, stopLabel } from "./station-facts";
 
@@ -61,14 +61,7 @@ export function StationResult({
               </div>
               <p className="ticket__fare">
                 <span className="ticket__amount ticket__amount--range">
-                  <Price amount={range.cheapest} />
-                  {range.dearest === range.cheapest ? null : (
-                    <>
-                      <span aria-hidden="true">–</span>
-                      <span className="visually-hidden">{pickerCopy.fareTo}</span>
-                      <Price amount={range.dearest} />
-                    </>
-                  )}
+                  <FareRangeText range={range} />
                 </span>
               </p>
             </>

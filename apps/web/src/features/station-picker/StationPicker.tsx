@@ -14,13 +14,22 @@ interface StationPickerProps {
   readonly onPick: (id: StationId) => void;
   /** "Show on map": the screen moves keyboard focus to the map after the sheet drops to peek. */
   readonly onShowOnMap: () => void;
+  /**
+   * Whether the picked station is the screen's current result (METRO-113: there is one). False hides the result
+   * while a location result is current; a new pick shows it again. Defaults to true.
+   */
+  readonly current?: boolean;
 }
 
 /**
  * "Or pick a station" and its result (METRO-112). Sheet rules for this flow: typing opens the sheet to full (the
  * suggestions need the room), a pick settles it at half, "Show on map" drops it to peek.
  */
-export function StationPicker({ onPick, onShowOnMap }: StationPickerProps): ReactElement {
+export function StationPicker({
+  onPick,
+  onShowOnMap,
+  current = true,
+}: StationPickerProps): ReactElement {
   const { setSnap } = useSheet();
   const [picked, setPicked] = useState<Station | null>(null);
   /** Counts picks, so choosing the same station again still moves focus to the heading. */
@@ -43,7 +52,7 @@ export function StationPicker({ onPick, onShowOnMap }: StationPickerProps): Reac
           onPick(station.id);
         }}
       />
-      {picked === null ? null : (
+      {picked === null || !current ? null : (
         <StationResult
           station={picked}
           headingRef={heading}
