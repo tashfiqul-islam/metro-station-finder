@@ -25,7 +25,9 @@ Entry delta of the slice against the base: 0 raw / 0 gzip. Net first-visit chang
 
 Lazy chunks of the shipped build (raw / gzip), against the base: `Nearby` JS 41,668 / 14,638 (was 41,038 / 14,490); `Nearby` CSS 49,112 / 8,151 (was 48,843 / 8,105); adapter `maps` 5,805 / 2,842 (was 5,137 / 2,599); core `src` 3,802 / 1,788 (was 3,428 / 1,596; same code, the hash-named file lists differ); `web-vitals` 7,962 / 3,058; `reveal` 656 / 431. All files: 358,566 / 109,041 of 400,000 / 125,000 (90 percent raw, 87 percent gzip).
 
-LAB_VITALS
+## Lab web vitals (Repo-verified, `e2e/web-vitals-lab.e2e.ts`, Chromium, first visit, one run after the final build)
+
+LCP 452 ms (limit 2,500); CLS 0.0000 (limit 0.1). The controls still fail as intended: the delayed script 3,440 ms, the late block CLS 0.1951. METRO-113 measured 384 to 420 ms; the 452 ms is one sample on a busy machine, with no new work on the first-visit path (the entry is identical to the byte), and was not chased. Real-user LCP is Unverified. The Google script no longer loads on the first visit, which can only help the real-network figure; that is Inferred, not measured.
 
 ## Google, billing and the caps
 
@@ -56,7 +58,13 @@ LAB_VITALS
 
 ## Verification record
 
-SMOKE_RECORD
+Commands run on the head, Windows, Chromium locally and every project with `CI=true`:
+
+- `bun run check`: exit 0 (format, lint, boundaries, imports, knip, links, branches, types, workflows, renovate, `bun test` 1,380 pass, `test:vitest` 407 pass with the 90 percent per-file gate, coverage scope, `tsc -b`).
+- `bun run build` then `bun run bundle:check`: first visit 249,561 / 78,133, no limit changed.
+- `bun run smoke` (Chromium): 158 passed on the second-last head. `CI=true bun run smoke --shuffle` (Chromium, Firefox, WebKit, mobile Chrome, port 4173 checked free first, the Playwright web server started and stopped by the run): 569 passed and 1 failed on the final head; the failure was `ERR_NO_BUFFER_SPACE` (a Windows socket-buffer exhaustion) logged as a console error in `place-search.e2e.ts` "a rough fix asks Google for nothing" on mobile Chrome while four projects ran in parallel; that test alone with `--repeat-each=5` on four projects then passed every repeat. An earlier four-project run failed the keyboard test A6 on three projects (the Tab walk swapped the widget in mid-walk; and the sheet went full on focus and hid the map controls); both were fixed as described above and the file passed 204 of 204 on four projects.
+- Mutation check that the network assertion can fail: with the provider asking at mount, "before the first focus there is no Google script" fails.
+- Not run: `smoke:live` (owner-run; no real Google call anywhere, the fake key is `fake-key-for-tests`), screen-reader output and live-region timing, 1.4.10 Reflow and 1.4.4 Resize Text, real devices, a phone's on-screen keyboard with the suggestion list, light and dark at 390 and 1280 px by eye (axe runs for both in `place-search.e2e.ts`).
 
 Unverified: that `focus()` on Google's `gmp-place-autocomplete` host reaches its inner input (closed shadow root possible); only the fake's input is tested, and `smoke:live` now prints `Focus in the widget after the swap` for the owner; that setting `value` on the real element before or after it connects carries the text and puts the caret at the end (the installed types declare `value` as a getter and setter, Repo-verified, 3.66.9; the behaviour is not); the real suggestion popup's width, z-index and clipping inside the sheet; how Google splits the billed SKUs for a search with this flow; whether a script load with no map is billed; the size of the Google script no longer loaded on first visit; the retry of `js-api-loader` after a failed script load when the connection returns (its source resets its bootstrap promise on a script error, Repo-verified in 2.1.3, but no real network failure was tried); screen-reader output and live-region timing; 1.4.10 Reflow and 1.4.4 Resize Text; the owner's visual confirmation in light and dark at 390 and 1280 px.
 
