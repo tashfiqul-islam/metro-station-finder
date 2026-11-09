@@ -110,14 +110,14 @@ kbd {
   outline-offset: var(--focus-offset);
 }
 
-/* Programmatic focus (the error fallback, a new result heading) must show a ring even when the browser
-   does not match :focus-visible for script focus. Kept from the pre-design focus.css (METRO-58). */
-[tabindex="-1"]:focus {
+/* Only the two error fallbacks (sections) force a ring on script focus (METRO-58); a result heading rings
+   by :focus-visible alone, so a tap leaves none (METRO-118). */
+section[tabindex="-1"]:focus {
   outline: 3px solid var(--color-focus);
   outline-offset: var(--focus-offset);
 }
 @media (forced-colors: active) {
-  [tabindex="-1"]:focus {
+  section[tabindex="-1"]:focus {
     outline-color: Highlight;
   }
 }
