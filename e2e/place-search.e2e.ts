@@ -449,7 +449,9 @@ test.describe("axe on the new states (METRO-114)", () => {
         await scan("place result with its route");
         // No connection and a failed load, each on a fresh page. A reload aborts a font download still in flight,
         // and Firefox logs that as a console error (METRO-125): let the page's fonts finish first.
-        await page.evaluate(() => document.fonts.ready);
+        await page.evaluate(async () => {
+          await document.fonts.ready;
+        });
         await page.unrouteAll({ behavior: "ignoreErrors" });
         await noConnection(page);
         await installMapsStub(page);

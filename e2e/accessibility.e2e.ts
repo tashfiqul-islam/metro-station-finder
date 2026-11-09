@@ -63,8 +63,17 @@ test.describe("animations settle before axe (METRO-125)", () => {
     page,
   }) => {
     await page.setContent(FADING);
-    await fade(page, { duration: 1500, fill: "forwards" });
-    expect(await fadeState(page)).toBe("running");
+    // Created paused and resumed in one step, so "running" is read at the moment of resuming, not after a delay a
+    // stalled machine could stretch; 3 s outlasts a stall and still ends inside the wait's 5 s bound.
+    await fade(page, { duration: 3000, fill: "forwards" }, true);
+    expect(await fadeState(page)).toBe("paused");
+    expect(
+      await page.evaluate(() => {
+        const animation = document.getAnimations()[0];
+        animation?.play();
+        return animation?.playState;
+      }),
+    ).toBe("running");
     const results = await axeBuilder(page).analyze();
     expect(await fadeState(page)).toBe("finished");
     expect(results.violations.map((violation) => violation.id)).not.toContain("color-contrast");

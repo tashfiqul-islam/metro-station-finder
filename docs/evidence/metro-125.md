@@ -90,6 +90,8 @@ Five shuffled four-project runs on `8c9834f`: one passed (789 passed, 24 skipped
 - ADR-0024: a repeated sentence in the takeover bullet was removed. The "Other tabs" bullet's opening fragment and the repeated "Playwright route stubs" bullet are in the base at `576d921`, not in this PR's diff, and were left alone.
 - Five shuffled four-project runs on `cc9994c` (before the follow-ups): 789 passed, 24 skipped, 0 failed, each (5.8 to 6.0 min).
 
+`animationsSettled` uses `document.getAnimations()`, which covers the main document only, not iframes; no e2e spec uses iframes today.
+
 Runs on the final tree: five consecutive clean runs were NOT reached. Of the runs after `cc9994c`, one failed on the Firefox font abort (fixed above), one on a Firefox process crash (`RenderCompositorSWGL failed mapping default framebuffer`, `page.evaluate: Target page, context or browser has been closed`; not a test or product defect, cause Unverified), and one on the lab LCP budget (2,600 ms against 2,500 ms with nine other browsers running). The lab LCP test measures while the whole suite runs; running it alone after the others needs a Playwright project/dependency change that is the owner's decision (see above). No budget was changed.
 
 ## Checks not run
