@@ -4,6 +4,8 @@
 - Date: 2026-11-08
 - Ticket and specification: METRO-105 (Plane); the ticket description and the owner decisions of 2026-11-08 are the contract. The owner-approved design handoff (Lagoon palette, glass panels, light and dark) is the visual source of truth. It is an untracked folder and is never committed; what it contained is now in the repository files named below.
 
+> Amendment 2026-11-10 (METRO-119): the pre-paint theme script also sets the two `theme-color` tags in `index.html` (each carries `data-scheme` and `data-system`) to the chosen theme's page background colour, and the theme button does the same through `syncThemeColor`. System leaves each tag to its `prefers-color-scheme` query. It extends the decision below and does not reverse it: the script stays one external file under 600 bytes, with no inline script or style and no CSP change. See [brand](../product/brand.md).
+
 ## Context
 
 The design handoff delivers plain static files: `tokens.css`, `base.css`, `components.css` (67 KB), `fonts.css` with two Latin variable woff2 fonts, 31 Lucide icons, `theme-boot.js`, and screens in light and dark. Every product slice (METRO-15) builds on it, so the foundation must be settled once.

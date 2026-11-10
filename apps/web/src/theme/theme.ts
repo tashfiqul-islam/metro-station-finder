@@ -50,6 +50,22 @@ export function savePreference(
 export function applyPreference(preference: ThemePreference, root: HTMLElement): void {
   if (preference === "system") root.removeAttribute("data-theme");
   else root.setAttribute("data-theme", preference);
+  syncThemeColor(preference, root.ownerDocument);
+}
+
+/**
+ * Points every `meta[name=theme-color]` at the chosen theme (METRO-119). Each tag names its scheme
+ * (`data-scheme`) and keeps its own colour in `data-system`, which nothing overwrites, because a chosen theme
+ * overwrites `content` (including in `public/theme-boot.js`, before this code runs). The tags carry one colour
+ * per `prefers-color-scheme`, which follows the OS: a chosen Light or Dark gives every tag that scheme's
+ * colour, and System, or a theme with no tag of its own, gives each tag its own colour back. The boot script
+ * applies the same rule on load; keep them identical.
+ */
+export function syncThemeColor(preference: ThemePreference, doc: Document): void {
+  const tags = [...doc.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')];
+  const chosen = tags.find((tag) => tag.dataset["scheme"] === preference);
+  for (const tag of tags)
+    tag.content = chosen?.dataset["system"] ?? tag.dataset["system"] ?? tag.content;
 }
 
 /** Reading `window.localStorage` itself can throw (blocked site data), so the access is guarded too. */
