@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { KeyboardEvent, PointerEvent } from "react";
 
-import { FIT, ZOOM_STEP, keyView, panPx, toMap, wheelPixels, zoomBy } from "./view";
+import { FIT, ZOOM_STEP, keyView, panPx, toMap, unitsPerPixel, wheelPixels, zoomBy } from "./view";
 import type { View } from "./view";
 
 /** Wheel zoom: one 100-pixel notch is about 22 percent. */
@@ -22,6 +22,33 @@ export function useMapView() {
   const [view, setView] = useState<View>(FIT);
   const svg = useRef<SVGSVGElement>(null);
   const pointers = useRef(new Map<number, Touch>());
+  const [size, setSize] = useState({ width: 0, height: 0 });
+  // The last size reported, read outside React: the same size sets no state and renders nothing.
+  const seen = useRef({ width: 0, height: 0 });
+
+  // The map's box changes with the sheet (the shell's frame ends where the sheet starts) and the window; the
+  // size is what keeps labels and pins at a fixed size on screen.
+  // A layout effect, and a first read of the box before the observer reports: WebKit reports a first size a
+  // frame later, and until then the labels would be drawn at the wrong size (METRO-115, found in CI on WebKit).
+  useLayoutEffect(() => {
+    const element = svg.current;
+    if (element === null) return () => {};
+    const report = (rawWidth: number, rawHeight: number): void => {
+      // Whole pixels, and the same size is the same state: a sheet drag reports many sizes, few differ.
+      const width = Math.round(rawWidth);
+      const height = Math.round(rawHeight);
+      if (seen.current.width === width && seen.current.height === height) return;
+      seen.current = { width, height };
+      setSize({ width, height });
+    };
+    const first = element.getBoundingClientRect();
+    report(first.width, first.height);
+    const observer = new ResizeObserver((entries) => {
+      for (const { contentRect } of entries) report(contentRect.width, contentRect.height);
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const element = svg.current;
@@ -100,6 +127,8 @@ export function useMapView() {
 
   return {
     view,
+    /** Map units per screen pixel: a size in px times this is the size in the view box. */
+    unit: unitsPerPixel(view, size),
     svg,
     handlers: {
       onPointerDown: down,

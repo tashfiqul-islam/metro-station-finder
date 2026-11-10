@@ -75,6 +75,15 @@ export function scaleOf(view: View, rect: Rect): number {
   );
 }
 
+/** Map units one screen pixel covers: 1 before layout. Labels and pins are drawn at this scale, so they keep their size on screen. */
+export function unitsPerPixel(view: View, size: Pick<Rect, "width" | "height">): number {
+  const scale = scaleOf(view, { left: 0, top: 0, ...size });
+  return scale > 0 ? 1 / scale : 1;
+}
+
+/** Zoom from which every station name is drawn; equal to one zoom step; below it (the fit view) only the termini and the marked stations are. */
+export const LABELS_ZOOM = 1.5;
+
 /** A client point in map units, allowing for the margin `meet` leaves on one axis. */
 export function toMap(view: View, rect: Rect, clientX: number, clientY: number): Point {
   const scale = scaleOf(view, rect);

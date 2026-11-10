@@ -9,6 +9,7 @@ import {
   keyView,
   panBy,
   scaleOf,
+  unitsPerPixel,
   toMap,
   viewBoxOf,
   wheelPixels,
@@ -95,4 +96,11 @@ test("a wheel delta is normalised to pixels for pixel, line and page modes", () 
   expect(wheelPixels(-100, 0, 880)).toBe(-100);
   expect(wheelPixels(-3, 1, 880)).toBe(-48);
   expect(wheelPixels(1, 2, 880)).toBe(880);
+});
+
+test("METRO-115 units per pixel is the inverse of the scale, and 1 before layout", () => {
+  expect(unitsPerPixel(FIT, { width: 0, height: 0 })).toBe(1);
+  expect(unitsPerPixel(FIT, { width: 470, height: 880 })).toBe(1);
+  expect(unitsPerPixel(FIT, { width: 390, height: 234 })).toBeCloseTo(880 / 234, 6);
+  expect(unitsPerPixel({ ...FIT, zoom: 2 }, { width: 470, height: 880 })).toBe(0.5);
 });

@@ -186,6 +186,7 @@ html.vt-theme *::after {
     animation-iteration-count: 1 !important;
     animation-delay: 0ms !important;
     transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
     scroll-behavior: auto !important;
   }
   ::view-transition-group(*),
