@@ -237,14 +237,41 @@ describe("index.html head (METRO-107)", () => {
     expect(html).not.toMatch(/(?:src|href|content)="https?:\/\//u);
   });
 
-  test("sets a light and a dark theme colour by media query", () => {
-    expect(html).toContain(
-      '<meta name="theme-color" content="#F2F6F6" media="(prefers-color-scheme: light)" />',
+  test("sets a light and a dark theme colour by media query, each naming its scheme and its own colour (METRO-119)", () => {
+    const tags = [...html.matchAll(/<meta\s+name="theme-color"[^>]*>/gu)].map((match) => match[0]);
+    expect(tags).toHaveLength(2);
+    for (const [scheme, colour] of [
+      ["light", "#F2F6F6"],
+      ["dark", "#060A0A"],
+    ] as const) {
+      const tag = tags.find((candidate) => candidate.includes(`data-scheme="${scheme}"`)) ?? "";
+      expect(tag).toContain(`content="${colour}"`);
+      expect(tag).toContain(`media="(prefers-color-scheme: ${scheme})"`);
+      // theme-boot.js overwrites content for a chosen theme; theme.ts restores System from data-system.
+      expect(tag).toContain(`data-system="${colour}"`);
+    }
+  });
+
+  /** The theme-color tag that names this scheme. */
+  const tagFor = (scheme: string): string =>
+    [...html.matchAll(/<meta\s+name="theme-color"[^>]*>/gu)]
+      .map((match) => match[0].toLowerCase())
+      .find((tag) => tag.includes(`data-scheme="${scheme}"`)) ?? "";
+
+  test("the theme colours are the page background tokens in all three places they are defined (METRO-119)", () => {
+    const tokens = readFileSync(join(root, "apps/web/src/styles/tokens.css"), "utf8").toLowerCase();
+    const bg = (block: RegExp): string | undefined =>
+      new RegExp(`${block.source}[^}]*?--color-bg:\\s*(#[0-9a-f]{6})`, "u").exec(tokens)?.[1];
+    const light = bg(/:root\s*\{/u);
+    const forcedDark = bg(/:root\[data-theme="dark"\]\s*\{/u);
+    // The System-on-a-dark-OS block: the third place the dark background is written.
+    const systemDark = bg(
+      /@media \(prefers-color-scheme: dark\)\s*\{\s*:root:not\(\[data-theme\]\)\s*\{/u,
     );
-    expect(html).toContain(
-      '<meta name="theme-color" content="#060A0A" media="(prefers-color-scheme: dark)" />',
-    );
-    expect(html.match(/name="theme-color"/gu)).toHaveLength(2);
+    expect(forcedDark).toBe(systemDark);
+    expect(tagFor("light")).toContain(`content="${light ?? "missing"}"`);
+    expect(tagFor("dark")).toContain(`content="${systemDark ?? "missing"}"`);
+    expect([light, forcedDark, systemDark]).toEqual(["#f2f6f6", "#060a0a", "#060a0a"]);
   });
 
   test("adds no inline style or script, so the CSP is unchanged", () => {
