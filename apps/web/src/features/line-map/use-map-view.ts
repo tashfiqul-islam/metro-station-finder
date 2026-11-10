@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { KeyboardEvent, PointerEvent } from "react";
 
 import { FIT, ZOOM_STEP, keyView, panPx, toMap, unitsPerPixel, wheelPixels, zoomBy } from "./view";
@@ -28,18 +28,23 @@ export function useMapView() {
 
   // The map's box changes with the sheet (the shell's frame ends where the sheet starts) and the window; the
   // size is what keeps labels and pins at a fixed size on screen.
-  useEffect(() => {
+  // A layout effect, and a first read of the box before the observer reports: WebKit reports a first size a
+  // frame later, and until then the labels would be drawn at the wrong size (METRO-115, found in CI on WebKit).
+  useLayoutEffect(() => {
     const element = svg.current;
     if (element === null) return () => {};
+    const report = (rawWidth: number, rawHeight: number): void => {
+      // Whole pixels, and the same size is the same state: a sheet drag reports many sizes, few differ.
+      const width = Math.round(rawWidth);
+      const height = Math.round(rawHeight);
+      if (seen.current.width === width && seen.current.height === height) return;
+      seen.current = { width, height };
+      setSize({ width, height });
+    };
+    const first = element.getBoundingClientRect();
+    report(first.width, first.height);
     const observer = new ResizeObserver((entries) => {
-      for (const { contentRect } of entries) {
-        // Whole pixels, and the same size is the same state: a sheet drag reports many sizes, few differ.
-        const width = Math.round(contentRect.width);
-        const height = Math.round(contentRect.height);
-        if (seen.current.width === width && seen.current.height === height) continue;
-        seen.current = { width, height };
-        setSize({ width, height });
-      }
+      for (const { contentRect } of entries) report(contentRect.width, contentRect.height);
     });
     observer.observe(element);
     return () => observer.disconnect();

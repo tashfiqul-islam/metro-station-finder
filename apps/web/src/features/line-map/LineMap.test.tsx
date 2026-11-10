@@ -245,6 +245,19 @@ test("METRO-111 the map carries no style attribute and makes no network request"
   fetchSpy.mockRestore();
 });
 
+test("METRO-115 the first render already uses the box's size, before any observer report", () => {
+  // WebKit reports a first size a frame late: the box is read when the map mounts, so no frame has labels at the
+  // wrong size. The stub never reports.
+  stubResize();
+  const rect = vi
+    .spyOn(Element.prototype, "getBoundingClientRect")
+    .mockReturnValue(new DOMRect(0, 0, 390, 234));
+  const { container } = render(<LineMap />);
+  const transform = container.querySelector(".map__pin")?.parentElement?.getAttribute("transform");
+  rect.mockRestore();
+  expect(Number(/scale\(([\d.]+)\)/u.exec(transform ?? "")?.[1])).toBeCloseTo(880 / 234, 3);
+});
+
 test("METRO-115 a size that rounds to the same pixels does not render the map again", () => {
   const resize = stubResize();
   render(<LineMap />);
