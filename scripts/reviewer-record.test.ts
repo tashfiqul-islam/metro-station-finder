@@ -10,6 +10,7 @@ import {
   readReviewerValue,
   reviewerRecordMain,
 } from "./reviewer-record";
+import { fastestMs } from "./test-timing";
 
 const valid =
   "independent-reviewer subagent (.claude/agents/independent-reviewer.md), session: r-123 on 2026-11-04, disposition https://github.com/o/r/pull/35#issuecomment-1";
@@ -110,14 +111,16 @@ test("METRO-36 only markdown under docs/ and at the root counts as documentation
 
 test("METRO-36 an extremely long body is handled quickly and still decided correctly", () => {
   const filler = "x ".repeat(500_000);
-  const started = performance.now();
-  expect(evaluateReviewer(`${filler}\n${body(valid)}`, code).ok).toBe(true);
-  expect(evaluateReviewer(`${filler}\n## Reviewer\n<!-- ${filler}`, code).ok).toBe(false);
-  expect(evaluateReviewer(`## Reviewer\n${filler}\n${valid}`, code).ok).toBe(true);
-  expect(evaluateReviewer(`## Reviewer\n${filler}`, code).ok).toBe(false);
-  expect(evaluateReviewer(`${"```\n".repeat(50_001)}## Reviewer\n${valid}`, code).ok).toBe(false);
-  expect(evaluateReviewer("<!--".repeat(100_000), code).ok).toBe(false);
-  expect(performance.now() - started).toBeLessThan(2000);
+  const decide = (): boolean[] => [
+    evaluateReviewer(`${filler}\n${body(valid)}`, code).ok,
+    evaluateReviewer(`${filler}\n## Reviewer\n<!-- ${filler}`, code).ok,
+    evaluateReviewer(`## Reviewer\n${filler}\n${valid}`, code).ok,
+    evaluateReviewer(`## Reviewer\n${filler}`, code).ok,
+    evaluateReviewer(`${"```\n".repeat(50_001)}## Reviewer\n${valid}`, code).ok,
+    evaluateReviewer("<!--".repeat(100_000), code).ok,
+  ];
+  expect(decide()).toEqual([true, false, true, false, false, false]);
+  expect(fastestMs(decide)).toBeLessThan(2000);
 });
 test("METRO-36 a duplicate heading falls back to the first non-empty section", () => {
   expect(readReviewerValue(`## Reviewer\nfirst value here\n## Reviewer\nsecond`)).toBe(

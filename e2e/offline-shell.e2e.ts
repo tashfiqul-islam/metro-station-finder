@@ -303,6 +303,52 @@ test.describe("offline shell on the real server", () => {
       });
       expect(served).toBe(true);
     });
+
+    // METRO-125: where Chromium has the static routing API, an API request does not start the worker. The
+    // web-vitals beacon sent on a person's first input used to reach a worker that was being stopped for a takeover
+    // and restart it. The test stops the worker through the browser's own protocol, sends API requests, and reads the
+    // worker's running status from the browser: a request that dispatched a fetch event would have started it first.
+    test("METRO-125 in Chromium an API request leaves a stopped worker stopped, and a shell file starts it", async ({
+      page,
+      context,
+      browserName,
+    }) => {
+      test.skip(
+        browserName !== "chromium",
+        "static routing is Chromium's; the others pass it through",
+      );
+      await open(page);
+      await shellReady(page);
+      const cdp = await context.newCDPSession(page);
+      const running = new Map<string, string>();
+      cdp.on("ServiceWorker.workerVersionUpdated", (event) => {
+        for (const version of event.versions) running.set(version.versionId, version.runningStatus);
+      });
+      await cdp.send("ServiceWorker.enable");
+      await expect.poll(() => running.size).toBeGreaterThan(0);
+      expect(running.size, "exactly one worker version exists").toBe(1);
+      const [versionId = ""] = [...running.keys()];
+      expect(versionId).not.toBe("");
+      await cdp.send("ServiceWorker.stopWorker", { versionId });
+      await expect.poll(() => running.get(versionId)).toBe("stopped");
+      // A beacon like the page's own, and a read: both are answered (4xx is fine) before the status is read.
+      await page.evaluate(async () => {
+        await fetch("/api/vitals", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: "{}",
+        });
+        await fetch("/api/other");
+      });
+      // A round trip on the same session: events reach a session in order, so any "running" event the requests
+      // caused arrives before this answer, and re-enabling reports every version's current status.
+      await cdp.send("ServiceWorker.enable");
+      expect(running.size).toBe(1);
+      expect(running.get(versionId)).toBe("stopped");
+      // Control: a shell file does go through the worker, which starts it again, so "stopped" above was observable.
+      await page.evaluate(async () => (await fetch("/theme-boot.js")).status);
+      await expect.poll(() => running.get(versionId)).toBe("running");
+    });
   });
 });
 
@@ -432,11 +478,10 @@ const updateRegion = (page: Page): Locator =>
   page.locator(".toast-region").getByRole("status").filter({ hasText: "A new version is ready." });
 
 /**
- * The page has finished its own loading: the idle web-vitals chunk is in and the network is quiet. Chromium can
- * leave a waiting worker waiting when the old worker is restarted while it is being stopped for the takeover
- * (Repo-verified under CPU load with 12 workers, ADR-0024, cause Unverified). Settling the page lowers the rate
- * but does not remove it, and a second takeover in the same page fails far more often than the first, so no
- * test presses Reload twice in one page. Waits on observable state, never a sleep.
+ * The page has finished its own loading: the idle web-vitals chunk is in and the network is quiet, so no request of
+ * the page's own is still on its way when the test changes the deploy. Waits on observable state, never a sleep.
+ * (The Chromium takeover race that once needed a settle step and a reading pause here was a request reaching the
+ * old worker while it was stopped: the worker now leaves `/api/*` to the network, METRO-125, ADR-0024.)
  */
 async function quiet(page: Page): Promise<void> {
   await expect
@@ -449,20 +494,6 @@ async function quiet(page: Page): Promise<void> {
   await page.waitForLoadState("networkidle");
 }
 
-/**
- * A person reads the toast before pressing Reload. Pressing it within a fraction of a second of the install, as a
- * script does, makes Chromium fail to take over far more often under load (Repo-verified, ADR-0024): about one
- * press in three at once, about one in ten after 1.5 s, about one in a hundred with this pause (4 of 408 runs of
- * the whole spec, 12 workers). Waits on the page's own clock, not on a guess about the server.
- */
-const READING_MS = 3000;
-async function readToast(page: Page): Promise<void> {
-  const shown = await page.evaluate(() => performance.now());
-  await page.waitForFunction(({ from, wait }) => performance.now() > from + wait, {
-    from: shown,
-    wait: READING_MS,
-  });
-}
 async function checkForUpdate(page: Page): Promise<void> {
   await page.evaluate(async () => {
     const registration = await navigator.serviceWorker.getRegistration();
@@ -644,7 +675,6 @@ test.describe("update flow", () => {
     deploy.current = second(first, { gone: [removed] });
     await checkForUpdate(page);
     await expect(updateRegion(page)).toBeVisible();
-    await readToast(page);
     await Promise.all([
       page.waitForEvent("load"),
       updateRegion(page).getByRole("button", { name: "Reload" }).click(),
@@ -672,7 +702,6 @@ test.describe("update flow", () => {
     deploy.current = second(first, { inert: true });
     await checkForUpdate(page);
     await expect(updateRegion(page)).toBeVisible();
-    await readToast(page);
     await updateRegion(page).getByRole("button", { name: "Reload" }).focus();
     await page.keyboard.press("Enter");
     // During the window: focus is on a visible control, not on the page, and the polite status changed.

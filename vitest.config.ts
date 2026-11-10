@@ -17,7 +17,7 @@ export default defineConfig({
       reportsDirectory: "coverage/vitest",
       include: ["apps/api/src/**/*.ts", "apps/web/src/**/*.{ts,tsx}"],
       exclude: ["apps/*/src/**/*.test.{ts,tsx}"],
-      thresholds: { perFile: true, lines: 90, functions: 90, branches: 90 },
+      thresholds: { perFile: true, statements: 100, lines: 100, functions: 100, branches: 100 },
     },
   },
 });

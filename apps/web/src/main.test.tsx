@@ -3,9 +3,14 @@ import { afterAll, afterEach, beforeAll, expect, test, vi } from "vitest";
 
 let mounted: HTMLElement | undefined;
 
-beforeAll(() => {
+// The first `import()` of the screen loads and transforms its whole module graph (about 0.4 s alone, over 1 s on
+// a loaded machine, METRO-125), which the 1 s default of `vi.waitFor` could not wait for. Loading it here warms
+// the transform cache that `vi.resetModules()` in the test leaves in place, with a hook timeout sized for a cold graph.
+const COLD_GRAPH_MS = 30_000;
+beforeAll(async () => {
   Reflect.set(globalThis, "IS_REACT_ACT_ENVIRONMENT", true);
-});
+  await Promise.all([import("./features/nearby/Nearby"), import("./adapters/maps")]);
+}, COLD_GRAPH_MS);
 afterEach(() => {
   mounted?.remove(); // leave no rendered app behind for the next test file
 });

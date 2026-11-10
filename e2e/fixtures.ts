@@ -73,9 +73,41 @@ export const AXE_TAGS = [
   "best-practice",
 ] as const;
 
-/** Axe runs through this one builder, in the guard and in the tests that prove its configuration. */
+/**
+ * Waits until no finite animation on the page is running or pending (the notice rises over 280 ms; METRO-125).
+ * Axe reads the colours the page shows at that instant: mid-fade a notice's text is a pale blend and fails
+ * contrast, which under load happened in about one run in five. A paused animation is not waited for (it would
+ * never finish) and an infinite one (the loading shimmer) is not a state the page settles into. The condition is
+ * polled on animation frames, so an animation created after the first look is covered; the wait is bounded and
+ * fails with Playwright's timeout error rather than hanging.
+ */
+export async function animationsSettled(page: Page): Promise<void> {
+  await page.waitForFunction(
+    () =>
+      document
+        .getAnimations()
+        .every(
+          (animation) =>
+            animation.effect?.getComputedTiming().iterations === Infinity ||
+            (animation.playState !== "running" && !animation.pending),
+        ),
+    undefined,
+    { timeout: 5000 },
+  );
+}
+
+/**
+ * Axe runs through this one builder, in the guard and in every test. Its `analyze` first waits for the page's
+ * finite animations to settle, so no call site reads a half-faded colour; the configuration is unchanged.
+ */
 export function axeBuilder(page: Page): AxeBuilder {
-  return new AxeBuilder({ page }).withTags([...AXE_TAGS]);
+  const builder = new AxeBuilder({ page }).withTags([...AXE_TAGS]);
+  const analyze = builder.analyze.bind(builder);
+  builder.analyze = async () => {
+    await animationsSettled(page);
+    return analyze();
+  };
+  return builder;
 }
 
 /**

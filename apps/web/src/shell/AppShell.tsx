@@ -4,6 +4,7 @@ import type { PointerEvent, ReactElement, ReactNode } from "react";
 import { ThemeToggle } from "../theme/ThemeToggle";
 import { Brand } from "./Brand";
 import { shellCopy } from "./copy";
+import { mounted } from "./mounted";
 import {
   DRAG_THRESHOLD_PX,
   clampHeight,
@@ -129,12 +130,6 @@ interface HandleProps {
   readonly hasNav: boolean;
 }
 
-/** A ref to an element of this shell; handlers only run while it is mounted. */
-function mounted(ref: { readonly current: HTMLElement | null }): HTMLElement {
-  if (ref.current === null) throw new Error("AppShell is not mounted");
-  return ref.current;
-}
-
 /** Undoes a drag in the DOM: no `--sheet-h`, no empty style attribute, no `data-dragging`. */
 function clearDrag(shell: HTMLElement, panel: HTMLElement): void {
   shell.style.removeProperty("--sheet-h");
@@ -165,10 +160,11 @@ function PanelHandle({ snap, setSnap, app, panel, hasNav }: HandleProps): ReactE
   const dragged = useRef(false);
 
   useEffect(() => {
-    const shell = app.current;
-    const panelElement = panel.current;
+    // Effects run after the refs are attached, so both elements exist here.
+    const shell = mounted(app);
+    const panelElement = mounted(panel);
     return () => {
-      if (shell !== null && panelElement !== null) clearDrag(shell, panelElement);
+      clearDrag(shell, panelElement);
     };
   }, [app, panel]);
 

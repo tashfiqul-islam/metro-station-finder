@@ -403,27 +403,28 @@ test.describe("use my location (METRO-113)", () => {
     }
   });
 
+  // One test per state, theme and size (METRO-125): the six states in one test took 15 s alone and passed 30 s
+  // on a loaded machine, so the test timed out although every state was fine. Each state still gets a fresh page.
+  const AXE_STATES: readonly (readonly [string, Parameters<typeof stubGeolocation>[1]])[] = [
+    ["locating", "pending"],
+    ["denied", "denied"],
+    ["unavailable", "unavailable"],
+    ["rough", { ...NEAR_UTTARA_NORTH, accuracy: 25_000 }],
+    ["rough-unknown", { ...NEAR_UTTARA_NORTH, accuracy: -1 }],
+    ["result", NEAR_UTTARA_NORTH],
+  ];
   for (const theme of ["light", "dark"] as const) {
     for (const size of [
       { width: 390, height: 844 },
       { width: 1280, height: 800 },
     ]) {
-      test(`METRO-113 every state passes axe in ${theme} at ${size.width} px`, async ({ page }) => {
-        await page.setViewportSize(size);
-        await open(page, theme);
-        expect(await page.evaluate(() => document.documentElement.dataset["theme"])).toBe(theme);
-        const states: [string, Parameters<typeof stubGeolocation>[1]][] = [
-          ["locating", "pending"],
-          ["denied", "denied"],
-          ["unavailable", "unavailable"],
-          ["rough", { ...NEAR_UTTARA_NORTH, accuracy: 25_000 }],
-          ["rough-unknown", { ...NEAR_UTTARA_NORTH, accuracy: -1 }],
-          ["result", NEAR_UTTARA_NORTH],
-        ];
-        for (const [name, answer] of states) {
-          // A fresh page per state: a pending press leaves the button busy, and a result stays on screen.
-          await page.reload();
-          await expect(locate(page)).toBeVisible();
+      for (const [name, answer] of AXE_STATES) {
+        test(`METRO-113 the ${name} state passes axe in ${theme} at ${size.width} px`, async ({
+          page,
+        }) => {
+          await page.setViewportSize(size);
+          await open(page, theme);
+          expect(await page.evaluate(() => document.documentElement.dataset["theme"])).toBe(theme);
           await page.evaluate((given) => {
             Object.defineProperty(navigator, "geolocation", {
               configurable: true,
@@ -466,8 +467,8 @@ test.describe("use my location (METRO-113)", () => {
           await settle(page);
           const violations = (await axeBuilder(page).analyze()).violations.map((v) => v.id);
           expect(violations, `${name} in ${theme}`).toEqual([]);
-        }
-      });
+        });
+      }
     }
   }
 });

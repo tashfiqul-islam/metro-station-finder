@@ -6,5 +6,5 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "skipLibCheck": true
   },
-  "include": ["apps/web/src/**/*.test.ts", "apps/web/src/**/*.test.tsx"]
+  "include": ["apps/web/src/**/*.test.ts", "apps/web/src/**/*.test.tsx", "apps/web/vitest.setup.ts"]
 }

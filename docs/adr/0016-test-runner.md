@@ -37,7 +37,7 @@ We will move the API and web test projects to Vitest (stages 1 and 2 below) and 
 `bun test` stays in `check` for every project not yet moved, so no test file runs under neither runner.
 
 - **Versions.** The newest Vitest the release cooldown allows when each ticket starts, pinned exactly (the spike passed on 4.1.12 and 5.1.0), with the plugin and both coverage packages pinned to match.
-- **Gate.** The per-file gate for lines and functions stays (amended 2026-11-08, METRO-94: Bun-run files now need 100 percent, the Vitest app thresholds stay 90). A 90 percent per-file branch threshold is added in the stage that moves a project. "No threshold is weakened" means no existing number is lowered; it does not mean the new branch gate passes today (see Consequences).
+- **Gate.** The per-file gate for lines and functions stays (amended 2026-11-08, METRO-94: Bun-run files now need 100 percent, the Vitest app thresholds stay 90; amended METRO-126: the Vitest app thresholds are now 100 on statements, lines, functions and branches per file). The per-file branch threshold was added in the stage that moved each project (90 then, 100 since METRO-126). "No threshold is weakened" means no existing number is lowered; it does not mean the new branch gate passes today (see Consequences).
 - **Order.** Randomised with a printed seed (`sequence.shuffle`), no fixed seed, no retries.
 - **Imports.** Test files import from `vitest` (globals stay off) so the `jest/*` rules see them.
 - **E2E.** Playwright is unchanged.
@@ -81,7 +81,7 @@ Must be revisited:
 
 Today: `scripts/adr.test.ts` checks this ADR's shape. Nothing else enforces the decision until a ticket lands (None, policy). When stages land, the gates are:
 
-- the `vitest.config.ts` thresholds (`perFile: true`, lines, functions, branches at 90) fail that stage's `check`;
+- the `vitest.config.ts` thresholds (`perFile: true`, lines, functions, branches; 90 when written, 100 since METRO-126) fail that stage's `check`;
 - `scripts/configuration.ts` and `scripts/test-order.test.ts` fail when `sequence.shuffle` is off or a fixed `seed` is set in a Vitest config (added in ticket 1, so ordering is enforced from the first Vitest file);
 - `scripts/test-hygiene.test.ts` fixtures import `vitest` and prove each `jest/*` rule rejects a weak test;
 - `eslint/no-restricted-imports` keeps rejecting `bun:test`;

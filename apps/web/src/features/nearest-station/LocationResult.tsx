@@ -86,24 +86,22 @@ export function LocationResult({ origin, focus }: LocationResultProps): ReactEle
               <span className="metric__label">{copy.distanceLabel}</span>
             </div>
           </div>
-          {route.phase !== "idle" ? (
-            <p className="result__walk">
-              <span className="metric__about">{copy.walking}: </span>
-              <output>
-                {route.phase === "loading" && copy.routeLoading}
-                {route.phase === "success" &&
-                  copy.walkEstimate(
-                    formatEstimate(route.route.distance / 1000),
-                    formatMinutes(route.route.durationSeconds),
-                  )}
-              </output>
-              {route.phase === "failure" && (
-                <span className="ns-alert-inline" role="alert">
-                  {copy.routeUnavailable}
-                </span>
-              )}
-            </p>
-          ) : null}
+          <p className="result__walk">
+            <span className="metric__about">{copy.walking}: </span>
+            <output>
+              {route.phase === "loading" && copy.routeLoading}
+              {route.phase === "success" &&
+                copy.walkEstimate(
+                  formatEstimate(route.route.distance / 1000),
+                  formatMinutes(route.route.durationSeconds),
+                )}
+            </output>
+            {route.phase === "failure" && (
+              <span className="ns-alert-inline" role="alert">
+                {copy.routeUnavailable}
+              </span>
+            )}
+          </p>
           {range === null ? null : (
             <>
               <div className="result__fare">
@@ -135,31 +133,29 @@ export function LocationResult({ origin, focus }: LocationResultProps): ReactEle
           </a>
         </div>
       </article>
-      {others.length === 0 ? null : (
-        <section className="also" aria-labelledby="also-t">
-          <div className="also__head">
-            <h3 className="section-label" id="also-t">
-              {copy.alsoNearby}
-            </h3>
-          </div>
-          <ul className="also__grid also__list">
-            {others.map(({ station: other, km }) => {
-              const stop = stations.indexOf(other) + 1;
-              return (
-                <li className="also__card" key={other.id}>
-                  <span className="roundel roundel--md" data-stop={stop} aria-hidden="true">
-                    {stopLabel(stop)}
-                  </span>
-                  <span className="also__text">
-                    <span className="also__name">{other.name}</span>
-                    <span className="also__meta">{copy.alsoMeta(formatEstimate(km))}</span>
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      )}
+      <section className="also" aria-labelledby="also-t">
+        <div className="also__head">
+          <h3 className="section-label" id="also-t">
+            {copy.alsoNearby}
+          </h3>
+        </div>
+        <ul className="also__grid also__list">
+          {others.map(({ station: other, km }) => {
+            const stop = stations.indexOf(other) + 1;
+            return (
+              <li className="also__card" key={other.id}>
+                <span className="roundel roundel--md" data-stop={stop} aria-hidden="true">
+                  {stopLabel(stop)}
+                </span>
+                <span className="also__text">
+                  <span className="also__name">{other.name}</span>
+                  <span className="also__meta">{copy.alsoMeta(formatEstimate(km))}</span>
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
     </>
   );
 }
