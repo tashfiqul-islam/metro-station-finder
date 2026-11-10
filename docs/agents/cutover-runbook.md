@@ -53,7 +53,7 @@ gh run list --repo $R --branch feature/metro-rebuild --limit 5
 
 ## 2. Bring the rebuild into main
 
-The pull request is required by the `main` ruleset (pull_request, signed commits, `Quality gates` and `Reviewer record`, branch up to date). Use a merge commit, not squash or rebase: `main` is an ancestor, so a merge commit keeps the reviewed commits and their signatures.
+The pull request is required by the `main` ruleset (pull_request, signed commits, `Quality gates` and `Reviewer record`, branch up to date; the `feature/metro-rebuild` ruleset does not require an up-to-date branch). Use a merge commit, not squash or rebase: `main` is an ancestor, so a merge commit keeps the reviewed commits and their signatures.
 
 ```powershell
 gh pr create --repo $R --base main --head feature/metro-rebuild --title "chore(release): bring the rebuild to main for v1.0.0" --body-file cutover-pr.md

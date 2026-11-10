@@ -14,13 +14,9 @@ hooks {
   }
   ["pre-push"] {
     steps {
-      ["check"] {
+      ["push-fast"] {
         exclusive = true
-        check = "bun run check"
-      }
-      ["build"] {
-        exclusive = true
-        check = "bun run build && bun run smoke && bun run bundle:check"
+        check = "bun run check:fast"
       }
       ["scan"] {
         exclusive = true

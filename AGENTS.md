@@ -91,7 +91,8 @@ Routing evidence and current gaps: [METRO-8 evidence](docs/evidence/metro-8.md).
 
 ## Done
 
-`check`, `build` and `smoke` pass. The PR lists commands run and not run, has a Reviewer record
+Run `bun run check` once locally before opening the PR; green hosted `Quality gates` on the final
+head prove build, smoke, `bundle:check` and the scans. The PR lists commands run and not run, has a Reviewer record
 (not needed for docs-only changes), and the diff matches the ticket.
 
 ## Reviewers: not findings here

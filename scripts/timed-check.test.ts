@@ -250,13 +250,15 @@ test("METRO-81 the wrapper runs exactly the commands in package.json check, so t
   expect(check).not.toContain("timed");
 });
 
-test("METRO-81 the Checks job runs the timed chain and the local check is unchanged", () => {
+test("METRO-81 the Checks job runs the timed chain; the hooks run only the fast check (METRO-134)", () => {
   const workflow = readFileSync(resolve(".github/workflows/quality.yml"), "utf8");
   expect(workflow).toContain("      - name: Run all checks with per-command timing\n");
   expect(workflow).toContain("        run: bun run check:timed\n");
   expect(workflow).not.toMatch(/run: bun run check\s*$/mu);
   const hk = readFileSync(resolve("hk.pkl"), "utf8");
-  expect(hk).toContain('check = "bun run check"');
+  // The full chain is CI-only now: no hook step may run it (METRO-134 D1).
+  expect(hk).not.toContain('check = "bun run check"');
+  expect(hk).toContain('check = "bun run check:fast"');
 });
 
 // The entrypoint and the `check:timed` wiring: run the real script with node against a temp package.json.
