@@ -109,7 +109,7 @@ test.describe("theme colour", () => {
 
   for (const first of ["light", "dark"] as const) {
     for (const os of ["light", "dark"] as const) {
-      test(`METRO-119 saved ${first}, reloaded on a ${os} OS, then pressed through the other themes and System, shows the right colour each time`, async ({
+      test(`METRO-119 saved ${first}, opened on a ${os} OS, then pressed through the other themes and System, shows the right colour each time`, async ({
         page,
       }) => {
         await open(page, os, first);
@@ -137,5 +137,27 @@ test.describe("theme colour", () => {
         }
       });
     }
+  }
+
+  for (const os of ["light", "dark"] as const) {
+    test(`METRO-119 on a ${os} OS: saved Light, press to Dark, reload, press again in the same session, right colour at every step`, async ({
+      page,
+    }) => {
+      await open(page, os);
+      const button = page.getByRole("button", { name: /^Theme: /u });
+      const press = async (name: RegExp, expected: string, step: string): Promise<void> => {
+        await button.click();
+        await expect(button).toHaveAccessibleName(name);
+        expect(await effective(page), step).toBe(expected);
+      };
+      await press(/^Theme: Light[.]/u, COLOUR.light, "Light");
+      await press(/^Theme: Dark[.]/u, COLOUR.dark, "Dark");
+      await page.reload();
+      await expect(button).toHaveAccessibleName(/^Theme: Dark[.]/u);
+      expect(await effective(page), "Dark after reload").toBe(COLOUR.dark);
+      await press(/^Theme: System[.]/u, COLOUR[os], "System after reload");
+      await press(/^Theme: Light[.]/u, COLOUR.light, "Light after reload");
+      await press(/^Theme: Dark[.]/u, COLOUR.dark, "Dark again");
+    });
   }
 });

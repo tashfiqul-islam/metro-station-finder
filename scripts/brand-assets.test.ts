@@ -252,15 +252,26 @@ describe("index.html head (METRO-107)", () => {
     }
   });
 
-  test("the theme colours are the page background tokens in both themes (METRO-119)", () => {
+  /** The theme-color tag that names this scheme. */
+  const tagFor = (scheme: string): string =>
+    [...html.matchAll(/<meta\s+name="theme-color"[^>]*>/gu)]
+      .map((match) => match[0].toLowerCase())
+      .find((tag) => tag.includes(`data-scheme="${scheme}"`)) ?? "";
+
+  test("the theme colours are the page background tokens in all three places they are defined (METRO-119)", () => {
     const tokens = readFileSync(join(root, "apps/web/src/styles/tokens.css"), "utf8").toLowerCase();
-    const light = /:root\s*\{[^}]*?--color-bg:\s*(#[0-9a-f]{6})/u.exec(tokens)?.[1];
-    const dark = /:root\[data-theme="dark"\]\s*\{[^}]*?--color-bg:\s*(#[0-9a-f]{6})/u.exec(
-      tokens,
-    )?.[1];
-    expect(html.toLowerCase()).toContain(`content="${light ?? "missing"}"`);
-    expect(html.toLowerCase()).toContain(`content="${dark ?? "missing"}"`);
-    expect([light, dark]).toEqual(["#f2f6f6", "#060a0a"]);
+    const bg = (block: RegExp): string | undefined =>
+      new RegExp(`${block.source}[^}]*?--color-bg:\\s*(#[0-9a-f]{6})`, "u").exec(tokens)?.[1];
+    const light = bg(/:root\s*\{/u);
+    const forcedDark = bg(/:root\[data-theme="dark"\]\s*\{/u);
+    // The System-on-a-dark-OS block: the third place the dark background is written.
+    const systemDark = bg(
+      /@media \(prefers-color-scheme: dark\)\s*\{\s*:root:not\(\[data-theme\]\)\s*\{/u,
+    );
+    expect(forcedDark).toBe(systemDark);
+    expect(tagFor("light")).toContain(`content="${light ?? "missing"}"`);
+    expect(tagFor("dark")).toContain(`content="${systemDark ?? "missing"}"`);
+    expect([light, forcedDark, systemDark]).toEqual(["#f2f6f6", "#060a0a", "#060a0a"]);
   });
 
   test("adds no inline style or script, so the CSP is unchanged", () => {
