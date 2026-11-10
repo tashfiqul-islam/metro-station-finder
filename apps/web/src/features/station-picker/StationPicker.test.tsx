@@ -242,6 +242,73 @@ test("METRO-112 leaving the input closes the list", () => {
   expect(box().hasAttribute("aria-activedescendant")).toBe(false);
 });
 
+/** A blur that arrives with a pointer press in progress (the press that blurs the input at its mousedown). */
+function pressOutsideThenBlur(): void {
+  fireEvent.pointerDown(document.body);
+  fireEvent.blur(box());
+}
+
+test("METRO-124 a press that blurs the input keeps the list until the press ends, so the control under it does not move", () => {
+  setup();
+  type("mir");
+  pressOutsideThenBlur();
+  expect(box().getAttribute("aria-expanded")).toBe("true");
+  fireEvent.mouseUp(document.body);
+  expect(box().getAttribute("aria-expanded")).toBe("false");
+  expect(box().hasAttribute("aria-activedescendant")).toBe(false);
+  // The press is over: a later blur (Tab) closes at once, as before.
+  type("mir");
+  fireEvent.blur(box());
+  expect(box().getAttribute("aria-expanded")).toBe("false");
+});
+
+test("METRO-124 a cancelled press or a key ends the wait and closes the list", () => {
+  setup();
+  type("mir");
+  pressOutsideThenBlur();
+  fireEvent.pointerCancel(document.body);
+  expect(box().getAttribute("aria-expanded")).toBe("false");
+  type("mir");
+  pressOutsideThenBlur();
+  fireEvent.keyDown(document.body, { key: "Tab" });
+  expect(box().getAttribute("aria-expanded")).toBe("false");
+});
+
+test("METRO-124 a modifier key held during the press does not end it; Tab does", () => {
+  setup();
+  type("mir");
+  pressOutsideThenBlur();
+  for (const modifier of ["Shift", "Control", "Alt", "Meta", "CapsLock"]) {
+    fireEvent.keyDown(document.body, { key: modifier });
+    expect(box().getAttribute("aria-expanded")).toBe("true");
+  }
+  fireEvent.keyDown(document.body, { key: "Tab" });
+  expect(box().getAttribute("aria-expanded")).toBe("false");
+});
+
+test("METRO-124 known and bounded: a press that never reports mouseup leaves the list open after another blur, until the next mouseup, key or cancel", () => {
+  setup();
+  type("mir");
+  fireEvent.pointerDown(document.body);
+  fireEvent.blur(box());
+  fireEvent.blur(box());
+  expect(box().getAttribute("aria-expanded")).toBe("true");
+  fireEvent.keyDown(document.body, { key: "Escape" });
+  expect(box().getAttribute("aria-expanded")).toBe("false");
+});
+
+test("METRO-124 a press that ends without a blur, or after focus came back, leaves the list as it is", () => {
+  setup();
+  type("mir");
+  fireEvent.pointerDown(box());
+  fireEvent.mouseUp(box());
+  expect(box().getAttribute("aria-expanded")).toBe("true");
+  pressOutsideThenBlur();
+  fireEvent.focus(box());
+  fireEvent.mouseUp(document.body);
+  expect(box().getAttribute("aria-expanded")).toBe("true");
+});
+
 test("METRO-112 no match: the text is announced by the one status, Browse all stays after blur outside it, and lists the 16 stations", () => {
   setup();
   type("Sadarghat");

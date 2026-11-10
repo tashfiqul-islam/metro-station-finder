@@ -66,6 +66,18 @@ test.describe("station picker", () => {
     await expect(page.getByRole("option")).toHaveCount(0);
   });
 
+  test("METRO-124 one press on Clear station search empties the field while the list is open", async ({
+    page,
+  }) => {
+    await open(page);
+    await combo(page).fill("mir");
+    await expect(combo(page)).toHaveAttribute("aria-expanded", "true");
+    await page.getByRole("button", { name: "Clear station search" }).click();
+    await expect(combo(page)).toHaveValue("");
+    await expect(combo(page)).toBeFocused();
+    await expect(combo(page)).toHaveAttribute("aria-expanded", "false");
+  });
+
   test("METRO-112 keys: ArrowDown and ArrowUp wrap, Enter picks, Escape twice clears, and the result heading takes focus", async ({
     page,
   }) => {
