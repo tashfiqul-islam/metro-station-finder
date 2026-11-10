@@ -3,6 +3,7 @@ import babel from "@rolldown/plugin-babel";
 import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import { build, defineConfig } from "vite";
 
+import { smokePort } from "../../scripts/smoke-port.ts";
 import { serviceWorkerPlugin, type WorkerConfig } from "../../scripts/sw-plugin.ts";
 
 /**
@@ -47,5 +48,5 @@ export default defineConfig({
   build: { manifest: true },
   server: { host: "127.0.0.1", port: 5173, strictPort: true },
   // METRO-130: SMOKE_PORT (set by scripts/smoke.ts) picks the preview port; strictPort makes a clash fail loudly.
-  preview: { host: "127.0.0.1", port: Number(process.env["SMOKE_PORT"] ?? 4173), strictPort: true },
+  preview: { host: "127.0.0.1", port: smokePort(process.env), strictPort: true },
 });

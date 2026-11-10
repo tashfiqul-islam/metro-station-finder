@@ -1,4 +1,5 @@
 import { spawn, spawnSync } from "node:child_process";
+import type { ChildProcess } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 import { chromium } from "@playwright/test";
@@ -18,7 +19,7 @@ import {
   widgetNodeIds,
 } from "./smoke-live-report.ts";
 import type { AccessibilityRun, AxEntry, LiveRun, TabEnd } from "./smoke-live-report.ts";
-import { resolveSmokePort } from "./smoke-port.ts";
+import { smokePort } from "./smoke-port.ts";
 
 /**
  * Owner-run live check (METRO-88), never run by CI or an agent: `bun run smoke:live`. It builds the web app
@@ -36,8 +37,13 @@ const GOOGLE_HOST = /(^|\.)(googleapis|gstatic|google|googleusercontent)\.com$/u
 /** A neighbourhood name, not an address or a person's place. */
 const QUERY = "Motijheel";
 
-async function waitForServer(origin: string): Promise<void> {
+async function waitForServer(origin: string, server: ChildProcess): Promise<void> {
   for (let attempt = 0; attempt < 120; attempt += 1) {
+    // The preview child exits at once when it cannot bind its port (strictPort): fail rather than fetch a
+    // foreign server that already holds the port.
+    if (server.exitCode !== null || server.signalCode !== null) {
+      throw new Error("the preview server exited (is the port in use?)");
+    }
     try {
       if ((await fetch(origin)).ok) return;
     } catch {
@@ -127,8 +133,8 @@ async function main(): Promise<boolean> {
   // stdio is ignored: build and server output is of no use here and must never be able to echo a key.
   const build = spawnSync(process.execPath, [vite, "build"], { cwd: web, stdio: "ignore" });
   if (build.status !== 0) throw new Error("the build failed; run `bun run build` to see why");
-  // METRO-130: a free port per run (or SMOKE_PORT); vite.config.ts reads it for the preview server.
-  const port = await resolveSmokePort(process.env);
+  // METRO-130: the owner's dev key lists http://127.0.0.1:4173/*, so this check keeps 4173 unless SMOKE_PORT is set.
+  const port = smokePort(process.env);
   const origin = `http://127.0.0.1:${port}`;
   const server = spawn(process.execPath, [vite, "preview"], {
     cwd: web,
@@ -153,7 +159,7 @@ async function main(): Promise<boolean> {
   let cdp: CDPSession | null = null;
   try {
     browser = await chromium.launch({ headless: process.env["SMOKE_LIVE_HEADLESS"] === "1" });
-    await waitForServer(origin);
+    await waitForServer(origin, server);
     const page = await browser.newPage();
     const csp: string[] = [];
     page.on("console", (message: ConsoleMessage) => {
