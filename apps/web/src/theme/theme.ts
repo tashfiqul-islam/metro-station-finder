@@ -53,21 +53,19 @@ export function applyPreference(preference: ThemePreference, root: HTMLElement):
   syncThemeColor(preference, root.ownerDocument);
 }
 
-/** A tag's own (System) colour, remembered on first sight because a chosen theme overwrites `content`. */
-const own = (tag: HTMLMetaElement): string => (tag.dataset["system"] ??= tag.content);
-
 /**
- * Points every `meta[name=theme-color]` at the chosen theme (METRO-119). The tags carry one colour per
- * `prefers-color-scheme`, which follows the OS; a chosen Light or Dark gives both tags that theme's colour, and
- * System gives each back its own. The page colours are read from the tags themselves, so no colour is repeated
- * here. `public/theme-boot.js` applies the same rule before first paint; keep them identical.
+ * Points every `meta[name=theme-color]` at the chosen theme (METRO-119). Each tag names its scheme
+ * (`data-scheme`) and keeps its own colour in `data-system`, which nothing overwrites, because a chosen theme
+ * overwrites `content` (including in `public/theme-boot.js`, before this code runs). The tags carry one colour
+ * per `prefers-color-scheme`, which follows the OS: a chosen Light or Dark gives every tag that scheme's
+ * colour, and System, or a theme with no tag of its own, gives each tag its own colour back. The boot script
+ * applies the same rule on load; keep them identical.
  */
 export function syncThemeColor(preference: ThemePreference, doc: Document): void {
-  const colours: Record<string, string> = {};
   const tags = [...doc.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')];
+  const chosen = tags.find((tag) => tag.dataset["scheme"] === preference);
   for (const tag of tags)
-    colours[(tag.getAttribute("media") ?? "").includes("dark") ? "dark" : "light"] = own(tag);
-  for (const tag of tags) tag.content = colours[preference] ?? own(tag);
+    tag.content = chosen?.dataset["system"] ?? tag.dataset["system"] ?? tag.content;
 }
 
 /** Reading `window.localStorage` itself can throw (blocked site data), so the access is guarded too. */

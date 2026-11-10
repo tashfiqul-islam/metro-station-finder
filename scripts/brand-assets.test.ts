@@ -237,14 +237,30 @@ describe("index.html head (METRO-107)", () => {
     expect(html).not.toMatch(/(?:src|href|content)="https?:\/\//u);
   });
 
-  test("sets a light and a dark theme colour by media query", () => {
-    expect(html).toContain(
-      '<meta name="theme-color" content="#F2F6F6" media="(prefers-color-scheme: light)" />',
-    );
-    expect(html).toContain(
-      '<meta name="theme-color" content="#060A0A" media="(prefers-color-scheme: dark)" />',
-    );
-    expect(html.match(/name="theme-color"/gu)).toHaveLength(2);
+  test("sets a light and a dark theme colour by media query, each naming its scheme and its own colour (METRO-119)", () => {
+    const tags = [...html.matchAll(/<meta\s+name="theme-color"[^>]*>/gu)].map((match) => match[0]);
+    expect(tags).toHaveLength(2);
+    for (const [scheme, colour] of [
+      ["light", "#F2F6F6"],
+      ["dark", "#060A0A"],
+    ] as const) {
+      const tag = tags.find((candidate) => candidate.includes(`data-scheme="${scheme}"`)) ?? "";
+      expect(tag).toContain(`content="${colour}"`);
+      expect(tag).toContain(`media="(prefers-color-scheme: ${scheme})"`);
+      // theme-boot.js overwrites content for a chosen theme; theme.ts restores System from data-system.
+      expect(tag).toContain(`data-system="${colour}"`);
+    }
+  });
+
+  test("the theme colours are the page background tokens in both themes (METRO-119)", () => {
+    const tokens = readFileSync(join(root, "apps/web/src/styles/tokens.css"), "utf8").toLowerCase();
+    const light = /:root\s*\{[^}]*?--color-bg:\s*(#[0-9a-f]{6})/u.exec(tokens)?.[1];
+    const dark = /:root\[data-theme="dark"\]\s*\{[^}]*?--color-bg:\s*(#[0-9a-f]{6})/u.exec(
+      tokens,
+    )?.[1];
+    expect(html.toLowerCase()).toContain(`content="${light ?? "missing"}"`);
+    expect(html.toLowerCase()).toContain(`content="${dark ?? "missing"}"`);
+    expect([light, dark]).toEqual(["#f2f6f6", "#060a0a"]);
   });
 
   test("adds no inline style or script, so the CSP is unchanged", () => {

@@ -2,8 +2,10 @@ import { runInNewContext } from "node:vm";
 
 import { expect, test } from "vitest";
 
+import pageSource from "../../index.html?raw";
 import source from "../../public/theme-boot.js?raw";
-import { THEME_KEY, syncThemeColor } from "./theme";
+import { THEME_KEY, applyPreference, syncThemeColor } from "./theme";
+import type { ThemePreference } from "./theme";
 
 /** A stand-in for <html> that records attribute changes, so the shipped file runs against nothing else. */
 function fakeRoot(initial: string | null) {
@@ -75,6 +77,8 @@ function pageWithTags(): Document {
     tag.name = "theme-color";
     tag.content = content;
     tag.setAttribute("media", `(prefers-color-scheme: ${scheme})`);
+    tag.dataset["scheme"] = scheme;
+    tag.dataset["system"] = content;
     doc.head.append(tag);
   }
   return doc;
@@ -115,5 +119,65 @@ test("METRO-119 the boot script and syncThemeColor give the same tags for every 
     const byFunction = pageWithTags();
     syncThemeColor(value, byFunction);
     expect(colours(byFunction), value).toEqual(colours(byScript));
+  }
+});
+
+/** The real head of apps/web/index.html, parsed fresh: the tests below run the shipped tags, not a copy. */
+const realPage = (): Document => new DOMParser().parseFromString(pageSource, "text/html");
+
+const tagsOf = (doc: Document): HTMLMetaElement[] => [
+  ...doc.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]'),
+];
+
+/** What a browser uses on an OS set to `os`: the first tag whose media query names that scheme. */
+const effectiveOn = (doc: Document, os: "light" | "dark"): string | undefined =>
+  tagsOf(doc).find((tag) => (tag.getAttribute("media") ?? "").includes(os))?.content;
+
+const PAGE = { light: effectiveOn(realPage(), "light"), dark: effectiveOn(realPage(), "dark") };
+
+test("METRO-119 index.html ships two different theme colours, one per scheme", () => {
+  expect(tagsOf(realPage())).toHaveLength(2);
+  expect(PAGE.light).toMatch(/^#[0-9A-F]{6}$/u);
+  expect(PAGE.dark).toMatch(/^#[0-9A-F]{6}$/u);
+  expect(PAGE.light).not.toBe(PAGE.dark);
+});
+
+test("METRO-119 after the real boot script, pressing through Light, Dark, System on either OS gives the right colour every time", () => {
+  const presses: ThemePreference[] = [
+    "light",
+    "dark",
+    "system",
+    "light",
+    "dark",
+    "system",
+    "system",
+  ];
+  for (const os of ["light", "dark"] as const) {
+    for (const savedBefore of [null, "light", "dark", "system"]) {
+      const doc = realPage();
+      runInNewContext(source, { document: doc, localStorage: saved(savedBefore) });
+      for (const press of presses) {
+        applyPreference(press, doc.documentElement);
+        const expected = press === "system" ? PAGE[os] : PAGE[press];
+        expect(
+          effectiveOn(doc, os),
+          `${os} OS, saved ${String(savedBefore)}, pressed ${press}`,
+        ).toBe(expected);
+      }
+    }
+  }
+});
+
+test("METRO-119 a page with one theme-color tag keeps it under boot and under every press", () => {
+  for (const choice of ["light", "dark"]) {
+    const doc = realPage();
+    tagsOf(doc)[1]?.remove();
+    const only = tagsOf(doc)[0];
+    runInNewContext(source, { document: doc, localStorage: saved(choice) });
+    expect(only?.content, `boot ${choice}`).toBe(PAGE.light);
+    for (const press of ["light", "dark", "system"] as const) {
+      applyPreference(press, doc.documentElement);
+      expect(only?.content, `press ${press}`).toBe(PAGE.light);
+    }
   }
 });

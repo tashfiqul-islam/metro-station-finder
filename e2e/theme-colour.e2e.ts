@@ -106,4 +106,36 @@ test.describe("theme colour", () => {
       await page.evaluate((): unknown => Reflect.get(window, "colourWhenBodyAppeared")),
     ).toEqual([COLOUR.dark]);
   });
+
+  for (const first of ["light", "dark"] as const) {
+    for (const os of ["light", "dark"] as const) {
+      test(`METRO-119 saved ${first}, reloaded on a ${os} OS, then pressed through the other themes and System, shows the right colour each time`, async ({
+        page,
+      }) => {
+        await open(page, os, first);
+        const button = page.getByRole("button", { name: /^Theme: /u });
+        await expect(button).toHaveAccessibleName(
+          new RegExp(`^Theme: ${first === "light" ? "Light" : "Dark"}[.]`, "u"),
+        );
+        expect(await effective(page), `saved ${first}`).toBe(COLOUR[first]);
+        // From the saved theme the button goes to the next one, then the next, then back to the saved one.
+        const order = ["system", "light", "dark"] as const;
+        let at = order.indexOf(first);
+        for (let step = 0; step < 4; step += 1) {
+          at = (at + 1) % order.length;
+          const theme = order[at] ?? "system";
+          await button.click();
+          await expect(button).toHaveAccessibleName(
+            new RegExp(
+              `^Theme: ${theme === "system" ? "System" : theme === "light" ? "Light" : "Dark"}[.]`,
+              "u",
+            ),
+          );
+          expect(await effective(page), `${theme} after saved ${first} on a ${os} OS`).toBe(
+            theme === "system" ? COLOUR[os] : COLOUR[theme],
+          );
+        }
+      });
+    }
+  }
 });
