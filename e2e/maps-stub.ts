@@ -218,8 +218,9 @@ export async function installMapsStub(page: Page, options: StubOptions = {}): Pr
   const blocked: string[] = [];
   const scriptUrls: string[] = [];
   const { promise: gate, resolve: releaseScript } = Promise.withResolvers<void>();
+  const release = (): void => releaseScript();
   // A script still held when the page closes is let go, so the pending route handler ends with the test.
-  page.once("close", releaseScript);
+  page.once("close", release);
   await page.addInitScript((given) => {
     Reflect.set(window, "__metroStub", { options: given, fetchFields: [], routes: [] });
   }, options);
@@ -242,7 +243,7 @@ export async function installMapsStub(page: Page, options: StubOptions = {}): Pr
   });
   return {
     blocked,
-    releaseScript,
+    releaseScript: release,
     calls: async () => {
       const raw = await page.evaluate(() => JSON.stringify(Reflect.get(window, "__metroStub")));
       const recorded: unknown = JSON.parse(raw);
