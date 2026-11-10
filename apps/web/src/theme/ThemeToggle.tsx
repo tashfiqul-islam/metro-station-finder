@@ -34,8 +34,14 @@ async function reveal(
 /**
  * Header button: System, Light, Dark, System. The preference is read once from storage (the boot script has
  * already applied it to `<html>`), saved on change, and revealed with a View Transition where available (loaded
- * on first use). Each press cycles from the latest choice, kept in a ref: two quick presses before React
- * re-renders (or while a reveal is still running) move two steps, not one.
+ * on first use). Each press cycles from the latest choice, kept in a ref, so presses made before React
+ * re-renders move one step each. Known limitation (METRO-119, Confirmed with Playwright 1.64 on WebKit 27.2,
+ * Chromium and Firefox): while the ~560 ms reveal runs, the `::view-transition` overlay takes hit-testing
+ * (`document.elementFromPoint` returns `<html>`), so a press in that window never reaches the button and is
+ * lost. `pointer-events: none` on the pseudo-elements does not lift it in Chromium or WebKit. The owner
+ * accepted this on 2026-11-11; revisit only if real users hit it. The overlap in `reveal.ts` (the first
+ * reveal's `finally` removes `html.vt-theme` while a second transition runs) is unreachable while presses
+ * cannot get through.
  */
 export function ThemeToggle(): ReactElement {
   const [preference, setPreference] = useState<ThemePreference>(() => readPreference());
