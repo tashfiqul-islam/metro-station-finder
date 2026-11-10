@@ -15,12 +15,12 @@ Read when: reviewing a committed diff as the independent reviewer, or disposing 
   6. Repository rules: `AGENTS.md` and the guidance it triggers are followed; claims are labelled Confirmed, Inferred or Unknown.
   7. Evidence: reported commands and results are plausible for the diff; external facts cite sources with dates.
 - Report findings ranked Critical (breaks correctness, security or a gate; blocks merge), Important (fix before merge) or Minor (optional). Each has file and line, quoted or described evidence and why it matters. State Verified (what and how) and Could not verify (what and why). Never claim a check that was not performed.
-- The `Reviewer record` check proves the `Reviewer` section is present, is not a placeholder and carries a reference. It cannot prove that a review happened; follow the linked output and disposition.
+- The `Reviewer record` check needs the `Reviewer` section to link a comment or review on this PR holding `Reviewed-head: <40-char SHA>`: the PR head, or a commit followed only by base merges (content not inspected). The coordinator posts the report there. It cannot tell who posted or edited it, so it proves a disposition record bound to the reviewed head exists, not that a review ran; follow the linked output and disposition.
 - Disposition: a report is a set of leads. The orchestrator verifies each finding against the code, then records exactly one disposition per finding: fixed (commit), disproved (evidence), accepted (reason and who) or deferred (ticket).
 
 ## Enforced by
 
-- `scripts/reviewer-record.ts`: fails a PR body without a real `Reviewer` section. Fix the body, not the check.
+- `scripts/reviewer-record.ts`: fails a PR without a linked, head-bound `Reviewer` record. Fix the body, not the check.
 - `scripts/independent-review.test.ts`: fails if the reviewer definition gains write tools or loses its link to this file.
 
 ## Read more

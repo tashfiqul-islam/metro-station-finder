@@ -46,10 +46,18 @@ test("METRO-36 it has its own per-pull-request concurrency group, not the Qualit
   });
 });
 
-test("METRO-36 permissions are empty at the top and contents read only on the job", () => {
+test("METRO-134 permissions are empty at the top and read-only on the job", () => {
   const { doc, job } = parsed();
   expect(doc["permissions"]).toEqual({});
-  expect(job["permissions"]).toEqual({ contents: "read" });
+  expect(job["permissions"]).toEqual({ contents: "read", "pull-requests": "read" });
+});
+
+test("METRO-134 github.token reaches only the check step, as GH_TOKEN, and nothing writes", () => {
+  const { steps } = parsed();
+  const holders = steps.filter((step) => JSON.stringify(step).includes("github.token"));
+  expect(holders.map((step) => step["run"])).toEqual(["node scripts/reviewer-record.ts"]);
+  expect(record(holders[0]?.["env"], "env")["GH_TOKEN"]).toBe("${{ github.token }}");
+  expect(text.match(/github\.token/gu)).toHaveLength(1);
 });
 
 test("METRO-36 no secrets, no actions/cache step, no persisted credentials, no write access", () => {
@@ -61,7 +69,7 @@ test("METRO-36 no secrets, no actions/cache step, no persisted credentials, no w
   expect(String(tools["uses"])).toStartWith("jdx/mise-action@");
   // METRO-97: the job holds no credential, so mise-action's own cache stays on and a warm run downloads nothing.
   expect(record(tools["with"], "tools.with")["cache"]).toBeUndefined();
-  expect(text).not.toMatch(/secrets\.|actions\/cache|write|GITHUB_TOKEN|github\.token/u);
+  expect(text).not.toMatch(/secrets\.|actions\/cache|write|GITHUB_TOKEN/u);
 });
 
 test("METRO-36 every step is named and every action is pinned to a commit", () => {
@@ -83,6 +91,9 @@ test("METRO-36 the untrusted body reaches the script only through an environment
     PR_BODY: "${{ github.event.pull_request.body }}",
     BASE_SHA: "${{ github.event.pull_request.base.sha }}",
     HEAD_SHA: "${{ github.event.pull_request.head.sha }}",
+    PR_NUMBER: "${{ github.event.pull_request.number }}",
+    REPOSITORY: "${{ github.repository }}",
+    GH_TOKEN: "${{ github.token }}",
   });
   const runs = steps.flatMap((step) => (typeof step["run"] === "string" ? [step["run"]] : []));
   expect(runs.length).toBeGreaterThan(0);
