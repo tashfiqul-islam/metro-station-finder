@@ -7,7 +7,7 @@ import { mapCopy } from "./copy";
 import { lineStops, project, round1 } from "./projection";
 import type { LineStop, Point } from "./projection";
 import { useMapView } from "./use-map-view";
-import { viewBoxOf } from "./view";
+import { LABELS_ZOOM, viewBoxOf } from "./view";
 
 import "../../styles/components/map.css";
 
@@ -30,7 +30,14 @@ const LAST = STOPS[STOPS.length - 1];
 const points = (list: readonly Point[]): string =>
   list.map((p) => `${round1(p.x)},${round1(p.y)}`).join(" ");
 
-/** The pill label's box: width follows the text (7.6u per character plus 9u padding each side), height 24u. */
+/** A scale for a transform attribute: three decimals, so the markup stays short. */
+const scaleText = (value: number): string => String(Math.round(value * 1000) / 1000);
+
+/** Where a stop's group sits and how it is scaled: fixed-size parts are drawn in pixels inside it. */
+const placeAt = (stop: Point, unit: number): string =>
+  `translate(${round1(stop.x)} ${round1(stop.y)}) scale(${scaleText(unit)})`;
+
+/** The pill label's box in pixels from its stop: width follows the text (7.6px per character plus 9px padding each side), height 24px. */
 function pill(stop: LineStop): {
   x: number;
   y: number;
@@ -41,20 +48,17 @@ function pill(stop: LineStop): {
   const width = round1(stop.name.length * 7.6 + 18);
   const left = stop.placement === "left";
   const below = stop.placement === "below";
-  const x = round1(below ? stop.x - width / 2 : left ? stop.x - 14 - width : stop.x + 14);
-  const y = round1(below ? stop.y + 20 : stop.y - 12);
-  return { x, y, width, textX: round1(x + width / 2), textY: round1(y + 16) };
+  const x = round1(below ? -width / 2 : left ? -14 - width : 14);
+  const y = below ? 20 : -12;
+  return { x, y, width, textX: round1(x + width / 2), textY: y + 16 };
 }
 
-/** The halo label's anchor and position. */
+/** The halo label's anchor and position in pixels from its stop. */
 function halo(stop: LineStop): { x: number; y: number; anchor: "start" | "end" | "middle" } {
-  if (stop.placement === "below")
-    return { x: round1(stop.x), y: round1(stop.y + 22), anchor: "middle" };
-  if (stop.placement === "left")
-    return { x: round1(stop.x - 11), y: round1(stop.y + 4), anchor: "end" };
-  return { x: round1(stop.x + 11), y: round1(stop.y + 4), anchor: "start" };
+  if (stop.placement === "below") return { x: 0, y: 22, anchor: "middle" };
+  if (stop.placement === "left") return { x: -11, y: 4, anchor: "end" };
+  return { x: 11, y: 4, anchor: "start" };
 }
-
 function nameOf(id: StationId): string {
   return STOPS.find((stop) => stop.id === id)?.name ?? "";
 }
@@ -69,7 +73,7 @@ function tripStops(trip: LineMapProps["trip"]): readonly LineStop[] {
 
 /**
  * The pure SVG schematic of MRT Line 6 (METRO-111): no network, no Google, nothing stored. Layers bottom to
- * top follow the handoff: background, planes, dot grid, line shadow, casing, line, trip highlight, walk path,
+ * top follow the handoff: background, dot grid, line shadow, casing, line, trip highlight, walk path,
  * user pin, station pins, labels. Every value is an attribute or a class; colours come from tokens.
  *
  * The svg is `role="application"` (named by its title, described by its desc) because it is a keyboard
@@ -77,7 +81,8 @@ function tripStops(trip: LineMapProps["trip"]): readonly LineStop[] {
  */
 export function LineMap({ highlighted = NONE, position, walk, trip }: LineMapProps): ReactElement {
   if (FIRST === undefined || LAST === undefined) throw new Error("The station dataset is empty");
-  const { view, svg, handlers, zoomIn, zoomOut, fit } = useMapView();
+  const { view, unit, svg, handlers, zoomIn, zoomOut, fit } = useMapView();
+  const allNames = view.zoom >= LABELS_ZOOM;
   const marked = new Set<StationId>(highlighted);
   const stretch = tripStops(trip);
   const user = position === undefined ? null : project(position);
@@ -130,10 +135,6 @@ export function LineMap({ highlighted = NONE, position, walk, trip }: LineMapPro
           </pattern>
         </defs>
         <rect className="map__bg" x="-3000" y="-3000" width="6710" height="7055" />
-        <rect className="map__plane--1" x="-260" y="-240" width="520" height="560" rx="96" />
-        <rect className="map__plane--2" x="330" y="-200" width="640" height="520" rx="96" />
-        <rect className="map__plane--2" x="-220" y="520" width="560" height="760" rx="96" />
-        <rect className="map__plane--1" x="300" y="380" width="640" height="560" rx="96" />
         <rect x="-600" y="-600" width="1910" height="2255" fill="url(#map-dots)" />
         <polyline
           className="map__shadow"
@@ -180,46 +181,29 @@ export function LineMap({ highlighted = NONE, position, walk, trip }: LineMapPro
           />
         )}
         {user === null ? null : (
-          <>
-            <circle className="map__me-pulse" cx={round1(user.x)} cy={round1(user.y)} r="9" />
-            <circle
-              className="map__me"
-              cx={round1(user.x)}
-              cy={round1(user.y)}
-              r="8"
-              strokeWidth="3"
-            />
-          </>
+          <g transform={placeAt(user, unit)}>
+            <circle className="map__me-pulse" r="9" />
+            <circle className="map__me" r="8" strokeWidth="3" />
+          </g>
         )}
-        {STOPS.map((stop) =>
-          marked.has(stop.id) ? (
-            <g key={stop.id}>
-              <circle className="map__pin-halo" cx={round1(stop.x)} cy={round1(stop.y)} r="15" />
-              <circle
-                className="map__pin map__pin--hl"
-                cx={round1(stop.x)}
-                cy={round1(stop.y)}
-                r="7.5"
-                strokeWidth="3"
-              />
-            </g>
-          ) : (
-            <circle
-              key={stop.id}
-              className="map__pin"
-              cx={round1(stop.x)}
-              cy={round1(stop.y)}
-              r="5"
-              strokeWidth="2.5"
-            />
-          ),
-        )}
+        {STOPS.map((stop) => (
+          <g key={stop.id} transform={placeAt(stop, unit)}>
+            {marked.has(stop.id) ? (
+              <>
+                <circle className="map__pin-halo" r="15" />
+                <circle className="map__pin map__pin--hl" r="7.5" strokeWidth="3" />
+              </>
+            ) : (
+              <circle className="map__pin" r="5" strokeWidth="2.5" />
+            )}
+          </g>
+        ))}
         {STOPS.map((stop) => {
           const isMarked = marked.has(stop.id);
           if (isMarked || stop.terminus) {
             const box = pill(stop);
             return (
-              <g key={stop.id}>
+              <g key={stop.id} transform={placeAt(stop, unit)}>
                 <rect
                   className={isMarked ? "map__pill" : "map__pill map__pill--term"}
                   x={box.x}
@@ -240,21 +224,23 @@ export function LineMap({ highlighted = NONE, position, walk, trip }: LineMapPro
               </g>
             );
           }
+          if (!allNames) return null;
           const spot = halo(stop);
           return (
-            <text
-              key={stop.id}
-              className="map__label"
-              x={spot.x}
-              y={spot.y}
-              textAnchor={spot.anchor}
-              fontSize="11.5"
-              strokeWidth="3.5"
-            >
-              {stop.name}
-            </text>
+            <g key={stop.id} transform={placeAt(stop, unit)}>
+              <text
+                className="map__label"
+                x={spot.x}
+                y={spot.y}
+                textAnchor={spot.anchor}
+                fontSize="11.5"
+                strokeWidth="3.5"
+              >
+                {stop.name}
+              </text>
+            </g>
           );
-        })}
+        })}{" "}
       </svg>
       <fieldset className="map-controls" aria-label={mapCopy.controls}>
         <button

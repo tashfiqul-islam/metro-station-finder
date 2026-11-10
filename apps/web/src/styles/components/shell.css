@@ -15,9 +15,9 @@
 }
 .app__map-frame {
   position: absolute;
-  top: 104px;
-  right: 64px;
-  left: 12px;
+  top: 64px;
+  right: 0;
+  left: 0;
   bottom: calc(var(--sheet-h) + var(--sheet-reserve) + 8px);
 }
 /* No section nav drawn (no router yet): nothing sits under the sheet, so it keeps only the side gap. */

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { KeyboardEvent, PointerEvent } from "react";
 
-import { FIT, ZOOM_STEP, keyView, panPx, toMap, wheelPixels, zoomBy } from "./view";
+import { FIT, ZOOM_STEP, keyView, panPx, toMap, unitsPerPixel, wheelPixels, zoomBy } from "./view";
 import type { View } from "./view";
 
 /** Wheel zoom: one 100-pixel notch is about 22 percent. */
@@ -22,6 +22,21 @@ export function useMapView() {
   const [view, setView] = useState<View>(FIT);
   const svg = useRef<SVGSVGElement>(null);
   const pointers = useRef(new Map<number, Touch>());
+  const [size, setSize] = useState({ width: 0, height: 0 });
+
+  // The map's box changes with the sheet (the shell's frame ends where the sheet starts) and the window; the
+  // size is what keeps labels and pins at a fixed size on screen.
+  useEffect(() => {
+    const element = svg.current;
+    if (element === null) return () => {};
+    const observer = new ResizeObserver((entries) => {
+      for (const { contentRect } of entries) {
+        setSize({ width: contentRect.width, height: contentRect.height });
+      }
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const element = svg.current;
@@ -100,6 +115,8 @@ export function useMapView() {
 
   return {
     view,
+    /** Map units per screen pixel: a size in px times this is the size in the view box. */
+    unit: unitsPerPixel(view, size),
     svg,
     handlers: {
       onPointerDown: down,

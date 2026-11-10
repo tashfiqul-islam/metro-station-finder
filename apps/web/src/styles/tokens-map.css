@@ -1,7 +1,5 @@
 /* tokens-map.css: schematic map colours (map-bg stays in tokens.css, the shell paints it). Imported by map.css. Same three theme blocks as tokens.css (light, dark, OS dark). */
 :root {
-  --color-map-plane-1: #d4e4e5;
-  --color-map-plane-2: #dce7ec;
   --color-map-dot: rgb(13 15 18 / 0.09);
   --color-map-casing: #ffffff;
   --color-map-shadow: rgb(13 15 18 / 0.06);
@@ -12,8 +10,6 @@
   --color-map-walk: #0d0f12;
 }
 :root[data-theme="dark"] {
-  --color-map-plane-1: #0c1817;
-  --color-map-plane-2: #0e1518;
   --color-map-dot: rgb(255 255 255 / 0.06);
   --color-map-casing: #141619;
   --color-map-shadow: rgb(0 0 0 / 0.55);
@@ -25,8 +21,6 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
-    --color-map-plane-1: #0c1817;
-    --color-map-plane-2: #0e1518;
     --color-map-dot: rgb(255 255 255 / 0.06);
     --color-map-casing: #141619;
     --color-map-shadow: rgb(0 0 0 / 0.55);
