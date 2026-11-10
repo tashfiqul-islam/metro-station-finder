@@ -257,14 +257,24 @@ test("METRO-115 a size that rounds to the same pixels does not render the map ag
   resize(390, 235);
   expect(renders.mock.calls.length).toBe(settled + 1);
 });
-test("METRO-115 pills near the south end stay apart on a short frame (the layout reads the reported size)", () => {
+test("METRO-115 the reported size decides where the end labels go: a short frame moves or drops what a tall one keeps", () => {
   const resize = stubResize();
   const { container } = render(<LineMap highlighted={[stationId("bangladesh-secretariat")]} />);
-  resize(320, 190);
-  const boxes = [...container.querySelectorAll("rect.map__pill")].map((r) =>
-    r.getBoundingClientRect(),
-  );
-  expect(boxes.length).toBeGreaterThanOrEqual(2);
-  const names = [...container.querySelectorAll("text.map__pill-text")].map((n) => n.textContent);
-  expect(names).toContain("Bangladesh Secretariat");
+  const pills = (): Record<string, string | null> =>
+    Object.fromEntries(
+      [...container.querySelectorAll("rect.map__pill")].map((r) => [
+        r.parentElement?.querySelector("text")?.textContent ?? "",
+        `${r.getAttribute("x")},${r.getAttribute("y")}`,
+      ]),
+    );
+  resize(1500, 2640);
+  const tall = pills();
+  // With room (a third of a map unit per pixel), every pill is on its own side: Motijheel (right) is at 14,-12.
+  expect(tall["Motijheel"]).toBe("14,-12");
+  expect(tall["Bangladesh Secretariat"]?.endsWith(",20")).toBe(true);
+  resize(390, 900);
+  const short = pills();
+  // The marked station keeps its side; the terminus beside it moves to another or is not drawn.
+  expect(short["Bangladesh Secretariat"]).toBe(tall["Bangladesh Secretariat"]);
+  expect(short["Motijheel"]).not.toBe(tall["Motijheel"]);
 });

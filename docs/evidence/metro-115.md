@@ -6,13 +6,13 @@ Date: 2026-11-10. Base: `46b0058` (`feature/metro-rebuild`; the bundle figures b
 
 | Bucket (limit raw / gzip)             | Base `c74d80c`   | This change      | Change        |
 | ------------------------------------- | ---------------- | ---------------- | ------------- |
-| First-visit JS (250,000 / 80,000)     | 235,483 / 74,210 | 235,483 / 74,209 | 0 / -1        |
-| First-visit CSS (20,000 / 6,000)      | 14,125 / 3,965   | 14,229 / 3,979   | +104 / +14    |
-| Lazy screen Nearby (120,000 / 30,000) | 92,206 / 23,189  | 94,049 / 23,866  | +1,843 / +677 |
-| Shared lazy (27,000 / 12,000)         | 20,389 / 9,160   | 20,389 / 9,156   | 0 / -4        |
-| Worker (6,000 / 2,800)                | 3,962 / 1,789    | 3,962 / 1,783    | 0 / -6        |
+| First-visit JS (250,000 / 80,000)     | 235,483 / 74,210 | 235,648 / 74,262 | +165 / +52    |
+| First-visit CSS (20,000 / 6,000)      | 14,125 / 3,965   | 14,271 / 3,992   | +146 / +27    |
+| Lazy screen Nearby (120,000 / 30,000) | 92,206 / 23,189  | 94,232 / 24,008  | +2,026 / +819 |
+| Shared lazy (27,000 / 12,000)         | 20,389 / 9,160   | 20,389 / 9,160   | 0 / 0         |
+| Worker (6,000 / 2,800)                | 3,962 / 1,789    | 3,962 / 1,787    | 0 / -2        |
 
-No limit was changed. The map code and `map.css` live in the lazy Nearby screen; only `shell.css` (frame insets and the full-sheet hide) is in the entry (+104 raw CSS bytes with the review fixes).
+No limit was changed. The map code and `map.css` live in the lazy Nearby screen; only `shell.css` (frame insets and the full-sheet hide) is in the entry (+146 raw CSS bytes with the review fixes; the focus-moving effect in `AppShell.tsx` adds 165 raw JS bytes to the entry).
 
 ## What changed
 
@@ -41,8 +41,9 @@ Measured in the picture at 390 x 844 with a result open: the line is about 250 p
 - Label collisions are resolved by `layoutLabels` (ADR-0025): priority marked, then termini, then others; side order own, right, left, below, above; a label that fits on no side is not drawn. The e2e checks no two pills overlap at 320x640 and 390x844 for Bangladesh Secretariat, Pallabi and Dhaka University selected at peek and half.
 - At full sheet the frame is `visibility: hidden` (phones), so the map and its buttons leave the tab order and the accessibility tree; e2e checks Tab never lands in the map and focus works again at half.
 - Below 768 px the svg is clipped on the top and sides (`clip-path: inset(0 0 -100vh)`) so a panned or zoomed map never paints under the header; e2e zooms four steps and checks nothing of the map is hit above the frame.
-- Resize reports are compared in whole pixels outside React state. Measured with a spy on the layout call in `LineMap.test.tsx`: three reports of the same rounded size cause 0 renders and a changed size causes 1. (A first version that compared inside a state updater still rendered once per report, which is why the comparison is in a ref.)
+- Resize reports are compared in whole pixels outside React state. Measured with a spy on the layout call in `LineMap.test.tsx`: three reports of the same rounded size cause 0 renders and a changed size causes 1. The comparison is in a ref because a functional state update compared inside the updater still rendered once per report in the same test.
 - The forced-colours e2e (390 and 1280 px) was run against the base code (the base sources of `apps/web/src` checked out over this branch in the same worktree, then restored) and fails there: the line stroke computes to `url("#map-line")`. It passes on this branch.
+- Focus: "Show on map" focuses the map in an effect after the snap commits (e2e from a full sheet); focus in the map when the sheet reaches full moves to the grip; the phone focus ring is drawn inside the clip. The e2e for these three was run against the previous commit's sources and all six cases (two sizes) failed there; they pass now.
 - By design a zoomed or panned view keeps its centre and zoom when the sheet moves; `e2e` checks the view box is unchanged after a snap change and that the fit button re-fits. The unzoomed re-fit is the peek/half test above.
 - Line strokes are 7 px on screen at every zoom (about 2 px at the fit view before), so the line is thicker than on the base.
 - `scripts/design-contrast.ts`: the glass was never judged over the line or the labels. The map now draws them behind the sheet when panned (the bottom of the clip is open), so a pan puts the line under the glass; that case is not checked by the gate and the `BACKDROPS` change (two planes removed) is for the owner to confirm. Only that line and the stale header comment changed in the file.

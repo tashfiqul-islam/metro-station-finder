@@ -133,6 +133,23 @@ async function pick(page: Page, name: string): Promise<void> {
   await expect(page.getByRole("heading", { level: 2, name })).toBeVisible();
 }
 
+/**
+ * True once the map has laid out for its current frame: the frame ends 8 px above the sheet and the pin groups
+ * carry the scale of the frame's size (what the ResizeObserver reported), so nothing is read from a stale layout.
+ */
+const laidOut = (page: Page) =>
+  page.evaluate(() => {
+    const svg = document.querySelector("svg.map");
+    const pin = document.querySelector("svg.map circle.map__pin")?.parentElement;
+    const panel = document.querySelector("main.panel")?.getBoundingClientRect();
+    if (!svg || !pin || !panel) return false;
+    const box = svg.getBoundingClientRect();
+    if (box.height <= 0) return false;
+    const expected = 1 / Math.min(box.width / 470, box.height / 880);
+    const got = Number(/scale\(([\d.]+)\)/u.exec(pin.getAttribute("transform") ?? "")?.[1]);
+    return Math.round(panel.top - box.bottom) === 8 && Math.abs(got / expected - 1) < 0.01;
+  });
+
 /** Every pill of the map in screen pixels. */
 const pillBoxes = (page: Page) =>
   page.evaluate(() =>
@@ -151,6 +168,7 @@ for (const size of SIZES) {
     await pick(page, "Karwan Bazar");
     for (const snap of ["peek", "half"] as const) {
       await setSnap(page, snap);
+      await expect.poll(() => laidOut(page)).toBe(true);
       await expect.poll(async () => (await pillBoxes(page)).length).toBeGreaterThanOrEqual(2);
       // At the fit view: the two ends and the selected station are named; no other station is.
       const names = (await pillBoxes(page)).map((box) => box.text);
@@ -170,6 +188,7 @@ for (const size of SIZES) {
       await pick(page, near);
       for (const snap of ["peek", "half"] as const) {
         await setSnap(page, snap);
+        await expect.poll(() => laidOut(page)).toBe(true);
         await expect
           .poll(async () => (await pillBoxes(page)).map((box) => box.text))
           .toContain(near);
@@ -310,4 +329,58 @@ for (const size of [
       expect(results.violations.map((violation) => violation.id)).toEqual([]);
     });
   }
+}
+
+for (const size of SIZES) {
+  test(`METRO-115 at ${size.name} Show on map from a full sheet drops the sheet and focuses the map`, async ({
+    page,
+  }) => {
+    const map = await open(page, size);
+    await pick(page, "Karwan Bazar");
+    await setSnap(page, "full");
+    await expect(map).toBeHidden();
+    await page.getByRole("button", { name: "Show on map", exact: true }).click();
+    await expect(page.locator(".app")).toHaveAttribute("data-snap", "peek");
+    await expect(map).toBeVisible();
+    await expect(map).toBeFocused();
+  });
+
+  test(`METRO-115 at ${size.name} focus in the map moves to the sheet grip when the sheet goes full`, async ({
+    page,
+  }) => {
+    const map = await open(page, size);
+    await setSnap(page, "half");
+    await map.focus();
+    await expect(map).toBeFocused();
+    // A script click moves no focus: the focus is still in the map when the sheet reaches full.
+    await page.locator(".panel__snap--up").evaluate((node) => {
+      if (node instanceof HTMLElement) node.click();
+    });
+    await expect(page.locator(".app")).toHaveAttribute("data-snap", "full");
+    const grip = page.locator(".panel__grip");
+    await expect(grip).toBeFocused();
+    await expect(grip).toBeVisible();
+  });
+
+  test(`METRO-115 at ${size.name} the focused map shows a focus ring that the clip does not cut`, async ({
+    page,
+  }) => {
+    const map = await open(page, size);
+    await map.focus();
+    expect(await map.evaluate((node) => node.matches(":focus-visible"))).toBe(true);
+    const ring = await map.evaluate((node) => {
+      const style = getComputedStyle(node);
+      return {
+        width: Number.parseFloat(style.outlineWidth),
+        offset: Number.parseFloat(style.outlineOffset),
+        style: style.outlineStyle,
+        clip: style.clipPath,
+      };
+    });
+    expect(ring.style).toBe("solid");
+    expect(ring.width).toBeGreaterThanOrEqual(2);
+    // The clip starts at the border box on the top and sides: the ring must end inside it (offset + width <= 0).
+    expect(ring.clip).toContain("inset(");
+    expect(ring.offset + ring.width).toBeLessThanOrEqual(0);
+  });
 }

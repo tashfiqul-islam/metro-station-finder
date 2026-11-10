@@ -103,6 +103,24 @@ test("METRO-112 Show on map moves keyboard focus to the map", () => {
   );
 });
 
+test("METRO-115 Show on map from a full sheet focuses the map only after the sheet has left full", () => {
+  render(<Harness />);
+  fireEvent.change(combo(), { target: { value: "farm" } });
+  fireEvent.keyDown(combo(), { key: "Enter" });
+  fireEvent.click(screen.getByRole("button", { name: "Make panel larger" }));
+  expect(document.querySelector(".app")?.getAttribute("data-snap")).toBe("full");
+  // A hidden map (full sheet) cannot take focus: record the sheet snap at the moment focus is asked for.
+  const snaps: (string | null | undefined)[] = [];
+  const focus = vi.spyOn(SVGElement.prototype, "focus").mockImplementation(() => {
+    snaps.push(document.querySelector(".app")?.getAttribute("data-snap"));
+  });
+  act(() => {
+    fireEvent.click(screen.getByRole("button", { name: "Show on map" }));
+  });
+  expect(snaps).toEqual(["peek"]);
+  focus.mockRestore();
+});
+
 test("METRO-112 Show on map does not fail when the map has not loaded", () => {
   render(
     <AppShell>

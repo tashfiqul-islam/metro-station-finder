@@ -49,7 +49,7 @@ function pillAt(name: string, side: Side): Label {
   };
 }
 
-/** A halo label (11.5px text, about 6.4px per character). */
+/** A halo label (11.5px text, about 6.4px per character). Never above: right, left and below always suffice. */
 function haloAt(name: string, side: Side): Label {
   const width = round1(name.length * 6.4);
   if (side === "below")
@@ -61,17 +61,6 @@ function haloAt(name: string, side: Side): Label {
       height: HALO_HEIGHT,
       textX: 0,
       textY: 22,
-      anchor: "middle",
-    };
-  if (side === "above")
-    return {
-      kind: "halo",
-      x: round1(-width / 2),
-      y: -20,
-      width,
-      height: HALO_HEIGHT,
-      textX: 0,
-      textY: -10,
       anchor: "middle",
     };
   if (side === "left")
@@ -130,7 +119,9 @@ export function layoutLabels(
   const boxes: Box[] = [];
   for (const stop of order) {
     const pill = marked.includes(stop.id) || stop.terminus;
-    const sides = [stop.placement, ...SIDES.filter((side) => side !== stop.placement)];
+    const sides = [stop.placement, ...SIDES.filter((side) => side !== stop.placement)].filter(
+      (side) => pill || side !== "above",
+    );
     for (const side of sides) {
       const label = pill ? pillAt(stop.name, side) : haloAt(stop.name, side);
       const left = stop.x / unit + label.x;

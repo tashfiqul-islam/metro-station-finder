@@ -15,7 +15,7 @@
 - We will keep labels, pins and the position marker at a fixed on-screen size by drawing each in its own `g` with `translate(x y) scale(unit)`, where `unit` is map units per pixel from `unitsPerPixel` (`view.ts`) and the size comes from a `ResizeObserver` in `use-map-view.ts`. Their sizes are written as pixels. Line strokes use `vector-effect: non-scaling-stroke`, so they are pixels too.
 - We will name only the termini and the marked stations (nearest, selected) at the fit view and every station from `LABELS_ZOOM` (one zoom step, 1.5). Labels are fixed size, so on a short frame neighbouring stops are a few pixels apart; `layoutLabels` (`labels.ts`) places them in priority order, marked stations (in the order given) before the termini before the other stations, each on the first side from its own, then right, left, below, above, that overlaps no label already placed (2 px apart), and does not draw one that fits on no side (its pin and its place in the station list remain). A marked station is therefore never moved or dropped for a terminus; a terminus next to a marked station may move or go.
 - We will remove the four grey planes and their two tokens, and set system colours under `forced-colors: active` (line `CanvasText` on a `Canvas` casing, selected pin `Highlight`), placed last in `map.css`.
-- A full sheet leaves the frame no height: the frame is `visibility: hidden` then (phones only), so the tab stop and the three buttons are neither focusable nor read, and they return when the sheet leaves full. The station list in the sheet is the content.
+- A full sheet leaves the frame no height: the frame is `visibility: hidden` then (phones only), so the tab stop and the three buttons are neither focusable nor read, and they return when the sheet leaves full. The hide waits `--dur-sheet` (no flash while the sheet rises). If focus is inside the map when the sheet reaches full, `AppShell` moves it to the sheet grip; "Show on map" focuses the map only after the snap has committed (`Nearby.tsx`), because a hidden map cannot take focus. The clip would cut the map's focus ring, so on phones the ring is drawn inside the frame (`outline-offset` of minus the ring width). The station list in the sheet is the content.
 - Resize reports are compared in whole pixels outside React state, so the same size renders nothing; a sheet drag renders the map only when the rounded size changes.
 - Line strokes are 7 px (shadow 18, casing 12) on screen at every zoom; at the fit view they were about 2 px before, so the line is thicker than the base on a phone by design.
 
@@ -24,7 +24,7 @@
 - Easier: label size no longer depends on the sheet or the window; the rule needs no per-snap code.
 - Harder: every new fixed-size drawing goes in a scaled group and, if it is a label, in `layoutLabels`. Labels are placed against each other only, not against pins or the user marker.
 - Unverified: real phone behaviour (touch, safe areas, dynamic toolbars; the owner checks in METRO-121); the user-position pulse (`transform-box: fill-box` on a circle inside a scaled group) is not covered by a test.
-- `map.css` and `LineMap.tsx` are in the lazy Nearby screen; only `shell.css` is in the entry (net CSS change under 10 bytes).
+- `map.css` and `LineMap.tsx` are in the lazy Nearby screen; only `shell.css` is in the entry (the frame insets and the full-sheet hide: +104 raw / +14 gzip CSS bytes, measured).
 
 ## Alternatives considered
 

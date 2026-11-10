@@ -71,6 +71,15 @@ export function AppShell({
   const panel = useRef<HTMLElement>(null);
   const sheet = useMemo(() => ({ snap, setSnap }), [snap]);
 
+  // A full sheet hides the map (shell.css). Focus inside it moves to the sheet's grip, a visible control, so it
+  // is not left on a hidden element (the grip is not drawn at 768 px and up, where the map stays).
+  useEffect(() => {
+    if (snap !== "full") return;
+    const shell = mounted(app);
+    if (shell.querySelector(".app__map")?.contains(document.activeElement))
+      shell.querySelector<HTMLElement>(".panel__grip")?.focus();
+  }, [snap]);
+
   return (
     <SheetContext value={sheet}>
       <div className={nav === undefined ? "app app--plain" : "app"} data-snap={snap} ref={app}>

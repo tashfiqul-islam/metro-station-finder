@@ -392,3 +392,26 @@ test("METRO-111 the map slot comes after the panel in the DOM, so the header and
   const buttons = [...container.querySelectorAll("button")].map((button) => button.textContent);
   expect(buttons.indexOf("panel control")).toBeLessThan(buttons.indexOf("map control"));
 });
+
+test("METRO-115 when the sheet reaches full while focus is in the map, focus moves to the sheet grip", () => {
+  render(
+    <AppShell initialSnap="half" map={<button type="button">inside the map</button>}>
+      x
+    </AppShell>,
+  );
+  screen.getByRole("button", { name: "inside the map" }).focus();
+  fireEvent.click(screen.getByRole("button", { name: "Make panel larger" }));
+  expect(document.activeElement).toBe(grip());
+});
+
+test("METRO-115 a full sheet leaves focus alone when it is not in the map", () => {
+  render(
+    <AppShell initialSnap="half" map={<button type="button">inside the map</button>}>
+      <button type="button">in the panel</button>
+    </AppShell>,
+  );
+  const inPanel = screen.getByRole("button", { name: "in the panel" });
+  inPanel.focus();
+  fireEvent.click(screen.getByRole("button", { name: "Make panel larger" }));
+  expect(document.activeElement).toBe(inPanel);
+});

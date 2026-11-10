@@ -99,3 +99,15 @@ test("METRO-115 the layout is deterministic: the same input gives the same label
   const second = layoutLabels(STOPS, [stationId("farmgate")], false, 4.6);
   expect([...second]).toEqual([...first]);
 });
+
+test("METRO-115 above is the last side tried for a pill, and a halo label never goes above", () => {
+  const marked = ["farmgate", "karwan-bazar", "bijoy-sharani"].map(stationId);
+  const pills = [...layoutLabels(STOPS, marked, false, 400).values()];
+  expect(Math.min(...pills.map((label) => label.y))).toBe(-44);
+  for (const unit of [0.8, 3, 8, 20]) {
+    const halos = [...layoutLabels(STOPS, [], true, unit).values()].filter(
+      (label) => label.kind === "halo",
+    );
+    expect(Math.min(...halos.map((label) => label.y))).toBeGreaterThanOrEqual(-10);
+  }
+});

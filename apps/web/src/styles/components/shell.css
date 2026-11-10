@@ -23,6 +23,8 @@
 /* A full sheet covers the map: hidden, so its tab stop and buttons are neither focusable nor read (METRO-115). */
 .app[data-snap="full"] .app__map-frame {
   visibility: hidden;
+  /* Hide only once the sheet has risen over it (no flash); leaving full shows it at once. */
+  transition: visibility 0s var(--dur-sheet);
 }
 /* No section nav drawn (no router yet): nothing sits under the sheet, so it keeps only the side gap. */
 .app--plain {

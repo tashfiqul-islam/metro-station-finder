@@ -1,5 +1,5 @@
 import type { StationId } from "@metro/core";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactElement, ReactNode } from "react";
 
 import type { MapsAdapter } from "../../adapters/maps/context";
@@ -41,9 +41,20 @@ function focusMap(): void {
  * location, Search for a place, then Or pick a station, then the one current result.
  */
 export function Nearby({ maps, setMap }: NearbyProps): ReactElement {
-  const { setSnap } = useSheet();
+  const { snap, setSnap } = useSheet();
   const [current, setCurrent] = useState<Current | null>(null);
   const [picks, setPicks] = useState(0);
+  /** "Show on map" presses, and how many of them have moved focus: focus waits for the sheet to leave full. */
+  const [shows, setShows] = useState(0);
+  const shown = useRef(0);
+
+  // A full sheet hides the map (shell.css), and a hidden element cannot take focus. "Show on map" drops the sheet
+  // to peek in the same event, so focus moves once that snap has committed, not in the click handler.
+  useEffect(() => {
+    if (shows === shown.current || snap === "full") return;
+    shown.current = shows;
+    focusMap();
+  }, [shows, snap]);
 
   const highlightedId =
     current?.kind === "pick" ? current.id : (current?.outcome.stationId ?? null);
@@ -86,7 +97,7 @@ export function Nearby({ maps, setMap }: NearbyProps): ReactElement {
             setPicks((count) => count + 1);
             setCurrent({ kind: "pick", id });
           }}
-          onShowOnMap={focusMap}
+          onShowOnMap={() => setShows((count) => count + 1)}
         />
       }
     />

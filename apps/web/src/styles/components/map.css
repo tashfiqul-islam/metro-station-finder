@@ -18,6 +18,10 @@
     overflow: visible;
     clip-path: inset(0 0 -100vh);
   }
+  /* The clip would cut the focus ring of the one tab stop: draw it inside the frame. */
+  .map:focus-visible {
+    outline-offset: calc(var(--focus-width) * -1);
+  }
 }
 .map__bg {
   fill: var(--color-map-bg);
@@ -214,14 +218,6 @@
 /* Windows contrast themes: the gradient and the token colours are replaced by system colours. The line is
    CanvasText on a Canvas casing, the selected station Highlight, so both stay visible (METRO-115). Last in the file, so it wins over the plain rules above. */
 @media (forced-colors: active) {
-  /* Phones: the frame ends where the sheet starts, and what is panned or zoomed past that edge paints behind the sheet.
-   The clip keeps it out of the header above and the screen edges: only the bottom is open (METRO-115). */
-  @media not all and (min-width: 768px) {
-    .map {
-      overflow: visible;
-      clip-path: inset(0 0 -100vh);
-    }
-  }
   .map__bg {
     fill: Canvas;
   }
