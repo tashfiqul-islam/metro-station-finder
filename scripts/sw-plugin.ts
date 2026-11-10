@@ -17,14 +17,11 @@ export interface WorkerConfig {
 
 /**
  * Build output that is never part of the offline shell. `sw.js` is excluded because it is the worker.
- * `favicon.ico` is excluded on purpose (METRO-123): the install is all or nothing, and a script fetch of it
- * fails under Playwright request interception (Playwright aborts `/favicon.ico` requests when a route exists).
- * No production failure was seen, but one was not ruled out. The page also declares `favicon.svg` and
- * `apple-touch-icon.png`, both cached; docs/evidence/metro-123.md.
+ * `favicon.ico` stays in the shell (METRO-123): a page fetch of it fails only while Playwright intercepts the
+ * request, which is a test-tool abort, not a server behaviour; docs/evidence/metro-123.md.
  */
 const NOT_SHELL = new Set([
   "sw.js",
-  "favicon.ico",
   // The large, maskable and monochrome PNG icons are only read by an install prompt, online (METRO-106 review):
   // about 250 KB the offline shell does not need. `icons/icon-192.png` and `apple-touch-icon.png` stay.
   "icons/icon-512.png",
