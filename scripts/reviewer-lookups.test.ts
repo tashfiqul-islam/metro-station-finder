@@ -7,19 +7,22 @@ interface Call {
   readonly url: string;
   readonly headers: Record<string, string>;
   readonly signal: AbortSignal | undefined;
+  readonly redirect: string;
 }
 
 /** A fake fetch that answers from `answers` in order and records each request. */
-function fake(answers: readonly { ok?: boolean; status?: number; json?: unknown }[]) {
+function fake(
+  answers: readonly { ok?: boolean; status?: number; json?: unknown; text?: string }[],
+) {
   const calls: Call[] = [];
   const queue = [...answers];
   const fetchJson: FetchJson = (url, init) => {
-    calls.push({ url, headers: init.headers, signal: init.signal });
+    calls.push({ url, headers: init.headers, signal: init.signal, redirect: init.redirect });
     const answer = queue.shift() ?? { ok: false, status: 500 };
     return Promise.resolve({
       ok: answer.ok ?? true,
       status: answer.status ?? 200,
-      json: () => Promise.resolve(answer.json),
+      text: () => Promise.resolve(answer.text ?? JSON.stringify(answer.json)),
     });
   };
   return { calls, lookups: createLookups(fetchJson, TOKEN, pull) };
@@ -53,6 +56,28 @@ test("METRO-134 an issue comment is read from the issues endpoint with the token
   expect(calls[0]?.headers["Authorization"]).toBe(`Bearer ${TOKEN}`);
   expect(calls[0]?.headers["X-GitHub-Api-Version"]).toBe("2022-11-28");
   expect(calls[0]?.signal).toBeInstanceOf(AbortSignal);
+  expect(calls[0]?.redirect).toBe("error");
+});
+
+test("METRO-134 a response that is not JSON or is over the size cap fails with status 0 and no text", async () => {
+  for (const text of [
+    "not json {",
+    "x".repeat(1_000_001),
+    `"${"x".repeat(999_990)}"`.padEnd(1_000_001),
+  ]) {
+    const { lookups } = fake([{ text }]);
+    const error = await failure(lookups.record("issuecomment", "1"));
+    expect(error.status).toBe(0);
+    expect(error.message).not.toContain("not json");
+  }
+});
+
+test("METRO-134 a merge parent that is not a 40-hex commit id is refused before any request", async () => {
+  for (const sha of ["../x", "A".repeat(40), "a".repeat(39), "a".repeat(40) + "/x", ""]) {
+    const { calls, lookups } = fake([{ json: { status: "ahead" } }]);
+    expect((await failure(lookups.isBaseAncestor(sha))).status).toBe(0);
+    expect(calls).toHaveLength(0);
+  }
 });
 
 test("METRO-134 a review is read from this pull request's reviews endpoint", async () => {

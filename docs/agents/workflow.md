@@ -6,8 +6,8 @@ Read when: preparing or implementing a ticket, opening or reviewing a PR, commit
 
 ### Preparation
 
-- Keep research, specification, ticket preparation and implementation separate: settle domain terms, spec and test seams, then create bounded tickets with [skills](skills.md), the [Plane adapter](plane.md), and the [specification](../templates/specification.md) and [ticket](../templates/plane-ticket.md) templates.
-- Ready needs a linked settled spec or decision, a bounded independently verifiable slice, failure and boundary acceptance checks that fail on base, blocker relations, required tools and data, a check plan and no material unknowns. Open blockers keep it in Backlog. Ready is state, not label.
+- Keep research, settled specification, ticket preparation and implementation separate: settle domain terms, spec and test seams, then create bounded tickets with [skills](skills.md), the [Plane adapter](plane.md) and the [specification](../templates/specification.md) and [ticket](../templates/plane-ticket.md) templates.
+- Ready needs a linked settled spec or decision, a bounded independently verifiable slice, failure and boundary acceptance checks that can fail on base, blocker relations, required tools and data, a check plan and no material unknowns. Open blockers keep it in Backlog. Ready is state, not label.
 
 ### Execution
 
@@ -19,16 +19,16 @@ Read when: preparing or implementing a ticket, opening or reviewing a PR, commit
 
 ### Independent review
 
-- Every PR not entirely markdown under `docs/` or at the root (code typos too) gets an independent review. Docs-only PRs write `none (docs only)` in `Reviewer` and still need green `Quality gates`. The owner's merge is the owner review.
-- The reviewer works in a fresh, different session with read-only tools and sees only the ticket or spec, base and head commits and the committed diff (no implementer reasoning). It follows the [checklist](review-checklist.md) to rank findings (Critical, Important, Minor) and state what it verified and could not.
+- Every PR not entirely markdown under `docs/` or at the root gets an independent review. Docs-only PRs write `none (docs only)` in `Reviewer` and still need green `Quality gates`. The owner's merge is the owner review.
+- The reviewer works in a fresh, different session with read-only tools and sees only the ticket or spec, base and head commits and the committed diff (no implementer reasoning). It follows the [checklist](review-checklist.md) to rank findings (Critical, Important, Minor) with file and line and state what it verified and could not.
 - Reports are leads, not authority. Verify each finding, then record one disposition: fixed (commit), disproved (evidence), accepted (reason, who) or deferred (ticket); Critical findings must be fixed or disproved, Important ones may also be accepted or deferred, with the reason. Merge only after dispositions are recorded and hosted checks are green.
-- `Reviewer` names the agent or person and links an issue comment or PR review on this PR holding the report, dispositions and a line `Reviewed-head: <40-char SHA>`: the PR head, or a commit followed only by base merges. Subagents are read-only, so the coordinator posts it. Every comment comes from the owner's account: the check proves a disposition record bound to the reviewed code exists, not that a review ran.
+- `Reviewer` names the agent or person and links an issue comment or PR review on this PR holding the report, dispositions and a line `Reviewed-head: <40-char SHA>`: the PR head, or a commit followed only by base merges (their content is not inspected). Subagents are read-only, so the coordinator posts it. The check cannot tell who posted or edited the comment: it proves a disposition record bound to the reviewed head exists, not that a review ran.
 
 ### Attribution
 
 - Agent commits end with a blank line and one trailer: `Co-Authored-By: <agent name and model> <noreply@anthropic.com>`. Agent PR bodies end with `🤖 Generated with [Claude Code](https://claude.com/claude-code)`.
-- Agents never add `Signed-off-by` (a person's own certification). Human-only commits carry no trailer; a person may sign off their own.
-- Merge commits are the default. If a PR with agent commits is squash-merged, the merger checks it ends with the trailer.
+- Agents never add `Signed-off-by`. Human-only commits carry no trailer; a person may sign off their own.
+- Merge commits are the default. If a PR with agent commits is squash-merged, the merger checks the final message ends with the trailer.
 
 ### Releases
 
@@ -40,10 +40,10 @@ Read when: preparing or implementing a ticket, opening or reviewing a PR, commit
 ## Enforced by
 
 - `scripts/reviewer-record.ts` (`Reviewer record` workflow): fails a PR without that record.
-- `scripts/commit-message.ts` : rejects non-Conventional subjects and a `Signed-off-by` with an AI-agent address; names are not matched, no trailer is required. Extend its identity list only with a test.
+- `scripts/commit-message.ts`: rejects non-Conventional subjects and a `Signed-off-by` with an AI-agent address; names are not matched, no trailer is required. Extend its identity list only with a test.
 - `scripts/base-branch.ts` (`branches:check`): fails when CONTRIBUTING.md, this file and plane.md name different bases.
 - `validateTag` (`scripts/release-sync.ts`): fails a tag that breaks the grammar.
 
 ## Read more
 
-- [Enforcement details](../evidence/metro-86-moved-workflow.md): parsing, ruleset IDs, merge methods.
+- [Enforcement details](../evidence/metro-86-moved-workflow.md).

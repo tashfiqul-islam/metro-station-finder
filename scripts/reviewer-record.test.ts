@@ -13,6 +13,7 @@ import {
 import {
   evaluateReviewer,
   gitChangedPaths,
+  gitProcessEnv,
   isDocsOnly,
   readReviewerValue,
   reviewerRecordMain,
@@ -41,11 +42,24 @@ const reviewTarget = "https://api.github.com/repos/o/r/pulls/35";
 interface Fake {
   readonly records?: Record<string, RecordText | Error>;
   readonly commits?: readonly PrCommit[] | Error;
+  /** Answers for successive commit-list reads (the last one repeats); overrides `commits`. */
+  readonly commitReads?: readonly (readonly PrCommit[] | Error)[];
   readonly ancestors?: readonly string[] | Error;
 }
 interface Spy {
   readonly lookups: Lookups;
   readonly requested: string[];
+}
+/** A sleep that records its pauses and never waits. */
+function fakeSleep() {
+  const pauses: number[] = [];
+  return {
+    pauses,
+    sleep: (milliseconds: number): Promise<void> => {
+      pauses.push(milliseconds);
+      return Promise.resolve();
+    },
+  };
 }
 /** Lookups that answer from memory; `requested` records every call so a test can prove what was (not) read. */
 function fakeLookups(fake: Fake = {}): Spy {
@@ -61,7 +75,13 @@ function fakeLookups(fake: Fake = {}): Spy {
     },
     commits: () => {
       requested.push("commits");
-      const found = fake.commits ?? linear;
+      const reads = fake.commitReads;
+      const found =
+        reads === undefined
+          ? (fake.commits ?? linear)
+          : (reads[
+              Math.min(requested.filter((call) => call === "commits").length, reads.length) - 1
+            ] ?? linear);
       return found instanceof Error ? Promise.reject(found) : Promise.resolve(found);
     },
     isBaseAncestor: (sha) => {
@@ -79,6 +99,7 @@ const context = (fake: Fake = {}, head = HEAD): ReviewContext => ({
   number: 35,
   head,
   lookups: fakeLookups(fake).lookups,
+  sleep: fakeSleep().sleep,
 });
 const ev = (text: string | null | undefined, paths: readonly string[], fake: Fake = {}) =>
   evaluateReviewer(text, paths, context(fake));
@@ -196,6 +217,7 @@ test("METRO-36 an extremely long body is handled quickly and still decided corre
     ),
   ];
   expect(await Promise.all(decide())).toEqual([true, false, true, false, false, false, true]);
+  // `decide` is async: fastestMs times only its synchronous prefix (the parsing under test), not the lookups.
   expect(fastestMs(decide)).toBeLessThan(2000);
 });
 test("METRO-36 a duplicate heading falls back to the first non-empty section", async () => {
@@ -425,10 +447,66 @@ test("METRO-134 a reviewed commit that is not in the pull request fails", async 
   expect(result.ok).toBe(false);
   expect(result.reason).toContain("not a commit of this pull request");
 });
-test("METRO-134 a head missing from the commit list fails", async () => {
-  const result = await decideAt({ ...reviewedFirst, commits: [commit(FIRST, BASE)] }, HEAD);
+/** A decision with its own sleep and lookups so a test can see the pauses and the reads. */
+async function decideWithSpies(fake: Fake) {
+  const spy = fakeLookups(fake);
+  const { pauses, sleep } = fakeSleep();
+  const result = await evaluateReviewer(body(valid), code, {
+    ...context(),
+    lookups: spy.lookups,
+    sleep,
+  });
+  const reads = spy.requested.filter((call) => call === "commits").length;
+  return { result, pauses, reads };
+}
+test("METRO-134 a head GitHub does not list yet is retried three times with short pauses, then fails", async () => {
+  const { result, pauses, reads } = await decideWithSpies({
+    ...reviewedFirst,
+    commits: [commit(FIRST, BASE)],
+  });
   expect(result.ok).toBe(false);
-  expect(result.reason).toContain("head is missing");
+  expect(result.reason).toContain("does not list the pull request head yet");
+  expect(result.reason).toContain("Re-run the check");
+  expect(reads).toBe(3);
+  expect(pauses).toEqual([3000, 3000]);
+});
+test("METRO-134 a head listed on the second read passes after one pause", async () => {
+  const { result, pauses, reads } = await decideWithSpies({
+    ...recordWith(`Reviewed-head: ${HEAD}`),
+    commitReads: [[commit(FIRST, BASE)], linear],
+  });
+  expect(result.ok).toBe(true);
+  expect(reads).toBe(2);
+  expect(pauses).toEqual([3000]);
+});
+test("METRO-134 a head listed at once is read once with no pause", async () => {
+  const { result, pauses, reads } = await decideWithSpies(recordWith(`Reviewed-head: ${HEAD}`));
+  expect(result.ok).toBe(true);
+  expect(reads).toBe(1);
+  expect(pauses).toEqual([]);
+});
+test("METRO-134 a list at the 250 cap without the head fails at once as too many commits", async () => {
+  const many = Array.from({ length: 250 }, (_, index) =>
+    commit(index.toString(16).padStart(40, "d"), BASE),
+  );
+  const { result, pauses, reads } = await decideWithSpies({
+    ...recordWith(`Reviewed-head: ${many[0]?.sha}`),
+    commits: many,
+  });
+  expect(result.ok).toBe(false);
+  expect(result.reason).toContain("250 or more commits");
+  expect(result.reason).not.toContain("Re-run");
+  expect(reads).toBe(1);
+  expect(pauses).toEqual([]);
+});
+test("METRO-134 a read that fails during the retries fails closed", async () => {
+  const { result, pauses } = await decideWithSpies({
+    ...reviewedFirst,
+    commitReads: [[commit(FIRST, BASE)], new LookupError(502)],
+  });
+  expect(result.ok).toBe(false);
+  expect(result.reason).toContain("Could not read the pull request commits (HTTP 502)");
+  expect(pauses).toEqual([3000]);
 });
 test("METRO-134 a reviewed commit that is not an ancestor of the head fails", async () => {
   const side = hex("5");
@@ -476,6 +554,12 @@ test("METRO-134 conflicting Reviewed-head lines fail and identical repeats pass"
     ).ok,
   ).toBe(true);
 });
+test("METRO-134 a Reviewed-head line inside a code fence counts, a trailing space does not", async () => {
+  expect(
+    (await ev(body(valid), code, recordWith(`\`\`\`\nReviewed-head: ${HEAD}\n\`\`\``))).ok,
+  ).toBe(true);
+  expect((await ev(body(valid), code, recordWith(`Reviewed-head: ${HEAD} `))).ok).toBe(false);
+});
 test("METRO-134 a Reviewed-head line must stand alone on its line", async () => {
   expect((await ev(body(valid), code, recordWith(`see Reviewed-head: ${HEAD}`))).ok).toBe(false);
 });
@@ -496,6 +580,10 @@ test("METRO-134 a comment that belongs to another pull request fails", async () 
     "https://api.github.com/repos/o/r/issues/135",
     "https://api.github.com/repos/o/other/issues/35",
     "https://api.github.com/repos/o/r/pulls/35",
+    "https://evil.example/repos/o/r/issues/35",
+    "https://api.github.com/repos/O/R/issues/35",
+    "https://api.github.com/repos/o/r/issues/35/",
+    "x https://api.github.com/repos/o/r/issues/35",
   ]) {
     const result = await ev(body(valid), code, recordWith(`Reviewed-head: ${HEAD}`, target));
     expect(result.ok).toBe(false);
@@ -599,6 +687,7 @@ async function run(
       pulls.push([pull, token]);
       return fakeLookups(fake).lookups;
     },
+    sleep: fakeSleep().sleep,
   });
   const exitCode = currentExit();
   process.exitCode = previous;
@@ -671,10 +760,26 @@ test("METRO-134 the entry point turns a non-Error throw into text", async () => 
       log: (m) => errors.push(m),
       error: (m) => errors.push(m),
       lookups: () => fakeLookups().lookups,
+      sleep: fakeSleep().sleep,
     },
   );
   expect(errors).toEqual(["plain text"]);
   process.exitCode = previous;
+});
+
+test("METRO-134 the git subprocess never receives the GitHub token or GIT_* redirects", () => {
+  expect(
+    gitProcessEnv({ GH_TOKEN: "secret", GIT_DIR: "x", PATH: "p", HOME: "h", EMPTY: undefined }),
+  ).toEqual({ PATH: "p", HOME: "h" });
+  const previous = process.env["GH_TOKEN"];
+  process.env["GH_TOKEN"] = "secret-token-value";
+  try {
+    expect(gitProcessEnv()["GH_TOKEN"]).toBeUndefined();
+    expect(gitChangedPaths("HEAD", "HEAD")).toEqual([]);
+  } finally {
+    if (previous === undefined) delete process.env["GH_TOKEN"];
+    else process.env["GH_TOKEN"] = previous;
+  }
 });
 
 test("METRO-36 git changed paths come from the merge base and fail visibly on a bad range", () => {

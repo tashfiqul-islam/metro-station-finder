@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { setTimeout as delay } from "node:timers/promises";
 
 import { cleanGitEnv } from "./git-env.ts";
 import {
@@ -53,6 +54,10 @@ const HEAD_LINE_START = /^Reviewed-head:/iu;
 const HEAD_LINE = /^Reviewed-head: ([0-9a-f]{40})$/u;
 /** Most merge commits whose parents are checked against the base; each costs one REST call. */
 const MAX_MERGES = 20;
+/** GitHub lists at most 250 commits per pull request. */
+const COMMIT_CAP = 250;
+const COMMIT_ATTEMPTS = 3;
+const COMMIT_RETRY_DELAY_MS = 3000;
 
 /** Removes HTML comments (GitHub hides them); an unterminated comment hides the rest, as it renders. */
 function stripComments(text: string): string {
@@ -126,6 +131,8 @@ export interface ReviewContext {
   readonly number: number;
   readonly head: string;
   readonly lookups: Lookups;
+  /** Pause between commit-list reads; injected so tests use no timers. */
+  readonly sleep: (milliseconds: number) => Promise<void>;
 }
 
 interface RecordLink {
@@ -160,7 +167,12 @@ function readLinks(
   return { own, other };
 }
 
-/** The one reviewed SHA in a record's text: a reason string when there is none, a malformed or conflicting one. */
+/**
+ * The one reviewed SHA in a record's text, or a failure reason when there is none, a malformed or a conflicting
+ * one. A `Reviewed-head:` line must stand alone on its line: exact key, one space, 40 lowercase hex characters,
+ * no trailing space. A line quoted inside a code fence still counts; anything that merely resembles one fails
+ * closed.
+ */
 function readReviewedHead(text: string): { readonly sha: string } | { readonly reason: string } {
   if (text.length > MAX_RECORD_LENGTH)
     return { reason: "The linked comment or review is too large to read; shorten it." };
@@ -203,7 +215,9 @@ async function bindingFailure(
   if (!known.has(reviewed))
     return "The reviewed commit is not a commit of this pull request (or the pull request has more than 250 commits).";
   if (!known.has(context.head))
-    return "The pull request head is missing from the commit list (GitHub lists at most 250 commits).";
+    return commits.length >= COMMIT_CAP
+      ? "The pull request has 250 or more commits and GitHub lists at most 250, so the head cannot be checked."
+      : "GitHub does not list the pull request head yet (it can lag a push). Re-run the check.";
   if (reviewed === context.head) return "";
   const children = new Map<string, string[]>();
   for (const commit of commits)
@@ -251,21 +265,34 @@ async function recordFailure(link: RecordLink, context: ReviewContext): Promise<
   } catch (error) {
     return `Could not read the linked ${what} on this pull request${status(error)}. Check that it exists (a deleted one fails).`;
   }
-  const expected =
-    link.kind === "issuecomment"
-      ? `/repos/${context.owner}/${context.repo}/issues/${context.number}`
-      : `/repos/${context.owner}/${context.repo}/pulls/${context.number}`;
-  if (!record.target.toLowerCase().endsWith(expected.toLowerCase()))
-    return `The linked ${what} does not belong to this pull request.`;
+  const expected = `https://api.github.com/repos/${context.owner}/${context.repo}/${
+    link.kind === "issuecomment" ? "issues" : "pulls"
+  }/${context.number}`;
+  if (record.target !== expected) return `The linked ${what} does not belong to this pull request.`;
   const reviewed = readReviewedHead(record.body);
   if ("reason" in reviewed) return reviewed.reason;
-  let commits: readonly PrCommit[];
-  try {
-    commits = await context.lookups.commits();
-  } catch (error) {
-    return `Could not read the pull request commits${status(error)}.`;
+  const commits = await readCommits(context);
+  return typeof commits === "string" ? commits : bindingFailure(reviewed.sha, context, commits);
+}
+
+/**
+ * The pull request commits. GitHub can lag a push, so while the head is not listed and the list is under the
+ * cap, the read is retried (3 attempts, 2 pauses of 3 s through the injected `sleep`). Returns a failure
+ * reason (a string) when a read fails.
+ */
+async function readCommits(context: ReviewContext): Promise<readonly PrCommit[] | string> {
+  let commits: readonly PrCommit[] = [];
+  for (let attempt = 1; attempt <= COMMIT_ATTEMPTS; attempt += 1) {
+    try {
+      commits = await context.lookups.commits();
+    } catch (error) {
+      return `Could not read the pull request commits${status(error)}.`;
+    }
+    if (commits.length >= COMMIT_CAP || commits.some((commit) => commit.sha === context.head))
+      break;
+    if (attempt < COMMIT_ATTEMPTS) await context.sleep(COMMIT_RETRY_DELAY_MS);
   }
-  return bindingFailure(reviewed.sha, context, commits);
+  return commits;
 }
 
 export async function evaluateReviewer(
@@ -315,13 +342,22 @@ export async function evaluateReviewer(
   return fail(firstFailure);
 }
 
+/** The environment for the git subprocess: no GIT_* redirects and never the GitHub token. */
+export function gitProcessEnv(
+  base: Readonly<Record<string, string | undefined>> = process.env,
+): Record<string, string> {
+  const env = cleanGitEnv(base);
+  delete env["GH_TOKEN"];
+  return env;
+}
+
 /** Changed paths from the merge base to the head; fails visibly when git cannot answer. */
 export function gitChangedPaths(base: string, head: string, cwd?: string): string[] {
   // --no-renames lists the old path of a move too, so a code file renamed into docs/ still counts as code.
   const result = spawnSync(
     "git",
     ["diff", "--name-only", "--no-renames", "-z", `${base}...${head}`, "--"],
-    { encoding: "utf8", shell: false, env: cleanGitEnv(), ...(cwd === undefined ? {} : { cwd }) },
+    { encoding: "utf8", shell: false, env: gitProcessEnv(), ...(cwd === undefined ? {} : { cwd }) },
   );
   if (result.error) throw result.error;
   if (result.status !== 0) throw new Error(`git diff failed: ${result.stderr.trim()}`);
@@ -333,6 +369,7 @@ export interface Deps {
   readonly log: (message: string) => void;
   readonly error: (message: string) => void;
   readonly lookups: (pull: PullRef, token: string) => Lookups;
+  readonly sleep: (milliseconds: number) => Promise<void>;
 }
 
 const SHA = /^[0-9a-f]{40}$/u;
@@ -352,6 +389,7 @@ export async function reviewerRecordMain(
     log: (m) => console.log(m),
     error: (m) => console.error(m),
     lookups: (pull, token) => createLookups(realFetch, token, pull),
+    sleep: delay,
   },
 ): Promise<void> {
   try {
@@ -370,6 +408,7 @@ export async function reviewerRecordMain(
       ...pull,
       head,
       lookups: deps.lookups(pull, token),
+      sleep: deps.sleep,
     });
     if (!decision.ok) {
       deps.error(decision.reason);

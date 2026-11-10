@@ -34,15 +34,19 @@ export interface PullRef {
   readonly base: string;
 }
 
-export interface FetchedJson {
+export interface FetchedText {
   readonly ok: boolean;
   readonly status: number;
-  readonly json: () => Promise<unknown>;
+  readonly text: () => Promise<string>;
 }
 export type FetchJson = (
   url: string,
-  init: { readonly headers: Record<string, string>; readonly signal?: AbortSignal },
-) => Promise<FetchedJson>;
+  init: {
+    readonly headers: Record<string, string>;
+    readonly redirect: "error";
+    readonly signal?: AbortSignal;
+  },
+) => Promise<FetchedText>;
 
 /** A failed lookup. `status` is the HTTP status, or 0 when the request or the response shape failed. */
 export class LookupError extends Error {
@@ -58,6 +62,9 @@ const PAGE_SIZE = 100;
 /** GitHub returns at most 250 commits for a pull request: three pages of 100. */
 const MAX_PAGES = 3;
 const TIMEOUT_MS = 15_000;
+/** A response longer than this many characters is refused before it is parsed. */
+const MAX_RESPONSE_LENGTH = 1_000_000;
+const COMMIT_SHA = /^[0-9a-f]{40}$/u;
 
 function field(value: Record<string, unknown>, name: string): string {
   const found = value[name];
@@ -76,7 +83,8 @@ function toCommit(value: unknown): PrCommit {
 
 /**
  * Lookups over REST. `owner`, `repo`, `number` and `base` must already be validated (no path characters),
- * and `id` and `sha` arguments come from digit-only or hex-only matches.
+ * `id` comes from a digit-only link match, and a `sha` argument is validated here before it joins a URL.
+ * Requests refuse redirects, and a response over 1,000,000 characters is refused before parsing.
  */
 export function createLookups(fetchJson: FetchJson, token: string, pull: PullRef): Lookups {
   const repoPath = `/repos/${pull.owner}/${pull.repo}`;
@@ -88,10 +96,17 @@ export function createLookups(fetchJson: FetchJson, token: string, pull: PullRef
         "X-GitHub-Api-Version": "2022-11-28",
         "User-Agent": "metro-reviewer-record",
       },
+      redirect: "error",
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     if (!response.ok) throw new LookupError(response.status);
-    return response.json();
+    const text = await response.text();
+    if (text.length > MAX_RESPONSE_LENGTH) throw new LookupError(0);
+    try {
+      return JSON.parse(text) as unknown;
+    } catch {
+      throw new LookupError(0);
+    }
   };
   return {
     async record(kind, id) {
@@ -121,6 +136,7 @@ export function createLookups(fetchJson: FetchJson, token: string, pull: PullRef
       return commits;
     },
     async isBaseAncestor(sha) {
+      if (!COMMIT_SHA.test(sha)) throw new LookupError(0);
       const data = await get(`${repoPath}/compare/${sha}...${pull.base}?per_page=1`);
       if (!isRecord(data)) throw new LookupError(0);
       const status = field(data, "status");
