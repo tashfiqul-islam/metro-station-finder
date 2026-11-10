@@ -8,6 +8,7 @@ import {
   nextPreference,
   readPreference,
   savePreference,
+  syncThemeColor,
 } from "./theme";
 
 afterEach(() => {
@@ -15,6 +16,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
   document.documentElement.removeAttribute("data-theme");
   document.documentElement.className = "";
+  for (const tag of document.querySelectorAll("meta[name=theme-color]")) tag.remove();
 });
 
 test("METRO-105 the storage key is the one theme-boot.js reads", () => {
@@ -85,6 +87,69 @@ test("METRO-105 applyPreference sets data-theme for light and dark and removes i
   expect(root.getAttribute("data-theme")).toBe("light");
   applyPreference("system", root);
   expect(root.hasAttribute("data-theme")).toBe(false);
+});
+
+function addTags(): HTMLMetaElement[] {
+  return [
+    ["#aaaaaa", "light"],
+    ["#111111", "dark"],
+  ].map(([content, scheme]) => {
+    const tag = document.createElement("meta");
+    tag.name = "theme-color";
+    tag.content = content ?? "";
+    tag.setAttribute("media", `(prefers-color-scheme: ${scheme})`);
+    tag.dataset["scheme"] = scheme;
+    tag.dataset["system"] = content ?? "";
+    document.head.append(tag);
+    return tag;
+  });
+}
+
+test("METRO-119 applyPreference moves both theme-color tags with the theme and System restores each", () => {
+  const tags = addTags();
+  const now = () => tags.map((tag) => tag.content);
+  applyPreference("dark", document.documentElement);
+  expect(now()).toEqual(["#111111", "#111111"]);
+  applyPreference("light", document.documentElement);
+  expect(now()).toEqual(["#aaaaaa", "#aaaaaa"]);
+  applyPreference("system", document.documentElement);
+  expect(now()).toEqual(["#aaaaaa", "#111111"]);
+  for (const tag of tags) tag.remove();
+});
+
+test("METRO-119 a page with no theme-color tag is left alone", () => {
+  expect(() => syncThemeColor("dark", document)).not.toThrow();
+});
+
+test("METRO-119 a tag with no data attributes keeps its own content under every preference", () => {
+  const tag = document.createElement("meta");
+  tag.name = "theme-color";
+  tag.content = "#cccccc";
+  document.head.append(tag);
+  for (const preference of THEME_ORDER) {
+    syncThemeColor(preference, document);
+    expect(tag.content, preference).toBe("#cccccc");
+  }
+  tag.remove();
+});
+
+test("METRO-119 a theme with no tag of its own gives every tag its own colour, never a blank", () => {
+  const [light, dark] = addTags();
+  dark?.remove();
+  syncThemeColor("dark", document);
+  expect(light?.content).toBe("#aaaaaa");
+  light?.remove();
+});
+
+test("METRO-119 a scheme tag without data-system lends nothing, so each tag keeps its own colour", () => {
+  const [light, dark] = addTags();
+  delete light?.dataset["system"];
+  if (light) light.content = "#bbbbbb";
+  syncThemeColor("light", document);
+  expect(dark?.content).toBe("#111111");
+  expect(light?.content).toBe("#bbbbbb");
+  light?.remove();
+  dark?.remove();
 });
 
 beforeEach(() => {
