@@ -19,6 +19,32 @@ const effective = (page: Page): Promise<string | null> =>
       )?.content ?? null,
   );
 
+type Preference = "system" | "light" | "dark";
+const NAME: Record<Preference, string> = { system: "System", light: "Light", dark: "Dark" };
+
+/**
+ * Waits until the page has fully taken `theme` and is idle: the button names it, `<html>` carries it (System
+ * means no `data-theme`) and the reveal is over (`html.vt-theme` is removed when the View Transition
+ * finishes, about 560 ms after the press; METRO-119 flake). The name changes in the first frame of a press,
+ * while the reveal's overlay still covers the page, so a click made on the name alone can land during the
+ * previous reveal and be lost (seen once in WebKit CI: the name stayed on Dark for the whole 5 s).
+ */
+async function settled(page: Page, theme: Preference): Promise<void> {
+  const root = page.locator("html");
+  await expect(page.getByRole("button", { name: /^Theme: /u })).toHaveAccessibleName(
+    new RegExp(`^Theme: ${NAME[theme]}[.]`, "u"),
+  );
+  if (theme === "system") await expect(root).not.toHaveAttribute("data-theme", /.+/u);
+  else await expect(root).toHaveAttribute("data-theme", theme);
+  await expect(root).not.toHaveClass(/(^|\s)vt-theme(\s|$)/u);
+}
+
+/** One press of the theme button, then the wait above: the next press never starts mid-reveal. */
+async function pressTo(page: Page, theme: Preference): Promise<void> {
+  await page.getByRole("button", { name: /^Theme: /u }).click();
+  await settled(page, theme);
+}
+
 async function open(
   page: Page,
   scheme: Scheme,
@@ -62,17 +88,16 @@ test.describe("theme colour", () => {
   }) => {
     for (const os of ["dark", "light"] as const) {
       await open(page, os);
-      const button = page.getByRole("button", { name: /^Theme: /u });
       const steps = [
-        ["Theme: Light.", COLOUR.light],
-        ["Theme: Dark.", COLOUR.dark],
-        ["Theme: System.", COLOUR[os]],
+        ["light", COLOUR.light],
+        ["dark", COLOUR.dark],
+        ["system", COLOUR[os]],
       ] as const;
+      await settled(page, "system");
       expect(await effective(page)).toBe(COLOUR[os]);
-      for (const [label, colour] of steps) {
-        await button.click();
-        await expect(button).toHaveAccessibleName(new RegExp(`^${label}`, "u"));
-        expect(await effective(page), label).toBe(colour);
+      for (const [theme, colour] of steps) {
+        await pressTo(page, theme);
+        expect(await effective(page), theme).toBe(colour);
       }
     }
   });
@@ -81,11 +106,7 @@ test.describe("theme colour", () => {
     page,
   }) => {
     await open(page, "light");
-    const button = page.getByRole("button", { name: /^Theme: /u });
-    for (const label of ["Light", "Dark"]) {
-      await button.click();
-      await expect(button).toHaveAccessibleName(new RegExp(`^Theme: ${label}[.]`, "u"));
-    }
+    for (const theme of ["light", "dark"] as const) await pressTo(page, theme);
     expect(await effective(page)).toBe(COLOUR.dark);
     // On every later load, record the colour the moment the parser creates <body>: no timer, no flash.
     await page.addInitScript(() => {
@@ -113,10 +134,7 @@ test.describe("theme colour", () => {
         page,
       }) => {
         await open(page, os, first);
-        const button = page.getByRole("button", { name: /^Theme: /u });
-        await expect(button).toHaveAccessibleName(
-          new RegExp(`^Theme: ${first === "light" ? "Light" : "Dark"}[.]`, "u"),
-        );
+        await settled(page, first);
         expect(await effective(page), `saved ${first}`).toBe(COLOUR[first]);
         // From the saved theme the button goes to the next one, then the next, then back to the saved one.
         const order = ["system", "light", "dark"] as const;
@@ -124,13 +142,7 @@ test.describe("theme colour", () => {
         for (let step = 0; step < 4; step += 1) {
           at = (at + 1) % order.length;
           const theme = order[at] ?? "system";
-          await button.click();
-          await expect(button).toHaveAccessibleName(
-            new RegExp(
-              `^Theme: ${theme === "system" ? "System" : theme === "light" ? "Light" : "Dark"}[.]`,
-              "u",
-            ),
-          );
+          await pressTo(page, theme);
           expect(await effective(page), `${theme} after saved ${first} on a ${os} OS`).toBe(
             theme === "system" ? COLOUR[os] : COLOUR[theme],
           );
@@ -144,20 +156,18 @@ test.describe("theme colour", () => {
       page,
     }) => {
       await open(page, os);
-      const button = page.getByRole("button", { name: /^Theme: /u });
-      const press = async (name: RegExp, expected: string, step: string): Promise<void> => {
-        await button.click();
-        await expect(button).toHaveAccessibleName(name);
+      const press = async (theme: Preference, expected: string, step: string): Promise<void> => {
+        await pressTo(page, theme);
         expect(await effective(page), step).toBe(expected);
       };
-      await press(/^Theme: Light[.]/u, COLOUR.light, "Light");
-      await press(/^Theme: Dark[.]/u, COLOUR.dark, "Dark");
+      await press("light", COLOUR.light, "Light");
+      await press("dark", COLOUR.dark, "Dark");
       await page.reload();
-      await expect(button).toHaveAccessibleName(/^Theme: Dark[.]/u);
+      await settled(page, "dark");
       expect(await effective(page), "Dark after reload").toBe(COLOUR.dark);
-      await press(/^Theme: System[.]/u, COLOUR[os], "System after reload");
-      await press(/^Theme: Light[.]/u, COLOUR.light, "Light after reload");
-      await press(/^Theme: Dark[.]/u, COLOUR.dark, "Dark again");
+      await press("system", COLOUR[os], "System after reload");
+      await press("light", COLOUR.light, "Light after reload");
+      await press("dark", COLOUR.dark, "Dark again");
     });
   }
 });
