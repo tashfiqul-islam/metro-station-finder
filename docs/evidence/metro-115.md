@@ -4,15 +4,15 @@ Date: 2026-11-10. Base: `46b0058` (`feature/metro-rebuild`; the bundle figures b
 
 ## BUNDLE MEASUREMENT (Repo-verified, `bun run build` then `bun run bundle:check`, ADR-0023 model)
 
-Final figures, one fresh `bun run build` and `bun run bundle:check` of each side on 2026-11-10: base `f6de564` (the tip of `feature/metro-rebuild` merged into this branch) and this branch's head.
+Final figures, one fresh `bun run build` and `bun run bundle:check` of each side on 2026-11-10: base `15ece17` (the tip of `feature/metro-rebuild` merged into this branch) and this branch's head.
 
-| Bucket (limit raw / gzip)             | Base `f6de564`   | This change      | Change        |
+| Bucket (limit raw / gzip)             | Base `15ece17`   | This change      | Change        |
 | ------------------------------------- | ---------------- | ---------------- | ------------- |
 | First-visit JS (250,000 / 80,000)     | 235,875 / 74,375 | 236,040 / 74,424 | +165 / +49    |
 | First-visit CSS (20,000 / 6,000)      | 14,125 / 3,965   | 14,301 / 3,997   | +176 / +32    |
-| Lazy screen Nearby (120,000 / 30,000) | 92,206 / 23,187  | 94,299 / 24,012  | +2,093 / +825 |
-| Shared lazy (27,000 / 12,000)         | 20,389 / 9,155   | 20,389 / 9,159   | 0 / +4        |
-| Worker (6,000 / 2,800)                | 3,962 / 1,785    | 3,962 / 1,784    | 0 / -1        |
+| Lazy screen Nearby (120,000 / 30,000) | 93,058 / 23,445  | 95,224 / 24,295  | +2,166 / +850 |
+| Shared lazy (27,000 / 12,000)         | 20,389 / 9,158   | 20,389 / 9,157   | 0 / -1        |
+| Worker (6,000 / 2,800)                | 3,977 / 1,788    | 3,977 / 1,787    | 0 / -1        |
 
 No limit was changed. The map code and `map.css` live in the lazy Nearby screen. The entry grows by CSS (`shell.css` frame insets and the full-sheet hide, `base.css` zeroing the transition delay under reduced motion: +176 raw / +32 gzip) and by JS (the focus-moving effect in `AppShell.tsx`: +165 raw / +49 gzip). The ticket's own head and the first measurements in this file's history are superseded by this table.
 
@@ -36,6 +36,10 @@ No limit was changed. The map code and `map.css` live in the lazy Nearby screen.
 | Real phone                                                                                            | Unverified (owner, METRO-121)                                                                                                                                                                                                                                |
 
 Measured in the picture at 390 x 844 with a result open: the line is about 250 px tall at half and 510 px at peek (read from a screenshot; it was 209 px at half in the ticket), the end names are 12.5 px.
+
+## WebKit first render (Repo-verified, found by hosted CI)
+
+CI `Smoke webkit` failed `at 1280 px the labels keep their size`: pill font 9.886 px, expected 12.5. Reproduced locally with `CI=true bun run smoke --project=webkit e2e/phone-map.e2e.ts -g "at 1280 px the labels keep" --repeat-each=12 --workers=4`: same 9.886 (12.5 x 0.7909, the viewBox scale of the 768x696 frame). A diagnostic in WebKit read the label group as `scale(1)` while the svg had its full size: WebKit delivers the ResizeObserver's first report a frame after mount, and until then the map drew labels unscaled (a visible one-frame flash in the product, not only a test artefact). The measurement (`getScreenCTM`) was right. Fix: `use-map-view.ts` reads the box in a layout effect when the map mounts, before the observer reports (`LineMap.test.tsx`: the first render has the box's scale with a stub that never reports). After the fix the same command passes 12 of 12, and the whole `phone-map` and `line-map` specs pass on webkit and firefox (90 tests, 4 workers).
 
 ## Notes
 
