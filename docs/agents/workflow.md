@@ -19,10 +19,10 @@ Read when: preparing or implementing a ticket, opening or reviewing a PR, commit
 
 ### Independent review
 
-- Every PR not entirely markdown under `docs/` or at the root gets an independent review. Docs-only PRs write `none (docs only)` in `Reviewer` and still need green `Quality gates`. The owner's merge is the owner review.
+- Every PR not entirely markdown under `docs/` or at the root gets an independent review. Docs-only PRs write `none (docs only)` in `Reviewer` and still need green `Quality gates`. The owner's merge is the owner review. Code typos are not exempt.
 - The reviewer works in a fresh, different session with read-only tools and sees only the ticket or spec, base and head commits and the committed diff (no implementer reasoning). It follows the [checklist](review-checklist.md) to rank findings (Critical, Important, Minor) with file and line and state what it verified and could not.
 - Reports are leads, not authority. Verify each finding, then record one disposition: fixed (commit), disproved (evidence), accepted (reason, who) or deferred (ticket); Critical findings must be fixed or disproved, Important ones may also be accepted or deferred, with the reason. Merge only after dispositions are recorded and hosted checks are green.
-- `Reviewer` names the agent or person and links an issue comment or PR review on this PR holding the report, dispositions and a line `Reviewed-head: <40-char SHA>`: the PR head, or a commit followed only by base merges (their content is not inspected). Subagents are read-only, so the coordinator posts it. The check cannot tell who posted or edited the comment: it proves a disposition record bound to the reviewed head exists, not that a review ran.
+- `Reviewer` names the agent or person and links an issue comment or PR review on this PR holding the report, dispositions and a line `Reviewed-head: <40-char SHA>`: the PR head, or a commit followed only by base merges (content not inspected). Subagents are read-only, so the coordinator posts it. The check cannot tell who posted or edited the comment: it proves a disposition record bound to the reviewed head exists, not that a review ran.
 
 ### Attribution
 
@@ -46,4 +46,4 @@ Read when: preparing or implementing a ticket, opening or reviewing a PR, commit
 
 ## Read more
 
-- [Enforcement details](../evidence/metro-86-moved-workflow.md).
+- [Details](../evidence/metro-86-moved-workflow.md).

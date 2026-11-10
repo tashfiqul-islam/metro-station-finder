@@ -342,12 +342,13 @@ export async function evaluateReviewer(
   return fail(firstFailure);
 }
 
-/** The environment for the git subprocess: no GIT_* redirects and never the GitHub token. */
+/** The environment for the git subprocess: no GIT_* redirects and never a GitHub token (GH_TOKEN or GITHUB_TOKEN). */
 export function gitProcessEnv(
   base: Readonly<Record<string, string | undefined>> = process.env,
 ): Record<string, string> {
   const env = cleanGitEnv(base);
   delete env["GH_TOKEN"];
+  delete env["GITHUB_TOKEN"];
   return env;
 }
 

@@ -72,6 +72,15 @@ test("METRO-134 a response that is not JSON or is over the size cap fails with s
   }
 });
 
+test("METRO-134 a response of exactly 1,000,000 characters is parsed, one more is refused", async () => {
+  const exact = `{"body":"${"x".repeat(1_000_000 - 27)}","issue_url":"u"}`;
+  expect(exact).toHaveLength(1_000_000);
+  const { lookups } = fake([{ text: exact }]);
+  expect((await lookups.record("issuecomment", "1")).target).toBe("u");
+  const { lookups: over } = fake([{ text: `${exact} ` }]);
+  expect((await failure(over.record("issuecomment", "1"))).status).toBe(0);
+});
+
 test("METRO-134 a merge parent that is not a 40-hex commit id is refused before any request", async () => {
   for (const sha of ["../x", "A".repeat(40), "a".repeat(39), "a".repeat(40) + "/x", ""]) {
     const { calls, lookups } = fake([{ json: { status: "ahead" } }]);

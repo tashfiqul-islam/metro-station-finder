@@ -769,16 +769,27 @@ test("METRO-134 the entry point turns a non-Error throw into text", async () => 
 
 test("METRO-134 the git subprocess never receives the GitHub token or GIT_* redirects", () => {
   expect(
-    gitProcessEnv({ GH_TOKEN: "secret", GIT_DIR: "x", PATH: "p", HOME: "h", EMPTY: undefined }),
+    gitProcessEnv({
+      GH_TOKEN: "secret",
+      GITHUB_TOKEN: "secret",
+      GIT_DIR: "x",
+      PATH: "p",
+      HOME: "h",
+      EMPTY: undefined,
+    }),
   ).toEqual({ PATH: "p", HOME: "h" });
-  const previous = process.env["GH_TOKEN"];
+  const previous = [process.env["GH_TOKEN"], process.env["GITHUB_TOKEN"]];
   process.env["GH_TOKEN"] = "secret-token-value";
+  process.env["GITHUB_TOKEN"] = "secret-token-value";
   try {
     expect(gitProcessEnv()["GH_TOKEN"]).toBeUndefined();
+    expect(gitProcessEnv()["GITHUB_TOKEN"]).toBeUndefined();
     expect(gitChangedPaths("HEAD", "HEAD")).toEqual([]);
   } finally {
-    if (previous === undefined) delete process.env["GH_TOKEN"];
-    else process.env["GH_TOKEN"] = previous;
+    if (previous[0] === undefined) delete process.env["GH_TOKEN"];
+    else process.env["GH_TOKEN"] = previous[0];
+    if (previous[1] === undefined) delete process.env["GITHUB_TOKEN"];
+    else process.env["GITHUB_TOKEN"] = previous[1];
   }
 });
 
