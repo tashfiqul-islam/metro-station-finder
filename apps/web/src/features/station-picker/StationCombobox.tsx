@@ -72,6 +72,35 @@ export function StationCombobox({
     }
   }, [expanded]);
 
+  // METRO-124: a press on a control outside the list blurs the input at its mousedown. Closing the list then
+  // collapses the content, the scrolled panel clamps its scroll position and the control slides away from under
+  // the pointer, so the click lands elsewhere. The close waits for the press to end (mouseup, or a cancel or
+  // a key); a blur with no press in progress (Tab, a programmatic focus) closes at once, as before.
+  const pressing = useRef(false);
+  const closeAfterPress = useRef(false);
+  useEffect(() => {
+    const press = (): void => {
+      pressing.current = true;
+    };
+    const release = (): void => {
+      pressing.current = false;
+      if (!closeAfterPress.current) return;
+      closeAfterPress.current = false;
+      setOpen(false);
+      setActive(-1);
+    };
+    document.addEventListener("pointerdown", press, true);
+    document.addEventListener("mouseup", release, true);
+    document.addEventListener("pointercancel", release, true);
+    document.addEventListener("keydown", release, true);
+    return () => {
+      document.removeEventListener("pointerdown", press, true);
+      document.removeEventListener("mouseup", release, true);
+      document.removeEventListener("pointercancel", release, true);
+      document.removeEventListener("keydown", release, true);
+    };
+  }, []);
+
   function choose(station: Station, source: "keyboard" | "pointer"): void {
     setText(station.name);
     setTyped(false);
@@ -188,7 +217,14 @@ export function StationCombobox({
             value={text}
             onChange={onChange}
             onKeyDown={onKeyDown}
+            onFocus={() => {
+              closeAfterPress.current = false;
+            }}
             onBlur={() => {
+              if (pressing.current) {
+                closeAfterPress.current = true;
+                return;
+              }
               setOpen(false);
               setActive(-1);
             }}
