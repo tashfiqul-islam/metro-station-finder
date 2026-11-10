@@ -25,7 +25,7 @@ async function injectBlockedImage(page: Page): Promise<void> {
     const image = document.createElement("img");
     image.alt = "";
     // A different origin from the app (127.0.0.1), so `img-src 'self'` blocks it.
-    image.src = "http://localhost:4173/csp-control.png";
+    image.src = `http://localhost:${location.port}/csp-control.png`;
     document.body.append(image);
   });
 }
