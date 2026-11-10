@@ -403,9 +403,11 @@ test.describe("station picker", () => {
       .map((entry) => entry.name);
     expect(found).toEqual([]);
     // METRO-112 forbade the word in every built script until the offline shell worker of METRO-106 existed
-    // (owner ruling). It exists now, so the claim may appear, but exactly in one place and only with the
-    // worker in the build: comments are stripped, so any "offline" in a built script is a user-visible string.
-    // This still fails on any other claim: a second file, a second sentence, or the sentence without the worker.
+    // (owner ruling). It exists now, so the claim may appear, but only with the worker in the build and only in
+    // two places: the one sentence in `Nearby-*.js`, and (METRO-122, below) the two share-image alt texts in
+    // index.html, each with exactly the allowed sentence. Comments are stripped, so any "offline" in a built
+    // script is a user-visible string. Any other file, sentence or place fails, as does the sentence without
+    // the worker.
     const claims = names.filter(
       (entry) =>
         /\.(js|html)$/u.test(entry.name) &&
