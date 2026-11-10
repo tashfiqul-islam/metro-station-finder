@@ -80,11 +80,17 @@ test("installed hooks inspect staged bytes and restore failed snapshots in linke
   }
 }, 60000);
 
-test("installed pre-push hook blocks a failing canonical check and allows a passing one", async () => {
+// METRO-134: pre-push runs only `check:fast` (step push-fast) and `scan`. The other canonical
+// scripts run in CI, so a failing stub for any of them must not block a push.
+test("installed pre-push hook blocks a failing check:fast or scan and ignores CI-only scripts", async () => {
   const root = await mkdtemp(join(tmpdir(), "metro-prepush-"));
   const remote = `${root}-remote`;
   const { run, ok } = runner(root);
-  const stub = "node -e 0";
+  // Each script fails while FAIL-<name> exists; the marker files are untracked, so removing them
+  // never needs a commit.
+  const scriptNames = ["check:fast", "check", "build", "smoke", "bundle:check", "scan"];
+  const heads = () => ok(["git", "ls-remote", "--heads", "origin"]);
+  const push = (branch: string) => run(["git", "push", "origin", `HEAD:refs/heads/${branch}`]);
   try {
     ok(["git", "init", "--bare", "-b", "main", remote], tmpdir());
     await configureFixture(root, ok);
@@ -92,32 +98,37 @@ test("installed pre-push hook blocks a failing canonical check and allows a pass
     await writeFile(
       join(root, "package.json"),
       JSON.stringify({
-        scripts: {
-          "check:fast": stub,
-          check: "node check.cjs",
-          build: stub,
-          smoke: stub,
-          "bundle:check": stub,
-          scan: stub,
-        },
+        scripts: Object.fromEntries(scriptNames.map((name) => [name, `node gate.cjs ${name}`])),
       }),
     );
     await writeFile(
-      join(root, "check.cjs"),
-      "if (require('node:fs').existsSync('FAIL')) process.exit(1);",
+      join(root, "gate.cjs"),
+      "if (require('node:fs').existsSync('FAIL-' + process.argv[2])) process.exit(1);",
     );
-    await writeFile(join(root, "FAIL"), "block\n");
     ok(["git", "add", "."]);
     ok(["git", "commit", "-m", "chore: fixture baseline"]);
     ok(["git", "remote", "add", "origin", remote]);
     ok(["hk", "install"]);
-    expect(run(["git", "push", "origin", "main"]).exitCode).not.toBe(0);
-    expect(ok(["git", "ls-remote", "--heads", "origin"])).toBe("");
-    await rm(join(root, "FAIL"));
-    ok(["git", "add", "-A"]);
-    ok(["git", "commit", "-m", "test: remove failing marker"]);
-    ok(["git", "push", "origin", "main"]);
-    expect(ok(["git", "ls-remote", "--heads", "origin"])).toContain("refs/heads/main");
+    const mark = (name: string) => writeFile(join(root, `FAIL-${name}`), "block\n");
+    const clear = (name: string) => rm(join(root, `FAIL-${name}`), { force: true });
+
+    // Blocking cases: nothing reaches the remote.
+    for (const name of ["check:fast", "scan"]) {
+      await mark(name);
+      expect(push("blocked").exitCode).not.toBe(0);
+      expect(heads()).toBe("");
+      await clear(name);
+    }
+
+    // Allow cases: CI-only scripts fail, the push still succeeds.
+    for (const name of ["check", "build", "smoke", "bundle:check"]) await mark(name);
+    expect(push("ci-only").exitCode).toBe(0);
+    expect(heads()).toContain("refs/heads/ci-only");
+
+    // Still blocked while a CI-only script also fails: the blocking steps decide.
+    await mark("scan");
+    expect(push("scan-blocked").exitCode).not.toBe(0);
+    expect(heads()).not.toContain("scan-blocked");
   } finally {
     await rm(remote, { recursive: true, force: true });
     await rm(root, { recursive: true, force: true });
