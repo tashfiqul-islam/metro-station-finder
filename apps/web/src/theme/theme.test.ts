@@ -8,6 +8,7 @@ import {
   nextPreference,
   readPreference,
   savePreference,
+  syncThemeColor,
 } from "./theme";
 
 afterEach(() => {
@@ -85,6 +86,55 @@ test("METRO-105 applyPreference sets data-theme for light and dark and removes i
   expect(root.getAttribute("data-theme")).toBe("light");
   applyPreference("system", root);
   expect(root.hasAttribute("data-theme")).toBe(false);
+});
+
+function addTags(): HTMLMetaElement[] {
+  return [
+    ["#aaaaaa", "light"],
+    ["#111111", "dark"],
+  ].map(([content, scheme]) => {
+    const tag = document.createElement("meta");
+    tag.name = "theme-color";
+    tag.content = content ?? "";
+    tag.setAttribute("media", `(prefers-color-scheme: ${scheme})`);
+    document.head.append(tag);
+    return tag;
+  });
+}
+
+test("METRO-119 applyPreference moves both theme-color tags with the theme and System restores each", () => {
+  const tags = addTags();
+  const now = () => tags.map((tag) => tag.content);
+  applyPreference("dark", document.documentElement);
+  expect(now()).toEqual(["#111111", "#111111"]);
+  applyPreference("light", document.documentElement);
+  expect(now()).toEqual(["#aaaaaa", "#aaaaaa"]);
+  applyPreference("system", document.documentElement);
+  expect(now()).toEqual(["#aaaaaa", "#111111"]);
+  for (const tag of tags) tag.remove();
+});
+
+test("METRO-119 a page with no theme-color tag is left alone, and one tag keeps its colour for the other theme", () => {
+  expect(() => syncThemeColor("dark", document)).not.toThrow();
+  const [light] = addTags();
+  document
+    .querySelectorAll("meta[name=theme-color]:not([media*=light])")
+    .forEach((t) => t.remove());
+  syncThemeColor("dark", document);
+  expect(light?.content).toBe("#aaaaaa");
+  light?.remove();
+});
+
+test("METRO-119 a tag with no media query counts as the light one", () => {
+  const tag = document.createElement("meta");
+  tag.name = "theme-color";
+  tag.content = "#cccccc";
+  document.head.append(tag);
+  syncThemeColor("dark", document);
+  expect(tag.content).toBe("#cccccc");
+  syncThemeColor("light", document);
+  expect(tag.content).toBe("#cccccc");
+  tag.remove();
 });
 
 beforeEach(() => {

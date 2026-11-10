@@ -3,7 +3,7 @@ import { runInNewContext } from "node:vm";
 import { expect, test } from "vitest";
 
 import source from "../../public/theme-boot.js?raw";
-import { THEME_KEY } from "./theme";
+import { THEME_KEY, syncThemeColor } from "./theme";
 
 /** A stand-in for <html> that records attribute changes, so the shipped file runs against nothing else. */
 function fakeRoot(initial: string | null) {
@@ -19,7 +19,10 @@ function fakeRoot(initial: string | null) {
 /** Runs the shipped file once in a sandbox that has only `document` and the given `localStorage`. */
 function boot(storage: { getItem: (key: string) => string | null }, before: string | null = null) {
   const root = fakeRoot(before);
-  runInNewContext(source, { document: { documentElement: root }, localStorage: storage });
+  runInNewContext(source, {
+    document: { documentElement: root, querySelector: () => null, querySelectorAll: () => [] },
+    localStorage: storage,
+  });
   return root.attributes.get("data-theme") ?? null;
 }
 
@@ -56,4 +59,61 @@ test("METRO-105 the script is a plain classic script: no import, no inline-only 
   expect(source).not.toMatch(
     /\bimport\b|\bexport\b|fetch\(|XMLHttpRequest|eval\(|document\.write/u,
   );
+});
+
+const LIGHT = "#aaaaaa";
+const DARK = "#111111";
+
+/** The two tags index.html ships, in a real document, so the shipped file runs against real attributes. */
+function pageWithTags(): Document {
+  const doc = document.implementation.createHTMLDocument("t");
+  for (const [content, scheme] of [
+    [LIGHT, "light"],
+    [DARK, "dark"],
+  ] as const) {
+    const tag = doc.createElement("meta");
+    tag.name = "theme-color";
+    tag.content = content;
+    tag.setAttribute("media", `(prefers-color-scheme: ${scheme})`);
+    doc.head.append(tag);
+  }
+  return doc;
+}
+
+function colours(doc: Document): string[] {
+  return [...doc.querySelectorAll<HTMLMetaElement>("meta[name=theme-color]")].map((t) => t.content);
+}
+
+test("METRO-119 a saved Dark or Light gives both theme-color tags that theme's colour", () => {
+  for (const [value, expected] of [
+    ["dark", DARK],
+    ["light", LIGHT],
+  ] as const) {
+    const doc = pageWithTags();
+    runInNewContext(source, { document: doc, localStorage: saved(value) });
+    expect(colours(doc), value).toEqual([expected, expected]);
+  }
+});
+
+test("METRO-119 System, a stray value and blocked storage leave each tag its own colour", () => {
+  const blocked = {
+    getItem: (): string => {
+      throw new DOMException("blocked", "SecurityError");
+    },
+  };
+  for (const storage of [saved("system"), saved("purple"), saved(null), blocked]) {
+    const doc = pageWithTags();
+    runInNewContext(source, { document: doc, localStorage: storage });
+    expect(colours(doc)).toEqual([LIGHT, DARK]);
+  }
+});
+
+test("METRO-119 the boot script and syncThemeColor give the same tags for every preference", () => {
+  for (const value of ["system", "light", "dark"] as const) {
+    const byScript = pageWithTags();
+    runInNewContext(source, { document: byScript, localStorage: saved(value) });
+    const byFunction = pageWithTags();
+    syncThemeColor(value, byFunction);
+    expect(colours(byFunction), value).toEqual(colours(byScript));
+  }
 });
