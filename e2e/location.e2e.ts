@@ -76,6 +76,23 @@ test.describe("use my location (METRO-113)", () => {
     expect(await snap(page)).toBe("half");
   });
 
+  test("METRO-124 one press on Use my location starts the search while the station list is open", async ({
+    page,
+  }) => {
+    await stubGeolocation(page, "pending");
+    await open(page);
+    await combo(page).fill("mir");
+    await expect(combo(page)).toHaveAttribute("aria-expanded", "true");
+    // No Escape first: the press itself blurs the input, and the list must not collapse under the pointer.
+    await locate(page).click();
+    await expect(
+      page.getByRole("status").filter({ hasText: "Finding your position" }),
+    ).toBeVisible();
+    await expect(locate(page)).toHaveAttribute("aria-disabled", "true");
+    // The press is over: the list closed, as a blur always did.
+    await expect(combo(page)).toHaveAttribute("aria-expanded", "false");
+  });
+
   test("METRO-113 locating with reduced motion: the ping does not move", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await stubGeolocation(page, "pending");
