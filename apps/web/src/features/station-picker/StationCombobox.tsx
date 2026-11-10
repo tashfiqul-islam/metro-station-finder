@@ -19,6 +19,17 @@ interface StationComboboxProps {
   readonly onEngage: () => void;
 }
 
+/** Keys that change how a press is read but do not end it. */
+const MODIFIERS: ReadonlySet<string> = new Set([
+  "Shift",
+  "Control",
+  "Alt",
+  "Meta",
+  "AltGraph",
+  "CapsLock",
+  "Fn",
+]);
+
 /** Scrolls the active option into the list; a browser without the method just skips it. */
 function revealOption(id: string): void {
   const node = document.getElementById(id);
@@ -82,7 +93,9 @@ export function StationCombobox({
     const press = (): void => {
       pressing.current = true;
     };
-    const release = (): void => {
+    const release = (event: Event): void => {
+      // A modifier held during the press is not the end of it.
+      if (event instanceof KeyboardEvent && MODIFIERS.has(event.key)) return;
       pressing.current = false;
       if (!closeAfterPress.current) return;
       closeAfterPress.current = false;

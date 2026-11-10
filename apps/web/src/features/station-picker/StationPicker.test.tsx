@@ -274,6 +274,29 @@ test("METRO-124 a cancelled press or a key ends the wait and closes the list", (
   expect(box().getAttribute("aria-expanded")).toBe("false");
 });
 
+test("METRO-124 a modifier key held during the press does not end it; Tab does", () => {
+  setup();
+  type("mir");
+  pressOutsideThenBlur();
+  for (const modifier of ["Shift", "Control", "Alt", "Meta", "CapsLock"]) {
+    fireEvent.keyDown(document.body, { key: modifier });
+    expect(box().getAttribute("aria-expanded")).toBe("true");
+  }
+  fireEvent.keyDown(document.body, { key: "Tab" });
+  expect(box().getAttribute("aria-expanded")).toBe("false");
+});
+
+test("METRO-124 known and bounded: a press that never reports mouseup leaves the list open after another blur, until the next mouseup, key or cancel", () => {
+  setup();
+  type("mir");
+  fireEvent.pointerDown(document.body);
+  fireEvent.blur(box());
+  fireEvent.blur(box());
+  expect(box().getAttribute("aria-expanded")).toBe("true");
+  fireEvent.keyDown(document.body, { key: "Escape" });
+  expect(box().getAttribute("aria-expanded")).toBe("false");
+});
+
 test("METRO-124 a press that ends without a blur, or after focus came back, leaves the list as it is", () => {
   setup();
   type("mir");
