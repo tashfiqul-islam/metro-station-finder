@@ -206,6 +206,9 @@ test.describe("offline shell on the real server", () => {
       return found;
     }, CACHE_PREFIX);
     expect(keys.length).toBeGreaterThan(10);
+    // The page declares /favicon.ico (METRO-123), so the offline page keeps it. Read from the cache, never fetched
+    // from the page: Playwright aborts a page fetch of that URL whenever a route is active.
+    expect(keys.map((key) => new URL(key).pathname)).toContain("/favicon.ico");
     expect(keys.filter((key) => new URL(key).search !== "" || new URL(key).hash !== "")).toEqual(
       [],
     );
