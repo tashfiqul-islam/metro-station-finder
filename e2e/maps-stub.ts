@@ -16,8 +16,12 @@ import { GOOGLE_HOSTS, expect } from "./fixtures";
 export interface StubOptions {
   /** Abort the Maps script itself (a blocked or failed load). */
   readonly scriptFails?: boolean;
-  /** Hold the Maps script back this long before answering (METRO-114: typing before the load completes). */
-  readonly scriptDelayMs?: number;
+  /**
+   * Hold the Maps script until the test calls `releaseScript` (METRO-114, METRO-129). The test, not a timer,
+   * decides when the load completes, so a slow runner cannot make it miss a state it asserts. A held script
+   * is also let go when the page closes, so no route outlives its test.
+   */
+  readonly holdScript?: boolean;
   /** `computeRoutes` answers only after this long (a route in flight while the result is replaced). */
   readonly routeDelayMs?: number;
   /** `fetchFields` rejects with an error whose message carries a coordinate. */
@@ -206,11 +210,17 @@ export interface MapsStub {
   /** Hosts of Google requests the stub aborted (host names only, never a URL or key). */
   readonly blocked: string[];
   calls(): Promise<StubCalls>;
+  /** Lets a held script answer now (it then fails or succeeds as `scriptFails` says). A no-op when not held. */
+  releaseScript(): void;
 }
 
 export async function installMapsStub(page: Page, options: StubOptions = {}): Promise<MapsStub> {
   const blocked: string[] = [];
   const scriptUrls: string[] = [];
+  const { promise: gate, resolve: releaseScript } = Promise.withResolvers<void>();
+  const release = (): void => releaseScript();
+  // A script still held when the page closes is let go, so the pending route handler ends with the test.
+  page.once("close", release);
   await page.addInitScript((given) => {
     Reflect.set(window, "__metroStub", { options: given, fetchFields: [], routes: [] });
   }, options);
@@ -221,8 +231,9 @@ export async function installMapsStub(page: Page, options: StubOptions = {}): Pr
   });
   await page.route("https://maps.googleapis.com/maps/api/js*", async (route) => {
     scriptUrls.push(route.request().url());
-    if (options.scriptDelayMs !== undefined) {
-      await new Promise((resolve) => setTimeout(resolve, options.scriptDelayMs));
+    if (options.holdScript === true) {
+      await gate;
+      if (page.isClosed()) return;
     }
     if (options.scriptFails === true) {
       await route.abort();
@@ -232,6 +243,7 @@ export async function installMapsStub(page: Page, options: StubOptions = {}): Pr
   });
   return {
     blocked,
+    releaseScript: release,
     calls: async () => {
       const raw = await page.evaluate(() => JSON.stringify(Reflect.get(window, "__metroStub")));
       const recorded: unknown = JSON.parse(raw);

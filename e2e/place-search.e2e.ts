@@ -128,14 +128,15 @@ test.describe("place search on first focus (METRO-114)", () => {
   test("METRO-114 typing before the load completes is kept, and typing goes on after the swap", async ({
     page,
   }) => {
-    const stub = await open(page, { scriptDelayMs: 1500 });
+    const stub = await open(page, { holdScript: true });
     const plain = plainSearch(page);
     await plain.focus();
     await page.keyboard.type("moti");
     // Still waiting for the script: the plain input is on screen and holds what was typed.
     await expect(plain).toBeVisible();
     await expect(plain).toHaveValue("moti");
-    expect((await stub.calls()).scriptUrls).toHaveLength(1);
+    await expect.poll(async () => (await stub.calls()).scriptUrls.length).toBe(1);
+    stub.releaseScript();
     const widget = widgetSearch(page);
     await expect(widget).toBeVisible({ timeout: 10_000 });
     await expect(widget).toHaveValue("moti");
@@ -148,9 +149,11 @@ test.describe("place search on first focus (METRO-114)", () => {
   test("METRO-114 a user who moved on before the swap does not get focus pulled back", async ({
     page,
   }) => {
-    await open(page, { scriptDelayMs: 1000 });
+    const stub = await open(page, { holdScript: true });
     await plainSearch(page).focus();
     await combo(page).focus();
+    await expect(combo(page)).toBeFocused();
+    stub.releaseScript();
     await expect(widgetSearch(page)).toBeVisible({ timeout: 10_000 });
     await expect(combo(page)).toBeFocused();
   });
@@ -217,15 +220,16 @@ test.describe("place search on first focus (METRO-114)", () => {
     page,
   }) => {
     await stubGeolocation(page, GOOD_FIX);
-    const stub = await open(page, { scriptDelayMs: 1200 });
+    const stub = await open(page, { holdScript: true });
     await locate(page).click();
     await expect(heading(page, "Uttara North")).toBeFocused();
     await expect(page.getByText("Finding the walking route…")).toBeVisible();
     await combo(page).fill("farm");
     await combo(page).press("Enter");
     await expect(heading(page, "Farmgate")).toBeFocused();
-    // Wait past the script delay: it arrives, and the replaced result must not ask for its route.
+    // Release the script: it arrives, and the replaced result must not ask for its route.
     await expect.poll(async () => (await stub.calls()).scriptUrls.length).toBe(1);
+    stub.releaseScript();
     await page.waitForTimeout(2000);
     expect((await stub.calls()).routes).toEqual([]);
     await expect(page.locator(".result")).toHaveCount(0);
