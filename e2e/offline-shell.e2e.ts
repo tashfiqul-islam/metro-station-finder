@@ -238,6 +238,13 @@ test.describe("offline shell on the real server", () => {
       expect(manifest[0]).toBe(200);
       expect(String(manifest[1])).not.toContain("html");
       expect(manifest[2]).toBe("{");
+      // The page declares /favicon.ico (METRO-123), so the offline page keeps its icon: an icon, not the shell.
+      const icon = await page.evaluate(async () => {
+        const response = await fetch("/favicon.ico");
+        return [response.status, response.headers.get("content-type")];
+      });
+      expect(icon[0]).toBe(200);
+      expect(String(icon[1])).toMatch(/^image\/(x-icon|vnd\.microsoft\.icon)/u);
       // The failing navigation runs in its own tab: a browser error page cannot be navigated away from at once.
       const probe = await context.newPage();
       workerMayControl(probe);
