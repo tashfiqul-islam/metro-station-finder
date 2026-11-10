@@ -46,5 +46,6 @@ export default defineConfig({
   // The first-visit bundle budget reads dist/client/.vite/manifest.json (METRO-104, ADR-0020).
   build: { manifest: true },
   server: { host: "127.0.0.1", port: 5173, strictPort: true },
-  preview: { host: "127.0.0.1", port: 4173, strictPort: true },
+  // METRO-130: SMOKE_PORT (set by scripts/smoke.ts) picks the preview port; strictPort makes a clash fail loudly.
+  preview: { host: "127.0.0.1", port: Number(process.env["SMOKE_PORT"] ?? 4173), strictPort: true },
 });

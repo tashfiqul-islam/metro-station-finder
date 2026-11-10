@@ -12,7 +12,7 @@
     "bootstrap": "bun run scripts/tools.ts && bun install --frozen-lockfile",
     "dev": "bun run scripts/tools.ts && bun run --cwd apps/web dev",
     "build": "bun run scripts/tools.ts && bun run --cwd apps/web build && bun run --cwd apps/api build",
-    "smoke": "bun run scripts/tools.ts && node node_modules/@playwright/test/cli.js test",
+    "smoke": "bun run scripts/tools.ts && node scripts/smoke.ts",
     "smoke:live": "bun run scripts/tools.ts && node scripts/smoke-live.ts",
     "typecheck": "tsc -b",
     "test:vitest": "vitest run --coverage",

@@ -18,6 +18,7 @@ import {
   widgetNodeIds,
 } from "./smoke-live-report.ts";
 import type { AccessibilityRun, AxEntry, LiveRun, TabEnd } from "./smoke-live-report.ts";
+import { resolveSmokePort } from "./smoke-port.ts";
 
 /**
  * Owner-run live check (METRO-88), never run by CI or an agent: `bun run smoke:live`. It builds the web app
@@ -30,13 +31,12 @@ import type { AccessibilityRun, AxEntry, LiveRun, TabEnd } from "./smoke-live-re
  */
 const web = fileURLToPath(new URL("../apps/web", import.meta.url));
 const vite = fileURLToPath(new URL("../node_modules/vite/bin/vite.js", import.meta.url));
-const origin = "http://127.0.0.1:4173";
 /** Hosts the page may only reach after the first focus of the place search (METRO-114). */
 const GOOGLE_HOST = /(^|\.)(googleapis|gstatic|google|googleusercontent)\.com$/u;
 /** A neighbourhood name, not an address or a person's place. */
 const QUERY = "Motijheel";
 
-async function waitForServer(): Promise<void> {
+async function waitForServer(origin: string): Promise<void> {
   for (let attempt = 0; attempt < 120; attempt += 1) {
     try {
       if ((await fetch(origin)).ok) return;
@@ -127,7 +127,14 @@ async function main(): Promise<boolean> {
   // stdio is ignored: build and server output is of no use here and must never be able to echo a key.
   const build = spawnSync(process.execPath, [vite, "build"], { cwd: web, stdio: "ignore" });
   if (build.status !== 0) throw new Error("the build failed; run `bun run build` to see why");
-  const server = spawn(process.execPath, [vite, "preview"], { cwd: web, stdio: "ignore" });
+  // METRO-130: a free port per run (or SMOKE_PORT); vite.config.ts reads it for the preview server.
+  const port = await resolveSmokePort(process.env);
+  const origin = `http://127.0.0.1:${port}`;
+  const server = spawn(process.execPath, [vite, "preview"], {
+    cwd: web,
+    env: { ...process.env, SMOKE_PORT: String(port) },
+    stdio: "ignore",
+  });
   const run: { -readonly [K in keyof LiveRun]: LiveRun[K] } = {
     version: null,
     cspMessages: [],
@@ -146,7 +153,7 @@ async function main(): Promise<boolean> {
   let cdp: CDPSession | null = null;
   try {
     browser = await chromium.launch({ headless: process.env["SMOKE_LIVE_HEADLESS"] === "1" });
-    await waitForServer();
+    await waitForServer(origin);
     const page = await browser.newPage();
     const csp: string[] = [];
     page.on("console", (message: ConsoleMessage) => {
