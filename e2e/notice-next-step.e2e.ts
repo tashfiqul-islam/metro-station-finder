@@ -2,6 +2,7 @@ import type { Locator, Page } from "@playwright/test";
 
 import { axeBuilder, expect, test } from "./fixtures";
 import { installMapsStub, plainSearch, stubGeolocation } from "./maps-stub";
+import type { MapsStub } from "./maps-stub";
 
 /**
  * METRO-120: a notice's suggested next step names only what is available right now. Each location notice is
@@ -64,13 +65,11 @@ async function reconnect(page: Page): Promise<void> {
   });
 }
 
-async function open(page: Page, scriptFails = false, scriptDelayMs?: number): Promise<void> {
-  await installMapsStub(page, {
-    scriptFails,
-    ...(scriptDelayMs === undefined ? {} : { scriptDelayMs }),
-  });
+async function open(page: Page, scriptFails = false, holdScript = false): Promise<MapsStub> {
+  const stub = await installMapsStub(page, { scriptFails, holdScript });
   await page.goto("/");
   await expect(locate(page)).toBeVisible();
+  return stub;
 }
 
 /** Lets finite animations (the notice rises in) end before axe measures colours. */
@@ -86,11 +85,10 @@ async function settle(page: Page): Promise<void> {
 }
 
 /**
- * A Maps load that is already under way and fails a little later. The first focus of the plain field starts it;
+ * A Maps load that is already under way and fails when the test releases the held script (METRO-129). The first focus of the plain field starts it;
  * pressing "Use my location" then moves focus out of the field (so the field is not what held focus) and the
  * notice's first action takes it. When the load fails, that action is removed under the focus.
  */
-const FAILS_AFTER_MS = 2500;
 async function startLoadThatFailsLater(page: Page): Promise<void> {
   await plainSearch(page).focus();
   await locate(page).click();
@@ -171,11 +169,12 @@ test.describe("a notice's next step is available right now (METRO-120)", () => {
       page,
     }) => {
       await stubGeolocation(page, "denied");
-      await open(page, true, FAILS_AFTER_MS);
+      const stub = await open(page, true, true);
       await startLoadThatFailsLater(page);
       const before = page.getByRole("group", { name: "Location is turned off. " + SEARCH });
       const action = before.getByRole("button", { name: "Search for a place" });
       await expect(action).toBeFocused();
+      stub.releaseScript();
       const after = page.getByRole("group", { name: "Location is turned off. " + PICK });
       await expect(after).toBeVisible({ timeout: 15_000 });
       await expect(after.getByRole("button", { name: "Search for a place" })).toHaveCount(0);
@@ -188,13 +187,14 @@ test.describe("a notice's next step is available right now (METRO-120)", () => {
       page,
     }) => {
       await stubGeolocation(page, "denied");
-      await open(page, true, FAILS_AFTER_MS);
+      const stub = await open(page, true, true);
       await startLoadThatFailsLater(page);
       const before = page.getByRole("group", { name: "Location is turned off. " + SEARCH });
       await expect(before.getByRole("button", { name: "Search for a place" })).toBeFocused();
       await page.evaluate(() => {
         if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
       });
+      stub.releaseScript();
       const after = page.getByRole("group", { name: "Location is turned off. " + PICK });
       await expect(after).toBeVisible({ timeout: 15_000 });
       await expect(after).not.toBeFocused();
