@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { chromiumRasteriser } from "../scripts/brand-chromium";
 import { cliMain, manifestFiles } from "../scripts/build-brand-assets";
 import { firstVisitFiles, parseManifest } from "../scripts/bundle-budget";
+import { OG_IMAGE_PATH, SITE_ORIGIN } from "../scripts/site-origin";
 import { expect, test } from "./fixtures";
 import { installMapsStub } from "./maps-stub";
 
@@ -25,6 +26,7 @@ const TYPES: Record<string, RegExp> = {
   "/icons/icon-maskable-192.png": /^image\/png/u,
   "/icons/icon-maskable-512.png": /^image\/png/u,
   "/icons/icon-monochrome-512.png": /^image\/png/u,
+  "/og/og-default.png": /^image\/png/u,
   "/robots.txt": /^text\/plain/u,
 };
 
@@ -35,7 +37,7 @@ test.describe("brand assets (METRO-107)", () => {
       root,
       log: (line) => lines.push(line),
     });
-    expect(lines).toEqual(["10 generated files match the masters"]);
+    expect(lines).toEqual(["11 generated files match the masters"]);
     expect(code).toBe(0);
   });
 
@@ -71,6 +73,16 @@ test.describe("brand assets (METRO-107)", () => {
       expect(html, href).toContain(`href="${href}"`);
     }
     expect(html.match(/name="theme-color"/gu)).toHaveLength(2);
+  });
+
+  test("METRO-122 the shipped HTML has the canonical link, og:url and og:image on one origin, with no token left", async ({
+    request,
+  }) => {
+    const html = await (await request.get("/")).text();
+    expect(html).not.toContain("%SITE_ORIGIN%");
+    expect(html).toContain(`<link rel="canonical" href="${SITE_ORIGIN}/" />`);
+    expect(html).toContain(`<meta property="og:url" content="${SITE_ORIGIN}/" />`);
+    expect(html).toContain(`<meta property="og:image" content="${SITE_ORIGIN}${OG_IMAGE_PATH}" />`);
   });
 
   test("METRO-107 the browser draws favicon.svg (its inline style is fine under the page CSP)", async ({
