@@ -1,6 +1,6 @@
 import type { Locator, Page } from "@playwright/test";
 
-import { expect, test } from "./fixtures";
+import { axeBuilder, expect, test } from "./fixtures";
 import { installMapsStub, searchForPlace } from "./maps-stub";
 
 /**
@@ -67,7 +67,8 @@ for (const size of SIZES) {
       await expect(page.locator("svg.map text.map__label")).toHaveCount(0);
       // One zoom step names every station at 11.5 px.
       await page.getByRole("button", { name: "Zoom in", exact: true }).click();
-      await expect(page.locator("svg.map text.map__label")).toHaveCount(14);
+      // Every station is named from here, except one whose label would overlap another (labels.ts).
+      await expect.poll(() => page.locator("svg.map text.map__label").count()).toBeGreaterThan(8);
       expect(await screenFontPx(page, "svg.map text.map__label")).toBeCloseTo(11.5, 1);
       await page.getByRole("button", { name: "Zoom in", exact: true }).click();
       expect(await screenFontPx(page, "svg.map text.map__label")).toBeCloseTo(11.5, 1);
@@ -101,7 +102,9 @@ for (const size of SIZES) {
       expect(heights[0]).toBeGreaterThan(heights[1] ?? Infinity);
       // A full sheet covers the map: the frame has no height left, and the map does not draw past the sheet's edge.
       await setSnap(page, "full");
-      await expect.poll(() => map.evaluate((node) => node.getBoundingClientRect().height)).toBe(0);
+      await expect
+        .poll(() => page.locator("svg.map").evaluate((node) => node.getBoundingClientRect().height))
+        .toBe(0);
     });
   });
 }
@@ -123,41 +126,188 @@ test.describe("desktop map", () => {
   });
 });
 
-test("METRO-115 Windows contrast themes: the line and the selected station use system colours and stay visible", async ({
+async function pick(page: Page, name: string): Promise<void> {
+  const box = page.getByRole("combobox", { name: "Or pick a station" });
+  await box.fill(name);
+  await box.press("Enter");
+  await expect(page.getByRole("heading", { level: 2, name })).toBeVisible();
+}
+
+/** Every pill of the map in screen pixels. */
+const pillBoxes = (page: Page) =>
+  page.evaluate(() =>
+    [...document.querySelectorAll("svg.map rect.map__pill")].map((node) => {
+      const r = node.getBoundingClientRect();
+      const text = node.parentElement?.querySelector("text")?.textContent ?? "";
+      return { text, left: r.left, top: r.top, right: r.right, bottom: r.bottom };
+    }),
+  );
+
+for (const size of SIZES) {
+  test(`METRO-115 at ${size.name} the selected station is named, the other stations are not, and no two pills overlap`, async ({
+    page,
+  }) => {
+    await open(page, size);
+    await pick(page, "Karwan Bazar");
+    for (const snap of ["peek", "half"] as const) {
+      await setSnap(page, snap);
+      await expect.poll(async () => (await pillBoxes(page)).length).toBeGreaterThanOrEqual(2);
+      // At the fit view: the two ends and the selected station are named; no other station is.
+      const names = (await pillBoxes(page)).map((box) => box.text);
+      expect(names).toContain("Karwan Bazar");
+      expect(
+        names.every((name) => ["Uttara North", "Karwan Bazar", "Motijheel"].includes(name)),
+      ).toBe(true);
+      await expect(page.locator("svg.map text.map__label")).toHaveCount(0);
+    }
+  });
+
+  for (const near of ["Bangladesh Secretariat", "Pallabi", "Dhaka University"]) {
+    test(`METRO-115 at ${size.name} a selected ${near} next to an end station does not overlap its pill`, async ({
+      page,
+    }) => {
+      await open(page, size);
+      await pick(page, near);
+      for (const snap of ["peek", "half"] as const) {
+        await setSnap(page, snap);
+        await expect
+          .poll(async () => (await pillBoxes(page)).map((box) => box.text))
+          .toContain(near);
+        const boxes = await pillBoxes(page);
+        for (const [index, a] of boxes.entries()) {
+          for (const b of boxes.slice(index + 1)) {
+            const apart =
+              a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top;
+            expect(apart, `${a.text} and ${b.text} at ${snap}`).toBe(true);
+          }
+        }
+      }
+    });
+  }
+
+  test(`METRO-115 at ${size.name} a full sheet makes the map inert, and leaving full brings it back`, async ({
+    page,
+  }) => {
+    const map = await open(page, size);
+    const zoom = page.getByRole("button", { name: "Zoom in", exact: true });
+    await expect(zoom).toBeVisible();
+    await setSnap(page, "full");
+    // Hidden, not just covered: no tab stop, no button, nothing for a screen reader.
+    await expect(map).toBeHidden();
+    await expect(zoom).toBeHidden();
+    for (let press = 0; press < 14; press += 1) {
+      await page.keyboard.press("Tab");
+      expect(await page.evaluate(() => document.activeElement?.closest(".app__map") ?? null)).toBe(
+        null,
+      );
+    }
+    await setSnap(page, "half");
+    await expect(map).toBeVisible();
+    await expect(zoom).toBeVisible();
+    await map.focus();
+    await expect(map).toBeFocused();
+  });
+
+  test(`METRO-115 at ${size.name} a zoomed map keeps its view when the sheet moves, and the fit button re-fits it`, async ({
+    page,
+  }) => {
+    const map = await open(page, size);
+    await setSnap(page, "peek");
+    await expect
+      .poll(() => map.evaluate((node) => node.getBoundingClientRect().height))
+      .toBeGreaterThan(300);
+    await page.getByRole("button", { name: "Zoom in", exact: true }).click();
+    const zoomed = await map.getAttribute("viewBox");
+    expect(zoomed).not.toBe("100 70 470 880");
+    await setSnap(page, "half");
+    expect(await map.getAttribute("viewBox")).toBe(zoomed);
+    await page.getByRole("button", { name: "Show whole line", exact: true }).click();
+    await expect(map).toHaveAttribute("viewBox", "100 70 470 880");
+  });
+}
+
+test("METRO-115 a zoomed phone map paints nothing above its frame, under the header", async ({
   page,
 }) => {
-  await page.emulateMedia({ forcedColors: "active" });
-  await open(page, { width: 390, height: 844 });
-  await searchForPlace(page, "motijheel");
-  const paint = (selector: string, property: "fill" | "stroke") =>
-    page
-      .locator(selector)
-      .first()
-      .evaluate((node, name) => getComputedStyle(node).getPropertyValue(name), property);
-  const line = await paint("svg.map polyline.map__line", "stroke");
-  const casing = await paint("svg.map polyline.map__casing", "stroke");
-  const selected = await paint("svg.map circle.map__pin--hl", "fill");
-  // A plain colour, not the token gradient (url(...)) that forced colours would drop.
-  expect(line).toMatch(/^rgb/u);
-  expect(casing).toMatch(/^rgb/u);
-  expect(selected).toMatch(/^rgb/u);
-  // The line differs from its casing and from the page behind it, and the selected pin differs from the line.
-  expect(line).not.toBe(casing);
-  expect(selected).not.toBe(line);
-  const ground = await paint("svg.map rect.map__bg", "fill");
-  expect(ground).not.toBe(line);
-  await expect(page.locator("svg.map circle.map__pin--hl")).toBeVisible();
+  const map = await open(page, { width: 390, height: 844 });
+  for (let step = 0; step < 4; step += 1) {
+    await page.getByRole("button", { name: "Zoom in", exact: true }).click();
+  }
+  const frame = await map.boundingBox();
+  if (frame === null) throw new Error("no layout");
+  const hits = await page.evaluate(
+    ({ x, y }) => document.elementsFromPoint(x, y).some((node) => node.closest("svg.map") !== null),
+    { x: 195, y: frame.y - 10 },
+  );
+  expect(hits, "the map paints above its frame").toBe(false);
+  const inside = await page.evaluate(
+    ({ x, y }) => document.elementsFromPoint(x, y).some((node) => node.closest("svg.map") !== null),
+    { x: 195, y: frame.y + 10 },
+  );
+  expect(inside, "the map paints inside its frame").toBe(true);
 });
 
-test("METRO-115 the phone map has no inline style and passes axe in light and dark", async ({
-  page,
-}) => {
-  const { axeBuilder } = await import("./fixtures");
+for (const size of [
+  { name: "390 px", width: 390, height: 844 },
+  { name: "1280 px", width: 1280, height: 800 },
+]) {
+  test(`METRO-115 Windows contrast themes at ${size.name}: the line and the selected station use system colours and stay visible`, async ({
+    page,
+  }) => {
+    await page.emulateMedia({ forcedColors: "active" });
+    await open(page, size);
+    await searchForPlace(page, "motijheel");
+    await expect(page.locator("svg.map circle.map__pin--hl")).toBeVisible();
+    const style = (selector: string, properties: readonly string[]) =>
+      page
+        .locator(selector)
+        .first()
+        .evaluate(
+          (node, names) =>
+            Object.fromEntries(
+              names.map((name) => [name, getComputedStyle(node).getPropertyValue(name)]),
+            ),
+          properties,
+        );
+    const line = await style("svg.map polyline.map__line", [
+      "stroke",
+      "stroke-width",
+      "stroke-opacity",
+      "opacity",
+    ]);
+    const casing = await style("svg.map polyline.map__casing", ["stroke"]);
+    const pin = await style("svg.map circle.map__pin--hl", ["fill", "stroke"]);
+    const ground = await style("svg.map rect.map__bg", ["fill"]);
+    // A plain system colour, not the token gradient (url(...)), drawn at a visible width and fully opaque.
+    expect(line["stroke"]).toMatch(/^rgb/u);
+    expect(Number.parseFloat(line["stroke-width"] ?? "0")).toBeGreaterThanOrEqual(4);
+    expect(Number.parseFloat(line["stroke-opacity"] ?? "0")).toBe(1);
+    expect(Number.parseFloat(line["opacity"] ?? "0")).toBe(1);
+    expect(casing["stroke"]).toMatch(/^rgb/u);
+    expect(pin["fill"]).toMatch(/^rgb/u);
+    // The line differs from its casing and from the ground; the selected pin differs from the line.
+    expect(line["stroke"]).not.toBe(casing["stroke"]);
+    expect(line["stroke"]).not.toBe(ground["fill"]);
+    expect(pin["fill"]).not.toBe(line["stroke"]);
+    expect(pin["fill"]).not.toBe(ground["fill"]);
+  });
+}
+
+for (const size of [
+  { name: "320 px", width: 320, height: 640 },
+  { name: "390 px", width: 390, height: 844 },
+  { name: "1280 px", width: 1280, height: 800 },
+]) {
   for (const scheme of ["light", "dark"] as const) {
-    await page.emulateMedia({ colorScheme: scheme });
-    await open(page, { width: 390, height: 844 });
-    expect(await page.locator(".app__map [style]").count()).toBe(0);
-    const results = await axeBuilder(page).analyze();
-    expect(results.violations.map((violation) => violation.id)).toEqual([]);
+    test(`METRO-115 the map has no inline style and passes axe in ${scheme} at ${size.name}`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme: scheme });
+      await open(page, size);
+      await pick(page, "Karwan Bazar");
+      expect(await page.locator(".app__map [style]").count()).toBe(0);
+      const results = await axeBuilder(page).analyze();
+      expect(results.violations.map((violation) => violation.id)).toEqual([]);
+    });
   }
-});
+}

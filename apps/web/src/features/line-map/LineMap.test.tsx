@@ -2,7 +2,15 @@ import { stationId } from "@metro/core";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterAll, afterEach, beforeAll, expect, test, vi } from "vitest";
 
+import * as labels from "./labels";
 import { LineMap } from "./LineMap";
+
+// Every render of the map calls the layout once: the spy counts renders.
+vi.mock("./labels", async (importOriginal) => {
+  const original = await importOriginal<typeof labels>();
+  return { ...original, layoutLabels: vi.fn(original.layoutLabels) };
+});
+const renders = vi.mocked(labels.layoutLabels);
 
 beforeAll(() => {
   Reflect.set(globalThis, "IS_REACT_ACT_ENVIRONMENT", true);
@@ -235,4 +243,28 @@ test("METRO-111 the map carries no style attribute and makes no network request"
   expect(container.querySelectorAll("[style]")).toHaveLength(0);
   expect(fetchSpy).not.toHaveBeenCalled();
   fetchSpy.mockRestore();
+});
+
+test("METRO-115 a size that rounds to the same pixels does not render the map again", () => {
+  const resize = stubResize();
+  render(<LineMap />);
+  resize(390, 234);
+  const settled = renders.mock.calls.length;
+  // A sheet drag reports a size on every frame: the same whole pixels are the same state, so no render.
+  resize(390.2, 233.8);
+  resize(390, 234);
+  expect(renders.mock.calls.length).toBe(settled);
+  resize(390, 235);
+  expect(renders.mock.calls.length).toBe(settled + 1);
+});
+test("METRO-115 pills near the south end stay apart on a short frame (the layout reads the reported size)", () => {
+  const resize = stubResize();
+  const { container } = render(<LineMap highlighted={[stationId("bangladesh-secretariat")]} />);
+  resize(320, 190);
+  const boxes = [...container.querySelectorAll("rect.map__pill")].map((r) =>
+    r.getBoundingClientRect(),
+  );
+  expect(boxes.length).toBeGreaterThanOrEqual(2);
+  const names = [...container.querySelectorAll("text.map__pill-text")].map((n) => n.textContent);
+  expect(names).toContain("Bangladesh Secretariat");
 });

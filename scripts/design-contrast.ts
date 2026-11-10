@@ -2,8 +2,8 @@
  * METRO-105 (ADR-0021): WCAG contrast of the design tokens, computed from `apps/web/src/styles/tokens.css`
  * for both themes. The pairs are the 53 rows of the design handoff's accessibility table (the same list is
  * checked in light and dark). A semi-transparent surface is composited over every backdrop it can sit on and the
- * lowest ratio counts: `glass` over the map layers and the page; `raised`, `muted`, `muted-2` and `accent-soft`
- * over the card, the page and the glass panel over each map layer. This is stricter than the handoff, which
+ * lowest ratio counts: `glass` over the map background and the page (the map planes were removed in METRO-115; the line and labels the map draws behind a sheet when panned are not judged); `raised`, `muted`, `muted-2` and `accent-soft`
+ * over the card, the page and the glass panel over each backdrop. This is stricter than the handoff, which
  * published one figure per pair; the published ratio is kept beside each pair for comparison.
  */
 

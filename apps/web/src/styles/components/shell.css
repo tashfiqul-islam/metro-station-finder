@@ -20,11 +20,18 @@
   left: 0;
   bottom: calc(var(--sheet-h) + var(--sheet-reserve) + 8px);
 }
+/* A full sheet covers the map: hidden, so its tab stop and buttons are neither focusable nor read (METRO-115). */
+.app[data-snap="full"] .app__map-frame {
+  visibility: hidden;
+}
 /* No section nav drawn (no router yet): nothing sits under the sheet, so it keeps only the side gap. */
 .app--plain {
   --sheet-reserve: var(--space-2);
 }
 @media (min-width: 768px) {
+  .app[data-snap="full"] .app__map-frame {
+    visibility: visible;
+  }
   .app__map-frame {
     top: 84px;
     right: 76px;

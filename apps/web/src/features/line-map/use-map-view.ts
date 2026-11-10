@@ -23,6 +23,8 @@ export function useMapView() {
   const svg = useRef<SVGSVGElement>(null);
   const pointers = useRef(new Map<number, Touch>());
   const [size, setSize] = useState({ width: 0, height: 0 });
+  // The last size reported, read outside React: the same size sets no state and renders nothing.
+  const seen = useRef({ width: 0, height: 0 });
 
   // The map's box changes with the sheet (the shell's frame ends where the sheet starts) and the window; the
   // size is what keeps labels and pins at a fixed size on screen.
@@ -31,7 +33,12 @@ export function useMapView() {
     if (element === null) return () => {};
     const observer = new ResizeObserver((entries) => {
       for (const { contentRect } of entries) {
-        setSize({ width: contentRect.width, height: contentRect.height });
+        // Whole pixels, and the same size is the same state: a sheet drag reports many sizes, few differ.
+        const width = Math.round(contentRect.width);
+        const height = Math.round(contentRect.height);
+        if (seen.current.width === width && seen.current.height === height) continue;
+        seen.current = { width, height };
+        setSize({ width, height });
       }
     });
     observer.observe(element);

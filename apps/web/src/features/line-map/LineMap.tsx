@@ -4,6 +4,7 @@ import type { ReactElement } from "react";
 import { Icon } from "../../icons/Icon";
 import { fitIcon, zoomInIcon, zoomOutIcon } from "./control-icons";
 import { mapCopy } from "./copy";
+import { layoutLabels } from "./labels";
 import { lineStops, project, round1 } from "./projection";
 import type { LineStop, Point } from "./projection";
 import { useMapView } from "./use-map-view";
@@ -37,28 +38,6 @@ const scaleText = (value: number): string => String(Math.round(value * 1000) / 1
 const placeAt = (stop: Point, unit: number): string =>
   `translate(${round1(stop.x)} ${round1(stop.y)}) scale(${scaleText(unit)})`;
 
-/** The pill label's box in pixels from its stop: width follows the text (7.6px per character plus 9px padding each side), height 24px. */
-function pill(stop: LineStop): {
-  x: number;
-  y: number;
-  width: number;
-  textX: number;
-  textY: number;
-} {
-  const width = round1(stop.name.length * 7.6 + 18);
-  const left = stop.placement === "left";
-  const below = stop.placement === "below";
-  const x = round1(below ? -width / 2 : left ? -14 - width : 14);
-  const y = below ? 20 : -12;
-  return { x, y, width, textX: round1(x + width / 2), textY: y + 16 };
-}
-
-/** The halo label's anchor and position in pixels from its stop. */
-function halo(stop: LineStop): { x: number; y: number; anchor: "start" | "end" | "middle" } {
-  if (stop.placement === "below") return { x: 0, y: 22, anchor: "middle" };
-  if (stop.placement === "left") return { x: -11, y: 4, anchor: "end" };
-  return { x: 11, y: 4, anchor: "start" };
-}
 function nameOf(id: StationId): string {
   return STOPS.find((stop) => stop.id === id)?.name ?? "";
 }
@@ -82,7 +61,7 @@ function tripStops(trip: LineMapProps["trip"]): readonly LineStop[] {
 export function LineMap({ highlighted = NONE, position, walk, trip }: LineMapProps): ReactElement {
   if (FIRST === undefined || LAST === undefined) throw new Error("The station dataset is empty");
   const { view, unit, svg, handlers, zoomIn, zoomOut, fit } = useMapView();
-  const allNames = view.zoom >= LABELS_ZOOM;
+  const labels = layoutLabels(STOPS, highlighted, view.zoom >= LABELS_ZOOM, unit);
   const marked = new Set<StationId>(highlighted);
   const stretch = tripStops(trip);
   const user = position === undefined ? null : project(position);
@@ -199,45 +178,42 @@ export function LineMap({ highlighted = NONE, position, walk, trip }: LineMapPro
           </g>
         ))}
         {STOPS.map((stop) => {
-          const isMarked = marked.has(stop.id);
-          if (isMarked || stop.terminus) {
-            const box = pill(stop);
-            return (
-              <g key={stop.id} transform={placeAt(stop, unit)}>
-                <rect
-                  className={isMarked ? "map__pill" : "map__pill map__pill--term"}
-                  x={box.x}
-                  y={box.y}
-                  width={box.width}
-                  height="24"
-                  rx="12"
-                />
+          const label = labels.get(stop.id);
+          if (label === undefined) return null;
+          return (
+            <g key={stop.id} transform={placeAt(stop, unit)}>
+              {label.kind === "pill" ? (
+                <>
+                  <rect
+                    className={marked.has(stop.id) ? "map__pill" : "map__pill map__pill--term"}
+                    x={label.x}
+                    y={label.y}
+                    width={label.width}
+                    height={label.height}
+                    rx="12"
+                  />
+                  <text
+                    className="map__pill-text"
+                    x={label.textX}
+                    y={label.textY}
+                    textAnchor="middle"
+                    fontSize="12.5"
+                  >
+                    {stop.name}
+                  </text>
+                </>
+              ) : (
                 <text
-                  className="map__pill-text"
-                  x={box.textX}
-                  y={box.textY}
-                  textAnchor="middle"
-                  fontSize="12.5"
+                  className="map__label"
+                  x={label.textX}
+                  y={label.textY}
+                  textAnchor={label.anchor}
+                  fontSize="11.5"
+                  strokeWidth="3.5"
                 >
                   {stop.name}
                 </text>
-              </g>
-            );
-          }
-          if (!allNames) return null;
-          const spot = halo(stop);
-          return (
-            <g key={stop.id} transform={placeAt(stop, unit)}>
-              <text
-                className="map__label"
-                x={spot.x}
-                y={spot.y}
-                textAnchor={spot.anchor}
-                fontSize="11.5"
-                strokeWidth="3.5"
-              >
-                {stop.name}
-              </text>
+              )}
             </g>
           );
         })}{" "}
