@@ -76,7 +76,6 @@ test("METRO-106 shellPaths: the page first as /, then built and public files, ne
       "/assets/index-a1.css",
       "/assets/index-a1.js",
       "/assets/x-b2.js",
-      "/favicon.ico",
       "/icons/icon-192.png",
       "/manifest.webmanifest",
       "/theme-boot.js",
