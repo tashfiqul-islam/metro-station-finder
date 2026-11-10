@@ -6,11 +6,11 @@ Date: 2026-11-10. Base: `c74d80c` (`feature/metro-rebuild`). Head: the tip of `t
 
 | Bucket (limit raw / gzip)             | Base `c74d80c`   | This change      | Change      |
 | ------------------------------------- | ---------------- | ---------------- | ----------- |
-| First-visit JS (250,000 / 80,000)     | 235,483 / 74,210 | 235,483 / 74,211 | 0 / +1      |
+| First-visit JS (250,000 / 80,000)     | 235,483 / 74,210 | 235,483 / 74,210 | 0 / 0       |
 | First-visit CSS (20,000 / 6,000)      | 14,125 / 3,965   | 14,118 / 3,957   | -7 / -8     |
-| Lazy screen Nearby (120,000 / 30,000) | 92,206 / 23,189  | 92,765 / 23,447  | +559 / +258 |
-| Shared lazy (27,000 / 12,000)         | 20,389 / 9,160   | 20,389 / 9,158   | 0 / -2      |
-| Worker (6,000 / 2,800)                | 3,962 / 1,789    | 3,962 / 1,784    | 0 / -5      |
+| Lazy screen Nearby (120,000 / 30,000) | 92,206 / 23,189  | 92,767 / 23,448  | +561 / +259 |
+| Shared lazy (27,000 / 12,000)         | 20,389 / 9,160   | 20,389 / 9,157   | 0 / -3      |
+| Worker (6,000 / 2,800)                | 3,962 / 1,789    | 3,962 / 1,783    | 0 / -6      |
 
 No limit was changed. The map code and `map.css` live in the lazy Nearby screen; only `shell.css` (frame insets) is in the entry.
 
@@ -19,7 +19,7 @@ No limit was changed. The map code and `map.css` live in the lazy Nearby screen;
 - `shell.css`: the phone map frame is `top: 64px; left: 0; right: 0`, ending 8 px above the sheet (it already followed `--sheet-h`). Desktop frame unchanged.
 - `map.css`: `overflow: visible` on the svg, `vector-effect: non-scaling-stroke` on the line strokes, plane rules removed, a last-in-file `forced-colors: active` block, controls offset for the new frame.
 - `LineMap.tsx`, `use-map-view.ts`, `view.ts`: pins, labels and the position marker sit in `g` elements scaled by `unitsPerPixel` (a `ResizeObserver` reports the box); halo labels only from `LABELS_ZOOM`; the four planes are removed.
-- `tokens-map.css`: the two plane tokens removed (no contrast pair used them).
+- `tokens-map.css`: the two plane tokens removed. `scripts/design-contrast.ts` listed them as backdrops a translucent surface is judged over; with the planes gone, the real backdrops are `map-bg` and `bg`, so the list is those two. All 23 contrast tests pass unchanged (the handoff figures are the same), so no threshold or expected figure moved.
 
 ## Acceptance (Repo-verified unless marked)
 

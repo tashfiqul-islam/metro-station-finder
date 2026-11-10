@@ -81,8 +81,8 @@ export function unitsPerPixel(view: View, size: Pick<Rect, "width" | "height">):
   return scale > 0 ? 1 / scale : 1;
 }
 
-/** Zoom from which every station name is drawn; below it (the fit view) only the termini and the marked stations are. */
-export const LABELS_ZOOM = ZOOM_STEP;
+/** Zoom from which every station name is drawn; equal to one zoom step; below it (the fit view) only the termini and the marked stations are. */
+export const LABELS_ZOOM = 1.5;
 
 /** A client point in map units, allowing for the margin `meet` leaves on one axis. */
 export function toMap(view: View, rect: Rect, clientX: number, clientY: number): Point {

@@ -154,7 +154,7 @@ export function withReducedTransparency(tokens: Tokens, overrides: Tokens): Toke
   return { ...tokens, ...Object.fromEntries(resolved) };
 }
 
-const BACKDROPS = ["map-bg", "map-plane-1", "map-plane-2", "bg"] as const;
+const BACKDROPS = ["map-bg", "bg"] as const;
 const ON_PANEL = ["raised", "muted", "muted-2", "accent-soft"] as const;
 
 const colorOf = (tokens: Tokens, name: string): Rgba => {
