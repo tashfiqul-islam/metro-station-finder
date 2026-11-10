@@ -26,8 +26,12 @@ const NAME: Record<Preference, string> = { system: "System", light: "Light", dar
  * Waits until the page has fully taken `theme` and is idle: the button names it, `<html>` carries it (System
  * means no `data-theme`) and the reveal is over (`html.vt-theme` is removed when the View Transition
  * finishes, about 560 ms after the press; METRO-119 flake). The name changes in the first frame of a press,
- * while the reveal's overlay still covers the page, so a click made on the name alone can land during the
- * previous reveal and be lost (seen once in WebKit CI: the name stayed on Dark for the whole 5 s).
+ * while the reveal's overlay still covers the page. Confirmed (Playwright 1.64 WebKit 27.2, Chromium and
+ * Firefox, reveal slowed to 8 s): while `html.vt-theme` is set, `document.elementFromPoint` at the button's
+ * centre returns `<html>`, a real `page.mouse.click` there changes nothing, and `locator.click` waits. Inferred
+ * (not reproduced): that this swallowed one press in the WebKit CI failure, where the name stayed on Dark for
+ * the whole 5 s, through a gap between Playwright's hit-target check and the press. `pointer-events: none` on
+ * the `::view-transition` pseudo-elements does not lift the overlay in Chromium or WebKit.
  */
 async function settled(page: Page, theme: Preference): Promise<void> {
   const root = page.locator("html");
