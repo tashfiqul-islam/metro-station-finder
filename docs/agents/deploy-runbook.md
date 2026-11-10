@@ -48,6 +48,12 @@ The config sets top-level `workers_dev: false` and leaves `preview_urls` unset (
 
 The domain cutover is its own owner-authorized step ([cutover runbook](cutover-runbook.md) step 4). Connect it to the Worker `metro-scaffold`, then confirm `https://<domain>/` serves the app and an unknown `/api/x` answers the 404 envelope.
 
+Redirect www to the apex (METRO-127, live; created through the Cloudflare API on the owner's request and verified with curl). Zone `metro-station-finder.com`, Redirect Rules ruleset `ab1a6ccc5ea3440fb18d9e42216de457` (phase `http_request_dynamic_redirect`), rule `0d1a854ae4084756b2fc142c2ca26e1f`: requests whose host is `www.metro-station-finder.com` get a 301 to `https://metro-station-finder.com` with the path and query preserved. The apex is canonical (`scripts/site-origin.ts`).
+
+- Keep `www.metro-station-finder.com` attached to the Worker `metro-scaffold` as well as the apex. Both names are attached today; do not detach www when changing domains, and re-run the check after any domain change.
+- Check (read-only): `curl.exe -sI https://www.metro-station-finder.com/` shows `301` and `location: https://metro-station-finder.com/`.
+- Rollback (Cloudflare write, owner only): in the dashboard open the zone, Rules, Redirect Rules, and disable the rule (toggle) or delete it. Through the API, update or delete that single rule by its rule id inside ruleset `ab1a6ccc5ea3440fb18d9e42216de457`; do not replace or delete the whole ruleset, which would drop any other redirect rules. After disabling, www serves the Worker directly (it stays attached, as above).
+
 ## 5. Check the settings, then switch the workflow on (last)
 
 First run the read-only settings check. It makes nine `gh api` GET calls and changes nothing; it must print only `PASS` lines and exit 0 before you set the variable. A repository-level Cloudflare secret or variable would let a run in an unprotected, auto-created `production` environment proceed, which is why the check fails on one.
@@ -136,4 +142,4 @@ curl.exe -s https://metro-station-finder.com/ | Select-String 'og:image|canonica
 
 - Not served from the service worker: the worker ignores the path and the build excludes it from the precache, so in a browser the request must show no "(ServiceWorker)" label in the Network panel.
 - Owner step, the only real proof the card works: paste the page URL once into the Facebook Sharing Debugger and the LinkedIn Post Inspector, and confirm the 1200 x 630 image and alt text appear. Scrapers cache, so use their "scrape again" button after a change.
-- `https://www.metro-station-finder.com/` must answer a 301 to the apex. The redirect is tracked in a separate ticket and is not part of this change.
+- `https://www.metro-station-finder.com/` answers a 301 to the apex. The redirect is live (METRO-127; rule in step 4). Check: `curl.exe -sI https://www.metro-station-finder.com/` must show `301` and `location: https://metro-station-finder.com/`.
