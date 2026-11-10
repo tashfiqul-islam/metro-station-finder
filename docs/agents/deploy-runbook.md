@@ -124,3 +124,16 @@ mise exec -- bunx wrangler rollback <version-id> --name metro-scaffold --message
 A rollback does not change bindings or stored data ([Cloudflare](https://developers.cloudflare.com/workers/versions-and-deployments/rollbacks/), Web-verified 2026-11-05). It does not undo the GitHub deployment record; if the release must be retracted, follow the rollback section of the [cutover runbook](cutover-runbook.md).
 
 The first real run proves these Unverified points; if a step fails the job stops or rolls back, and the fix is a reviewed change to the workflow or `scripts/production.ts`: the live JSON of `wrangler deployments status --json` (the parser `currentVersionId` follows the installed Wrangler source and fails closed on anything else), that `versions deploy` accepts `@0%`, that the version override also selects the static asset set for `/`, and that the token has every permission it needs. Live verification with a throwaway tag is not part of METRO-57.
+
+## 8. Share image check (METRO-122, after the first deploy and after any change to `apps/web/brand/og-default.svg`)
+
+The share image is served at `https://metro-station-finder.com/og/og-default.png` (apex, canonical; the origin is one constant in `scripts/site-origin.ts`). Until the first production deploy that URL answers with the old scaffold or a 404. After a deploy:
+
+```powershell
+curl.exe -sI https://metro-station-finder.com/og/og-default.png            # expect 200 and content-type: image/png
+curl.exe -s https://metro-station-finder.com/ | Select-String 'og:image|canonical|og:url'   # all three on https://metro-station-finder.com
+```
+
+- Not served from the service worker: the worker ignores the path and the build excludes it from the precache, so in a browser the request must show no "(ServiceWorker)" label in the Network panel.
+- Owner step, the only real proof the card works: paste the page URL once into the Facebook Sharing Debugger and the LinkedIn Post Inspector, and confirm the 1200 x 630 image and alt text appear. Scrapers cache, so use their "scrape again" button after a change.
+- `https://www.metro-station-finder.com/` must answer a 301 to the apex. The redirect is tracked in a separate ticket and is not part of this change.

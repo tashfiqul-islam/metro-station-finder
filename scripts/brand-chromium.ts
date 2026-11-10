@@ -6,8 +6,8 @@ import { isRecord } from "./guards.ts";
  * of the build script use a fake.
  */
 export interface Rasteriser {
-  /** Renders an SVG at `size` x `size` pixels on a transparent background and returns the PNG bytes. */
-  render(svg: string, size: number): Promise<Uint8Array>;
+  /** Renders an SVG at `width` x `height` pixels (square when `height` is omitted) on a transparent background and returns the PNG bytes. */
+  render(svg: string, width: number, height?: number): Promise<Uint8Array>;
   /** Largest per-channel difference between two decoded PNGs, or -1 when their sizes differ. */
   largestDifference(a: Uint8Array, b: Uint8Array): Promise<number>;
   close(): Promise<void>;
@@ -79,14 +79,14 @@ export async function chromiumRasteriser(browserType?: BrowserType): Promise<Ras
   const browser = await (browserType ?? (await loadChromium())).launch();
   const page = await browser.newPage();
   return {
-    async render(svg, size) {
-      await page.setViewportSize({ width: size, height: size });
+    async render(svg, width, height = width) {
+      await page.setViewportSize({ width, height });
       await page.setContent(
         `<html><body style="margin:0;background:transparent">${svg}</body></html>`,
       );
       return page.screenshot({
         omitBackground: true,
-        clip: { x: 0, y: 0, width: size, height: size },
+        clip: { x: 0, y: 0, width, height },
       });
     },
     async largestDifference(a, b) {

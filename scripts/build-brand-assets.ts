@@ -41,10 +41,17 @@ export async function samePixels(
 interface PngJob {
   readonly out: string;
   readonly source: string;
+  /** Pixel width, and the height too unless `height` is given. */
   readonly size: number;
+  /** Set only for a non-square output (the share image). */
+  readonly height?: number;
 }
 
-/** Each PNG: the master it is drawn from and its pixel size. The apple-touch icon is opaque and full-bleed. */
+/**
+ * Each PNG: the master it is drawn from and its pixel size. The apple-touch icon is opaque and full-bleed. The
+ * share image (METRO-122) is the one non-square job: a 1200 x 630 master with outlined text and an opaque
+ * background, drawn at its own size so no pixel is resampled.
+ */
 export const PNG_JOBS: readonly PngJob[] = [
   { out: "apple-touch-icon.png", source: "apple-touch-icon.svg", size: 180 },
   { out: "icons/icon-192.png", source: "app-icon.svg", size: 192 },
@@ -52,6 +59,7 @@ export const PNG_JOBS: readonly PngJob[] = [
   { out: "icons/icon-maskable-192.png", source: "app-icon-maskable.svg", size: 192 },
   { out: "icons/icon-maskable-512.png", source: "app-icon-maskable.svg", size: 512 },
   { out: "icons/icon-monochrome-512.png", source: "icon-monochrome.svg", size: 512 },
+  { out: "og/og-default.png", source: "og-default.svg", size: 1200, height: 630 },
 ];
 
 /** The ICO holds a 16 and a 32 drawn from the micro mark and a 48 from the small mark. */
@@ -165,26 +173,27 @@ export const NO_SIZE_PAIR = "SVG master has no width and height pair to resize";
 
 const SIZE_PAIR = /width="\d+(\.\d+)?" height="\d+(\.\d+)?"/u;
 
-/** Sets the root `width` and `height` so one master renders at any size; throws when there is no pair. */
-export function sized(svg: string, size: number): string {
+/** Sets the root `width` and `height` (square unless `height` is given); throws when there is no pair. */
+export function sized(svg: string, width: number, height = width): string {
   if (!SIZE_PAIR.test(svg)) throw new Error(NO_SIZE_PAIR);
-  return svg.replace(SIZE_PAIR, `width="${size}" height="${size}"`);
+  return svg.replace(SIZE_PAIR, `width="${width}" height="${height}"`);
 }
 
 export type Files = ReadonlyMap<string, Uint8Array>;
 
-/** Renders a master at `size` and fails unless the PNG that comes back really is `size` x `size`. */
+/** Renders a master at `width` x `height` and fails unless the PNG that comes back really has that size. */
 async function raster(
   rasteriser: Rasteriser,
   label: string,
   svg: string,
-  size: number,
+  width: number,
+  height = width,
 ): Promise<Uint8Array> {
-  const png = await rasteriser.render(sized(svg, size), size);
+  const png = await rasteriser.render(sized(svg, width, height), width, height);
   const info = imageSize(png);
   const [only] = info?.sizes ?? [];
-  if (info?.format !== "png" || only?.width !== size || only.height !== size) {
-    throw new Error(`${label} was not rendered as a ${size}x${size} PNG`);
+  if (info?.format !== "png" || only?.width !== width || only.height !== height) {
+    throw new Error(`${label} was not rendered as a ${width}x${height} PNG`);
   }
   return png;
 }
@@ -199,7 +208,10 @@ export async function buildAssets(
   out.set("robots.txt", text(ROBOTS_TXT));
   out.set("manifest.webmanifest", text(MANIFEST_JSON));
   for (const job of PNG_JOBS) {
-    out.set(job.out, await raster(rasteriser, job.out, await read(job.source), job.size));
+    out.set(
+      job.out,
+      await raster(rasteriser, job.out, await read(job.source), job.size, job.height),
+    );
   }
   const icons: { size: number; png: Uint8Array }[] = [];
   for (const job of ICO_JOBS) {

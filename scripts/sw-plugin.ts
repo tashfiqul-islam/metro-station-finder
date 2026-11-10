@@ -30,6 +30,9 @@ const NOT_SHELL = new Set([
   "icons/icon-maskable-192.png",
   "icons/icon-maskable-512.png",
   "icons/icon-monochrome-512.png",
+  // The share image is fetched by link-preview crawlers, never by the app: about 0.5 MB the shell must not
+  // download or serve from a worker (METRO-122).
+  "og/og-default.png",
   "_headers",
   ".assetsignore",
   "robots.txt",
