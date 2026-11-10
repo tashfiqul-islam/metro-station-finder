@@ -278,8 +278,9 @@ test.describe("nearest station from a searched place (METRO-88)", () => {
   test("METRO-114 A6 in the plain phase the keyboard reaches the plain input, which draws a focus indicator", async ({
     page,
   }) => {
-    // The script is held back for the whole walk, so the plain input stays in place while Tab passes it.
-    await openSlice(page, { scriptDelayMs: 25_000 });
+    // The script is held for the whole walk (never released here; closing the page lets it go), so the plain
+    // input stays in place while Tab passes it.
+    await openSlice(page, { holdScript: true });
     await expect(plainSearch(page)).toBeVisible();
     const shell = (await shellControls(page)) + 4;
     await expectTabReachesEveryControl(page, { expected: shell + 3 });

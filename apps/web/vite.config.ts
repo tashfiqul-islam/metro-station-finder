@@ -3,6 +3,7 @@ import babel from "@rolldown/plugin-babel";
 import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import { build, defineConfig } from "vite";
 
+import { siteOriginPlugin } from "../../scripts/site-origin.ts";
 import { smokePort } from "../../scripts/smoke-port.ts";
 import { serviceWorkerPlugin, type WorkerConfig } from "../../scripts/sw-plugin.ts";
 
@@ -38,6 +39,8 @@ export default defineConfig({
   // names reach the client bundle, so the other secrets in that file stay out of it.
   envDir: "../..",
   plugins: [
+    // %SITE_ORIGIN% in index.html becomes the one origin constant (METRO-122).
+    siteOriginPlugin(),
     react(),
     babel({ presets: [reactCompilerPreset()] }),
     cloudflare({ configPath: "../api/wrangler.jsonc" }),
