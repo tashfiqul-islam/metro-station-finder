@@ -100,14 +100,34 @@ test("METRO-115 the layout is deterministic: the same input gives the same label
   expect([...second]).toEqual([...first]);
 });
 
-test("METRO-115 above is the last side tried for a pill, and a halo label never goes above", () => {
+const crowdStop = (id: string, name: string, placement: LineStop["placement"]): LineStop => ({
+  id: stationId(id),
+  name,
+  x: 300,
+  y: 300,
+  terminus: false,
+  placement,
+});
+
+test("METRO-115 above is the last side tried, for a pill and for a halo label", () => {
   const marked = ["farmgate", "karwan-bazar", "bijoy-sharani"].map(stationId);
   const pills = [...layoutLabels(STOPS, marked, false, 400).values()];
   expect(Math.min(...pills.map((label) => label.y))).toBe(-44);
-  for (const unit of [0.8, 3, 8, 20]) {
-    const halos = [...layoutLabels(STOPS, [], true, unit).values()].filter(
-      (label) => label.kind === "halo",
-    );
-    expect(Math.min(...halos.map((label) => label.y))).toBeGreaterThanOrEqual(-10);
-  }
+  // Three marked stations on one spot take the right, left and below of a halo label there: it goes above.
+  const crowd = [
+    crowdStop("b1", "B1", "right"),
+    crowdStop("b2", "B2", "left"),
+    crowdStop("b3", "B3", "below"),
+  ];
+  const labels = layoutLabels(
+    [...crowd, crowdStop("halo", "A", "right")],
+    crowd.map((s) => s.id),
+    true,
+    1,
+  );
+  const halo = labels.get(stationId("halo"));
+  expect(halo?.kind).toBe("halo");
+  expect(halo?.y).toBe(-20);
+  expect(halo?.textY).toBe(-10);
+  expect(halo?.anchor).toBe("middle");
 });

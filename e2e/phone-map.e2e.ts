@@ -136,6 +136,7 @@ async function pick(page: Page, name: string): Promise<void> {
 /**
  * True once the map has laid out for its current frame: the frame ends 8 px above the sheet and the pin groups
  * carry the scale of the frame's size (what the ResizeObserver reported), so nothing is read from a stale layout.
+ * The 470 and 880 are the fit view's size (`FIT_VIEW` in `projection.ts`): change them with the view box.
  */
 const laidOut = (page: Page) =>
   page.evaluate(() => {
@@ -384,3 +385,16 @@ for (const size of SIZES) {
     expect(ring.offset + ring.width).toBeLessThanOrEqual(0);
   });
 }
+
+test("METRO-115 under reduced motion the full sheet hides the map at once: no transition delay", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const map = await open(page, { width: 390, height: 844 });
+  await setSnap(page, "full");
+  await expect(map).toBeHidden();
+  const delay = await page
+    .locator(".app__map-frame")
+    .evaluate((node) => getComputedStyle(node).transitionDelay);
+  expect(Number.parseFloat(delay)).toBe(0);
+});

@@ -24,7 +24,7 @@
 - Easier: label size no longer depends on the sheet or the window; the rule needs no per-snap code.
 - Harder: every new fixed-size drawing goes in a scaled group and, if it is a label, in `layoutLabels`. Labels are placed against each other only, not against pins or the user marker.
 - Unverified: real phone behaviour (touch, safe areas, dynamic toolbars; the owner checks in METRO-121); the user-position pulse (`transform-box: fill-box` on a circle inside a scaled group) is not covered by a test.
-- `map.css` and `LineMap.tsx` are in the lazy Nearby screen; only `shell.css` is in the entry (the frame insets and the full-sheet hide: +104 raw / +14 gzip CSS bytes, measured).
+- `map.css` and `LineMap.tsx` are in the lazy Nearby screen; only `shell.css` is in the entry (the frame insets and the full-sheet hide: +146 raw / +27 gzip CSS bytes against the base, measured; the focus effect in `AppShell.tsx` adds 165 raw / 52 gzip JS bytes).
 
 ## Alternatives considered
 
