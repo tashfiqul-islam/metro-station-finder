@@ -203,6 +203,28 @@ test("METRO-105 dragging writes --sheet-h through the CSSOM, marks the panel and
   expect(app(container).getAttribute("data-snap")).toBe("full");
 });
 
+test("METRO-126 a press and release under the drag threshold changes no snap and its click still cycles", () => {
+  const { container } = render(<AppShell>x</AppShell>);
+  pointer("pointerdown", { clientY: 500 });
+  pointer("pointermove", { clientY: 498 });
+  pointer("pointerup", { clientY: 498 });
+  expect(app(container).getAttribute("data-snap")).toBe("half");
+  fireEvent.click(grip());
+  expect(app(container).getAttribute("data-snap")).toBe("full");
+});
+
+test("METRO-126 ending a drag removes only the sheet height and keeps another inline style on the shell", () => {
+  const { container } = render(<AppShell>x</AppShell>);
+  app(container).style.setProperty("--probe", "1");
+  pointer("pointerdown", { clientY: 500 });
+  pointer("pointermove", { clientY: 400 });
+  expect(app(container).style.getPropertyValue("--sheet-h")).toBe("590px");
+  pointer("pointercancel", { clientY: 400 });
+  expect(app(container).style.getPropertyValue("--sheet-h")).toBe("");
+  expect(app(container).style.getPropertyValue("--probe")).toBe("1");
+  expect(app(container).hasAttribute("style")).toBe(true);
+});
+
 test("METRO-105 a drag down to the bottom snaps to peek and a tap after a drag works again", () => {
   const { container } = render(<AppShell>x</AppShell>);
   pointer("pointerdown", { clientY: 100 });

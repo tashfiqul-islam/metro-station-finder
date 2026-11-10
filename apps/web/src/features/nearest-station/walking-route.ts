@@ -61,7 +61,8 @@ export function useWalkingRoute(
     const { pending } = requested.current;
     let current = true;
     const timer = setTimeout(() => {
-      if (current) setResult({ key, route: null });
+      // Cleanup and every answer clear this timer, so it only ever fires for a request still wanted.
+      setResult({ key, route: null });
       current = false;
     }, ROUTE_WATCHDOG_MS);
     void (async () => {

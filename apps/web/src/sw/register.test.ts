@@ -348,6 +348,24 @@ test("METRO-106 offline, nothing is registered now; the registration runs once, 
   expect(document.querySelectorAll("[role=status]")).toHaveLength(1);
 });
 
+test("METRO-126 a registration that fails once the connection returns is swallowed and shows no prompt", async () => {
+  const { container, env, online, onlineTasks } = setup();
+  online.value = false;
+  await registerWorker(container, env);
+  const attempts = vi.fn(() => Promise.reject(new Error("registration refused")));
+  container.register = attempts;
+  online.value = true;
+  onlineTasks[0]?.();
+  await vi.waitFor(() => {
+    expect(attempts).toHaveBeenCalledTimes(1);
+  });
+  // Vitest fails the run on an unhandled rejection, so reaching here proves the failure was caught.
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, 0);
+  });
+  expect(document.querySelector("[role=status]")).toBeNull();
+});
+
 test("METRO-106 the default online hook listens for the window's online event once", async () => {
   const container = new FakeContainer();
   vi.stubGlobal("navigator", { serviceWorker: container, onLine: false });
