@@ -51,7 +51,7 @@ test("METRO-34 step 6.4 keeps the phrase the base-branch gate reads, so the gate
   const fixtureDocs = {
     "CONTRIBUTING.md": "Open pull requests against `main` now.\n",
     "docs/agents/workflow.md": "Owner requires ticket PRs target `main`.\n",
-    "docs/agents/plane.md": "Ticket merges target `main`.\n",
+    "docs/agents/tracker.md": "Ticket merges target `main`.\n",
   };
   const { mkdtemp, mkdir, writeFile, rm } = await import("node:fs/promises");
   const { tmpdir } = await import("node:os");
@@ -86,7 +86,7 @@ test("METRO-34 the quality-gates push-trigger dependency is documented", () => {
 const BASE_BRANCH_DOCUMENTS = [
   "CONTRIBUTING.md",
   "docs/agents/workflow.md",
-  "docs/agents/plane.md",
+  "docs/agents/tracker.md",
   "docs/development.md",
   "docs/agents/maintenance.md",
 ];
@@ -106,7 +106,7 @@ test("METRO-61 the runbook says Renovate needs no edit at the flip and why", () 
 test("METRO-61 every base-branch document points at the cutover runbook", () => {
   for (const file of BASE_BRANCH_DOCUMENTS)
     expect(read(file), file).toContain("cutover-runbook.md");
-  for (const file of ["CONTRIBUTING.md", "docs/agents/workflow.md", "docs/agents/plane.md"])
+  for (const file of ["CONTRIBUTING.md", "docs/agents/workflow.md", "docs/agents/tracker.md"])
     expect(read(file), file).toContain("step 6.4");
 });
 

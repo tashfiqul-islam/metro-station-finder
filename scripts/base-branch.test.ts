@@ -10,7 +10,7 @@ const CONTRIBUTING = (branch: string) =>
   `Open pull requests against \`${branch}\` using the template.\n`;
 const WORKFLOW = (branch: string) =>
   `Owner currently requires ticket PRs target \`${branch}\`. Merge later.\n`;
-const PLANE = (branch: string) => `Ticket merges target \`${branch}\`; owner-authorized.\n`;
+const TRACKER = (branch: string) => `Ticket merges target \`${branch}\`; owner-authorized.\n`;
 
 async function fixture(files: Record<string, string>): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), "metro-base-branch-"));
@@ -22,11 +22,11 @@ async function fixture(files: Record<string, string>): Promise<string> {
   return root;
 }
 
-function docs(contributing: string, workflow: string, plane: string): Record<string, string> {
+function docs(contributing: string, workflow: string, tracker: string): Record<string, string> {
   return {
     "CONTRIBUTING.md": CONTRIBUTING(contributing),
     "docs/agents/workflow.md": WORKFLOW(workflow),
-    "docs/agents/plane.md": PLANE(plane),
+    "docs/agents/tracker.md": TRACKER(tracker),
   };
 }
 
@@ -34,7 +34,7 @@ afterEach(async () => {
   for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
 });
 
-test("METRO-34 passes when CONTRIBUTING, workflow and plane name the same base branch", async () => {
+test("METRO-34 passes when CONTRIBUTING, workflow and tracker name the same base branch", async () => {
   const root = await fixture(
     docs("feature/metro-rebuild", "feature/metro-rebuild", "feature/metro-rebuild"),
   );
@@ -49,7 +49,7 @@ test("METRO-34 fails and names every file when the documents name different base
   expect(text).toContain("CONTRIBUTING.md");
   expect(text).toContain("main");
   expect(text).toContain("docs/agents/workflow.md");
-  expect(text).toContain("docs/agents/plane.md");
+  expect(text).toContain("docs/agents/tracker.md");
   expect(text).toContain("feature/metro-rebuild");
 });
 
@@ -61,10 +61,10 @@ test("METRO-34 passes when all three move together to main", async () => {
 test("METRO-34 fails visibly when a document no longer states its base branch", async () => {
   const root = await fixture({
     ...docs("main", "main", "main"),
-    "docs/agents/plane.md": "Nothing about branches here.\n",
+    "docs/agents/tracker.md": "Nothing about branches here.\n",
   });
   const text = (await checkBaseBranches(root)).join("\n");
-  expect(text).toContain("docs/agents/plane.md");
+  expect(text).toContain("docs/agents/tracker.md");
   expect(text).toContain("does not state");
 });
 

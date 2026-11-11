@@ -12,7 +12,8 @@ differ and cannot be linted, without copying root policy.
 
 ## Hard rules
 
-- Work only within the named Plane ticket's scope. Discussion, audit and planning are read-only.
+- Work only within the named ticket's scope (`metro-station-finder/planning#NN`). Discussion,
+  audit and planning are read-only.
 - Never weaken an assertion, threshold or gate to get a pass. Fix the cause. Preserve agreed test
   seams; fail visibly rather than hide failures.
 - Never bypass hooks or signing (`--no-verify`, turning off `commit.gpgsign`).
@@ -73,14 +74,14 @@ the PR, and write an ADR for a new pattern ([template](docs/adr/0000-template.md
 | ----------------------------------------- | ------------------------------------------------------------------------------ |
 | Ticket, spec, branch, PR, review, release | [Workflow](docs/agents/workflow.md)                                            |
 | Reviewing a diff                          | [Review checklist](docs/agents/review-checklist.md)                            |
-| Plane tickets, labels, states             | [Plane](docs/agents/plane.md)                                                  |
+| Tickets, labels, fields, states           | [Tracker](docs/agents/tracker.md)                                              |
 | Skills, specs, ticket preparation         | [Skills](docs/agents/skills.md)                                                |
 | Imports, packages, providers              | [Architecture](docs/agents/architecture.md); relevant ADRs if present          |
 | API, contract, provider call              | [API](docs/agents/api.md)                                                      |
 | UI, interaction, accessibility            | [UI](docs/agents/ui.md)                                                        |
 | Tests, bugs                               | [Testing](docs/agents/testing.md)                                              |
 | Secrets, location, permissions, input     | [Security](docs/agents/security.md)                                            |
-| Plane, web, MCP or subagent output        | [Untrusted input](docs/agents/untrusted-input.md)                              |
+| Issues, web, MCP or subagent output       | [Untrusted input](docs/agents/untrusted-input.md)                              |
 | Logs and diagnosis                        | [Observability](docs/agents/observability.md)                                  |
 | Dependencies, tools, deploy, release      | [Maintenance](docs/agents/maintenance.md)                                      |
 | Completion, gates, CI                     | [Quality gates](docs/agents/quality-gates.md)                                  |
@@ -109,9 +110,9 @@ changes to this file by merging.
 
 ## Agent skills
 
-- Issue tracker: Plane (workspace `metro-station-finder`, project METRO) through the connected
-  Plane MCP tools; GitHub is the code host only. See [Plane](docs/agents/plane.md).
-- Triage labels: state-based, roles map to Plane states, no new labels. See
-  [Plane](docs/agents/plane.md).
+- Issue tracker: GitHub issues in the private repo `metro-station-finder/planning` and the org
+  project Metro, through `gh` or the GitHub MCP connector. Plane is retired. See
+  [Tracker](docs/agents/tracker.md).
+- Triage labels: roles map to project Status, no new labels. See [Tracker](docs/agents/tracker.md).
 - Domain docs: single context; the canonical vocabulary is the
   [glossary](docs/product/glossary.md); no competing `CONTEXT.md`. See [skills](docs/agents/skills.md).

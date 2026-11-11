@@ -6,14 +6,14 @@ Read when: preparing or implementing a ticket, opening or reviewing a PR, commit
 
 ### Preparation
 
-- Keep research, settled specification, ticket preparation and implementation separate: settle domain terms, spec and test seams, then create bounded tickets with [skills](skills.md), the [Plane adapter](plane.md) and the [specification](../templates/specification.md) and [ticket](../templates/plane-ticket.md) templates.
+- Keep research, settled specification, ticket preparation and implementation separate: settle domain terms, spec and test seams, then create bounded tickets with [skills](skills.md), the [tracker](tracker.md) and the [specification](../templates/specification.md) and [ticket](../templates/ticket.md) templates.
 - Ready needs a linked settled spec or decision, a bounded independently verifiable slice, failure and boundary acceptance checks that can fail on base, blocker relations, required tools and data, a check plan and no material unknowns. Open blockers keep it in Backlog. Ready is state, not label.
 
 ### Execution
 
 - Backlog captures scope; Specifying settles it; Ready records readiness; explicit authorization starts work; In Progress is implementation; In Review carries the PR and evidence; Done needs a verified merge to `main` unless the integration rule below applies; Cancelled gives a reason and replacement.
 - One fresh-session outcome per ticket and PR, in an isolated worktree; keep explicit exclusions, no unrelated cleanup. Record base, head, commands, results, unrun checks, review disposition and gaps. One implementation and one review per agent is guidance, not enforced WIP.
-- Owner rule: ticket PRs target `feature/metro-rebuild`; merge only under explicit ticket authorization. For authorized rebuild tickets Done follows a verified merge there with required CI and resolved review (overrides the main-only rule); flag premature automatic Done. The default base stays until v1.0.0 is ready and changes only at [runbook](cutover-runbook.md) step 6.4, with CONTRIBUTING.md and plane.md. Done is not released: that needs a tag, its SHA and deployment smoke evidence.
+- Owner rule: ticket PRs target `feature/metro-rebuild`; merge only under explicit ticket authorization. For authorized rebuild tickets Done follows a verified merge there with required CI and resolved review (overrides the main-only rule); flag premature automatic Done. The default base stays until v1.0.0 is ready and changes only at [runbook](cutover-runbook.md) step 6.4, with CONTRIBUTING.md and tracker.md. Done is not released: that needs a tag, its SHA and deployment smoke evidence.
 - Never merge the base into an open PR speculatively; update only when GitHub reports it behind and you are about to merge, preferably with server-side "Update branch". Its merge commits satisfy the signed-commits rule: GitHub signs web commits ([Web-verified](https://docs.github.com/en/authentication/managing-commit-signature-verification/about-commit-signature-verification)); #129 to #131 (2026-11-10) show them `verified` (Repo-verified).
 - The PR body is the record; write a `docs/evidence/` file only for investigations, measurements or decisions later docs cite.
 
@@ -41,7 +41,7 @@ Read when: preparing or implementing a ticket, opening or reviewing a PR, commit
 
 - `scripts/reviewer-record.ts` (`Reviewer record` workflow): fails a PR without that record.
 - `scripts/commit-message.ts`: rejects non-Conventional subjects and a `Signed-off-by` with an AI-agent address; names are not matched, no trailer is required. Extend its identity list only with a test.
-- `scripts/base-branch.ts` (`branches:check`): fails when CONTRIBUTING.md, this file and plane.md name different bases.
+- `scripts/base-branch.ts` (`branches:check`): fails when CONTRIBUTING.md, this file and tracker.md name different bases.
 - `validateTag` (`scripts/release-sync.ts`): fails a tag that breaks the grammar.
 
 ## Read more

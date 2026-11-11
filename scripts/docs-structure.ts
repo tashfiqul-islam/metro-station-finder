@@ -3,7 +3,7 @@
  * and a Map table of `path | kind` rows. Every file under docs/ must match a map row, every row
  * must match a file, every row's kind must be in the Kinds table, every kind in the Kinds table
  * must be used by a row, and specifications carry no implementation checklist (work tracking lives
- * in Plane). Pure functions over text so each rule can be proven on synthetic input.
+ * in the tracker). Pure functions over text so each rule can be proven on synthetic input.
  *
  * Limits (textual checks, not a Markdown parser): a task item indented four or more spaces is still
  * counted (it is usually a nested list item, but an indented code block would be a false positive);
@@ -95,7 +95,7 @@ export function checklistProblems(text: string): string[] {
       continue;
     }
     if (TASK_ITEM.test(line))
-      problems.push(`line ${index + 1}: implementation checklist item; track work in Plane`);
+      problems.push(`line ${index + 1}: implementation checklist item; track work in the tracker`);
   }
   if (fence) problems.push(`line ${fence.line}: unclosed fence; the rest of the file is unchecked`);
   return problems;

@@ -40,22 +40,22 @@ First cell is a path: a trailing `/` covers a directory, otherwise it is one fil
 | `docs/product/`                          | reference | legacy parity, glossary and the brand and install assets note               |
 | `docs/development.md`                    | reference | local workspace facts                                                       |
 | `docs/design/handoff/`                   | reference | owner design handoff, reference only, never shipped or imported             |
-| `docs/templates/`                        | template  | specification and Plane ticket forms                                        |
+| `docs/templates/`                        | template  | specification and ticket forms                                              |
 | `docs/examples/`                         | example   | synthetic preparation and untrusted-input fixtures                          |
 | `docs/superpowers/plans/`                | history   | dated task plans; their task lists are frozen history                       |
 
-## Ownership: code, docs, Plane, git
+## Ownership: code, docs, tracker, git
 
 - **Code owns exact shapes.** Types, schemas, error codes and route tables live in `packages/` and `apps/` (for example `@metro/contracts`). A contract says what must hold and links the file; it does not copy the type. A copy drifts, the code does not.
 - **Docs own intent and rules.** Contracts: what behavior is settled. Decisions: why. Guides: how to work. Evidence: what was observed on which revision.
-- **Plane owns work tracking.** Status, task breakdown, blockers and acceptance progress live in the ticket, not in a document.
+- **The tracker owns work tracking** (issues in `metro-station-finder/planning`). Status, task breakdown, blockers and acceptance progress live in the ticket, not in a document.
 - **Git owns history.** Superseded text is removed from current documents; the old text stays in git. A decision is superseded by a new ADR, never silently edited.
 - **Root `CLAUDE.md` owns routing and guardrails.** Only the repository owner changes it, and it is not described further here.
 
 ## Rules
 
 1. **No copied exact types in specifications.** Name the type or schema and link its file. Write the contract in terms of observable behavior and failure cases.
-2. **No implementation checklists in specifications.** Markdown task-list items (`- [ ]`) are rejected by the check in `docs/specifications/`, including inside blockquotes, but not inside fenced code. Limits: an indented task item (four or more spaces) and one inside an HTML comment are still counted, and an unclosed fence is reported. Work tracking lives in Plane. Templates, Plane ticket forms and frozen `history` plans may contain checklists because they are forms or frozen records, not current contracts.
+2. **No implementation checklists in specifications.** Markdown task-list items (`- [ ]`) are rejected by the check in `docs/specifications/`, including inside blockquotes, but not inside fenced code. Limits: an indented task item (four or more spaces) and one inside an HTML comment are still counted, and an unclosed fence is reported. Work tracking lives in the tracker. Templates, ticket forms and frozen `history` plans may contain checklists because they are forms or frozen records, not current contracts.
 
 ## Naming
 

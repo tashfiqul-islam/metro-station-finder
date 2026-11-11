@@ -4,7 +4,7 @@ Preparation only. Approval of this document does not authorize tracker writes, d
 
 - Identity: [stable specification ID; never reuse for another specification]
 - Revision: [immutable revision or repository SHA]
-- Source: [canonical Plane Page URL; immutable revision reference]
+- Source: [repository path of the settled spec; immutable revision (path@SHA)]
 - Decision owner and approval: [who approved what, date and evidence]
 - Research: [sources, observed facts, inferences and unresolved questions]
 - Domain: [links to canonical glossary, parity requirements and applicable ADRs]
@@ -33,4 +33,4 @@ Repeat for each bounded, independently verifiable vertical slice. Split by obser
 
 ## Readiness record
 
-[Reviewer, reviewed revision, unresolved blockers, acceptance-to-seam mapping and disposition.] Preserve all slice criteria, failure checks, testing seams and blockers in prepared tickets. Use the [Plane adapter](../agents/plane.md) for authorized publication and reconciliation. Use the [local example](../examples/plane-preparation/README.md) to exercise preservation; it does not evaluate research quality or authorize Ready.
+[Reviewer, reviewed revision, unresolved blockers, acceptance-to-seam mapping and disposition.] Preserve all slice criteria, failure checks, testing seams and blockers in prepared tickets. Use the [tracker](../agents/tracker.md) for authorized ticket creation and reconciliation. Use the [local example](../examples/plane-preparation/README.md) to exercise preservation; it does not evaluate research quality or authorize Ready.

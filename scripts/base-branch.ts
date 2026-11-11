@@ -3,7 +3,7 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 /**
- * METRO-34 criterion 3: CONTRIBUTING.md, docs/agents/workflow.md and docs/agents/plane.md must name
+ * METRO-34 criterion 3: CONTRIBUTING.md, docs/agents/workflow.md and docs/agents/tracker.md must name
  * the same pull request base branch. At the default-branch switch all three change in one reviewed
  * edit; this check fails when only some do. Limitation: it proves the documents agree with each
  * other, not that they match GitHub's actual default branch or the Renovate and workflow
@@ -19,7 +19,7 @@ interface Source {
 const SOURCES: readonly Source[] = [
   { file: "CONTRIBUTING.md", phrase: /Open pull requests against `([^`]+)`/gu },
   { file: "docs/agents/workflow.md", phrase: /ticket PRs target `([^`]+)`/gu },
-  { file: "docs/agents/plane.md", phrase: /Ticket merges target `([^`]+)`/gu },
+  { file: "docs/agents/tracker.md", phrase: /Ticket merges target `([^`]+)`/gu },
 ];
 
 /** Returns one message per problem; an empty list means the three documents agree. */
@@ -56,7 +56,7 @@ export async function runBaseBranchCheck(root: string): Promise<void> {
   const problems = await checkBaseBranches(root);
   for (const problem of problems) console.error(problem);
   if (problems.length > 0) process.exitCode = 1;
-  else console.log("Base branch ok: CONTRIBUTING.md, workflow.md and plane.md agree");
+  else console.log("Base branch ok: CONTRIBUTING.md, workflow.md and tracker.md agree");
 }
 
 /** Process entry: checks the repository at the first argument, or the one containing this script. */

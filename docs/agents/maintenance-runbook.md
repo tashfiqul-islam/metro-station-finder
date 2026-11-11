@@ -26,7 +26,7 @@ Accepted checks for this procedure are in `scripts/cloudflare-token-check.test.t
 
 Wrangler 4.156.1 fixed `wrangler types --check` failing on CRLF checkouts (audit row RT-17). Installed when METRO-49 was decided: wrangler 4.156.0, which predates the fix; the newest published was 4.157.0. Bumping was out of scope there ([ADR-0014](../adr/0014-language-level-and-worker-types.md)).
 
-Tracking: Create a Plane ticket when Renovate proposes wrangler >= 4.156.1.
+Tracking: Create a ticket in the [tracker](tracker.md) when Renovate proposes wrangler >= 4.156.1.
 
 Precondition: the checkout must really have CRLF working files, otherwise the re-test proves nothing. `git config core.autocrlf` must print `true`, and `.gitattributes` must not force `eol=lf` for the file. The repository's `.gitattributes` currently has `* text=auto eol=lf`, which does force LF: for the re-test, temporarily use `git -c core.eol=crlf` with an override line `apps/api/worker-configuration.d.ts text eol=crlf` in `.git/info/attributes` (it takes precedence and is not committed). Verify with `git ls-files --eol apps/api/worker-configuration.d.ts`: the working-tree column must read `w/crlf`.
 
