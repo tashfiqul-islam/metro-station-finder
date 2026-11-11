@@ -54,11 +54,12 @@ jobs:
           version: 2026.10.25
           install_args: node
           cache: false # this job holds the tracker App key; never restore a cache into it
-      # Until the pull request that adds the script merges, the base commit has no script to run. Then the job
-      # says so and stops before minting a token, instead of failing; after that merge the script is always there.
-      - name: Note when the base commit has no tracker sync script yet
+      # Only the pull request that adds the script (planning#153) has a base commit without it, on every event
+      # including its merge, so that ticket is moved by hand. The job warns and stops before minting a token.
+      # tracker-sync-workflow.test.ts fails if the script is renamed or deleted, so this never hides a later break.
+      - name: Warn when the base commit has no tracker sync script yet
         if: ${{ hashFiles('scripts/tracker-sync.ts') == '' }}
-        run: echo "::notice::scripts/tracker-sync.ts is not on the base commit yet; nothing synced."
+        run: echo "::warning::scripts/tracker-sync.ts is not on the base commit; nothing synced. Move the ticket by hand."
       - name: Mint a planning token from the tracker App
         id: token
         if: ${{ hashFiles('scripts/tracker-sync.ts') != '' }}

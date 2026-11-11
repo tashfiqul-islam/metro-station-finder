@@ -86,5 +86,5 @@ change GitHub settings):
 
 The token is limited in the workflow to `planning`, Issues write and organization Projects write, and is
 revoked when the job ends. Rotate by generating a new key, replacing the secret, then deleting the old key
-in the App settings. The job runs the base commit's script, so a change to the script takes effect after it merges; the job is skipped while `TRACKER_APP_CLIENT_ID` is unset. If the job fails or the App is missing, move Status and close by hand. The workflow
+in the App settings. The job runs the base commit's script, so a change to the script takes effect after it merges, and on the pull request that added it (planning#153, including its merge) the job only warned; the job is skipped while `TRACKER_APP_CLIENT_ID` is unset. If the job fails or the App is missing, move Status and close by hand. The workflow
 moves with the repository at the transfer: after it, the App can be installed on the code repository too.
