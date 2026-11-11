@@ -22,8 +22,12 @@ export interface StubOptions {
    * is also let go when the page closes, so no route outlives its test.
    */
   readonly holdScript?: boolean;
-  /** `computeRoutes` answers only after this long (a route in flight while the result is replaced). */
-  readonly routeDelayMs?: number;
+  /**
+   * `computeRoutes` stays in flight until the test calls `releaseRoute` (METRO-131; a route in flight while the
+   * result is replaced). The test, not a timer, decides when the answer arrives. The gate lives in the page, so
+   * it ends with the page.
+   */
+  readonly holdRoute?: boolean;
   /** `fetchFields` rejects with an error whose message carries a coordinate. */
   readonly fetchFails?: boolean;
   /** `computeRoutes` rejects with an error whose message carries a key. */
@@ -34,6 +38,10 @@ export interface StubCalls {
   readonly fetchFields: unknown[];
   readonly routes: unknown[];
   readonly scriptUrls: string[];
+  /** True once the stub Maps script has run in the page (the load has completed). */
+  readonly scriptRan: boolean;
+  /** How many `computeRoutes` calls have reached their answer (or their failure). */
+  readonly routesAnswered: number;
 }
 
 /**
@@ -47,6 +55,7 @@ export const MEASURED_GOOGLE_NAME = "Search For a Place";
 const STUB_SCRIPT = `
 (() => {
   const state = window.__metroStub;
+  state.scriptRan = true;
   const spots = { motijheel: { lat: 23.728, lng: 90.419 }, uttara: { lat: 23.87, lng: 90.367 } };
   class FakeAutocomplete extends HTMLElement {
     constructor(options) {
@@ -143,9 +152,8 @@ const STUB_SCRIPT = `
       Route: {
         computeRoutes: async (request) => {
           state.routes.push(request);
-          if (state.options.routeDelayMs) {
-            await new Promise((resolve) => setTimeout(resolve, state.options.routeDelayMs));
-          }
+          if (state.options.holdRoute) await state.routeGate;
+          state.routesAnswered += 1;
           if (state.options.routeFails) throw new Error("secret key=abc");
           return { routes: [{ distanceMeters: 1234, durationMillis: 900000 }] };
         },
@@ -212,6 +220,8 @@ export interface MapsStub {
   calls(): Promise<StubCalls>;
   /** Lets a held script answer now (it then fails or succeeds as `scriptFails` says). A no-op when not held. */
   releaseScript(): void;
+  /** Lets a held `computeRoutes` answer now. A no-op when not held. */
+  releaseRoute(): Promise<void>;
 }
 
 export async function installMapsStub(page: Page, options: StubOptions = {}): Promise<MapsStub> {
@@ -222,7 +232,16 @@ export async function installMapsStub(page: Page, options: StubOptions = {}): Pr
   // A script still held when the page closes is let go, so the pending route handler ends with the test.
   page.once("close", release);
   await page.addInitScript((given) => {
-    Reflect.set(window, "__metroStub", { options: given, fetchFields: [], routes: [] });
+    const { promise: routeGate, resolve: letGo } = Promise.withResolvers<void>();
+    Reflect.set(window, "__metroStub", {
+      options: given,
+      fetchFields: [],
+      routes: [],
+      routesAnswered: 0,
+      scriptRan: false,
+      routeGate,
+    });
+    Reflect.set(window, "__metroReleaseRoute", letGo);
   }, options);
   // Later routes win in Playwright, so the catch-all is registered first.
   await page.route(GOOGLE_HOSTS, async (route) => {
@@ -244,14 +263,28 @@ export async function installMapsStub(page: Page, options: StubOptions = {}): Pr
   return {
     blocked,
     releaseScript: release,
+    releaseRoute: async () => {
+      await page.evaluate(() => {
+        const letGo: unknown = Reflect.get(window, "__metroReleaseRoute");
+        if (typeof letGo === "function") Reflect.apply(letGo, undefined, []);
+      });
+    },
     calls: async () => {
       const raw = await page.evaluate(() => JSON.stringify(Reflect.get(window, "__metroStub")));
       const recorded: unknown = JSON.parse(raw);
       if (!isRecord(recorded)) throw new Error("the Maps stub recorded nothing");
-      const { fetchFields, routes } = recorded;
+      const { fetchFields, routes, scriptRan, routesAnswered } = recorded;
       if (!Array.isArray(fetchFields) || !Array.isArray(routes))
         throw new Error("the Maps stub recorded no call lists");
-      return { fetchFields: fetchFields.map(keep), routes: routes.map(keep), scriptUrls };
+      if (typeof scriptRan !== "boolean" || typeof routesAnswered !== "number")
+        throw new Error("the Maps stub recorded no progress");
+      return {
+        fetchFields: fetchFields.map(keep),
+        routes: routes.map(keep),
+        scriptUrls,
+        scriptRan,
+        routesAnswered,
+      };
     },
   };
 }

@@ -54,6 +54,20 @@ async function settle(page: Page): Promise<void> {
   );
 }
 
+/**
+ * Two animation frames: every render and effect the last change caused has run by then (React commits and runs
+ * its effects before the next frame; the stub records a request the moment it is made). It is a flush of the
+ * page's own work, not a wait for time, and it is what makes a "nothing more happened" assertion read after
+ * the thing that could have happened had its chance (METRO-131).
+ */
+const afterRender = (page: Page): Promise<void> =>
+  page.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      }),
+  );
+
 /** Pretends the browser reports no connection, until `reconnect` runs. */
 async function noConnection(page: Page): Promise<void> {
   await page.addInitScript(() => {
@@ -193,13 +207,17 @@ test.describe("place search on first focus (METRO-114)", () => {
     await expect(page.getByText(ROUTE_TEXT)).toBeVisible();
     expect((await stub.calls()).routes).toHaveLength(1);
     // A re-render caused by the theme toggle asks for nothing more.
-    await page.getByRole("button", { name: /theme/iu }).click();
-    await page.waitForTimeout(500);
+    const theme = page.getByRole("button", { name: /theme/iu });
+    const before = (await theme.getAttribute("aria-label")) ?? "";
+    await theme.click();
+    // Positive signal: the app re-rendered with the new preference (the button's name names the next step).
+    await expect(theme).not.toHaveAttribute("aria-label", before);
+    await afterRender(page);
     expect((await stub.calls()).routes).toHaveLength(1);
     await combo(page).fill("farm");
     await combo(page).press("Enter");
     await expect(heading(page, "Farmgate")).toBeFocused();
-    await page.waitForTimeout(300);
+    await afterRender(page);
     expect((await stub.calls()).routes).toHaveLength(1);
   });
 
@@ -210,7 +228,9 @@ test.describe("place search on first focus (METRO-114)", () => {
     await expect(
       page.getByRole("group", { name: /found your position only roughly/u }),
     ).toBeVisible();
-    await page.waitForTimeout(500);
+    // The notice is on screen: the outcome was rendered, and any route or script request it would have made
+    // from its effects has been issued by the end of the next frames.
+    await afterRender(page);
     const calls = await stub.calls();
     expect(calls.scriptUrls).toEqual([]);
     expect(calls.routes).toEqual([]);
@@ -230,7 +250,9 @@ test.describe("place search on first focus (METRO-114)", () => {
     // Release the script: it arrives, and the replaced result must not ask for its route.
     await expect.poll(async () => (await stub.calls()).scriptUrls.length).toBe(1);
     stub.releaseScript();
-    await page.waitForTimeout(2000);
+    // Positive signal: the released script has run in the page, so the libraries could now answer a route.
+    await expect.poll(async () => (await stub.calls()).scriptRan).toBe(true);
+    await afterRender(page);
     expect((await stub.calls()).routes).toEqual([]);
     await expect(page.locator(".result")).toHaveCount(0);
   });
@@ -239,14 +261,17 @@ test.describe("place search on first focus (METRO-114)", () => {
     page,
   }) => {
     await stubGeolocation(page, GOOD_FIX);
-    const stub = await open(page, { routeDelayMs: 1200 });
+    const stub = await open(page, { holdRoute: true });
     await locate(page).click();
     await expect(heading(page, "Uttara North")).toBeFocused();
     await expect.poll(async () => (await stub.calls()).routes.length).toBe(1);
     await combo(page).fill("farm");
     await combo(page).press("Enter");
     await expect(heading(page, "Farmgate")).toBeFocused();
-    await page.waitForTimeout(2000);
+    // The test, not a timer, lets the route answer; the answer has been delivered once `routesAnswered` counts it.
+    await stub.releaseRoute();
+    await expect.poll(async () => (await stub.calls()).routesAnswered).toBe(1);
+    await afterRender(page);
     await expect(page.getByText(ROUTE_TEXT)).toHaveCount(0);
     await expect(page.locator(".result")).toHaveCount(0);
     await expect(heading(page, "Farmgate")).toBeFocused();

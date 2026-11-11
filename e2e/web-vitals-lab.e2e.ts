@@ -27,18 +27,28 @@ const SETTLE_CAP_MS = 10_000;
 
 declare global {
   interface Window {
-    vitalsLab: { lcp: number[]; shifts: unknown[]; lastEntryAt: number };
+    vitalsLab: {
+      lcp: number[];
+      shifts: unknown[];
+      lastEntryAt: number;
+      onEntry?: (() => void) | undefined;
+    };
   }
 }
 
 async function observe(page: Page): Promise<void> {
   await page.addInitScript(() => {
-    const state = { lcp: [] as number[], shifts: [] as unknown[], lastEntryAt: performance.now() };
+    const state: Window["vitalsLab"] = {
+      lcp: [],
+      shifts: [],
+      lastEntryAt: performance.now(),
+    };
     Reflect.set(window, "vitalsLab", state);
     const watch = (type: string, onEntry: (entry: PerformanceEntry) => void) => {
       new PerformanceObserver((list) => {
         for (const entry of list.getEntries()) onEntry(entry);
         state.lastEntryAt = performance.now();
+        state.onEntry?.();
       }).observe({ type, buffered: true });
     };
     watch("largest-contentful-paint", (entry) => state.lcp.push(entry.startTime));
@@ -63,16 +73,26 @@ async function settle(page: Page): Promise<boolean> {
         requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
       );
       await document.fonts.ready;
-      const start = performance.now();
-      state.lastEntryAt = Math.max(state.lastEntryAt, start);
+      // The quiet window and the cap are the definition of "settled" (a span with no new entry), so each is one
+      // timer; nothing polls. An entry re-arms the quiet timer through `onEntry` (METRO-131).
+      state.lastEntryAt = Math.max(state.lastEntryAt, performance.now());
       return new Promise<boolean>((resolve) => {
-        const tick = () => {
-          const now = performance.now();
-          if (now - state.lastEntryAt >= quietMs) resolve(true);
-          else if (now - start >= capMs) resolve(false);
-          else setTimeout(tick, 50);
+        let quiet = 0;
+        const cap = setTimeout(() => {
+          clearTimeout(quiet);
+          state.onEntry = undefined;
+          resolve(false);
+        }, capMs);
+        const arm = () => {
+          clearTimeout(quiet);
+          quiet = window.setTimeout(() => {
+            clearTimeout(cap);
+            state.onEntry = undefined;
+            resolve(true);
+          }, quietMs);
         };
-        tick();
+        state.onEntry = arm;
+        arm();
       });
     },
     { quietMs: QUIET_MS, capMs: SETTLE_CAP_MS },
@@ -139,6 +159,9 @@ test.describe("lab web vitals (METRO-44 part C)", () => {
     page,
   }) => {
     await page.route("**/assets/index-*.js", async (route) => {
+      // Documented unavoidable clock (METRO-131): the thing under test is a time measurement (LCP above 2500 ms),
+      // so the page must really run that long. A test-controlled gate cannot replace it: releasing one at
+      // "LCP is over 2500 ms" would itself need the clock. 3000 ms keeps 500 ms above the limit.
       await new Promise((resolve) => setTimeout(resolve, 3000));
       await route.continue();
     });
