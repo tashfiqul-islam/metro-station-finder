@@ -4,6 +4,8 @@
 - Date: 2026-11-09
 - Ticket and specification: METRO-112 (Plane), parent METRO-109; the ticket description and the owner decisions of 2026-11-09 are the contract.
 
+> Amendment 2026-11-11 (METRO-117, decision unchanged): `picker-icons.ts`, `location-icons.ts` and `control-icons.ts` (and their drift tests) are gone; each icon is its own module in `icons/shapes/`, so a lazy chunk imports its icons without pulling an entry export, and "importing from `icon-data.ts`" is no longer a thing (that file is deleted). `common.css`, `nearby.css` and `route.css` are split by component; the `.tag--sample` rule stays removed.
+
 ## Context
 
 - Repo-verified (METRO-111 evidence, `docs/evidence/metro-111.md`): the first visit had 338 raw and 1,865 gzip bytes of headroom against 250,000 / 80,000 after the line map, and the map's own lazy loader cost about 300 raw bytes of the entry. Slices 2 to 4 must add a picker, a location flow and more Google code without raising a limit (ADR-0020).

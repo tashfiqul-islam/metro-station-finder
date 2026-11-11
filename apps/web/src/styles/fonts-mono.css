@@ -1,5 +1,8 @@
-/* fonts-mono.css: JetBrains Mono 500 to 600, Latin subset, one variable file. Imported by each component file
-   that sets `--font-mono`, so it is declared (and fetched, on use) only where those styles are. */
+/* fonts-mono.css: JetBrains Mono 500 to 600, Latin subset, one variable file. Imported by `typography.css`,
+   `quick.css`, `scrubber.css`, `ticket-trip.css`, `fare-map.css`, `live-line.css` and `neighbour.css`. `base.css`,
+   `map.css`, `line.css`, `header-extras.css`, `palette.css` and `station.css` also set `--font-mono` and do not import it: they
+   rely on `typography.css` being in the same chunk (a known coupling). The font is declared, and fetched on use, only
+   in a chunk that holds one of them. */
 @font-face {
   font-family: "JetBrains Mono";
   src: url("./fonts/jetbrains-mono-latin-wght.woff2") format("woff2");
