@@ -54,8 +54,14 @@ jobs:
           version: 2026.10.25
           install_args: node
           cache: false # this job holds the tracker App key; never restore a cache into it
+      # Until the pull request that adds the script merges, the base commit has no script to run. Then the job
+      # says so and stops before minting a token, instead of failing; after that merge the script is always there.
+      - name: Note when the base commit has no tracker sync script yet
+        if: ${{ hashFiles('scripts/tracker-sync.ts') == '' }}
+        run: echo "::notice::scripts/tracker-sync.ts is not on the base commit yet; nothing synced."
       - name: Mint a planning token from the tracker App
         id: token
+        if: ${{ hashFiles('scripts/tracker-sync.ts') != '' }}
         uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         with:
           client-id: ${{ vars.TRACKER_APP_CLIENT_ID }}
@@ -65,6 +71,7 @@ jobs:
           permission-issues: write
           permission-organization-projects: write
       - name: Sync the ticket Status
+        if: ${{ hashFiles('scripts/tracker-sync.ts') != '' }}
         # The script reads the event payload file itself; the body never enters the environment or a command.
         run: node scripts/tracker-sync.ts
         env:
