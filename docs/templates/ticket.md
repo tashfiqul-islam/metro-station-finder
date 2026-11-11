@@ -1,6 +1,6 @@
 # [Slice title]
 
-Preparation only. Do not create or implement without the relevant authorization. Create the issue in `metro-station-finder/planning` with the Task form; it carries these sections. Set the rest in the sidebar per the [tracker](../agents/tracker.md): type, parent epic, one `area:*` label plus any `quality:*` and status flags, milestone, Status, and the fields Initiative, Module, Release, Mode, Spec and Priority.
+Preparation only. Do not create or implement without the relevant authorization. Create the issue in `metro-station-finder/planning` with the Task form; it carries these sections. Set the rest in the sidebar per the [tracker](../agents/tracker.md): type, parent epic, one `area:*` label plus any `quality:*` and status flags, milestone, Status, and the fields Initiative, Module and Release (required), plus Mode, Spec and Priority when they apply.
 
 ## Outcome
 
