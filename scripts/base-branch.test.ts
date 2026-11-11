@@ -26,7 +26,7 @@ function docs(contributing: string, workflow: string, plane: string): Record<str
   return {
     "CONTRIBUTING.md": CONTRIBUTING(contributing),
     "docs/agents/workflow.md": WORKFLOW(workflow),
-    "docs/agents/plane.md": PLANE(plane),
+    "docs/agents/tracker.md": PLANE(plane),
   };
 }
 
@@ -49,7 +49,7 @@ test("METRO-34 fails and names every file when the documents name different base
   expect(text).toContain("CONTRIBUTING.md");
   expect(text).toContain("main");
   expect(text).toContain("docs/agents/workflow.md");
-  expect(text).toContain("docs/agents/plane.md");
+  expect(text).toContain("docs/agents/tracker.md");
   expect(text).toContain("feature/metro-rebuild");
 });
 
@@ -61,10 +61,10 @@ test("METRO-34 passes when all three move together to main", async () => {
 test("METRO-34 fails visibly when a document no longer states its base branch", async () => {
   const root = await fixture({
     ...docs("main", "main", "main"),
-    "docs/agents/plane.md": "Nothing about branches here.\n",
+    "docs/agents/tracker.md": "Nothing about branches here.\n",
   });
   const text = (await checkBaseBranches(root)).join("\n");
-  expect(text).toContain("docs/agents/plane.md");
+  expect(text).toContain("docs/agents/tracker.md");
   expect(text).toContain("does not state");
 });
 
