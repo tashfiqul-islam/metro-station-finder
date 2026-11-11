@@ -2,8 +2,12 @@ import { parseErrorEnvelope, parseWebVitalPayload } from "../packages/contracts/
 import { expect, test } from "./fixtures";
 import { expectNoCoordinateInApi, installMapsStub, trackApiRequests } from "./maps-stub";
 
-/** What each engine reports for one click and a hide: WebKit has no LCP, Firefox and WebKit no CLS (layout-shift). */
-const EXPECTED = { chromium: ["LCP", "CLS"], firefox: ["LCP"], webkit: ["INP"] } as const;
+/** What each engine reports, sorted, for one click and a hide: Firefox and WebKit have no CLS (layout-shift). */
+const EXPECTED = {
+  chromium: ["CLS", "INP", "LCP"],
+  firefox: ["INP", "LCP"],
+  webkit: ["INP", "LCP"],
+} as const;
 
 test.describe("real-user web vitals beacon (METRO-44)", () => {
   test("METRO-44 the built app sends contract-valid, position-free beacons to /api/vitals and the Worker accepts them", async ({
@@ -52,28 +56,82 @@ test.describe("real-user web vitals beacon (METRO-44)", () => {
           requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
         }),
     );
-    // LCP is final at the first input and CLS when the page is hidden. Click once, then hide the page on
-    // every poll until the beacons have arrived (CLS is Chromium-only: Firefox and WebKit do not implement layout-shift) (a later hide adds no duplicate).
+    // LCP is final at the first input, CLS and INP are reported when the page is hidden. web-vitals reports a
+    // metric again on every later hide whose value changed (an unchanged value is dropped by its
+    // bindReporter), so hiding repeatedly could legitimately add a second INP or CLS. Click once, wait for
+    // the page to have recorded that interaction, hide exactly once, and wait for the exact set: a missing
+    // metric or a duplicate keeps the poll red.
+    //
+    // Why one hide is enough. Spec-verified (Performance Timeline, "queue the PerformanceObserver task"): the
+    // observers of one global are notified in the order they registered, and a "buffered" registration is
+    // handed the entries already recorded. web-vitals registered its first-input observer at page start,
+    // ours is later, so by the time our callback runs web-vitals has been notified of the click and has
+    // queued its work with requestIdleCallback (setTimeout 0 where that is missing, WebKit), run first-in
+    // first-out. Our own idle task is queued after it, so when it runs web-vitals has processed the click
+    // and an INP candidate exists; the hide then reports it (Repo-verified, whenIdleOrHidden.ts and onINP.ts).
+    // Unverified: the notification order in each engine. If it did not hold, INP would be missing at the
+    // hide and the exact-set poll would time out red; it can not pass with a wrong set.
+    // The page's first-input slot must be the click's: the page clock is read just before the click and the
+    // entry must start at or after it. A fixture or an earlier input that took the slot would make the wait
+    // resolve on the wrong entry, so the assertion fails the test instead of letting it become a no-op.
+    const beforeClick = await page.evaluate(() => performance.now());
     await page.mouse.click(5, 5);
-    await expect
-      .poll(
-        async () => {
-          await page.evaluate(() => {
-            Object.defineProperty(document, "visibilityState", {
-              value: "hidden",
-              configurable: true,
-            });
-            document.dispatchEvent(new Event("visibilitychange"));
+    const firstInputStart = await page.evaluate(
+      () =>
+        new Promise<number>((resolve) => {
+          // "first-input" is dispatched for the first input whatever its duration (an "event" entry is
+          // dropped when the click is faster than the duration threshold), and web-vitals observes it too.
+          const observer = new PerformanceObserver((list) => {
+            observer.disconnect();
+            const start = list.getEntries()[0]?.startTime ?? -1;
+            const settle = (): void => {
+              requestAnimationFrame(() => requestAnimationFrame(() => resolve(start)));
+            };
+            if (typeof requestIdleCallback === "function") {
+              requestIdleCallback(settle, { timeout: 1000 });
+            } else {
+              setTimeout(settle, 0);
+            }
           });
-          return beacons
-            .map((beacon) => parseWebVitalPayload(JSON.parse(beacon.body)).name)
-            .toSorted();
-        },
-        { message: "the expected beacons" },
-      )
-      .toEqual(expect.arrayContaining([...EXPECTED[browserName]]));
-    await expect.poll(() => statuses.length).toBe(beacons.length);
-    expect(statuses.every((status) => status === 204)).toBe(true);
+          observer.observe({ type: "first-input", buffered: true });
+        }),
+    );
+    expect(firstInputStart, "the first-input entry is the click's").toBeGreaterThanOrEqual(
+      beforeClick,
+    );
+    await page.evaluate(() => {
+      Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true });
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    // A beacon that is not a contract payload shows up by name, not as a poll timeout.
+    const sentNames = (): string[] =>
+      beacons
+        .map((beacon) => {
+          try {
+            return parseWebVitalPayload(JSON.parse(beacon.body)).name;
+          } catch {
+            return "NOT-A-CONTRACT-PAYLOAD";
+          }
+        })
+        .toSorted();
+    const expectedNames = [...EXPECTED[browserName]];
+    await expect.poll(sentNames, { message: "the expected beacons" }).toEqual(expectedNames);
+    // Both counts are read live on every poll: a snapshot of the sent count goes stale when a beacon is
+    // still in flight (METRO-135). The set is settled once every sent beacon has a response.
+    await expect
+      .poll(() => statuses.length === beacons.length, { message: "every beacon answered" })
+      .toBe(true);
+    // No airtight "nothing more will be sent" signal exists: web-vitals exposes none. What this proves is
+    // that two painted frames after the answers, with the page hidden once, the set is still exactly the
+    // expected one and every beacon is still answered.
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) => {
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+        }),
+    );
+    expect(sentNames()).toEqual(expectedNames);
+    expect(statuses).toEqual(beacons.map(() => 204));
 
     for (const beacon of beacons) {
       expect(beacon.method).toBe("POST");
@@ -89,6 +147,8 @@ test.describe("real-user web vitals beacon (METRO-44)", () => {
         "rating",
         "value",
       ]);
+      // web-vitals 6 ids are v6-<13-digit ms timestamp>-<13-digit random>: nothing else can ride in the id.
+      expect(parsed.id).toMatch(/^v6-\d{13}-\d{13}$/u);
       for (const fragment of ["lat", "lng", "uttara", "SECRETREF", "?", "http"]) {
         expect(beacon.body, fragment).not.toContain(fragment);
       }
