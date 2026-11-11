@@ -38,8 +38,8 @@ export interface StubCalls {
   readonly fetchFields: unknown[];
   readonly routes: unknown[];
   readonly scriptUrls: string[];
-  /** True once the stub Maps script has run in the page (the load has completed). */
-  readonly scriptRan: boolean;
+  /** Names of the libraries whose `importLibrary` promise has resolved in the page, in order. */
+  readonly librariesImported: string[];
   /** How many `computeRoutes` calls have reached their answer (or their failure). */
   readonly routesAnswered: number;
 }
@@ -55,7 +55,6 @@ export const MEASURED_GOOGLE_NAME = "Search For a Place";
 const STUB_SCRIPT = `
 (() => {
   const state = window.__metroStub;
-  state.scriptRan = true;
   const spots = { motijheel: { lat: 23.728, lng: 90.419 }, uttara: { lat: 23.87, lng: 90.367 } };
   class FakeAutocomplete extends HTMLElement {
     constructor(options) {
@@ -161,7 +160,13 @@ const STUB_SCRIPT = `
     },
   };
   google.maps.version = "3.66.stub";
-  google.maps.importLibrary = (name) => Promise.resolve(libraries[name]);
+  // The name is recorded when the promise resolves, before the caller's continuation runs: a test that sees it
+  // knows the libraries are in the app's hands, not merely that the script ran.
+  google.maps.importLibrary = (name) =>
+    Promise.resolve(libraries[name]).then((library) => {
+      state.librariesImported.push(name);
+      return library;
+    });
   google.maps.__ib__();
 })();
 `;
@@ -238,7 +243,7 @@ export async function installMapsStub(page: Page, options: StubOptions = {}): Pr
       fetchFields: [],
       routes: [],
       routesAnswered: 0,
-      scriptRan: false,
+      librariesImported: [],
       routeGate,
     });
     Reflect.set(window, "__metroReleaseRoute", letGo);
@@ -273,16 +278,19 @@ export async function installMapsStub(page: Page, options: StubOptions = {}): Pr
       const raw = await page.evaluate(() => JSON.stringify(Reflect.get(window, "__metroStub")));
       const recorded: unknown = JSON.parse(raw);
       if (!isRecord(recorded)) throw new Error("the Maps stub recorded nothing");
-      const { fetchFields, routes, scriptRan, routesAnswered } = recorded;
-      if (!Array.isArray(fetchFields) || !Array.isArray(routes))
+      const { fetchFields, routes, librariesImported, routesAnswered } = recorded;
+      if (
+        !Array.isArray(fetchFields) ||
+        !Array.isArray(routes) ||
+        !Array.isArray(librariesImported)
+      )
         throw new Error("the Maps stub recorded no call lists");
-      if (typeof scriptRan !== "boolean" || typeof routesAnswered !== "number")
-        throw new Error("the Maps stub recorded no progress");
+      if (typeof routesAnswered !== "number") throw new Error("the Maps stub recorded no progress");
       return {
         fetchFields: fetchFields.map(keep),
         routes: routes.map(keep),
         scriptUrls,
-        scriptRan,
+        librariesImported: librariesImported.map(String),
         routesAnswered,
       };
     },

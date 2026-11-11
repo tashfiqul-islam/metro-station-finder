@@ -159,20 +159,30 @@ export async function expectTabReachesEveryControl(
       }, STYLE_KEYS);
     // Scrolling a focused control into view is asynchronous in some engines (Linux WebKit in CI
     // was still unscrolled when first measured), so measure again until it is in view (the positive signal),
-    // within the same 2 s budget. `expect.poll` retries the measurement; a miss is reported by the assertions
-    // below (`partlyVisible` is asserted there), so the timeout is swallowed here and not repeated.
+    // within the same 2 s budget and the old 50 ms cadence. Only the poll's own timeout (never in view) is turned
+    // into the report that the assertions below fail on (`partlyVisible` is asserted there); an error raised by
+    // the measurement itself (a closed page, say) is rethrown.
     let report = await measure();
     if (report && !report.partlyVisible) {
-      await expect
-        .poll(
-          async () => {
-            report = await measure();
-            return report?.partlyVisible ?? true;
-          },
-          { timeout: 2000 },
-        )
-        .toBe(true)
-        .catch(() => null);
+      let measureFailed = false;
+      try {
+        await expect
+          .poll(
+            async () => {
+              try {
+                report = await measure();
+              } catch (error) {
+                measureFailed = true;
+                throw error;
+              }
+              return report?.partlyVisible ?? true;
+            },
+            { timeout: 2000, intervals: [50] },
+          )
+          .toBe(true);
+      } catch (error) {
+        if (measureFailed) throw error;
+      }
     }
     const label = `Tab press ${position + 1} of ${count}`;
     expect(report, `${label} focuses a control`).not.toBeNull();

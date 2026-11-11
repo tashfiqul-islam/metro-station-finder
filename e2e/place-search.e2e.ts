@@ -228,8 +228,10 @@ test.describe("place search on first focus (METRO-114)", () => {
     await expect(
       page.getByRole("group", { name: /found your position only roughly/u }),
     ).toBeVisible();
-    // The notice is on screen: the outcome was rendered, and any route or script request it would have made
-    // from its effects has been issued by the end of the next frames.
+    // Accepted limit (owner-delegated, METRO-131): the positive signal is the notice being visible, then the
+    // page's next frames. A request issued after a timer or promise chain longer than that (~32 ms) would pass.
+    // No debounce or deferred request exists in the product code today, and adding one would be a design
+    // change; there is no observable event for "the app decided not to ask".
     await afterRender(page);
     const calls = await stub.calls();
     expect(calls.scriptUrls).toEqual([]);
@@ -250,8 +252,13 @@ test.describe("place search on first focus (METRO-114)", () => {
     // Release the script: it arrives, and the replaced result must not ask for its route.
     await expect.poll(async () => (await stub.calls()).scriptUrls.length).toBe(1);
     stub.releaseScript();
-    // Positive signal: the released script has run in the page, so the libraries could now answer a route.
-    await expect.poll(async () => (await stub.calls()).scriptRan).toBe(true);
+    // Positive signal: both libraries have resolved in the page and the place search has swapped in the widget
+    // (the same commit that makes the route service available), so a route request this result could still
+    // make is due now. The script merely having run would be too early (METRO-131 review).
+    await expect
+      .poll(async () => (await stub.calls()).librariesImported.toSorted())
+      .toEqual(["places", "routes"]);
+    await expect(widgetSearch(page)).toBeVisible();
     await afterRender(page);
     expect((await stub.calls()).routes).toEqual([]);
     await expect(page.locator(".result")).toHaveCount(0);
