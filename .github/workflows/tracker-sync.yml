@@ -1,0 +1,79 @@
+name: Tracker sync
+# Moves the planning ticket a pull request names on the org project Metro (metro-station-finder/planning#153,
+# docs/agents/tracker.md): In Review when opened or ready, Done and closed when merged, In Progress when closed
+# unmerged. GITHUB_TOKEN cannot reach another owner's repository or project, so a GitHub App token is minted.
+on:
+  pull_request:
+    branches: [feature/metro-rebuild, main]
+    types: [opened, reopened, ready_for_review, closed]
+permissions: {}
+env:
+  # METRO-45: install tools only from mise.lock URLs and checksums.
+  MISE_LOCKED: "1"
+jobs:
+  sync:
+    name: Sync the planning ticket
+    # Same-repository pull requests only, never bots (METRO-47): only then may a job hold the App key. Skipped,
+    # not failed, until the owner has set up the App (docs/agents/maintenance-runbook.md).
+    if: ${{ vars.TRACKER_APP_CLIENT_ID != '' && github.event.pull_request.head.repo.full_name == github.repository && !endsWith(github.actor, '[bot]') && !endsWith(github.event.pull_request.user.login, '[bot]') && github.event.pull_request.user.type != 'Bot' && github.event.sender.type != 'Bot' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    concurrency:
+      group: tracker-sync-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
+    permissions:
+      contents: read
+    steps:
+      # The base commit, not the pull request: only reviewed code (the script, mise.toml and mise.lock) runs
+      # next to the App key. A pull request can still change this workflow file itself; review it as such.
+      - name: Check out the base commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+      # METRO-99 pattern: a GitHub release 504 must not fail the job on one try. Node only; no dependencies are
+      # installed, so no node_modules code ever runs next to the App token.
+      - name: Install pinned tools with mise
+        id: mise1
+        continue-on-error: true
+        timeout-minutes: 4
+        uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          version: 2026.10.25
+          install_args: node
+          cache: false # this job holds the tracker App key; never restore a cache into it
+      - name: Wait before the second tool install
+        if: ${{ steps.mise1.outcome == 'failure' }}
+        run: sleep 30
+      - name: Install pinned tools with mise (second attempt)
+        id: mise2
+        if: ${{ steps.mise1.outcome == 'failure' }}
+        timeout-minutes: 4
+        uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          version: 2026.10.25
+          install_args: node
+          cache: false # this job holds the tracker App key; never restore a cache into it
+      # Only the pull request that adds the script (planning#153) has a base commit without it, on every event
+      # including its merge, so that ticket is moved by hand. The job warns and stops before minting a token.
+      # tracker-sync-workflow.test.ts fails if the script is renamed or deleted, so this never hides a later break.
+      - name: Warn when the base commit has no tracker sync script yet
+        if: ${{ hashFiles('scripts/tracker-sync.ts') == '' }}
+        run: echo "::warning::scripts/tracker-sync.ts is not on the base commit; nothing synced. Move the ticket by hand."
+      - name: Mint a planning token from the tracker App
+        id: token
+        if: ${{ hashFiles('scripts/tracker-sync.ts') != '' }}
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.TRACKER_APP_CLIENT_ID }}
+          private-key: ${{ secrets.TRACKER_APP_PRIVATE_KEY }}
+          owner: metro-station-finder
+          repositories: planning
+          permission-issues: write
+          permission-organization-projects: write
+      - name: Sync the ticket Status
+        if: ${{ hashFiles('scripts/tracker-sync.ts') != '' }}
+        # The script reads the event payload file itself; the body never enters the environment or a command.
+        run: node scripts/tracker-sync.ts
+        env:
+          TRACKER_TOKEN: ${{ steps.token.outputs.token }}

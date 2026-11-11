@@ -66,4 +66,25 @@ Re-test after the next wrangler bump, on Windows:
 
 ## Mise install and GitHub release 504s (METRO-97)
 
-Uncredentialed jobs (Changes, Checks, Security, Build and smoke, Smoke, Quality gates, Reviewer record) leave `jdx/mise-action`'s cache on: it restores the mise binary and the installed tools, and saves once after a miss, so a warm job makes no github.com release request. `uncredentialedMiseCacheViolations` rejects `cache: false` there. A credentialed job (the Cloudflare preview) must not restore a cache, so its install is a chain of three attempts: step `timeout-minutes` at most 5, `continue-on-error` on all but the last, each retry and the `sleep` step before it gated on exactly the previous attempt's `outcome == 'failure'`, unique ids, and attempts plus pauses plus a 180 s margin inside the job's `timeout-minutes` (`credentialedMiseRetryViolations`). METRO-99 applies the same chain to every other credentialed workflow, and the policy runs over all of `.github/workflows`: production deploy keeps three attempts (job limit 30 min); token check, preview cleanup, release sync and release draft use two attempts with one 30 s pause and a 12 minute job limit (two 4 minute attempts plus the pause plus the 180 s margin need over 11.5 minutes). A new credentialed job that installs mise must copy the chain and be listed in `RETRY_JOBS` in `scripts/ci-hardening.test.ts`. Measurements: [evidence](../evidence/metro-97.md), [METRO-99](../evidence/metro-99.md).
+Uncredentialed jobs (Changes, Checks, Security, Build and smoke, Smoke, Quality gates, Reviewer record) leave `jdx/mise-action`'s cache on: it restores the mise binary and the installed tools, and saves once after a miss, so a warm job makes no github.com release request. `uncredentialedMiseCacheViolations` rejects `cache: false` there. A credentialed job (the Cloudflare preview) must not restore a cache, so its install is a chain of three attempts: step `timeout-minutes` at most 5, `continue-on-error` on all but the last, each retry and the `sleep` step before it gated on exactly the previous attempt's `outcome == 'failure'`, unique ids, and attempts plus pauses plus a 180 s margin inside the job's `timeout-minutes` (`credentialedMiseRetryViolations`). METRO-99 applies the same chain to every other credentialed workflow, and the policy runs over all of `.github/workflows`: production deploy keeps three attempts (job limit 30 min); token check, preview cleanup, release sync, release draft and tracker sync use two attempts with one 30 s pause and a 12 minute job limit (two 4 minute attempts plus the pause plus the 180 s margin need over 11.5 minutes). A new credentialed job that installs mise must copy the chain and be listed in `RETRY_JOBS` in `scripts/ci-hardening.test.ts`. Measurements: [evidence](../evidence/metro-97.md), [METRO-99](../evidence/metro-99.md).
+
+## Tracker sync GitHub App (planning#153)
+
+`.github/workflows/tracker-sync.yml` moves the planning ticket a pull request names
+([tracker](tracker.md)). `GITHUB_TOKEN` cannot write to another owner's repository or project, so the job
+mints a short-lived installation token from a GitHub App owned by the org. Owner steps, once (agents never
+change GitHub settings):
+
+1. Org settings, Developer settings, GitHub Apps, New GitHub App: name `metro-tracker-sync`, homepage the
+   code repository, webhook off, "Only on this account". Repository permissions: Issues read and write,
+   Metadata read. Organization permissions: Projects read and write. Nothing else.
+2. Note the Client ID; generate a private key (a `.pem` download). Keep the file outside any repository
+   and delete it once stored.
+3. Install the App on `metro-station-finder`, "Only select repositories": `planning`.
+4. In `tashfiqul-islam/metro-station-finder`, Settings, Secrets and variables, Actions: variable
+   `TRACKER_APP_CLIENT_ID` (the Client ID) and secret `TRACKER_APP_PRIVATE_KEY` (the whole `.pem` text).
+
+The token is limited in the workflow to `planning`, Issues write and organization Projects write, and is
+revoked when the job ends. Rotate by generating a new key, replacing the secret, then deleting the old key
+in the App settings. The job runs the base commit's script, so a change to the script takes effect after it merges, and on the pull request that added it (planning#153, including its merge) the job only warned; the job is skipped while `TRACKER_APP_CLIENT_ID` is unset. If the job fails or the App is missing, move Status and close by hand. The workflow
+moves with the repository at the transfer: after it, the App can be installed on the code repository too.
