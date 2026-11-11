@@ -59,20 +59,45 @@ test.describe("real-user web vitals beacon (METRO-44)", () => {
     // LCP is final at the first input, CLS and INP are reported when the page is hidden. web-vitals reports a
     // metric again on every later hide whose value changed (an unchanged value is dropped by its
     // bindReporter), so hiding repeatedly could legitimately add a second INP or CLS. Click once, wait for
-    // the page to have recorded that interaction (its first-input entry, then two painted frames),
-    // hide exactly once, and wait for the exact set: a missing metric or a duplicate keeps the poll red.
+    // the page to have recorded that interaction, hide exactly once, and wait for the exact set: a missing
+    // metric or a duplicate keeps the poll red.
+    //
+    // Why one hide is enough. Spec-verified (Performance Timeline, "queue the PerformanceObserver task"): the
+    // observers of one global are notified in the order they registered, and a "buffered" registration is
+    // handed the entries already recorded. web-vitals registered its first-input observer at page start,
+    // ours is later, so by the time our callback runs web-vitals has been notified of the click and has
+    // queued its work with requestIdleCallback (setTimeout 0 where that is missing, WebKit), run first-in
+    // first-out. Our own idle task is queued after it, so when it runs web-vitals has processed the click
+    // and an INP candidate exists; the hide then reports it (Repo-verified, whenIdleOrHidden.ts and onINP.ts).
+    // Unverified: the notification order in each engine. If it did not hold, INP would be missing at the
+    // hide and the exact-set poll would time out red; it can not pass with a wrong set.
+    // The page's first-input slot must be the click's: the page clock is read just before the click and the
+    // entry must start at or after it. A fixture or an earlier input that took the slot would make the wait
+    // resolve on the wrong entry, so the assertion fails the test instead of letting it become a no-op.
+    const beforeClick = await page.evaluate(() => performance.now());
     await page.mouse.click(5, 5);
-    await page.evaluate(
+    const firstInputStart = await page.evaluate(
       () =>
-        new Promise<void>((resolve) => {
+        new Promise<number>((resolve) => {
           // "first-input" is dispatched for the first input whatever its duration (an "event" entry is
           // dropped when the click is faster than the duration threshold), and web-vitals observes it too.
-          const observer = new PerformanceObserver(() => {
+          const observer = new PerformanceObserver((list) => {
             observer.disconnect();
-            requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+            const start = list.getEntries()[0]?.startTime ?? -1;
+            const settle = (): void => {
+              requestAnimationFrame(() => requestAnimationFrame(() => resolve(start)));
+            };
+            if (typeof requestIdleCallback === "function") {
+              requestIdleCallback(settle, { timeout: 1000 });
+            } else {
+              setTimeout(settle, 0);
+            }
           });
           observer.observe({ type: "first-input", buffered: true });
         }),
+    );
+    expect(firstInputStart, "the first-input entry is the click's").toBeGreaterThanOrEqual(
+      beforeClick,
     );
     await page.evaluate(() => {
       Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true });
