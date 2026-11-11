@@ -1,5 +1,5 @@
-/* fonts-mono.css: JetBrains Mono 500 to 600, Latin subset, one variable file. Imported by common.css, so it is
-   declared (and fetched, on use) only where the eyebrow, tag and key-cap styles are. */
+/* fonts-mono.css: JetBrains Mono 500 to 600, Latin subset, one variable file. Imported by each component file
+   that sets `--font-mono`, so it is declared (and fetched, on use) only where those styles are. */
 @font-face {
   font-family: "JetBrains Mono";
   src: url("./fonts/jetbrains-mono-latin-wght.woff2") format("woff2");

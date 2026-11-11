@@ -1,0 +1,275 @@
+/* scrubber.css: Scrubber (drag along the line) and the data-pos, data-a and data-b position steps. Colours only via var(--…). Breakpoint 768px. */
+
+@import "../fonts-mono.css";
+
+/* Scrubber (drag along the line). Positions come from data-pos (0–15) → --pos. The app may set --pos via CSSOM while dragging. */
+.scrub {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px 12px;
+  border-top: 1px solid var(--color-hair);
+  background: var(--color-muted);
+}
+.scrub__title {
+  font-size: var(--fs-11);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--track-caps);
+  text-transform: uppercase;
+  color: var(--color-muted-fg);
+}
+.scrub__hint {
+  font-family: var(--font-mono);
+  font-size: var(--fs-11);
+  color: var(--color-muted-fg);
+}
+.scrub__area {
+  position: relative;
+  height: 92px;
+  margin: 0 14px;
+  touch-action: none;
+  user-select: none;
+}
+.scrub__track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 44px;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--color-muted-2);
+}
+.scrub__fill {
+  position: absolute;
+  top: 44px;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  left: var(--a);
+  width: calc(var(--b) - var(--a));
+  background: linear-gradient(90deg, var(--color-accent), var(--color-accent-2));
+  transition:
+    left var(--dur-base) var(--ease-out),
+    width var(--dur-base) var(--ease-out);
+}
+.scrub__tick {
+  position: absolute;
+  top: 45px;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border-radius: var(--radius-pill);
+  left: var(--pos);
+  background: var(--color-muted-fg);
+  opacity: 0.45;
+  pointer-events: none;
+}
+.scrub__tick[data-in] {
+  background: var(--color-on-accent);
+  opacity: 0.85;
+}
+.scrub__handle {
+  position: absolute;
+  top: 25px;
+  left: var(--pos);
+  width: var(--target);
+  height: var(--target);
+  margin-left: -22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-pill);
+  cursor: grab;
+  transition: left var(--dur-base) var(--ease-out);
+}
+.scrub__handle::before {
+  content: "";
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-pill);
+  box-sizing: border-box;
+  box-shadow:
+    0 0 0 1px var(--color-hair),
+    var(--shadow-2);
+}
+.scrub__handle--from::before {
+  background: var(--color-card);
+  border: 4px solid var(--color-accent);
+}
+.scrub__handle--to::before {
+  background: var(--color-accent-2);
+  border: 4px solid var(--color-card);
+}
+.scrub__flag {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-12);
+  font-weight: var(--fw-semibold);
+  line-height: 16px;
+  pointer-events: none;
+  box-shadow: var(--shadow-1);
+}
+.scrub__handle--from .scrub__flag {
+  bottom: 40px;
+  background: var(--color-fg);
+  color: var(--color-bg);
+}
+.scrub__handle--to .scrub__flag {
+  top: 40px;
+  background: var(--color-accent-2);
+  color: var(--color-on-accent);
+}
+.scrub__ends {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: var(--fs-11);
+  color: var(--color-muted-fg);
+}
+[data-pos="0"] {
+  --pos: 0%;
+}
+[data-pos="1"] {
+  --pos: 6.667%;
+}
+[data-pos="2"] {
+  --pos: 13.333%;
+}
+[data-pos="3"] {
+  --pos: 20%;
+}
+[data-pos="4"] {
+  --pos: 26.667%;
+}
+[data-pos="5"] {
+  --pos: 33.333%;
+}
+[data-pos="6"] {
+  --pos: 40%;
+}
+[data-pos="7"] {
+  --pos: 46.667%;
+}
+[data-pos="8"] {
+  --pos: 53.333%;
+}
+[data-pos="9"] {
+  --pos: 60%;
+}
+[data-pos="10"] {
+  --pos: 66.667%;
+}
+[data-pos="11"] {
+  --pos: 73.333%;
+}
+[data-pos="12"] {
+  --pos: 80%;
+}
+[data-pos="13"] {
+  --pos: 86.667%;
+}
+[data-pos="14"] {
+  --pos: 93.333%;
+}
+[data-pos="15"] {
+  --pos: 100%;
+}
+[data-a="0"] {
+  --a: 0%;
+}
+[data-a="1"] {
+  --a: 6.667%;
+}
+[data-a="2"] {
+  --a: 13.333%;
+}
+[data-a="3"] {
+  --a: 20%;
+}
+[data-a="4"] {
+  --a: 26.667%;
+}
+[data-a="5"] {
+  --a: 33.333%;
+}
+[data-a="6"] {
+  --a: 40%;
+}
+[data-a="7"] {
+  --a: 46.667%;
+}
+[data-a="8"] {
+  --a: 53.333%;
+}
+[data-a="9"] {
+  --a: 60%;
+}
+[data-a="10"] {
+  --a: 66.667%;
+}
+[data-a="11"] {
+  --a: 73.333%;
+}
+[data-a="12"] {
+  --a: 80%;
+}
+[data-a="13"] {
+  --a: 86.667%;
+}
+[data-a="14"] {
+  --a: 93.333%;
+}
+[data-a="15"] {
+  --a: 100%;
+}
+[data-b="0"] {
+  --b: 0%;
+}
+[data-b="1"] {
+  --b: 6.667%;
+}
+[data-b="2"] {
+  --b: 13.333%;
+}
+[data-b="3"] {
+  --b: 20%;
+}
+[data-b="4"] {
+  --b: 26.667%;
+}
+[data-b="5"] {
+  --b: 33.333%;
+}
+[data-b="6"] {
+  --b: 40%;
+}
+[data-b="7"] {
+  --b: 46.667%;
+}
+[data-b="8"] {
+  --b: 53.333%;
+}
+[data-b="9"] {
+  --b: 60%;
+}
+[data-b="10"] {
+  --b: 66.667%;
+}
+[data-b="11"] {
+  --b: 73.333%;
+}
+[data-b="12"] {
+  --b: 80%;
+}
+[data-b="13"] {
+  --b: 86.667%;
+}
+[data-b="14"] {
+  --b: 93.333%;
+}
+[data-b="15"] {
+  --b: 100%;
+}

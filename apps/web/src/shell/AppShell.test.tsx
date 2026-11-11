@@ -1,7 +1,8 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterAll, afterEach, beforeAll, beforeEach, expect, test, vi } from "vitest";
 
-import { locate, search } from "../icons/icon-data";
+import { locate } from "../icons/shapes/locate";
+import { search } from "../icons/shapes/search";
 import { AppShell, useSheet } from "./AppShell";
 import { SectionNav } from "./SectionNav";
 

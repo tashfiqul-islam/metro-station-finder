@@ -2,8 +2,10 @@ import { useRef, useState } from "react";
 import type { ReactElement } from "react";
 
 import { Icon } from "../icons/Icon";
-import { monitor, moon, sun } from "../icons/icon-data";
-import type { IconShapes } from "../icons/icon-data";
+import type { IconShapes } from "../icons/Icon";
+import { monitor } from "../icons/shapes/monitor";
+import { moon } from "../icons/shapes/moon";
+import { sun } from "../icons/shapes/sun";
 import { shellCopy } from "../shell/copy";
 import { applyPreference, nextPreference, readPreference, savePreference } from "./theme";
 import type { ThemePreference } from "./theme";

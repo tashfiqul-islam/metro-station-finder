@@ -1,0 +1,42 @@
+/* intro.css: Nearby intro. Colours only via var(--…). Breakpoint 768px. */
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: 2px 2px 0;
+}
+.intro__title {
+  font-size: var(--fs-30);
+  line-height: 1;
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--track-tight);
+}
+.intro__accent {
+  background: var(--gradient-line);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.intro__text {
+  font-size: var(--fs-15);
+  line-height: 1.45;
+  color: var(--color-muted-fg);
+  max-width: 34ch;
+}
+@media (min-width: 768px) {
+  .intro {
+    gap: var(--space-3);
+    padding-top: 6px;
+  }
+  .intro__title {
+    font-size: var(--fs-40);
+    line-height: 0.98;
+  }
+}
+@media (forced-colors: active) {
+  .intro__accent {
+    background: none;
+    color: CanvasText;
+  }
+}

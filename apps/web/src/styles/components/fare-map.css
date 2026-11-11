@@ -1,0 +1,118 @@
+/* fare-map.css: Fare map: 16 x 16 cells banded by fare. Colours only via var(--…). Breakpoint 768px. */
+
+@import "../fonts-mono.css";
+
+.fare-map {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  border-radius: var(--radius-tile);
+  background: var(--color-raised);
+  box-shadow:
+    var(--shadow-rim),
+    0 0 0 1px var(--color-hair),
+    var(--shadow-1);
+}
+.fare-map__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+.fare-map__read {
+  font-size: var(--fs-13);
+  font-weight: var(--fw-semibold);
+}
+.fare-map__value {
+  font-size: var(--fs-30);
+  line-height: 1;
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.04em;
+  color: var(--color-accent);
+  font-variant-numeric: tabular-nums;
+}
+.fare-map__grid {
+  display: grid;
+  grid-template-columns: repeat(16, minmax(0, 1fr));
+  gap: 2px;
+  aspect-ratio: 1;
+  border-radius: var(--radius-sm);
+}
+.fare-map__cell {
+  border-radius: 4px;
+  background: color-mix(in oklch, var(--color-accent) var(--band), transparent);
+}
+.fare-map__cell[data-band="0"] {
+  --band: 0%;
+  background: var(--color-muted);
+}
+.fare-map__cell[data-band="1"] {
+  --band: 14%;
+}
+.fare-map__cell[data-band="2"] {
+  --band: 24%;
+}
+.fare-map__cell[data-band="3"] {
+  --band: 33%;
+}
+.fare-map__cell[data-band="4"] {
+  --band: 43%;
+}
+.fare-map__cell[data-band="5"] {
+  --band: 53%;
+}
+.fare-map__cell[data-band="6"] {
+  --band: 62%;
+}
+.fare-map__cell[data-band="7"] {
+  --band: 72%;
+}
+.fare-map__cell[data-band="8"] {
+  --band: 82%;
+}
+.fare-map__cell[data-band="9"] {
+  --band: 92%;
+}
+.fare-map__cell[data-selected] {
+  box-shadow:
+    0 0 0 2px var(--color-accent),
+    inset 0 0 0 2px var(--color-card);
+  position: relative;
+  z-index: 1;
+}
+.fare-map__legend {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  font-family: var(--font-mono);
+  font-size: var(--fs-11);
+  color: var(--color-muted-fg);
+}
+.fare-map__scale {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.fare-map__swatch {
+  width: 14px;
+  height: 10px;
+  border-radius: 3px;
+  background: color-mix(in oklch, var(--color-accent) var(--band), transparent);
+}
+.fare-map__swatch[data-band="1"] {
+  --band: 14%;
+}
+.fare-map__swatch[data-band="3"] {
+  --band: 33%;
+}
+.fare-map__swatch[data-band="5"] {
+  --band: 53%;
+}
+.fare-map__swatch[data-band="7"] {
+  --band: 72%;
+}
+.fare-map__swatch[data-band="9"] {
+  --band: 92%;
+}

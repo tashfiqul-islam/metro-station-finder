@@ -3,6 +3,8 @@ import type { ReactNode } from "react";
 
 import { nearbyCopy } from "./copy";
 
+import "../../styles/components/button.css";
+
 interface Props {
   readonly children: ReactNode;
   /** Replaces the page reload in tests. */

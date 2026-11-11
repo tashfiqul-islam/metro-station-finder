@@ -1,0 +1,98 @@
+/* ticket.css: Fare ticket: perforated card, chip, amount and note. Colours only via var(--…). Breakpoint 768px. */
+
+@import "../tokens-parts.css";
+
+.ticket {
+  display: flex;
+  flex-direction: column;
+  filter: var(--shadow-ticket);
+}
+.ticket__top,
+.ticket__stub {
+  position: relative;
+  background: var(--color-card);
+}
+.ticket__top {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 20px 20px 22px;
+  border-radius: var(--radius-pane) var(--radius-pane) 0 0;
+  box-shadow:
+    inset 1px 1px 0 var(--color-hair),
+    inset -1px 0 0 var(--color-hair);
+  -webkit-mask:
+    radial-gradient(circle 12px at 0 100%, transparent 11.5px, var(--mask-ink) 12px) left / 51% 100%
+      no-repeat,
+    radial-gradient(circle 12px at 100% 100%, transparent 11.5px, var(--mask-ink) 12px) right / 51%
+      100% no-repeat;
+  mask:
+    radial-gradient(circle 12px at 0 100%, transparent 11.5px, var(--mask-ink) 12px) left / 51% 100%
+      no-repeat,
+    radial-gradient(circle 12px at 100% 100%, transparent 11.5px, var(--mask-ink) 12px) right / 51%
+      100% no-repeat;
+}
+.ticket__stub {
+  padding: 16px 20px 18px;
+  border-radius: 0 0 var(--radius-pane) var(--radius-pane);
+  box-shadow:
+    inset 1px -1px 0 var(--color-hair),
+    inset -1px 0 0 var(--color-hair);
+  -webkit-mask:
+    radial-gradient(circle 12px at 0 0, transparent 11.5px, var(--mask-ink) 12px) left / 51% 100%
+      no-repeat,
+    radial-gradient(circle 12px at 100% 0, transparent 11.5px, var(--mask-ink) 12px) right / 51%
+      100% no-repeat;
+  mask:
+    radial-gradient(circle 12px at 0 0, transparent 11.5px, var(--mask-ink) 12px) left / 51% 100%
+      no-repeat,
+    radial-gradient(circle 12px at 100% 0, transparent 11.5px, var(--mask-ink) 12px) right / 51%
+      100% no-repeat;
+}
+.ticket__perf {
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  top: -1px;
+  height: 2px;
+  background-image: linear-gradient(90deg, var(--color-ctl-line) 50%, transparent 50%);
+  background-size: 10px 2px;
+  opacity: 0.5;
+}
+.ticket__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2);
+}
+.ticket__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent-soft);
+  color: var(--color-on-soft);
+  font-size: var(--fs-11);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--track-caps);
+  text-transform: uppercase;
+}
+.ticket__fare {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+.ticket__amount {
+  font-size: var(--fs-80);
+  line-height: 0.86;
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.065em;
+  font-variant-numeric: tabular-nums;
+}
+.ticket__note {
+  font-size: var(--fs-12);
+  line-height: 1.5;
+  color: var(--color-muted-fg);
+}

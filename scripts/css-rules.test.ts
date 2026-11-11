@@ -33,7 +33,7 @@ const files = webFiles();
 test("the web app has no inline style, no colour literal outside tokens.css and the right load order", () => {
   expect(Object.keys(files).length).toBeGreaterThan(40);
   expect(Object.keys(files)).toContain("apps/web/src/styles/tokens.css");
-  expect(Object.keys(files)).toContain("apps/web/src/styles/components/common.css");
+  expect(Object.keys(files)).toContain("apps/web/src/styles/components/button.css");
   expect(Object.keys(files)).toContain("apps/web/public/theme-boot.js");
   expect(checkTree(files)).toEqual([]);
 });

@@ -2,7 +2,9 @@ import type { Coordinate, StationId } from "@metro/core";
 import type { ReactElement } from "react";
 
 import { Icon } from "../../icons/Icon";
-import { fitIcon, zoomInIcon, zoomOutIcon } from "./control-icons";
+import { maximize } from "../../icons/shapes/maximize";
+import { minus } from "../../icons/shapes/minus";
+import { plus } from "../../icons/shapes/plus";
 import { mapCopy } from "./copy";
 import { layoutLabels } from "./labels";
 import { lineStops, project, round1 } from "./projection";
@@ -225,7 +227,7 @@ export function LineMap({ highlighted = NONE, position, walk, trip }: LineMapPro
           aria-label={mapCopy.zoomIn}
           onClick={zoomIn}
         >
-          <Icon icon={zoomInIcon} />
+          <Icon icon={plus} />
         </button>
         <button
           type="button"
@@ -233,10 +235,10 @@ export function LineMap({ highlighted = NONE, position, walk, trip }: LineMapPro
           aria-label={mapCopy.zoomOut}
           onClick={zoomOut}
         >
-          <Icon icon={zoomOutIcon} />
+          <Icon icon={minus} />
         </button>
         <button type="button" className="map-controls__btn" aria-label={mapCopy.fit} onClick={fit}>
-          <Icon icon={fitIcon} size={18} />
+          <Icon icon={maximize} size={18} />
         </button>
       </fieldset>
       <ol className="line-map__list visually-hidden" aria-label={mapCopy.listLabel}>

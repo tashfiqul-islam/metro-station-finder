@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 
 import { Icon } from "../icons/Icon";
-import type { IconShapes } from "../icons/icon-data";
+import type { IconShapes } from "../icons/Icon";
 
 import "../styles/components/nav.css";
 import { shellCopy } from "./copy";

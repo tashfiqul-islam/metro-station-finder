@@ -1,0 +1,25 @@
+/* status.css: Status (locating). Colours only via var(--…). Breakpoint 768px. */
+
+.status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 32px 16px;
+  border-radius: var(--radius-pane);
+  background: var(--color-raised);
+  box-shadow:
+    var(--shadow-rim),
+    0 0 0 1px var(--color-hair),
+    var(--shadow-1);
+}
+.status__text {
+  font-size: var(--fs-15);
+  font-weight: var(--fw-strong);
+}
+.status__sub {
+  font-size: var(--fs-12);
+  color: var(--color-muted-fg);
+  text-align: center;
+  max-width: 34ch;
+}

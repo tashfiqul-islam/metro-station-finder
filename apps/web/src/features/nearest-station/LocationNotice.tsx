@@ -2,7 +2,9 @@ import { useEffect, useRef } from "react";
 import type { ReactElement, ReactNode } from "react";
 
 import { Icon } from "../../icons/Icon";
-import type { IconShapes } from "../../icons/icon-data";
+import type { IconShapes } from "../../icons/Icon";
+
+import "../../styles/components/notice.css";
 
 interface LocationNoticeProps {
   /** `bad` for a refusal, `warn` for a position that could not be used. */

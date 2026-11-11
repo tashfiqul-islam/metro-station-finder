@@ -1,0 +1,6 @@
+import type { IconShapes } from "../Icon";
+
+export const plus: IconShapes = [
+  ["path", { d: "M5 12h14" }],
+  ["path", { d: "M12 5v14" }],
+];
