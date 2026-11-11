@@ -2,8 +2,12 @@ import { parseErrorEnvelope, parseWebVitalPayload } from "../packages/contracts/
 import { expect, test } from "./fixtures";
 import { expectNoCoordinateInApi, installMapsStub, trackApiRequests } from "./maps-stub";
 
-/** What each engine reports for one click and a hide: WebKit has no LCP, Firefox and WebKit no CLS (layout-shift). */
-const EXPECTED = { chromium: ["LCP", "CLS"], firefox: ["LCP"], webkit: ["INP"] } as const;
+/** What each engine reports, sorted, for one click and a hide: Firefox and WebKit have no CLS (layout-shift). */
+const EXPECTED = {
+  chromium: ["CLS", "INP", "LCP"],
+  firefox: ["INP", "LCP"],
+  webkit: ["INP", "LCP"],
+} as const;
 
 test.describe("real-user web vitals beacon (METRO-44)", () => {
   test("METRO-44 the built app sends contract-valid, position-free beacons to /api/vitals and the Worker accepts them", async ({
@@ -52,9 +56,12 @@ test.describe("real-user web vitals beacon (METRO-44)", () => {
           requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
         }),
     );
-    // LCP is final at the first input and CLS when the page is hidden. Click once, then hide the page on
-    // every poll until the beacons have arrived (CLS is Chromium-only: Firefox and WebKit do not implement layout-shift) (a later hide adds no duplicate).
+    // LCP is final at the first input, CLS when the page is hidden, and INP is reported on a hide after the
+    // click has painted, so it can arrive well after LCP. Click once, then hide the page on every poll until
+    // the set of beacons is exactly the expected one: a missing metric or a duplicate keeps the poll red.
     await page.mouse.click(5, 5);
+    const sentNames = (): string[] =>
+      beacons.map((beacon) => parseWebVitalPayload(JSON.parse(beacon.body)).name).toSorted();
     await expect
       .poll(
         async () => {
@@ -65,15 +72,18 @@ test.describe("real-user web vitals beacon (METRO-44)", () => {
             });
             document.dispatchEvent(new Event("visibilitychange"));
           });
-          return beacons
-            .map((beacon) => parseWebVitalPayload(JSON.parse(beacon.body)).name)
-            .toSorted();
+          return sentNames();
         },
         { message: "the expected beacons" },
       )
-      .toEqual(expect.arrayContaining([...EXPECTED[browserName]]));
-    await expect.poll(() => statuses.length).toBe(beacons.length);
-    expect(statuses.every((status) => status === 204)).toBe(true);
+      .toEqual([...EXPECTED[browserName]]);
+    // Both counts are read live on every poll: a snapshot of the sent count goes stale when a beacon is
+    // still in flight (METRO-135). The set is settled once every sent beacon has a response.
+    await expect
+      .poll(() => statuses.length === beacons.length, { message: "every beacon answered" })
+      .toBe(true);
+    expect(sentNames()).toEqual([...EXPECTED[browserName]]);
+    expect(statuses).toEqual(beacons.map(() => 204));
 
     for (const beacon of beacons) {
       expect(beacon.method).toBe("POST");
