@@ -308,6 +308,7 @@ const RETRY_JOBS: readonly (readonly [string, string, number])[] = [
   ["cloudflare-token-check.yml", "check", 2],
   ["release-sync.yml", "sync", 2],
   ["release-draft.yml", "draft", 2],
+  ["tracker-sync.yml", "sync", 2],
 ];
 
 function miseOf(steps: Record<string, unknown>[]) {
