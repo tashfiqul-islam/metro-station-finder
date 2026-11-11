@@ -1,0 +1,130 @@
+/* result.css: Result card, metrics and the external link. Colours only via var(--…). Breakpoint 768px. */
+
+.result {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-pane);
+  overflow: hidden;
+  background: var(--color-raised);
+  box-shadow:
+    var(--shadow-rim),
+    0 0 0 1px var(--color-hair),
+    var(--shadow-1);
+}
+.result__main {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 20px 20px 18px;
+}
+.result__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+.result__titles {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.result__name {
+  font-size: var(--fs-34);
+  line-height: 1;
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--track-tight);
+}
+.result__metrics {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+.metric {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.metric--end {
+  align-items: flex-end;
+  text-align: right;
+}
+.metric__about {
+  font-size: var(--fs-12);
+  color: var(--color-muted-fg);
+}
+.metric__value {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.metric__num {
+  font-size: var(--fs-40);
+  line-height: 0.9;
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--track-tight);
+}
+.metric__unit {
+  font-size: var(--fs-15);
+  font-weight: var(--fw-strong);
+}
+.metric__label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-12);
+  color: var(--color-muted-fg);
+}
+.metric__label .icon {
+  color: var(--color-accent);
+}
+.result__fare {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 12px 14px;
+  border-radius: var(--radius-row);
+  background: var(--color-muted);
+  font-size: var(--fs-13);
+}
+.result__fare-value {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: var(--fw-bold);
+  font-variant-numeric: tabular-nums;
+}
+.result__actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  padding: 12px;
+  border-top: 1px solid var(--color-hair);
+  background: var(--color-muted);
+}
+.result__links {
+  display: flex;
+  justify-content: center;
+  padding: 0 12px 12px;
+  background: var(--color-muted);
+}
+.link-ext {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--target);
+  padding: 0 12px;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-13);
+  font-weight: var(--fw-semibold);
+  color: var(--color-fg);
+  text-decoration: none;
+}
+.link-ext:hover {
+  background: var(--color-muted-2);
+}

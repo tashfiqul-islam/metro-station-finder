@@ -1,0 +1,86 @@
+/* locate.css: Use my location tile and its consent line. Colours only via var(--…). Breakpoint 768px. */
+
+@import "../tokens-parts.css";
+
+.locate {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 14px 16px 14px 14px;
+  text-align: left;
+  border-radius: var(--radius-tile);
+  background: var(--gradient-line);
+  color: var(--color-on-accent);
+  box-shadow: var(--shadow-signal);
+  overflow: hidden;
+  transition:
+    filter var(--dur-fast),
+    transform var(--dur-instant) var(--ease-out);
+}
+.locate:hover {
+  filter: brightness(1.06);
+}
+.locate:active {
+  transform: scale(0.985);
+}
+.locate__icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  flex: none;
+  border-radius: var(--radius-pill);
+  background: var(--color-on-accent-veil);
+}
+.locate__icon::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: currentColor;
+  opacity: 0.16;
+  animation: ping-ring 2.4s ease-out infinite;
+}
+.locate__text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.locate__title {
+  font-size: var(--fs-16);
+  font-weight: var(--fw-strong);
+  letter-spacing: -0.01em;
+}
+@keyframes ping-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.45;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .locate__icon::before {
+    animation: none;
+    opacity: 0;
+  }
+}
+@media (forced-colors: active) {
+  .locate {
+    background: ButtonFace;
+    color: ButtonText;
+  }
+}
+.consent {
+  font-size: var(--fs-12);
+  line-height: 1.5;
+  color: var(--color-muted-fg);
+  padding: 0 4px;
+}

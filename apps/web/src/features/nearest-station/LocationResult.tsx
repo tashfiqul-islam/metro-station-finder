@@ -5,17 +5,20 @@ import type { ReactElement } from "react";
 
 import { useMaps } from "../../adapters/maps/context";
 import { Icon } from "../../icons/Icon";
+import { externalLink } from "../../icons/shapes/external-link";
+import { navigation } from "../../icons/shapes/navigation";
 import { pickerCopy } from "../station-picker/copy";
 import { FareRangeText } from "../station-picker/FareRangeText";
-import { directionsIcon, externalIcon } from "../station-picker/picker-icons";
 import { directionsUrl, fareRange, stopLabel } from "../station-picker/station-facts";
 import { alsoNearby } from "./also-nearby";
 import { copy } from "./copy";
 import { formatEstimate, formatIsoDate, formatMinutes } from "./format";
 import { useWalkingRoute } from "./walking-route";
 
-import "../../styles/components/common.css";
-import "../../styles/components/nearby.css";
+import "../../styles/components/typography.css";
+import "../../styles/components/roundel.css";
+import "../../styles/components/result.css";
+import "../../styles/components/also.css";
 
 const { stations, fares } = baselineDataset;
 
@@ -126,9 +129,9 @@ export function LocationResult({ origin, focus }: LocationResultProps): ReactEle
             target="_blank"
             rel="noopener noreferrer"
           >
-            <Icon icon={directionsIcon} size={16} />
+            <Icon icon={navigation} size={16} />
             {pickerCopy.directions}
-            <Icon icon={externalIcon} size={14} />
+            <Icon icon={externalLink} size={14} />
             <span className="visually-hidden">{pickerCopy.newTab}</span>
           </a>
         </div>

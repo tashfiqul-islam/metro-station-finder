@@ -1,0 +1,100 @@
+/* neighbour.css: Neighbour strip. Colours only via var(--…). Breakpoint 768px. */
+
+@import "../fonts-mono.css";
+
+.nb {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.nb__track {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.nb__track::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 9px;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--color-accent) 14%,
+    var(--color-accent-2) 86%,
+    transparent
+  );
+}
+.nb__stop {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: 0 4px;
+  color: var(--color-muted-fg);
+  text-decoration: none;
+}
+a.nb__stop,
+button.nb__stop {
+  min-height: var(--target);
+  border-radius: var(--radius-field);
+}
+a.nb__stop:hover,
+button.nb__stop:hover {
+  background: var(--color-muted);
+}
+.nb__dot {
+  width: 12px;
+  height: 12px;
+  margin: 5px 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-card);
+  border: 3px solid var(--color-accent);
+}
+.nb__stop--current .nb__dot {
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  border: 6px solid var(--color-fg);
+  box-shadow: 0 0 0 5px var(--color-accent-soft);
+  animation: mark-pop 420ms var(--ease-out) both;
+}
+.nb__stop--end .nb__dot {
+  width: 10px;
+  height: 10px;
+  margin: 6px 0;
+  border: 0;
+  border-radius: 3px;
+  background: var(--color-muted-fg);
+}
+.nb__name {
+  font-size: var(--fs-12);
+  font-weight: var(--fw-medium);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.nb__stop--current .nb__name {
+  font-size: var(--fs-13);
+  font-weight: var(--fw-bold);
+  color: var(--color-fg);
+}
+.nb__ends {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-11);
+  color: var(--color-muted-fg);
+}
+@media (prefers-reduced-motion: reduce) {
+  .nb__stop--current .nb__dot {
+    animation: none;
+  }
+}

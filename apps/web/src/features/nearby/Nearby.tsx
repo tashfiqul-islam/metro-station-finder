@@ -10,7 +10,7 @@ import type { LocationOutcome } from "../nearest-station/NearestStation";
 import { StationPicker } from "../station-picker/StationPicker";
 import { MapBoundary } from "./MapBoundary";
 
-import "../../styles/components/common.css";
+import "../../styles/components/toast.css";
 import "./nearby-screen.css";
 
 export interface NearbyProps {

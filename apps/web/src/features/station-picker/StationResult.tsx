@@ -3,16 +3,20 @@ import type { Station } from "@metro/core";
 import type { ReactElement, Ref } from "react";
 
 import { Icon } from "../../icons/Icon";
+import { externalLink } from "../../icons/shapes/external-link";
+import { mapPin } from "../../icons/shapes/map-pin";
+import { navigation } from "../../icons/shapes/navigation";
 import { copy as nearestCopy } from "../nearest-station/copy";
 import { formatIsoDate } from "../nearest-station/format";
 import { pickerCopy } from "./copy";
 import { FareRangeText } from "./FareRangeText";
-import { directionsIcon, externalIcon, pinIcon } from "./picker-icons";
 import { directionsUrl, fareRange, stopLabel } from "./station-facts";
 
-import "../../styles/components/common.css";
-import "../../styles/components/nearby.css";
-import "../../styles/components/route.css";
+import "../../styles/components/typography.css";
+import "../../styles/components/button.css";
+import "../../styles/components/roundel.css";
+import "../../styles/components/result.css";
+import "../../styles/components/ticket.css";
 
 interface StationResultProps {
   readonly station: Station;
@@ -86,13 +90,13 @@ export function StationResult({
           target="_blank"
           rel="noopener noreferrer"
         >
-          <Icon icon={directionsIcon} size={16} />
+          <Icon icon={navigation} size={16} />
           {pickerCopy.directions}
-          <Icon icon={externalIcon} size={14} />
+          <Icon icon={externalLink} size={14} />
           <span className="visually-hidden">{pickerCopy.newTab}</span>
         </a>
         <button type="button" className="btn btn--quiet btn--sm" onClick={onShowOnMap}>
-          <Icon icon={pinIcon} size={16} />
+          <Icon icon={mapPin} size={16} />
           {pickerCopy.showOnMap}
         </button>
       </div>

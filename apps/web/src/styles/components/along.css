@@ -1,0 +1,81 @@
+/* along.css: Along-the-line stop list. Colours only via var(--…). Breakpoint 768px. */
+
+.along {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.along__list {
+  display: flex;
+  flex-direction: column;
+}
+.along__item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 44px;
+}
+.along__item--end {
+  min-height: 48px;
+}
+.along__rail {
+  position: relative;
+  width: 16px;
+  align-self: stretch;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.along__rail::before {
+  content: "";
+  position: absolute;
+  left: 7px;
+  width: 2px;
+  top: 0;
+  bottom: 0;
+  background: var(--color-accent);
+}
+.along__item:first-child .along__rail::before {
+  top: 50%;
+}
+.along__item:last-child .along__rail::before {
+  bottom: 50%;
+}
+.along__item--more .along__rail::before {
+  background: linear-gradient(var(--color-accent) 50%, transparent 50%);
+  background-size: 2px 6px;
+}
+.along__dot {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--color-card);
+  border: 2px solid var(--color-accent);
+}
+.along__item--end .along__dot {
+  width: 14px;
+  height: 14px;
+  border-width: 3px;
+}
+.along__item--end:last-child .along__dot {
+  background: var(--color-accent);
+}
+.along__name {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  min-height: var(--target);
+  padding: 0 10px;
+  border-radius: var(--radius-field);
+  text-align: left;
+  color: var(--color-fg);
+}
+.along__name:hover {
+  background: var(--color-muted);
+}
+.along__item--end .along__name {
+  font-weight: var(--fw-semibold);
+}

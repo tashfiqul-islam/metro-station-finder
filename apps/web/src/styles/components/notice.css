@@ -1,0 +1,95 @@
+/* notice.css: Notice (feedback). Colours only via var(--…). Breakpoint 768px. */
+
+@import "../tokens-parts.css";
+
+.notice {
+  --tone: var(--color-info);
+  --tone-fg: var(--color-info-fg);
+  --tone-ink: var(--color-info-ink);
+  --tone-soft: var(--color-info-soft);
+  --tone-line: var(--color-info-line);
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: 14px 16px 14px 14px;
+  border-radius: var(--radius-card);
+  background: var(--tone-soft);
+  box-shadow: inset 0 0 0 1px var(--tone-line);
+  animation: rise 280ms var(--ease-out) both;
+}
+.notice[data-tone="ok"] {
+  --tone: var(--color-ok);
+  --tone-fg: var(--color-ok-fg);
+  --tone-ink: var(--color-ok-ink);
+  --tone-soft: var(--color-ok-soft);
+  --tone-line: var(--color-ok-line);
+}
+.notice[data-tone="warn"] {
+  --tone: var(--color-warn);
+  --tone-fg: var(--color-warn-fg);
+  --tone-ink: var(--color-warn-ink);
+  --tone-soft: var(--color-warn-soft);
+  --tone-line: var(--color-warn-line);
+}
+.notice[data-tone="bad"] {
+  --tone: var(--color-bad);
+  --tone-fg: var(--color-bad-fg);
+  --tone-ink: var(--color-bad-ink);
+  --tone-soft: var(--color-bad-soft);
+  --tone-line: var(--color-bad-line);
+}
+.notice[data-size="sm"] {
+  padding: 10px 12px;
+  gap: 10px;
+  border-radius: var(--radius-field);
+  align-items: center;
+}
+.notice__chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border-radius: var(--radius-pill);
+  background: var(--tone);
+  color: var(--tone-fg);
+}
+.notice[data-size="sm"] .notice__chip {
+  width: 24px;
+  height: 24px;
+}
+.notice__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 5px;
+}
+.notice[data-size="sm"] .notice__body {
+  padding-top: 0;
+}
+.notice__title {
+  font-size: var(--fs-14);
+  font-weight: var(--fw-strong);
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  color: var(--tone-ink);
+}
+.notice__text {
+  font-size: var(--fs-13);
+  line-height: 1.45;
+  color: var(--color-fg);
+}
+.notice__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: 10px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .notice {
+    animation: none;
+  }
+}

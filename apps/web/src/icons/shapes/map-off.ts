@@ -1,0 +1,9 @@
+import type { IconShapes } from "../Icon";
+
+export const mapOff: IconShapes = [
+  ["path", { d: "M8.5 3.3 9 3l6 3 5.4-2.7A1 1 0 0 1 22 4.2v12.6" }],
+  ["path", { d: "M15 6v4" }],
+  ["path", { d: "M9 9v12l-5.4 2.7A1 1 0 0 1 2 22.8V8.4a1 1 0 0 1 .6-.9L5 6.3" }],
+  ["path", { d: "m15 21-6-3" }],
+  ["path", { d: "m2 2 20 20" }],
+];

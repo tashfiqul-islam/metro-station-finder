@@ -1,0 +1,69 @@
+/* button.css: Buttons. Colours only via var(--…). Breakpoint 768px. */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--target);
+  padding: 0 18px;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-14);
+  font-weight: var(--fw-strong);
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+  text-decoration: none;
+  transition:
+    background-color var(--dur-fast),
+    color var(--dur-fast),
+    box-shadow var(--dur-fast),
+    transform var(--dur-instant) var(--ease-out);
+}
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.btn--primary {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  box-shadow: var(--shadow-signal);
+}
+.btn--primary:hover {
+  background: var(--color-accent-hover);
+}
+.btn--quiet {
+  background: var(--color-card);
+  color: var(--color-fg);
+  box-shadow:
+    0 0 0 1px var(--color-hair),
+    var(--shadow-1);
+}
+.btn--quiet:hover {
+  background: var(--color-muted);
+}
+.btn--ghost {
+  background: transparent;
+  color: var(--color-fg);
+}
+.btn--ghost:hover {
+  background: var(--color-muted);
+}
+.btn--block {
+  width: 100%;
+}
+.btn--sm {
+  min-height: 36px;
+  padding: 0 12px;
+  font-size: var(--fs-13);
+}
+.btn--icon {
+  width: var(--target);
+  padding: 0;
+}
+.btn__ext {
+  opacity: 0.7;
+}
+.btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}

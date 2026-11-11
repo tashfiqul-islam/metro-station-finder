@@ -3,13 +3,18 @@ import { useEffect, useId, useRef, useState } from "react";
 import type { ChangeEvent, KeyboardEvent, ReactElement } from "react";
 
 import { Icon } from "../../icons/Icon";
+import { chevronRight } from "../../icons/shapes/chevron-right";
+import { search } from "../../icons/shapes/search";
+import { x } from "../../icons/shapes/x";
 import { pickerCopy } from "./copy";
 import { matchStations, splitName } from "./match";
-import { chevronIcon, clearIcon, searchIcon } from "./picker-icons";
 import { stopLabel } from "./station-facts";
 
 import "../../styles/components/fields.css";
-import "../../styles/components/common.css";
+import "../../styles/components/button.css";
+import "../../styles/components/roundel.css";
+import "../../styles/components/empty.css";
+import "../../styles/components/status.css";
 
 interface StationComboboxProps {
   readonly stations: readonly Station[];
@@ -212,7 +217,7 @@ export function StationCombobox({
           {pickerCopy.label}
         </label>
         <div className="combo">
-          <Icon icon={searchIcon} />
+          <Icon icon={search} />
           <input
             ref={input}
             id={inputId}
@@ -249,7 +254,7 @@ export function StationCombobox({
               aria-label={pickerCopy.clear}
               onClick={clear}
             >
-              <Icon icon={clearIcon} size={16} />
+              <Icon icon={x} size={16} />
             </button>
           )}
         </div>
@@ -297,7 +302,7 @@ export function StationCombobox({
                 <span className="option__sub">{pickerCopy.stop(position, stations.length)}</span>
               </span>
               <span className="option__end" aria-hidden="true">
-                <Icon icon={chevronIcon} size={16} />
+                <Icon icon={chevronRight} size={16} />
               </span>
             </div>
           );

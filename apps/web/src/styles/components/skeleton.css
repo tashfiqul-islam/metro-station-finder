@@ -1,0 +1,64 @@
+/* skeleton.css: Skeleton (loading placeholder). Colours only via var(--…). Breakpoint 768px. */
+
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 20px;
+  border-radius: var(--radius-pane);
+  background: var(--color-raised);
+  box-shadow:
+    var(--shadow-rim),
+    0 0 0 1px var(--color-hair),
+    var(--shadow-1);
+}
+.skeleton__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+.skeleton__bar {
+  display: block;
+  height: 14px;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(
+    90deg,
+    var(--color-muted) 0%,
+    var(--color-muted-2) 50%,
+    var(--color-muted) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+.skeleton__bar--title {
+  height: 30px;
+  width: 68%;
+}
+.skeleton__bar--metric {
+  height: 60px;
+  width: 120px;
+  border-radius: var(--radius-field);
+}
+.skeleton__bar--short {
+  width: 72px;
+  height: 18px;
+}
+.skeleton__bar--strip {
+  height: 46px;
+  border-radius: var(--radius-row);
+}
+.skeleton__bar--action {
+  height: 48px;
+  border-radius: var(--radius-pill);
+}
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton__bar {
+    animation: none;
+  }
+}

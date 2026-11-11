@@ -1,0 +1,62 @@
+/* typography.css: Type blocks: eyebrow, section label, screen title, screen head, tag, footnote. Colours only via var(--…). Breakpoint 768px. */
+
+@import "../fonts-mono.css";
+
+/* ════════════ Typography blocks ════════════ */
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--fs-11);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--track-caps);
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+.section-label {
+  font-size: var(--fs-11);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--track-caps);
+  text-transform: uppercase;
+  color: var(--color-muted-fg);
+  padding: 0 4px;
+}
+.screen-title {
+  font-size: var(--fs-34);
+  line-height: 1;
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--track-tight);
+}
+.screen-head {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 2px 0;
+}
+.tag {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 7px;
+  border-radius: var(--radius-pill);
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: var(--fs-10);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: var(--color-muted-2);
+  color: var(--color-muted-fg);
+}
+.tag--accent {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+.tag--soft {
+  background: var(--color-accent-soft);
+  color: var(--color-on-soft);
+}
+.footnote {
+  font-size: var(--fs-12);
+  line-height: 1.5;
+  color: var(--color-muted-fg);
+  padding: 0 4px;
+}

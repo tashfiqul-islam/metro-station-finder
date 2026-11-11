@@ -1,0 +1,98 @@
+/* toast.css: Toast. Colours only via var(--…). Breakpoint 768px. */
+
+@import "../tokens-parts.css";
+
+.toast-region {
+  position: absolute;
+  z-index: var(--z-toast);
+  left: 50%;
+  bottom: calc(var(--sheet-h) + var(--sheet-reserve) + 20px);
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100% - 24px);
+  pointer-events: none;
+}
+@media (min-width: 768px) {
+  .toast-region {
+    left: calc(var(--side-w) + 24px + (100% - var(--side-w) - 24px) / 2);
+    bottom: 24px;
+    max-width: 440px;
+  }
+}
+.toast {
+  --tone: var(--color-ok);
+  --tone-fg: var(--color-ok-fg);
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 8px 6px 8px 12px;
+  border-radius: 18px;
+  background: var(--color-inverse);
+  color: var(--color-on-inverse);
+  box-shadow: var(--shadow-toast);
+  font-size: var(--fs-14);
+  font-weight: var(--fw-medium);
+  line-height: 1.35;
+  animation: toast-in 260ms var(--ease-out) backwards;
+  transition:
+    opacity 180ms,
+    transform 180ms;
+}
+.toast[data-leaving] {
+  opacity: 0;
+  transform: translateY(8px) scale(0.98);
+}
+.toast__chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent-inverse);
+  color: var(--color-inverse);
+}
+.toast__text {
+  flex: 1;
+  min-width: 0;
+  padding: 2px 0;
+}
+.toast__action {
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-13);
+  font-weight: var(--fw-bold);
+  color: var(--color-accent-inverse);
+}
+.toast__action:hover,
+.toast__close:hover {
+  background: var(--color-muted-2);
+}
+.toast__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--target);
+  height: var(--target);
+  flex: none;
+  border-radius: var(--radius-pill);
+  color: var(--color-on-inverse-2);
+}
+.toast :focus-visible {
+  outline-color: var(--color-accent-inverse);
+}
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    animation: none;
+  }
+}

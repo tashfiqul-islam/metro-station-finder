@@ -1,4 +1,4 @@
-/* station-picker.css: the picker's own rules, on top of fields.css, nearby.css and route.css. Tokens only. */
+/* station-picker.css: the picker's own rules, on top of fields.css, result.css and ticket.css. Tokens only. */
 
 @import "../../styles/tokens-parts.css";
 .pick {

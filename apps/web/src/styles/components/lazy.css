@@ -1,0 +1,33 @@
+/* lazy.css: Lazy-loaded section. Colours only via var(--…). Breakpoint 768px. */
+
+.lazy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  min-height: 240px;
+  padding: 32px 20px;
+  text-align: center;
+  border-radius: var(--radius-pane);
+  background: var(--color-raised);
+  box-shadow:
+    var(--shadow-rim),
+    0 0 0 1px var(--color-hair),
+    var(--shadow-1);
+}
+.lazy__text {
+  font-size: var(--fs-15);
+  font-weight: var(--fw-strong);
+  max-width: 32ch;
+}
+.lazy__bars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 260px;
+}
+.lazy:focus-visible {
+  outline-offset: 4px;
+}

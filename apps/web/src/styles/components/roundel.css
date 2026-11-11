@@ -1,0 +1,94 @@
+/* roundel.css: Station roundel. Colours only via var(--…). Breakpoint 768px. */
+
+.roundel {
+  --roundel-size: 48px;
+  --stop-t: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: var(--roundel-size);
+  height: var(--roundel-size);
+  border-radius: var(--radius-pill);
+  border: calc(var(--roundel-size) / 14) solid transparent;
+  background:
+    linear-gradient(var(--color-card), var(--color-card)) padding-box,
+    linear-gradient(
+        135deg,
+        color-mix(in oklch, var(--color-accent) var(--stop-t), var(--color-accent-2)),
+        var(--color-accent-2)
+      )
+      border-box;
+  font-size: calc(var(--roundel-size) * 0.34);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-fg);
+  box-shadow: var(--shadow-1);
+}
+.roundel--sm {
+  --roundel-size: 32px;
+}
+.roundel--md {
+  --roundel-size: 36px;
+}
+.roundel--lg {
+  --roundel-size: 48px;
+}
+.roundel--xl {
+  --roundel-size: 56px;
+}
+.roundel[data-stop="1"] {
+  --stop-t: 100%;
+}
+.roundel[data-stop="2"] {
+  --stop-t: 93%;
+}
+.roundel[data-stop="3"] {
+  --stop-t: 87%;
+}
+.roundel[data-stop="4"] {
+  --stop-t: 80%;
+}
+.roundel[data-stop="5"] {
+  --stop-t: 73%;
+}
+.roundel[data-stop="6"] {
+  --stop-t: 67%;
+}
+.roundel[data-stop="7"] {
+  --stop-t: 60%;
+}
+.roundel[data-stop="8"] {
+  --stop-t: 53%;
+}
+.roundel[data-stop="9"] {
+  --stop-t: 47%;
+}
+.roundel[data-stop="10"] {
+  --stop-t: 40%;
+}
+.roundel[data-stop="11"] {
+  --stop-t: 33%;
+}
+.roundel[data-stop="12"] {
+  --stop-t: 27%;
+}
+.roundel[data-stop="13"] {
+  --stop-t: 20%;
+}
+.roundel[data-stop="14"] {
+  --stop-t: 13%;
+}
+.roundel[data-stop="15"] {
+  --stop-t: 7%;
+}
+.roundel[data-stop="16"] {
+  --stop-t: 0%;
+}
+@media (forced-colors: active) {
+  .roundel {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+}

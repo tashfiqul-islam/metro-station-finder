@@ -3,7 +3,7 @@ Third-party notices for Metro Station Finder (METRO-105)
 Fonts, self-hosted as Latin-subset variable WOFF2 (src/styles/fonts/):
   Hanken Grotesk   SIL Open Font License 1.1
   JetBrains Mono   SIL Open Font License 1.1
-Icons: 31 icons from Lucide (https://lucide.dev), inlined as SVG (src/icons/icon-data.ts).
+Icons: 31 icons from Lucide (https://lucide.dev), inlined as SVG (src/icons/shapes/).
   Lucide            ISC License; a few icons also carry the MIT License of Feather (Cole Bemis).
 
 

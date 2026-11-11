@@ -6,6 +6,8 @@
 
 > Amendment 2026-11-10 (METRO-119): the pre-paint theme script also sets the two `theme-color` tags in `index.html` (each carries `data-scheme` and `data-system`) to the chosen theme's page background colour, and the theme button does the same through `syncThemeColor`. System leaves each tag to its `prefers-color-scheme` query. It extends the decision below and does not reverse it: the script stays one external file under 600 bytes, with no inline script or style and no CSP change. See [brand](../product/brand.md).
 
+> Amendment 2026-11-11 (METRO-117, decision unchanged): `components/common.css`, `nearby.css` and `route.css` are split by component (`typography`, `button`, `roundel`, `notice`, `empty`, `status`, `toast`, `result`, `ticket` and others), each imported by the module that draws it; `fonts-mono.css` is imported by the component files that set `--font-mono`. `Icon` draws one export of a per-icon module in `icons/shapes/` (31 modules; `icons/icon-data.ts` no longer exists). Where the text below names the old files or the 31 named exports of `icon-data.ts`, read these. It extends the decision below and does not reverse it. See [brand](../product/brand.md).
+
 ## Context
 
 The design handoff delivers plain static files: `tokens.css`, `base.css`, `components.css` (67 KB), `fonts.css` with two Latin variable woff2 fonts, 31 Lucide icons, `theme-boot.js`, and screens in light and dark. Every product slice (METRO-15) builds on it, so the foundation must be settled once.

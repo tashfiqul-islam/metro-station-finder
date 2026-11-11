@@ -1,10 +1,20 @@
 import { createElement } from "react";
 import type { ReactElement } from "react";
 
-import type { IconShapes } from "./icon-data";
+/** One SVG shape: its element name and attributes. */
+type IconShape = readonly [
+  tag: "path" | "circle" | "rect" | "line" | "polygon" | "polyline",
+  attributes: Readonly<Record<string, string>>,
+];
+/**
+ * An icon of the design handoff (Lucide, ISC licence, notice in `public/licenses.txt`): SVG shapes on a 24 x 24
+ * grid. One module per icon in `shapes/` imports this type (erased at build), so a lazy chunk takes only the
+ * icons it imports.
+ */
+export type IconShapes = readonly IconShape[];
 
 interface IconProps {
-  /** One of the named exports of `icon-data.ts`, so only the icons a build uses are bundled. */
+  /** The export of one module in `shapes/`, so a chunk bundles only the icons it imports. */
   readonly icon: IconShapes;
   /** Width and height in CSS px. The handoff uses 14, 16, 18 and 20. */
   readonly size?: number;

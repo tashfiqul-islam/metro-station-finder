@@ -7,17 +7,26 @@ import { PLACE_INPUT_ID, useMaps } from "../../adapters/maps/context";
 import type { MapsAdapter } from "../../adapters/maps/context";
 import { focusSearchControl } from "../../adapters/maps/focus";
 import { Icon } from "../../icons/Icon";
-import { chevronIcon, searchIcon } from "../station-picker/picker-icons";
+import { alert } from "../../icons/shapes/alert";
+import { chevronRight } from "../../icons/shapes/chevron-right";
+import { locate as locateIcon } from "../../icons/shapes/locate";
+import { locateOff } from "../../icons/shapes/locate-off";
+import { refresh } from "../../icons/shapes/refresh";
+import { search } from "../../icons/shapes/search";
 import { copy } from "./copy";
 import { formatAccuracy } from "./format";
 import { locate } from "./geolocate";
-import { alertIcon, locateIcon, locateOffIcon, refreshIcon } from "./location-icons";
 import { LocationNotice } from "./LocationNotice";
 import { LocationResult } from "./LocationResult";
 import { SearchingMark } from "./SearchingMark";
 import { useOnline } from "./use-online";
 
-import "../../styles/components/common.css";
+import "../../styles/components/typography.css";
+import "../../styles/components/button.css";
+import "../../styles/components/notice.css";
+import "../../styles/components/empty.css";
+import "../../styles/components/status.css";
+import "../../styles/components/locate.css";
 import "./nearest-station.css";
 
 const stations = baselineDataset.stations;
@@ -257,13 +266,13 @@ function Slice({
         };
       }}
     >
-      <Icon icon={searchIcon} size={16} />
+      <Icon icon={search} size={16} />
       {copy.searchLabel}
     </button>
   );
   const retry = (
     <button type="button" className="btn btn--primary btn--sm" onClick={() => void findMe()}>
-      <Icon icon={refreshIcon} size={16} />
+      <Icon icon={refresh} size={16} />
       {copy.tryAgain}
     </button>
   );
@@ -282,7 +291,7 @@ function Slice({
         {notice !== null && (
           <LocationNotice
             tone={notice.kind === "denied" ? "bad" : "warn"}
-            icon={notice.kind === "denied" ? locateOffIcon : alertIcon}
+            icon={notice.kind === "denied" ? locateOff : alert}
             text={noticeText(notice, searchAvailable)}
             takeFocus={notice.focus}
             actions={
@@ -311,7 +320,7 @@ function Slice({
           <span className="locate__text">
             <span className="locate__title">{copy.locateButton}</span>
           </span>
-          <Icon icon={chevronIcon} size={20} />
+          <Icon icon={chevronRight} size={20} />
         </button>
         {/* The status sits right under the button, so it is in view when the sheet settles at half. */}
         {/* Mounted from the start and empty, so the status is announced when it fills (a region inserted with its text is announced less reliably). Empty it takes no room. */}
@@ -338,7 +347,7 @@ function Slice({
               tabIndex={-1}
             >
               <span className="notice__chip" aria-hidden="true">
-                <Icon icon={searchIcon} size={16} />
+                <Icon icon={search} size={16} />
               </span>
               <div className="notice__body">
                 <p className="notice__text">

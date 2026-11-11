@@ -4,6 +4,8 @@
 - Date: 2026-11-09
 - Ticket and specification: METRO-112 (Plane), parent METRO-109; the ticket description and the owner decisions of 2026-11-09 are the contract.
 
+> Amendment 2026-11-11 (METRO-117, decision unchanged): `picker-icons.ts`, `location-icons.ts` and `control-icons.ts` (and their drift tests) are gone; each icon is its own module in `icons/shapes/`, so a lazy chunk imports its icons without pulling an entry export, and "importing from `icon-data.ts`" is no longer a thing (that file is deleted). `common.css`, `nearby.css` and `route.css` are split by component; the `.tag--sample` rule stays removed.
+
 ## Context
 
 - Repo-verified (METRO-111 evidence, `docs/evidence/metro-111.md`): the first visit had 338 raw and 1,865 gzip bytes of headroom against 250,000 / 80,000 after the line map, and the map's own lazy loader cost about 300 raw bytes of the entry. Slices 2 to 4 must add a picker, a location flow and more Google code without raising a limit (ADR-0020).
@@ -31,7 +33,7 @@ We will load the Nearby screen (the nearest-station page, the Maps adapter, the 
 - A lazy chunk that imports an export of an entry module can pull it into the entry: the picker's `useSheet` import cost the entry 110 raw bytes (A/B build in `docs/evidence/metro-112.md`). Measure the entry after such an import.
 - Harder: the screen and the map now load or fail together (one Reload region instead of two). The shell's map frame is empty until the screen has loaded; the map arrives one commit after the page, in the same task.
 - The page loads two stylesheets (entry and screen) instead of three; `headers.e2e.ts` and `nearest-station.e2e.ts` pin two.
-- The Nearby CSS chunk is 47.7 KB raw because it carries `common.css`, `nearby.css`, `route.css`, `fields.css`, `map.css` and the slice's own files; splitting `route.css` (only the ticket is used) is a lever if the Nearby limits (ADR-0023; the all-files ceiling this sentence named, 87 percent used, is gone) become tight.
+- The Nearby CSS chunk was 47.7 KB raw because it carried whole handoff files (`common.css`, `nearby.css`, `route.css`) for the few components the screen uses; METRO-117 split them per component and each file imports only what it draws (`docs/evidence/metro-117.md`).
 - The mono font is fetched the first time it is drawn (the result's eyebrow); a first-ever use of the picker while offline shows the system mono font until the offline cache of METRO-106 holds the file.
 - Two results can show together (a located nearest station and a picked station); METRO-113 makes the current result single (a new pick replaces a location result and the reverse).
 - Unverified: screen readers (NVDA, VoiceOver) reading the combobox, the status region and the focus move to the result heading.

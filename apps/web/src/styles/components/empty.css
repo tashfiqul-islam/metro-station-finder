@@ -1,0 +1,47 @@
+/* empty.css: Empty state. Colours only via var(--…). Breakpoint 768px. */
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 4px;
+  padding: 28px 16px 20px;
+}
+.empty--card {
+  border-radius: var(--radius-tile);
+  background: var(--color-raised);
+  box-shadow:
+    var(--shadow-rim),
+    0 0 0 1px var(--color-hair),
+    var(--shadow-1);
+}
+.empty__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  margin-bottom: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--color-muted);
+  color: var(--color-muted-fg);
+  box-shadow: inset 0 0 0 1px var(--color-hair);
+}
+.empty__title {
+  font-size: var(--fs-15);
+  font-weight: var(--fw-strong);
+  letter-spacing: -0.01em;
+}
+.empty__text {
+  font-size: var(--fs-13);
+  line-height: 1.45;
+  color: var(--color-muted-fg);
+  max-width: 300px;
+}
+.empty__actions {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-top: 12px;
+}
