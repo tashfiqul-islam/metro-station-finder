@@ -10,12 +10,12 @@ import {
   snapHeights,
 } from "./sheet";
 
-test("METRO-105 snap heights follow the handoff: 196px, 58 percent, viewport minus 148px", () => {
-  expect(snapHeights(844)).toEqual({ peek: 196, half: 490, full: 696 });
+test("METRO-105 snap heights follow the handoff: 250px, 58 percent, viewport minus 148px", () => {
+  expect(snapHeights(844)).toEqual({ peek: 250, half: 490, full: 696 });
 });
 
 test("METRO-105 a very short viewport never makes full smaller than peek", () => {
-  expect(snapHeights(300).full).toBe(196);
+  expect(snapHeights(300).full).toBe(250);
 });
 
 test("METRO-105 a drag is clamped between 120px and full", () => {
@@ -29,8 +29,8 @@ test("METRO-105 release snaps to the nearest of the three heights", () => {
   expect(nearestSnap(400, 844)).toBe("half");
   expect(nearestSnap(600, 844)).toBe("full");
   expect(nearestSnap(696, 844)).toBe("full");
-  expect(nearestSnap(343, 844)).toBe("peek");
-  expect(nearestSnap(344, 844)).toBe("half");
+  expect(nearestSnap(370, 844)).toBe("peek");
+  expect(nearestSnap(371, 844)).toBe("half");
 });
 
 test("METRO-105 tapping the grip cycles peek, half, full, peek", () => {

@@ -67,7 +67,7 @@
     top: var(--space-3);
     left: var(--space-3);
     right: var(--space-3);
-    height: var(--header-h);
+    height: 56px; /* the rev 1 header bar; rev 2 removes the bar at 768px+, so it has no token */
     padding: 0 6px;
     gap: 6px;
     border-radius: var(--radius-pill);

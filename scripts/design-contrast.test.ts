@@ -166,6 +166,7 @@ test("reduced transparency overrides the glass tokens under every theme selector
   expect(reduced.overrides).toEqual({
     "--color-glass": "var(--color-glass-solid)",
     "--color-glass-thick": "var(--color-glass-solid)",
+    "--color-pop": "var(--color-glass-solid)",
     "--blur": "none",
   });
   expect(reduced.lastInFile).toBe(true);

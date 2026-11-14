@@ -4,6 +4,8 @@
 - Date: 2026-11-10
 - Ticket and specification: METRO-115 (Plane); the ticket is the contract, no separate specification.
 
+> Amendment 2026-11-15 (METRO-154, decision unchanged): the sheet's peek height is now 250 px (design handoff revision 2, `--sheet-peek`); where the text below says "peek 196 px", read 250 px. The frame still ends 8 px above the sheet through `--sheet-h`.
+
 ## Context
 
 - Repo-verified (ticket, measured at head 061d771): at 390 px the map drew in a 314x234 box inset from the screen edges, the whole line took 75x209 px and station labels were 4 px tall, because labels and pins were sized in map units and the fit view shrinks every unit with the box.
