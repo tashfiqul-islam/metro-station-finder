@@ -8,6 +8,12 @@
   --color-map-label: #0d0f12;
   --color-map-halo: #e8efef;
   --color-map-walk: #0d0f12;
+  --color-map-water: #cfe0ea;
+  --color-map-water-ink: #2d5a77;
+  --color-map-road: #ffffff;
+  --color-map-road-edge: #d3dedf;
+  --color-map-park: #d6e7e1;
+  --color-map-area: #5a606b;
 }
 :root[data-theme="dark"] {
   --color-map-dot: rgb(255 255 255 / 0.06);
@@ -18,6 +24,12 @@
   --color-map-label: #f2f3f5;
   --color-map-halo: #090e0e;
   --color-map-walk: #f2f3f5;
+  --color-map-water: #0e1b24;
+  --color-map-water-ink: #7fb2d4;
+  --color-map-road: #16191d;
+  --color-map-road-edge: #0a0d0e;
+  --color-map-park: #0c1715;
+  --color-map-area: #9aa0ab;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
@@ -29,5 +41,11 @@
     --color-map-label: #f2f3f5;
     --color-map-halo: #090e0e;
     --color-map-walk: #f2f3f5;
+    --color-map-water: #0e1b24;
+    --color-map-water-ink: #7fb2d4;
+    --color-map-road: #16191d;
+    --color-map-road-edge: #0a0d0e;
+    --color-map-park: #0c1715;
+    --color-map-area: #9aa0ab;
   }
 }

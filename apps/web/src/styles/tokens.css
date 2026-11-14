@@ -70,9 +70,9 @@
   --color-brand-tile-ink: #ffffff;
   --shadow-brand-tile: inset 0 1px 0 rgb(255 255 255 / 0.25), 0 6px 14px -6px #0e8590;
   --side-w: 360px;
-  --header-h: 56px;
+  --ctl-h: 52px;
   --tabbar-h: 64px;
-  --sheet-peek: 196px;
+  --sheet-peek: 250px;
   --sheet-half: 58dvh;
   /* The sheet's top edge at full height sits --sheet-top below the screen top. The space under the sheet,
      --sheet-reserve, is the tab bar and its gap; `.app--plain` (no nav drawn) shrinks it. Full height is
@@ -104,6 +104,7 @@
   --color-mark-b: #1d6fb8;
   --color-mark-station: #0d0f12;
   --color-map-bg: #e8efef;
+  --color-pop: rgb(255 255 255 / 0.94);
   --shadow-1: 0 1px 1px rgb(13 15 18 / 0.04), 0 2px 6px -2px rgb(13 15 18 / 0.08);
   --shadow-2: 0 1px 2px rgb(13 15 18 / 0.05), 0 12px 32px -12px rgb(13 15 18 / 0.18);
   --shadow-3: 0 2px 4px rgb(13 15 18 / 0.05), 0 24px 60px -18px rgb(13 15 18 / 0.28);
@@ -145,6 +146,7 @@
   --color-mark-b: #8cc8ff;
   --color-mark-station: #f2f3f5;
   --color-map-bg: #090e0e;
+  --color-pop: rgb(20 22 25 / 0.94);
   --shadow-1: 0 1px 2px rgb(0 0 0 / 0.4);
   --shadow-2: 0 1px 2px rgb(0 0 0 / 0.4), 0 16px 40px -12px rgb(0 0 0 / 0.6);
   --shadow-3: 0 2px 4px rgb(0 0 0 / 0.4), 0 28px 64px -16px rgb(0 0 0 / 0.72);
@@ -180,6 +182,7 @@
     --color-mark-b: #8cc8ff;
     --color-mark-station: #f2f3f5;
     --color-map-bg: #090e0e;
+    --color-pop: rgb(20 22 25 / 0.94);
     --shadow-1: 0 1px 2px rgb(0 0 0 / 0.4);
     --shadow-2: 0 1px 2px rgb(0 0 0 / 0.4), 0 16px 40px -12px rgb(0 0 0 / 0.6);
     --shadow-3: 0 2px 4px rgb(0 0 0 / 0.4), 0 28px 64px -16px rgb(0 0 0 / 0.72);
@@ -198,6 +201,7 @@
   :root:not([data-theme]) {
     --color-glass: var(--color-glass-solid);
     --color-glass-thick: var(--color-glass-solid);
+    --color-pop: var(--color-glass-solid);
     --blur: none;
   }
 }
