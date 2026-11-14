@@ -1,6 +1,6 @@
 # ADR-0001: Foundation baseline
 
-- Status: Accepted
+- Status: Accepted (decision 6 superseded by ADR-0026)
 - Date: 2026-11-03
 - Ticket and specification: METRO-19, `metro-foundation-completion` revision `2026-11-03-r1`
 
@@ -17,11 +17,13 @@ The independent Metro rebuild started with a scaffold whose decisions were recor
 5. **Core purity.** `packages/core` is dependency-free and uses ES types only; `scripts/boundaries.ts` enforces it. See [architecture](../agents/architecture.md).
 6. **Plane as issue tracker.** Tickets, specifications and readiness live in Plane; GitHub is the code host only. See the [Plane adapter](../agents/plane.md).
 
+> Superseded 2026-11-15 by [ADR-0026](0026-github-tracker.md) (planning#152): tracking moved to GitHub issues in metro-station-finder/planning. The text above is left as written.
+
 ## Consequences
 
 - Upgrades to the compiler, Wrangler or Vite must recheck the TypeScript 6 seam and the runtime smoke.
 - Core cannot import frameworks or other packages; shared contracts need a separate package (decided in a later ADR).
-- Work tracking depends on the Plane connector; its limits are documented in the adapter.
+- Work tracking depends on the Plane connector; its limits are documented in the adapter (superseded, see ADR-0026).
 
 ## Alternatives considered
 

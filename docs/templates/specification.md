@@ -33,4 +33,4 @@ Repeat for each bounded, independently verifiable vertical slice. Split by obser
 
 ## Readiness record
 
-[Reviewer, reviewed revision, unresolved blockers, acceptance-to-seam mapping and disposition.] Preserve all slice criteria, failure checks, testing seams and blockers in prepared tickets. Use the [tracker](../agents/tracker.md) for authorized ticket creation and reconciliation. Use the [local example](../examples/plane-preparation/README.md) to exercise preservation; it does not evaluate research quality or authorize Ready.
+[Reviewer, reviewed revision, unresolved blockers, acceptance-to-seam mapping and disposition.] Preserve all slice criteria, failure checks, testing seams and blockers in prepared tickets. Use the [tracker](../agents/tracker.md) for authorized ticket creation and reconciliation. Use the [local example](../examples/ticket-preparation/README.md) to exercise preservation; it does not evaluate research quality or authorize Ready.
