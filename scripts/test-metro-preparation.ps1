@@ -4,7 +4,7 @@ param([Parameter(Mandatory)][hashtable]$SkillRoots)
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $verifier = Join-Path $PSScriptRoot 'verify-metro-preparation.ps1'
-$example = Join-Path $PSScriptRoot '../docs/examples/plane-preparation'
+$example = Join-Path $PSScriptRoot '../docs/examples/ticket-preparation'
 $lockPath = Join-Path $PSScriptRoot '../docs/agents/skills.lock.json'
 & $verifier -SkillRoots $SkillRoots
 $temporary = Join-Path ([IO.Path]::GetTempPath()) ('metro-preparation-' + [guid]::NewGuid())

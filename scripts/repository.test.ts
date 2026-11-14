@@ -91,7 +91,7 @@ test("FND-H2 the preparation README snippet lists every locked skill root", asyn
   const roots = new Set(
     collections.map((file: unknown) => (isRecord(file) ? file["root"] : undefined)),
   );
-  const readme = await read("docs/examples/plane-preparation/README.md");
+  const readme = await read("docs/examples/ticket-preparation/README.md");
   expect(roots.size).toBeGreaterThan(0);
   for (const name of roots) expect(readme).toMatch(new RegExp(String.raw`^\s+${name} = '`, "mu"));
 });

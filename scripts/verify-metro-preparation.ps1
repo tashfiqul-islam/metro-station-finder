@@ -2,8 +2,8 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)][hashtable]$SkillRoots,
-    [string]$SourcePath = "$PSScriptRoot/../docs/examples/plane-preparation/source.json",
-    [string]$TicketsPath = "$PSScriptRoot/../docs/examples/plane-preparation/tickets.json",
+    [string]$SourcePath = "$PSScriptRoot/../docs/examples/ticket-preparation/source.json",
+    [string]$TicketsPath = "$PSScriptRoot/../docs/examples/ticket-preparation/tickets.json",
     [string]$LockPath = "$PSScriptRoot/../docs/agents/skills.lock.json"
 )
 Set-StrictMode -Version Latest
