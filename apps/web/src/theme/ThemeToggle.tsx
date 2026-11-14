@@ -44,9 +44,10 @@ async function reveal(
  * already applied it to `<html>`), saved on change, and revealed with a View Transition where available (loaded
  * on first use). Other open tabs follow: a `storage` event for the theme key (or a cleared store) and every
  * `pageshow` (a back-forward cache restore may have missed events) re-read the saved choice and apply it at
- * once, with no reveal, and never save it (METRO-133). Each press cycles from the latest choice, kept in a ref, so presses made before React
- * re-renders move one step each. Known limitation (METRO-119, Confirmed with Playwright 1.64 on WebKit 27.2,
- * Chromium and Firefox): while the ~560 ms reveal runs, the `::view-transition` overlay takes hit-testing
+ * once, with no reveal, and never save it (METRO-133). Each press cycles from the latest choice, kept in a ref,
+ * so presses made before React re-renders move one step each. Known limitation (METRO-119, Confirmed with
+ * Playwright 1.64 on WebKit 27.2, Chromium and Firefox): while the ~560 ms reveal runs, the
+ * `::view-transition` overlay takes hit-testing
  * (`document.elementFromPoint` returns `<html>`), so a press in that window never reaches the button and is
  * lost. `pointer-events: none` on the pseudo-elements does not lift it in Chromium or WebKit. The owner
  * accepted this on 2026-11-11; revisit only if real users hit it. The overlap in `reveal.ts` (the first
