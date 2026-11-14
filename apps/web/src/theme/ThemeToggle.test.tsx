@@ -144,3 +144,113 @@ test("METRO-105 the icon is decorative and the button has no inline style", () =
   expect(container.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
   expect(container.querySelector("[style]")).toBeNull();
 });
+
+/** Two theme-color tags as in `theme.test.ts`: each keeps its own colour in `data-system`. */
+function addTags(): HTMLMetaElement[] {
+  return [
+    ["#aaaaaa", "light"],
+    ["#111111", "dark"],
+  ].map(([content, scheme]) => {
+    const tag = document.createElement("meta");
+    tag.name = "theme-color";
+    tag.content = content ?? "";
+    tag.setAttribute("media", `(prefers-color-scheme: ${scheme})`);
+    tag.dataset["scheme"] = scheme;
+    tag.dataset["system"] = content ?? "";
+    document.head.append(tag);
+    return tag;
+  });
+}
+
+/** Another tab's change: set storage, then deliver the event it would raise here. */
+async function remote(key: string | null, change: () => void): Promise<void> {
+  change();
+  await act(async () => {
+    window.dispatchEvent(new StorageEvent("storage", { key }));
+  });
+}
+
+test("METRO-133 a theme saved in another tab applies here: html, button, both theme-color tags, no write", async () => {
+  const tags = addTags();
+  const setItem = vi.spyOn(Storage.prototype, "setItem");
+  try {
+    render(<ThemeToggle />);
+    await remote(THEME_KEY, () => {
+      localStorage.setItem(THEME_KEY, "dark");
+      setItem.mockClear();
+    });
+    expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
+    expect(screen.getByRole("button", { name: "Theme: Dark. Switch to System" })).toBeTruthy();
+    expect(tags.map((tag) => tag.content)).toEqual(["#111111", "#111111"]);
+    expect(setItem).not.toHaveBeenCalled();
+  } finally {
+    setItem.mockRestore();
+    for (const tag of tags) tag.remove();
+  }
+});
+
+test("METRO-133 localStorage.clear() in another tab (key null) returns this tab to System", async () => {
+  localStorage.setItem(THEME_KEY, "dark");
+  document.documentElement.setAttribute("data-theme", "dark");
+  render(<ThemeToggle />);
+  await remote(null, () => {
+    localStorage.clear();
+  });
+  expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
+  expect(screen.getByRole("button", { name: "Theme: System. Switch to Light" })).toBeTruthy();
+});
+
+test("METRO-133 an event for another key changes nothing, and a stored invalid value reads as System", async () => {
+  render(<ThemeToggle />);
+  await remote("other", () => {
+    localStorage.setItem(THEME_KEY, "dark");
+  });
+  expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
+  expect(screen.getByRole("button", { name: "Theme: System. Switch to Light" })).toBeTruthy();
+  await remote(THEME_KEY, () => {
+    localStorage.setItem(THEME_KEY, "dark");
+  });
+  expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
+  await remote(THEME_KEY, () => {
+    localStorage.setItem(THEME_KEY, "blue");
+  });
+  expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
+  expect(screen.getByRole("button", { name: "Theme: System. Switch to Light" })).toBeTruthy();
+});
+
+test("METRO-133 a pageshow after storage changed applies the stored theme", async () => {
+  render(<ThemeToggle />);
+  localStorage.setItem(THEME_KEY, "light");
+  await act(async () => {
+    window.dispatchEvent(new Event("pageshow"));
+  });
+  expect(document.documentElement.getAttribute("data-theme")).toBe("light");
+  expect(screen.getByRole("button", { name: "Theme: Light. Switch to Dark" })).toBeTruthy();
+});
+
+test("METRO-133 after unmount, storage and pageshow events change nothing", async () => {
+  const { unmount } = render(<ThemeToggle />);
+  // Live first, so the test fails where no listener exists at all.
+  await remote(THEME_KEY, () => {
+    localStorage.setItem(THEME_KEY, "dark");
+  });
+  expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
+  unmount();
+  document.documentElement.removeAttribute("data-theme");
+  await act(async () => {
+    window.dispatchEvent(new StorageEvent("storage", { key: THEME_KEY }));
+    window.dispatchEvent(new Event("pageshow"));
+  });
+  expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
+});
+
+test("METRO-133 a press after a remote change to Dark goes to System, not past the stale value", async () => {
+  render(<ThemeToggle />);
+  await remote(THEME_KEY, () => {
+    localStorage.setItem(THEME_KEY, "dark");
+  });
+  await press("Theme: Dark. Switch to System");
+  expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
+  expect(localStorage.getItem(THEME_KEY)).toBe("system");
+  expect(screen.getByRole("button", { name: "Theme: System. Switch to Light" })).toBeTruthy();
+});
