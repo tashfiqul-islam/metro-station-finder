@@ -37,18 +37,20 @@ async function open(page: Page): Promise<void> {
   await expect(toggle(page)).toBeVisible();
 }
 
-test("METRO-133 a theme chosen in one tab appears in the other: Light, Dark, then System", async ({
-  context,
-}) => {
-  const a = await context.newPage();
-  const b = await context.newPage();
-  await open(a);
-  await open(b);
-  await settled(a, "system");
-  await showsTheme(b, "system");
-  for (const theme of ["light", "dark", "system"] as const) {
-    await toggle(a).click();
-    await settled(a, theme);
-    await showsTheme(b, theme);
-  }
-});
+for (const run of Array.from({ length: 40 }, (_, index) => index)) {
+  test(`METRO-133 repeat ${run}: a theme chosen in one tab appears in the other`, async ({
+    context,
+  }) => {
+    const a = await context.newPage();
+    const b = await context.newPage();
+    await open(a);
+    await open(b);
+    await settled(a, "system");
+    await showsTheme(b, "system");
+    for (const theme of ["light", "dark", "system"] as const) {
+      await toggle(a).click();
+      await settled(a, theme);
+      await showsTheme(b, theme);
+    }
+  });
+}
