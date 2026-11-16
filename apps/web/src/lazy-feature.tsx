@@ -1,8 +1,16 @@
 import { Component, Suspense, lazy, type ComponentType, type ReactNode } from "react";
 
+import { Icon } from "./icons/Icon";
+import { refresh } from "./icons/shapes/refresh";
+
+import "./styles/components/button.css";
+import "./styles/components/empty.css";
+import "./styles/components/lazy.css";
+import "./styles/components/skeleton.css";
+
 /** All copy of the lazy-loading helper (fixed, English only; never an error message). */
 export const lazyCopy = {
-  loading: "Loading this part of the page.",
+  loading: "Loading",
   failed: "This part of the page could not be loaded. Reload the page to try again.",
   reload: "Reload the page",
 } as const;
@@ -31,13 +39,26 @@ interface State {
 const loadErrors = new WeakSet();
 
 /**
- * Pending state: visible text in a polite status region, no spinner and no animation, so there is nothing
- * for `prefers-reduced-motion` to switch off and the meaning never depends on motion. On a fast load it
- * can flash for a moment; accepted as a known minor (ADR-0020).
+ * Pending state (handoff rev 10, "Lazy-loaded sections"): the word "Loading" in a polite status region
+ * (`<output>` is `role="status"`), under three shimmer bars that are `aria-hidden`; `skeleton.css` makes the
+ * bars static under `prefers-reduced-motion`. The meaning is the text, never the motion. On a fast load it can
+ * flash for a moment; accepted as a known minor (ADR-0020).
  */
 function Pending(): ReactNode {
-  return <output>{lazyCopy.loading}</output>;
+  return (
+    <output className="lazy">
+      <span className="lazy__text">{lazyCopy.loading}</span>
+      <span className="lazy__bars" aria-hidden="true">
+        <span className="skeleton__bar" />
+        <span className="skeleton__bar" />
+        <span className="skeleton__bar skeleton__bar--short" />
+      </span>
+    </output>
+  );
 }
+
+/** Gives each failure region its own message id, so two failed features on one page never share one. */
+let failureCount = 0;
 
 /**
  * Class component because React has no hook for error boundaries. A rejected `import()` (offline, chunk
@@ -48,11 +69,12 @@ function Pending(): ReactNode {
  * or rendered; the root callbacks in `report-error.ts` log only its built-in class name.
  *
  * Accessibility: like a route change, the failure takes focus (a `tabIndex={-1}` region named by the fixed
- * text, which is read once when focus lands) and has NO `role="alert"`; an alert plus moved focus can
+ * text through `aria-labelledby`, which is read once when focus lands) and has NO `role="alert"`; an alert plus moved focus can
  * announce the same text twice. The visible focus ring comes from `base.css` (`section:focus`, forced on script focus; METRO-118).
  */
 class FeatureBoundary<P extends object> extends Component<Props<P>, State> {
   override state: State = { failed: false, foreign: null };
+  private readonly messageId = `lazy-msg-${String(++failureCount)}`;
   private readonly focusRegion = (node: HTMLElement | null): void => {
     node?.focus();
   };
@@ -73,9 +95,19 @@ class FeatureBoundary<P extends object> extends Component<Props<P>, State> {
     }
     if (this.state.failed) {
       return (
-        <section ref={this.focusRegion} aria-label={lazyCopy.failed} tabIndex={-1}>
-          <p>{lazyCopy.failed}</p>
-          <button type="button" onClick={this.props.reload}>
+        <section
+          className="lazy"
+          ref={this.focusRegion}
+          aria-labelledby={this.messageId}
+          tabIndex={-1}
+        >
+          <span className="empty__icon" aria-hidden="true">
+            <Icon icon={refresh} size={24} />
+          </span>
+          <p className="lazy__text" id={this.messageId}>
+            {lazyCopy.failed}
+          </p>
+          <button type="button" className="btn btn--primary" onClick={this.props.reload}>
             {lazyCopy.reload}
           </button>
         </section>

@@ -21,7 +21,7 @@ test("METRO-93 the app renders the nearest-station slice with the real adapter a
   render(<AppRoutes />);
   // The slice is a lazy chunk (ADR-0021): a fixed pending status first, then the slice inside the shell.
   // One status for the screen; the map beside it is silent while it loads.
-  expect(screen.getByText("Loading this part of the page.").tagName).toBe("OUTPUT");
+  expect(screen.getByText("Loading").closest("output")?.className).toBe("lazy");
   expect(
     await screen.findByRole("heading", { level: 1, name: "Nearest Metro station" }),
   ).toBeTruthy();
