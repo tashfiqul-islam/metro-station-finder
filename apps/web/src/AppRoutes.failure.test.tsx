@@ -37,5 +37,5 @@ test("METRO-112 when the Nearby chunk cannot load, the contained reload region s
   expect(screen.queryByRole("region", { name: "Line map" })).toBeNull();
   expect(screen.queryByRole("application")).toBeNull();
   // The only status was the pending one, and it is gone.
-  expect(screen.queryByText("Loading this part of the page.")).toBeNull();
+  expect(screen.queryByText("Loading")).toBeNull();
 });

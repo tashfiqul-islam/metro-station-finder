@@ -74,7 +74,15 @@ test("METRO-104 while the chunk is pending a fixed polite status shows, then the
     root.render(<Lazy name="late" />);
   });
   expect(status()?.textContent).toBe(lazyCopy.loading);
-  expect(container.querySelector("svg, [aria-busy], [class]")).toBeNull();
+  // The handoff markup: the text and three bars that assistive tech skips; no spinner, no busy state.
+  expect(status()?.getAttribute("role")).toBeNull();
+  expect(status()?.tagName).toBe("OUTPUT");
+  const bars = container.querySelector(".lazy__bars");
+  expect(bars?.getAttribute("aria-hidden")).toBe("true");
+  expect(bars?.querySelectorAll(".skeleton__bar")).toHaveLength(3);
+  expect(bars?.querySelector(".skeleton__bar--short")).not.toBeNull();
+  expect(container.querySelector("svg")).toBeNull();
+  expect(container.querySelector("[aria-busy], [role=progressbar]")).toBeNull();
   expect(container.textContent).not.toContain("Loaded");
   await act(async () => {
     gate.release({ default: Feature });
@@ -125,7 +133,13 @@ test("METRO-104 a rejected import shows the fixed failure copy and never the err
   await settle();
   const region = failure();
   expect(region?.textContent).toContain(lazyCopy.failed);
-  expect(region?.getAttribute("aria-label")).toBe(lazyCopy.failed);
+  // Named by the message itself, through aria-labelledby (the handoff), not by a copy of it in aria-label.
+  const message = region?.querySelector(".lazy__text");
+  expect(message?.textContent).toBe(lazyCopy.failed);
+  expect(region?.getAttribute("aria-labelledby")).toBe(message?.id);
+  expect(region?.hasAttribute("aria-label")).toBe(false);
+  expect(region?.classList.contains("lazy")).toBe(true);
+  expect(region?.querySelector(".empty__icon svg")?.getAttribute("aria-hidden")).toBe("true");
   expect(document.activeElement).toBe(region);
   const shown = container.textContent ?? "";
   for (const fragment of LEAKS) expect(shown).not.toContain(fragment);
@@ -180,6 +194,11 @@ test("METRO-104 roles and keyboard: focus lands on one named region, not an aler
   const button = reloadButton();
   expect(button?.tagName).toBe("BUTTON");
   expect(button?.getAttribute("type")).toBe("button");
+  expect(button?.className).toBe("btn btn--primary");
+  // The button is the one control inside the region, so Tab from the focused region reaches it.
+  expect(
+    failure()?.querySelectorAll("button, a, input, select, textarea, [tabindex]"),
+  ).toHaveLength(1);
   expect(button?.textContent).toBe(lazyCopy.reload);
   button?.focus();
   expect(document.activeElement).toBe(button);
