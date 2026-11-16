@@ -1,6 +1,7 @@
 /* tokens-parts.css: colours and shadows that only lazily loaded parts use: notice tones, scrim, ticket and tab
    shadows, thumb, veil, the ticket mask ink and the theme-card previews (same in both themes, so only in :root). The
-   toast tokens (ok, inverse, accent-inverse, shadow-toast) are in tokens.css, since the shell loads the toast. Imported by every component file that uses one of them (common, palette, nav, route, line, nearby, settings,
+   toast tokens (ok, inverse, accent-inverse, shadow-toast) are in tokens.css, since the shell loads the toast.
+   Imported by every component file that uses one of them (common, palette, nav, route, line, nearby, settings,
    header-extras, and the nearest-station slice). Same three theme blocks as tokens.css (light, dark, OS dark). */
 :root {
   --color-preview-light-bg: #f2f6f6;

@@ -148,13 +148,24 @@ export function ToastRegion(): ReactElement | null {
 }
 
 /**
- * Keyboard focus was on a toast control that is about to go. The panel takes it, except while the sheet peeks:
- * focus entering the panel's content opens a peeking sheet to half (AppShell), which a toast must not do, so the
- * sheet's grip takes it (the handle controls do not open the sheet, ADR-0021).
+ * Keyboard focus was on a toast control that is about to go. The panel's scroll area takes it, except while the
+ * sheet peeks: focus entering that content opens a peeking sheet to half (AppShell), which a toast must not do.
+ * So at peek the sheet's grip takes it (the handle controls do not open the sheet, ADR-0021). From 768 px the
+ * handle is not drawn, so the grip cannot take focus; then the `main` panel does, through a programmatic
+ * `tabindex="-1"` (it is outside the scroll area, so it does not open the sheet either).
  */
 function handOffFocus(): void {
   const peeking = document.querySelector(".app")?.getAttribute("data-snap") === "peek";
-  document.querySelector<HTMLElement>(peeking ? ".panel__grip" : ".panel__scroll")?.focus();
+  if (!peeking) {
+    document.querySelector<HTMLElement>(".panel__scroll")?.focus();
+    return;
+  }
+  const grip = document.querySelector<HTMLElement>(".panel__grip");
+  grip?.focus();
+  if (document.activeElement === grip) return;
+  const panel = document.querySelector<HTMLElement>("main.panel");
+  panel?.setAttribute("tabindex", "-1");
+  panel?.focus();
 }
 
 function Toast({ toast, state }: { readonly toast: Current; readonly state: State }): ReactElement {

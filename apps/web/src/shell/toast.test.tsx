@@ -440,3 +440,25 @@ test("METRO-158 the region and the announcer draw nothing outside the provider",
   expect(container.querySelector(".toast")).toBeNull();
   expect(container.querySelector("output")?.textContent).toBe("");
 });
+
+test("METRO-158 at a peeking sheet where the grip cannot take focus (not drawn from 768 px), focus goes to the panel and the sheet stays at peek", () => {
+  const { api, container } = mount("peek");
+  const grip = container.querySelector<HTMLElement>(".panel__grip");
+  // happy-dom has no layout: a handle that is `display: none` ignores focus(), which this stands in for.
+  if (grip === null) throw new Error("no grip");
+  vi.spyOn(grip, "focus").mockImplementation(() => {});
+  act(() => api().show({ text: "Saved", undo: () => {} }));
+  act(() => dismissButton().focus());
+  fireEvent.click(dismissButton());
+  const panel = container.querySelector<HTMLElement>("main.panel");
+  expect(document.activeElement).toBe(panel);
+  expect(panel?.getAttribute("tabindex")).toBe("-1");
+  expect(container.querySelector(".app")?.getAttribute("data-snap")).toBe("peek");
+  // With no grip at all it does the same.
+  wait(180);
+  grip.remove();
+  act(() => api().show({ text: "Again" }));
+  act(() => dismissButton().focus());
+  fireEvent.click(dismissButton());
+  expect(document.activeElement).toBe(panel);
+});
