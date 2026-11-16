@@ -1,4 +1,5 @@
-/* button.css: Buttons. Colours only via var(--…). Breakpoint 768px. */
+/* button.css: the primary button, the part the entry's lazy failure state draws. The rest is in `button-rest.css`,
+   which screen chunks import instead (METRO-158). Colours only via var(--…). Breakpoint 768px. */
 
 .btn {
   display: inline-flex;
@@ -29,53 +30,4 @@
 }
 .btn--primary:hover {
   background: var(--color-accent-hover);
-}
-.btn--quiet {
-  background: var(--color-card);
-  color: var(--color-fg);
-  box-shadow:
-    0 0 0 1px var(--color-hair),
-    var(--shadow-1);
-}
-.btn--quiet:hover {
-  background: var(--color-muted);
-}
-.btn--ghost {
-  background: transparent;
-  color: var(--color-fg);
-}
-.btn--ghost:hover {
-  background: var(--color-muted);
-}
-.btn--block {
-  width: 100%;
-}
-.btn--sm {
-  min-height: 36px;
-  padding: 0 12px;
-  font-size: var(--fs-13);
-}
-.btn--icon {
-  width: var(--target);
-  padding: 0;
-}
-.btn__ext {
-  opacity: 0.7;
-}
-.btn--maps {
-  min-height: 52px;
-  justify-content: space-between;
-  padding: 0 18px 0 20px;
-  font-size: var(--fs-15);
-  letter-spacing: -0.01em;
-}
-.btn__lead {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-}
-.btn-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
 }
