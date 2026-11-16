@@ -8,8 +8,10 @@ import { linksAreTabbable } from "./keyboard";
 import { installMapsStub } from "./maps-stub";
 
 /**
- * METRO-112: the station picker and the station result (local data, no network), in the real build with the enforced CSP. A pick
- * has no user position, so it must show no distance or walk and make no request of any kind.
+ * METRO-112: station search and the station result (local data), in the real build with the enforced CSP. A pick
+ * has no user position, so it must show no distance or walk. Since METRO-163 the field is the one search field
+ * over stations and places; this spec is about the stations, so the stub answers every places query with nothing
+ * (`emptySuggestions`) and `place-search.e2e.ts` covers the places.
  */
 const MAP_NAME = "Schematic map of MRT Line 6";
 
@@ -17,14 +19,15 @@ async function open(page: Page, saved?: "light" | "dark"): Promise<void> {
   if (saved !== undefined) {
     await page.addInitScript((value) => localStorage.setItem("msf-theme", value), saved);
   }
-  await installMapsStub(page);
+  await installMapsStub(page, { emptySuggestions: true });
   await page.goto("/");
   await expect(page.getByRole("application", { name: MAP_NAME, exact: true })).toBeVisible();
   await expect(combo(page)).toBeVisible();
 }
 
-const combo = (page: Page): Locator => page.getByRole("combobox", { name: "Or pick a station" });
-const popup = (page: Page): Locator => page.getByRole("listbox", { name: "Stations" });
+const combo = (page: Page): Locator =>
+  page.getByRole("combobox", { name: "Search a place or station" });
+const popup = (page: Page): Locator => page.getByRole("listbox", { name: "Suggestions" });
 const snap = (page: Page): Promise<string | null> => page.locator(".app").getAttribute("data-snap");
 
 async function pick(page: Page, text: string): Promise<void> {
@@ -60,7 +63,9 @@ test.describe("station picker", () => {
     const box = combo(page);
     await expect(box).toHaveAttribute("aria-expanded", "false");
     await expect(box).toHaveAttribute("aria-autocomplete", "list");
-    await expect(box).toHaveAccessibleDescription("Search all 16 stations by name.");
+    // METRO-163: the field has the handoff's hidden label and placeholder and no hint line, so no description.
+    await expect(box).toHaveAccessibleDescription("");
+    await expect(box).toHaveAttribute("placeholder", "Search a place or station");
     const controls = await box.getAttribute("aria-controls");
     expect(await page.locator(`#${controls}`).getAttribute("role")).toBe("listbox");
     await expect(page.getByRole("option")).toHaveCount(0);
@@ -72,7 +77,7 @@ test.describe("station picker", () => {
     await open(page);
     await combo(page).fill("mir");
     await expect(combo(page)).toHaveAttribute("aria-expanded", "true");
-    await page.getByRole("button", { name: "Clear station search" }).click();
+    await page.getByRole("button", { name: "Clear search" }).click();
     await expect(combo(page)).toHaveValue("");
     await expect(combo(page)).toBeFocused();
     await expect(combo(page)).toHaveAttribute("aria-expanded", "false");
@@ -102,14 +107,16 @@ test.describe("station picker", () => {
     await expect(box).toHaveValue("mir");
     await box.press("Escape");
     await expect(box).toHaveValue("");
+    // METRO-163: empty text lists nothing, so the arrows have no list to open.
     await box.press("ArrowDown");
-    await expect(box).toHaveAttribute("aria-expanded", "true");
-    await expect(popup(page).getByRole("option")).toHaveCount(16);
+    await expect(box).toHaveAttribute("aria-expanded", "false");
+    await box.fill("mir");
+    await expect(popup(page).getByRole("option")).toHaveCount(2);
     await box.press("End");
     await expect(box).not.toHaveAttribute("aria-activedescendant", /.+/u);
     await box.press("ArrowDown");
     await box.press("Enter");
-    const heading = page.getByRole("heading", { level: 2, name: "Uttara North" });
+    const heading = page.getByRole("heading", { level: 2, name: "Mirpur 11" });
     await expect(heading).toBeFocused();
     await expect(heading).toHaveAttribute("tabindex", "-1");
   });
@@ -172,7 +179,7 @@ test.describe("station picker", () => {
     page,
   }) => {
     await open(page);
-    const status = page.locator(".pick__combo output");
+    const status = page.locator(".search__feedback output, .empty output");
     await expect(status).toHaveText("");
     await combo(page).fill("mir");
     await expect(status).toHaveText("2 stations");
@@ -194,8 +201,11 @@ test.describe("station picker", () => {
     await box.fill("Sadarghat");
     await expect(page.getByText("No station matches that name.")).toBeVisible();
     await expect(box).toHaveAttribute("aria-expanded", "false");
+    // Tab leaves the field for its Clear button and its locate button, then reaches Browse all.
     await page.keyboard.press("Tab");
-    await expect(page.getByRole("button", { name: "Clear station search" })).toBeFocused();
+    await expect(page.getByRole("button", { name: "Clear search" })).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(page.locator("button.search__locate")).toBeFocused();
     await page.keyboard.press("Tab");
     const browse = page.getByRole("button", { name: "Browse all 16 stations" });
     await expect(browse).toBeFocused();
@@ -213,8 +223,12 @@ test.describe("station picker", () => {
     expect(await snap(page)).toBe("half");
     await combo(page).fill("a");
     expect(await snap(page)).toBe("full");
+    // Up to five stations are listed for typed text; "Browse all" lists the 16, which is what must scroll.
+    await expect(popup(page).getByRole("option")).toHaveCount(5);
+    await combo(page).fill("zz");
+    await page.getByRole("button", { name: "Browse all 16 stations" }).click();
     const list = popup(page);
-    await expect(list.getByRole("option")).not.toHaveCount(0);
+    await expect(list.getByRole("option")).toHaveCount(16);
     await animationsEnded(page);
     const viewport = page.viewportSize();
     const header = await page.locator(".app-header").boundingBox();
@@ -296,12 +310,15 @@ test.describe("station picker", () => {
     expect(stops[0]?.region).toBe("header");
     if (await linksAreTabbable(page)) expect(stops[0]?.name).toMatch(/home/iu);
     const names = stops.map((stop) => stop.name);
-    const locate = names.indexOf("Use my location");
-    const picker = names.indexOf("Or pick a station");
-    expect(locate, "location button").toBeGreaterThan(-1);
-    expect(picker, "picker").toBeGreaterThan(locate);
+    // METRO-163: the one field comes first, with its own locate button, then the page's Use my location.
+    const picker = names.indexOf("Search a place or station");
+    const inField = names.indexOf("Use my location");
+    const locate = names.lastIndexOf("Use my location");
+    expect(picker, "search field").toBeGreaterThan(-1);
+    expect(inField, "locate button in the field").toBeGreaterThan(picker);
+    expect(locate, "location button").toBeGreaterThan(inField);
     const firstMap = stops.findIndex((stop) => stop.region === "map");
-    expect(firstMap).toBeGreaterThan(picker);
+    expect(firstMap).toBeGreaterThan(locate);
     expect(stops.slice(firstMap).map((stop) => stop.region)).toEqual(["map", "map", "map", "map"]);
   });
 
@@ -452,7 +469,7 @@ test.describe("station picker", () => {
     expect(claimFile?.name).toMatch(/^Nearby-.*\.js$/u);
     expect(claimText.match(/offline/giu)).toHaveLength(1);
     expect(claimText).toContain(
-      "You’re offline. Stations and fares still work. Place search returns when you reconnect. Pick a station instead.",
+      "You’re offline. Stations and fares still work. Place search returns when you reconnect.",
     );
     // Backed by the worker: sw.js is built beside index.html, precaches the shell, and the app registers it.
     const worker = readFileSync(join(dist, "client", "sw.js"), "utf8");

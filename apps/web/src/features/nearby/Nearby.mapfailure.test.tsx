@@ -58,7 +58,7 @@ test("METRO-112 a render error in the line map is contained in the map frame: a 
   // Not the root fallback: the page and the picker are still there and usable.
   expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
   expect(screen.getByRole("heading", { level: 1, name: "Nearest Metro station" })).toBeTruthy();
-  const box = screen.getByRole("combobox", { name: "Or pick a station" });
+  const box = screen.getByRole("combobox", { name: "Search a place or station" });
   fireEvent.change(box, { target: { value: "farm" } });
   fireEvent.keyDown(box, { key: "Enter" });
   expect(screen.getByRole("heading", { level: 2, name: "Farmgate" })).toBeTruthy();

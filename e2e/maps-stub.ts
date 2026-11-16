@@ -7,10 +7,10 @@ import { GOOGLE_HOSTS, expect } from "./fixtures";
  * A fake of the Maps JavaScript API for the browser journeys (METRO-88). It is served by `page.route` at the
  * real `https://maps.googleapis.com/maps/api/js` URL, so the browser still checks that URL against the
  * enforced `script-src`. Every other Google host is aborted and recorded: a test run never reaches Google.
- * It does not reproduce Google's shadow DOM or ARIA, so the real widget needs the manual live check. It
- * copies the one name Google was measured to expose (owner probe 2026-11-08, METRO-101) and the documented
- * `description` option, so the wiring we control is asserted; the real tree is verified only by smoke:live.
- * Synthetic coordinates only; the key the app sends is the fake `fake-key-for-tests`.
+ * Since METRO-163 the app draws its own search field, so the stub serves `AutocompleteSuggestion` and
+ * `AutocompleteSessionToken` and records every request (input, region, restriction box, token) and every
+ * `fetchFields`; what Google itself answers is verified only by the owner-run `smoke:live`. Synthetic
+ * coordinates only; the key the app sends is the fake `fake-key-for-tests`.
  */
 
 export interface StubOptions {
@@ -30,11 +30,25 @@ export interface StubOptions {
   readonly holdRoute?: boolean;
   /** `fetchFields` rejects with an error whose message carries a coordinate. */
   readonly fetchFails?: boolean;
+  /** `fetchAutocompleteSuggestions` rejects with an error whose message carries a key. */
+  readonly suggestFails?: boolean;
+  /** `fetchAutocompleteSuggestions` answers with no suggestion at all. */
+  readonly emptySuggestions?: boolean;
   /** `computeRoutes` rejects with an error whose message carries a key. */
   readonly routeFails?: boolean;
 }
 
+/** One `fetchAutocompleteSuggestions` request as the stub saw it. */
+export interface AutocompleteCall {
+  readonly input: string;
+  readonly includedRegionCodes: readonly string[];
+  readonly locationRestriction: Readonly<Record<string, number>>;
+  /** The session token's serial number: tokens are numbered in the order the page made them. */
+  readonly token: number;
+}
+
 export interface StubCalls {
+  readonly autocomplete: AutocompleteCall[];
   readonly fetchFields: unknown[];
   readonly routes: unknown[];
   readonly scriptUrls: string[];
@@ -44,109 +58,77 @@ export interface StubCalls {
   readonly routesAnswered: number;
 }
 
-/**
- * The accessible name the real widget was measured to expose: owner probe 2026-11-08 (METRO-101), relayed and
- * not re-run by an agent. It is not a Google guarantee. The stub and the e2e tests share this one constant;
- * the unit test in `NearestStation.test.tsx` keeps its own copy (vitest does not import from `e2e/`).
- */
-export const MEASURED_GOOGLE_NAME = "Search For a Place";
+/** Where the two synthetic places are: near Motijheel and near Uttara North (the end stations of the line). */
+const SPOTS = {
+  motijheel: { lat: 23.728, lng: 90.419 },
+  uttara: { lat: 23.87, lng: 90.367 },
+} as const;
+export type Spot = keyof typeof SPOTS;
 
-/** Typing "motijheel" or "uttara" and pressing Enter selects a point near that station. */
+/** The text that makes the stub list a place at that spot. Neither is a station name, so Places is asked. */
+export const placeQuery = (spot: Spot): string =>
+  `${spot === "uttara" ? "Uttara" : "Motijheel"} Area`;
+
+/**
+ * The stub's `places` library (METRO-163). A query that contains a spot's name lists one place there, named
+ * "<Spot> Area", then "Second suggestion" (near Uttara) and "Third suggestion" (near Motijheel); any other query
+ * lists the last two only. Token serial numbers let a test see which requests shared a session.
+ */
 const STUB_SCRIPT = `
 (() => {
   const state = window.__metroStub;
-  const spots = { motijheel: { lat: 23.728, lng: 90.419 }, uttara: { lat: 23.87, lng: 90.367 } };
-  class FakeAutocomplete extends HTMLElement {
-    constructor(options) {
-      super();
-      this.options = options;
-    }
-    // The fake assumes the best case for the real widget: the host forwards focus to its inner input. Whether
-    // Google's host does is Unverified (the live check prints whether typing reached it).
-    focus() {
-      const input = this.querySelector("input");
-      if (input) input.focus();
-    }
-    get value() {
-      const input = this.querySelector("input");
-      return input ? input.value : "";
-    }
-    set value(text) {
-      const input = this.querySelector("input");
-      if (input) input.value = text ?? "";
-    }
-    connectedCallback() {
-      if (this.querySelector("input")) return;
-      const input = document.createElement("input");
-      input.type = "text";
-      input.setAttribute("aria-label", ${JSON.stringify(MEASURED_GOOGLE_NAME)});
-      if (this.options.description) {
-        const hint = document.createElement("span");
-        hint.id = "fake-autocomplete-description";
-        hint.hidden = true;
-        hint.textContent = this.options.description;
-        input.setAttribute("aria-describedby", hint.id);
-        this.append(hint);
-      }
-      const choose = () => {
-        const text = input.value.toLowerCase();
-        const spot = Object.keys(spots).find((name) => text.includes(name));
-        const location = spot ? spots[spot] : spots.motijheel;
-        const place = {
-          location: { lat: () => location.lat, lng: () => location.lng },
-          fetchFields: async (request) => {
-            state.fetchFields.push(request.fields);
-            if (state.options.fetchFails) throw new Error("secret lat=" + location.lat);
-          },
-        };
-        const selection = new Event("gmp-select");
-        selection.placePrediction = { toPlace: () => place };
-        this.dispatchEvent(selection);
-      };
-      input.addEventListener("keydown", (event) => {
-        if (event.key === "Enter") choose();
-      });
-      // A stand-in for the suggestion popup: a listbox as wide as the host, under the input, drawn with
-      // CSSOM (a style attribute would break the enforced CSP). Real Google draws its own popup in its shadow
-      // root, so this proves our containers do not clip or cover a popup, not what Google's looks like.
-      const popup = document.createElement("ul");
-      popup.setAttribute("role", "listbox");
-      popup.setAttribute("aria-label", "Suggestions");
-      popup.hidden = true;
-      for (const label of ["First suggestion", "Second suggestion", "Third suggestion"]) {
-        const option = document.createElement("li");
-        option.setAttribute("role", "option");
-        option.setAttribute("aria-selected", "false");
-        option.textContent = label;
-        option.addEventListener("mousedown", (event) => {
-          event.preventDefault();
-          choose();
-        });
-        popup.append(option);
-      }
-      popup.className = "fake-ac-popup";
-      input.addEventListener("input", () => {
-        popup.hidden = input.value === "";
-      });
-      this.classList.add("fake-ac");
-      this.append(input, popup);
+  const spots = ${JSON.stringify(SPOTS)};
+  let tokens = 0;
+  class FakeToken {
+    constructor() {
+      tokens += 1;
+      this.serial = tokens;
     }
   }
-  // Styles come from a constructable stylesheet: no <style> element and no style attribute, so the app's own
-  // "no inline style" assertions stay meaningful with the stub present.
-  const sheet = new CSSStyleSheet();
-  sheet.replaceSync(
-    ".fake-ac{position:relative;display:block;width:100%}" +
-      ".fake-ac-popup{position:absolute;top:100%;left:0;right:0;z-index:5;margin:0;padding:4px;list-style:none;" +
-      "background:#fff;color:#000;border:1px solid #767676;box-sizing:border-box}" +
-      ".fake-ac-popup[hidden]{display:none}",
-  );
-  document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
-  customElements.define("fake-place-autocomplete", FakeAutocomplete);
+  const text = (value) => ({ text: value, matches: [] });
+  const prediction = (id, name, detail, location) => ({
+    placePrediction: {
+      placeId: id,
+      text: text(name + ", " + detail),
+      mainText: text(name),
+      secondaryText: text(detail),
+      toPlace: () => ({
+        location: { lat: () => location.lat, lng: () => location.lng },
+        fetchFields: async (request) => {
+          state.fetchFields.push(request.fields);
+          if (state.options.fetchFails) throw new Error("secret lat=" + location.lat);
+        },
+      }),
+    },
+  });
   const libraries = {
     core: {},
     maps: {},
-    places: { PlaceAutocompleteElement: FakeAutocomplete },
+    places: {
+      AutocompleteSessionToken: FakeToken,
+      AutocompleteSuggestion: {
+        fetchAutocompleteSuggestions: async (request) => {
+          state.autocomplete.push({
+            input: request.input,
+            includedRegionCodes: request.includedRegionCodes,
+            locationRestriction: request.locationRestriction,
+            token: request.sessionToken.serial,
+          });
+          if (state.options.suggestFails) throw new Error("secret key=abc");
+          if (state.options.emptySuggestions) return { suggestions: [] };
+          const lower = request.input.toLowerCase();
+          const spot = Object.keys(spots).find((name) => lower.includes(name));
+          const list = [];
+          if (spot) {
+            const title = spot.charAt(0).toUpperCase() + spot.slice(1);
+            list.push(prediction("stub-" + spot, title + " Area", "Dhaka", spots[spot]));
+          }
+          list.push(prediction("stub-second", "Second suggestion", "Dhaka", spots.uttara));
+          list.push(prediction("stub-third", "Third suggestion", "Dhaka", spots.motijheel));
+          return { suggestions: list };
+        },
+      },
+    },
     routes: {
       Route: {
         computeRoutes: async (request) => {
@@ -173,10 +155,31 @@ const STUB_SCRIPT = `
 
 const keep = (item: unknown): unknown => item;
 
+function toCall(item: unknown): AutocompleteCall {
+  if (!isRecord(item)) throw new Error("the Maps stub recorded a malformed request");
+  const { input, includedRegionCodes, locationRestriction, token } = item;
+  if (
+    typeof input !== "string" ||
+    !Array.isArray(includedRegionCodes) ||
+    !isRecord(locationRestriction) ||
+    typeof token !== "number"
+  ) {
+    throw new Error("the Maps stub recorded a malformed request");
+  }
+  return {
+    input,
+    includedRegionCodes: includedRegionCodes.map(String),
+    locationRestriction: Object.fromEntries(
+      Object.entries(locationRestriction).map(([name, value]) => [name, Number(value)]),
+    ),
+    token,
+  };
+}
+
 /**
  * Pages a service worker may control (METRO-106, ADR-0024). Playwright route stubs are not applied to such a page
  * in every browser (WebKit let the real Maps script through), so the helpers that touch the place search, whose
- * first focus loads Google, refuse to run on one. A structural guard, not a convention.
+ * first query loads Google, refuse to run on one. A structural guard, not a convention.
  */
 const withWorker = new WeakSet<Page>();
 export function workerMayControl(page: Page): void {
@@ -188,35 +191,30 @@ function noGoogleHere(page: Page): void {
   }
 }
 
-/** The plain input before the first focus: named by the visible label (exact, case-sensitive). */
-export const plainSearch = (page: Page) => {
+/** The one search field of Nearby: stations and places (METRO-163). Guarded like every place-search helper. */
+export const placeSearch = (page: Page) => {
   noGoogleHere(page);
-  return page.getByRole("textbox", { name: "Search for a place", exact: true });
+  return page.getByRole("combobox", { name: "Search a place or station", exact: true });
 };
 
-/** Google's widget input once swapped in, under the name the owner probe measured (the stub copies it). */
-export const widgetSearch = (page: Page) => {
-  noGoogleHere(page);
-  return page.getByRole("textbox", { name: MEASURED_GOOGLE_NAME, exact: true });
-};
+/** The Places group's options of the open list: place suggestions, never stations. */
+export const placeOptions = (page: Page) =>
+  page.getByRole("group", { name: "Places", exact: true }).getByRole("option");
 
 /**
- * Types a query the way a user does: into the plain input (the first focus loads the stub, which swaps the
- * widget in and carries the text over), then Enter in the widget selects. Waits for the swap, so the
- * keypress goes to the widget and never to the plain input.
+ * Types a place query the way a user does and chooses the first suggestion with the keyboard: the field is
+ * typed into (the first query that Places is asked for loads the stub), the Places group is waited for, then
+ * ArrowDown to the first place and Enter. Waits on the list, never on time.
  */
-export async function searchForPlace(page: Page, text: string): Promise<void> {
-  const widget = widgetSearch(page);
-  // The widget is already in place when the libraries were loaded earlier (a good fix needs them for its route):
-  // then there is no plain input to type into.
-  if (await widget.isVisible()) {
-    await widget.fill(text);
-  } else {
-    await plainSearch(page).fill(text);
-    await expect(widget).toBeVisible();
-    await expect(widget).toHaveValue(text);
-  }
-  await widget.press("Enter");
+export async function searchForPlace(page: Page, spot: Spot): Promise<void> {
+  const field = placeSearch(page);
+  await field.fill(placeQuery(spot));
+  const first = placeOptions(page).first();
+  await expect(first).toBeVisible();
+  // No station matches these texts, so the first option is a place; ArrowDown makes it active.
+  await field.press("ArrowDown");
+  await expect(first).toHaveAttribute("aria-selected", "true");
+  await field.press("Enter");
 }
 
 export interface MapsStub {
@@ -240,6 +238,7 @@ export async function installMapsStub(page: Page, options: StubOptions = {}): Pr
     const { promise: routeGate, resolve: letGo } = Promise.withResolvers<void>();
     Reflect.set(window, "__metroStub", {
       options: given,
+      autocomplete: [],
       fetchFields: [],
       routes: [],
       routesAnswered: 0,
@@ -278,8 +277,9 @@ export async function installMapsStub(page: Page, options: StubOptions = {}): Pr
       const raw = await page.evaluate(() => JSON.stringify(Reflect.get(window, "__metroStub")));
       const recorded: unknown = JSON.parse(raw);
       if (!isRecord(recorded)) throw new Error("the Maps stub recorded nothing");
-      const { fetchFields, routes, librariesImported, routesAnswered } = recorded;
+      const { autocomplete, fetchFields, routes, librariesImported, routesAnswered } = recorded;
       if (
+        !Array.isArray(autocomplete) ||
         !Array.isArray(fetchFields) ||
         !Array.isArray(routes) ||
         !Array.isArray(librariesImported)
@@ -287,6 +287,7 @@ export async function installMapsStub(page: Page, options: StubOptions = {}): Pr
         throw new Error("the Maps stub recorded no call lists");
       if (typeof routesAnswered !== "number") throw new Error("the Maps stub recorded no progress");
       return {
+        autocomplete: autocomplete.map(toCall),
         fetchFields: fetchFields.map(keep),
         routes: routes.map(keep),
         scriptUrls,

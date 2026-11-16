@@ -334,8 +334,22 @@ export function focusedEntry(
       };
 }
 
-const isWidget = (node: object): boolean =>
-  String(propertyOf(node, "nodeName")).toLowerCase() === "gmp-place-autocomplete";
+/**
+ * The search block of the one search field (METRO-163: `div.search-block`, our own markup; Google's widget is
+ * gone). A CDP node lists its attributes as one flat array of name and value strings.
+ */
+const isWidget = (node: object): boolean => {
+  if (String(propertyOf(node, "nodeName")).toLowerCase() !== "div") return false;
+  const attributes = propertyOf(node, "attributes");
+  if (!Array.isArray(attributes)) return false;
+  const at = (attributes as unknown[]).indexOf("class");
+  return (
+    at >= 0 &&
+    String((attributes as unknown[])[at + 1])
+      .split(" ")
+      .includes("search-block")
+  );
+};
 const childrenOf = (node: object): object[] =>
   ["children", "shadowRoots", "pseudoElements"].flatMap((key) => {
     const list = propertyOf(node, key);
@@ -352,7 +366,7 @@ const contentOf = (node: object): object[] => {
 const below = (node: object): object[] => [...childrenOf(node), ...contentOf(node)];
 
 /**
- * The DOM node ids of the widget element (`gmp-place-autocomplete`, the first in document order) and
+ * The DOM node ids of the search block (`div.search-block`, the first in document order) and
  * everything below it, shadow roots included, from a `DOM.getDocument` tree read with `pierce: true`. Null
  * when the element is not in the tree, so the caller reports that nothing could be read inside the widget.
  */

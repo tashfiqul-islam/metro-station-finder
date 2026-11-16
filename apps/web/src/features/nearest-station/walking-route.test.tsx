@@ -17,7 +17,7 @@ beforeAll(() => {
 afterEach(cleanup);
 
 function state(service: RouteService | null): MapsState {
-  return { status: "ready", routes: service, load: vi.fn() };
+  return { status: "ready", routes: service, places: null, load: vi.fn() };
 }
 
 test("METRO-126 a new service object for the same result attaches to the one request and never asks twice", async () => {

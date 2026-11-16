@@ -484,7 +484,8 @@ const widgetDom = {
       children: [
         { nodeName: "BODY", backendNodeId: 3, children: [{ nodeName: "INPUT", backendNodeId: 4 }] },
         {
-          nodeName: "GMP-PLACE-AUTOCOMPLETE",
+          nodeName: "DIV",
+          attributes: ["id", "x", "class", "search-block wide"],
           backendNodeId: 10,
           children: [{ nodeName: "SPAN", backendNodeId: 11 }],
           shadowRoots: [
@@ -498,7 +499,7 @@ const widgetDom = {
           ],
           contentDocument: { nodeName: "#document", backendNodeId: 15 },
         },
-        { nodeName: "gmp-place-autocomplete", backendNodeId: 20 },
+        { nodeName: "div", attributes: ["class", "search-block"], backendNodeId: 20 },
       ],
     },
   ],
@@ -512,7 +513,19 @@ test("widgetNodeIds is null when the widget is missing, has no ids, or the tree 
   expect(
     widgetNodeIds({ nodeName: "#document", children: [{ nodeName: "DIV" }, 7, null] }),
   ).toBeNull();
-  expect(widgetNodeIds({ nodeName: "GMP-PLACE-AUTOCOMPLETE" })).toBeNull();
+  expect(widgetNodeIds({ nodeName: "DIV", attributes: ["class", "search-block"] })).toBeNull();
+  // Not the block: a div with other classes, one with no class, one with no attribute list.
+  expect(
+    widgetNodeIds({
+      nodeName: "#document",
+      children: [
+        { nodeName: "DIV", attributes: ["class", "search"], backendNodeId: 1 },
+        { nodeName: "DIV", attributes: ["id", "search-block"], backendNodeId: 2 },
+        { nodeName: "DIV", backendNodeId: 3 },
+        { nodeName: "SPAN", attributes: ["class", "search-block"], backendNodeId: 4 },
+      ],
+    }),
+  ).toBeNull();
   expect(widgetNodeIds({ children: "no" })).toBeNull();
   expect(widgetNodeIds(null)).toBeNull();
   expect(widgetNodeIds("text")).toBeNull();
@@ -623,7 +636,12 @@ test("the widget search is quick on a very wide tree and still finds the widget"
     nodeName: "#document",
     children: [
       ...siblings,
-      { nodeName: "GMP-PLACE-AUTOCOMPLETE", backendNodeId: 7, children: siblings },
+      {
+        nodeName: "DIV",
+        attributes: ["class", "search-block"],
+        backendNodeId: 7,
+        children: siblings,
+      },
     ],
   };
   expect(fastestMs(() => widgetNodeIds(wide))).toBeLessThan(500);

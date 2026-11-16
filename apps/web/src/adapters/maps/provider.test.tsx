@@ -2,8 +2,8 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { StrictMode } from "react";
 import { afterAll, afterEach, beforeAll, expect, test, vi } from "vitest";
 
-import { useMaps, usePlaces } from "./context";
-import type { PlacesApi } from "./context";
+import { useMaps } from "./context";
+import type { PlacesApi } from "./place-search";
 import { LOAD_WATCHDOG_MS, MapsProvider } from "./provider";
 import type { RouteApi } from "./routes";
 
@@ -12,14 +12,18 @@ interface Loaded {
   readonly routes: { readonly Route: RouteApi };
 }
 
-class FakePlaceElement extends HTMLElement {
-  value: string | null = null;
+class FakeToken {
+  readonly kind = "token";
 }
-customElements.define("fake-provider-place", FakePlaceElement);
 
 /** Fake libraries: the provider passes `places` along and wraps `routes.Route` in a service. */
 const loaded: Loaded = {
-  places: { PlaceAutocompleteElement: FakePlaceElement },
+  places: {
+    AutocompleteSessionToken: FakeToken,
+    AutocompleteSuggestion: {
+      fetchAutocompleteSuggestions: vi.fn(() => Promise.resolve({ suggestions: [] })),
+    },
+  },
   routes: { Route: { computeRoutes: vi.fn() } },
 };
 
@@ -38,8 +42,7 @@ function deferred<T>() {
 }
 
 function Probe() {
-  const { status, routes, load } = useMaps();
-  const places = usePlaces();
+  const { status, routes, places, load } = useMaps();
   const parts = [
     status,
     routes === null ? "no-routes" : "routes",
@@ -236,7 +239,7 @@ test("METRO-88 StrictMode re-runs the effect and still ends ready", async () => 
   expect(await screen.findByText("ready/routes/places")).toBeTruthy();
 });
 
-test("METRO-88 useMaps and usePlaces outside a provider are unavailable and empty", () => {
+test("METRO-88 useMaps outside a provider are unavailable and empty", () => {
   render(<Probe />);
   expect(screen.getByText("unavailable/no-routes/no-places")).toBeTruthy();
 });

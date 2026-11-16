@@ -2,6 +2,8 @@
 
 Status: the first run passed on 2026-11-08 at e5a2e04 (Maps 3.66.13d, 0 CSP messages, Places requests 10, Routes requests 1); the output is recorded as a [comment on PR #95](https://github.com/tashfiqul-islam/metro-station-finder/pull/95#issuecomment-6720883479). METRO-100 added the accessibility lines, which no owner run has printed yet. Run by the owner, by hand, never by CI or an agent.
 
+Since METRO-163 the check drives the app's own search field (Google's widget is gone): it types "Gu", waits, counts Google requests (expected 0), then types the query "Gulshan" so places are asked for, reads the field's own accessibility tree (the search block, `div.search-block`) and chooses the first place. The lines below that name the widget, its shadow root or the swap describe the earlier flow and print as before only where the report still has the line (Unverified: no owner run has used the new flow yet).
+
 Why: every automated test stubs Google, so the Google hosts in the enforced CSP, the real widget's labelling and the cost behaviour are untested until this is run. The specification's Unverified list ([nearest-station-slice](../specifications/nearest-station-slice.md)) is settled by it.
 
 ## Before the first run (Google Cloud console, owner)

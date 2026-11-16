@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { afterAll, afterEach, beforeAll, expect, test, vi } from "vitest";
 
 import { mapsAdapter } from "../../adapters/maps";
-import { MapsContext, PLACE_INPUT_ID } from "../../adapters/maps/context";
+import { MapsContext } from "../../adapters/maps/context";
 import type { MapsAdapter } from "../../adapters/maps/context";
 import { AppShell } from "../../shell/AppShell";
 import { fakePosition } from "../nearest-station/geolocation-fakes";
@@ -23,12 +23,24 @@ afterAll(() => {
 
 function noop(): void {}
 
-/** A ready adapter with a plain stand-in for the search, so the page order can be checked (no key in tests). */
+/** A ready adapter (no key in tests): places are available, so the field offers them. */
 const readyMaps: MapsAdapter = {
   Provider: ({ children }) => (
-    <MapsContext value={{ status: "ready", routes: null, load: noop }}>{children}</MapsContext>
+    <MapsContext
+      value={{
+        status: "ready",
+        routes: null,
+        places: {
+          suggest: () => Promise.resolve([]),
+          choose: () => Promise.reject(new Error("no")),
+          abandon: noop,
+        },
+        load: noop,
+      }}
+    >
+      {children}
+    </MapsContext>
   ),
-  PlaceSearch: () => <input id={PLACE_INPUT_ID} aria-label="stand-in search" />,
 };
 
 /** The screen inside the shell the way `AppRoutes` wires it: the map goes up through `setMap`. */
@@ -49,7 +61,8 @@ function Harness({
   );
 }
 
-const combo = (): HTMLElement => screen.getByRole("combobox", { name: "Or pick a station" });
+const combo = (): HTMLElement =>
+  screen.getByRole("combobox", { name: "Search a place or station" });
 
 test("METRO-112 the screen fills the shell's map slot with the line map, nothing highlighted yet", () => {
   render(<Harness />);
@@ -79,11 +92,11 @@ test("METRO-112 the map goes away with the screen", () => {
   expect(screen.queryByRole("application")).toBeNull();
 });
 
-test("METRO-112 the existing controls keep their order and the picker follows the location controls", () => {
+test("METRO-112 the one search field comes before the location button, and the map region follows the panel", () => {
   render(<Harness />);
-  const locate = screen.getByRole("button", { name: "Use my location" });
+  const locate = must(document.querySelector<HTMLElement>("button.locate"));
   const picker = combo();
-  const order = locate.compareDocumentPosition(picker);
+  const order = picker.compareDocumentPosition(locate);
   expect(order & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   // Header, then panel handle, then the screen; the map region comes after the panel.
   const main = screen.getByRole("main");
@@ -148,7 +161,8 @@ function must<T>(value: T | null | undefined): T {
   if (value === null || value === undefined) throw new Error("missing");
   return value;
 }
-const locate = (): HTMLElement => screen.getByRole("button", { name: "Use my location" });
+/** The page's own "Use my location" button; the field has a twin inside it (`.search__locate`). */
+const locate = (): HTMLElement => must(document.querySelector<HTMLElement>("button.locate"));
 const mapDesc = (): string => document.querySelector(".line-map svg desc")?.textContent ?? "";
 const resultHeadings = (): string[] =>
   screen
@@ -157,13 +171,9 @@ const resultHeadings = (): string[] =>
     .map((h) => h.textContent);
 const sheet = (): string =>
   screen.getByRole("button", { name: /^Resize panel\./u }).getAttribute("aria-label") ?? "";
-/** The locating status (the shell has its own, for the panel size). */
+/** The locating status: the `output` right under the page's own button (the shell and the field have theirs). */
 const locatingStatus = (): HTMLElement =>
-  must(
-    screen
-      .getAllByRole("status")
-      .find((node) => node.tagName === "OUTPUT" && !node.textContent.startsWith("Panel")),
-  );
+  must(document.querySelector<HTMLElement>("button.locate + output"));
 /** Lets the map's passive effect run: `findBy*` can resolve before it. */
 async function flush(): Promise<void> {
   await act(async () => {});
@@ -263,15 +273,27 @@ test("METRO-113 a rough fix leaves a picked station as the current result", asyn
   expect(mapDesc()).not.toContain("Your position is shown.");
 });
 
-test("METRO-113 the page order is Use my location, then the place search, then Or pick a station, then the result", async () => {
+test("METRO-163 the page order is the search field, its locate button, Use my location, then the result", async () => {
   geolocation(20);
   render(<Harness maps={readyMaps} />);
+  const inField = screen.getAllByRole("button", { name: "Use my location" })[0];
   fireEvent.click(locate());
   const result = await screen.findByRole("heading", { level: 2, name: "Uttara North" });
-  const label = must(document.getElementById("place-label"));
-  expect(follows(locate(), label)).toBe(true);
-  expect(follows(label, combo())).toBe(true);
-  expect(follows(combo(), result)).toBe(true);
+  expect(follows(combo(), must(inField))).toBe(true);
+  expect(follows(must(inField), locate())).toBe(true);
+  expect(follows(locate(), result)).toBe(true);
+  // One field for stations and places: no second search and no separate station field.
+  expect(screen.getAllByRole("combobox")).toHaveLength(1);
+  expect(screen.queryByText("Or pick a station")).toBeNull();
+  expect(document.querySelector("gmp-place-autocomplete, .place-slot")).toBeNull();
+});
+
+test("METRO-163 the locate button in the field finds the nearest station like Use my location", async () => {
+  geolocation(20);
+  render(<Harness maps={readyMaps} />);
+  fireEvent.click(must(screen.getAllByRole("button", { name: "Use my location" })[0]));
+  await screen.findByRole("heading", { level: 2, name: "Uttara North" });
+  expect(resultHeadings()).toEqual(["Uttara North"]);
 });
 
 test("METRO-113 a fix sends no request of any kind and logs nothing", async () => {
@@ -363,11 +385,17 @@ test("METRO-113 unmounting the screen during a locating leaves the shell alone w
   expect(screen.queryByRole("heading", { level: 2, name: "Uttara North" })).toBeNull();
 });
 
-test("METRO-114 typing in the place search opens the sheet to full, focus alone does not", () => {
+test("METRO-114 typing in the search field opens the sheet to full, focus alone does not", () => {
   render(<Harness maps={readyMaps} initialSnap="half" />);
-  const box = screen.getByRole("textbox", { name: "stand-in search" });
-  act(() => box.focus());
+  act(() => combo().focus());
   expect(sheet()).toContain("half height");
-  fireEvent.input(box, { target: { value: "mot" } });
+  fireEvent.change(combo(), { target: { value: "mot" } });
   expect(sheet()).toContain("full height");
+});
+
+test("METRO-163 picking a station settles the sheet at half from a full one, and picking is by name or alias", () => {
+  render(<Harness initialSnap="full" />);
+  pick("agaragaon");
+  expect(sheet()).toContain("half");
+  expect(screen.getByRole("heading", { level: 2, name: "Agargaon" })).toBeTruthy();
 });

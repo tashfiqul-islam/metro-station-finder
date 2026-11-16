@@ -1,7 +1,7 @@
-import type { Coordinate } from "@metro/core";
+import type { Coordinate, Station } from "@metro/core";
 import * as Core from "@metro/core";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { StrictMode, useEffect, useMemo, useSyncExternalStore } from "react";
+import { StrictMode, useMemo, useSyncExternalStore } from "react";
 import type { ReactNode } from "react";
 import { afterAll, afterEach, beforeAll, expect, test, vi } from "vitest";
 
@@ -9,7 +9,6 @@ import { MapsContext } from "../../adapters/maps/context";
 import type {
   MapsAdapter,
   MapsStatus,
-  PlaceSearchProps,
   RouteService,
   WalkingRoute,
 } from "../../adapters/maps/context";
@@ -35,23 +34,54 @@ vi.mock("@metro/core", async (importOriginal) => {
 const NEAR_UTTARA_NORTH: Coordinate = { lat: 23.87, lng: 90.367 };
 const NEAR_MOTIJHEEL: Coordinate = { lat: 23.728, lng: 90.419 };
 
+/** What the screen hands the search field (METRO-163): the field itself is tested in `PlaceSearch.test.tsx`. */
+interface FakeSearchProps {
+  readonly stations: readonly Station[];
+  readonly onStation: (station: Station, source: "keyboard" | "pointer") => void;
+  readonly onPlace: (location: Coordinate) => void;
+  readonly onPlaceFailure: () => void;
+  readonly onLocate: () => void;
+  readonly onEngage: () => void;
+}
+
+const captured = vi.hoisted(() => ({
+  props: null as FakeSearchProps | null,
+  /** When set, the field hands focus to the page's first button as Maps becomes unavailable. */
+  handFocusWhenUnavailable: false,
+}));
+
+vi.mock("../place-search/PlaceSearch", async () => {
+  const react = await import("react");
+  const maps = await import("../../adapters/maps/context");
+  return {
+    SEARCH_INPUT_ID: "place-search-input",
+    PlaceSearch: (props: FakeSearchProps) => {
+      captured.props = props;
+      const { status } = maps.useMaps();
+      react.useEffect(() => {
+        if (captured.handFocusWhenUnavailable && status === "unavailable") {
+          document.querySelector("button")?.focus();
+        }
+      }, [status]);
+      return react.createElement("input", {
+        id: "place-search-input",
+        "aria-label": "fake search box",
+        onInput: () => props.onEngage(),
+      });
+    },
+  };
+});
+
+const fieldProps = (): FakeSearchProps => {
+  if (captured.props === null) throw new Error("the field was not rendered");
+  return captured.props;
+};
+
 const world = {
   status: "ready" as MapsStatus,
   load: vi.fn(),
   service: null as RouteService | null,
-  searchProps: null as PlaceSearchProps | null,
 };
-
-function FakePlaceSearch(props: PlaceSearchProps) {
-  useEffect(() => {
-    world.searchProps = props;
-  });
-  return (
-    <fieldset aria-labelledby={props.labelId} data-fake-search>
-      <input aria-label="fake search box" />
-    </fieldset>
-  );
-}
 
 const listeners = new Set<() => void>();
 let version = 0;
@@ -76,14 +106,14 @@ function FakeProvider({ children }: { readonly children: ReactNode }) {
     () => version,
   );
   const value = useMemo(
-    () => ({ status: world.status, routes: world.service, load: world.load }),
+    () => ({ status: world.status, routes: world.service, places: null, load: world.load }),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `seen` is the signal that the world changed
     [seen],
   );
   return <MapsContext value={value}>{children}</MapsContext>;
 }
 
-const fakeMaps: MapsAdapter = { Provider: FakeProvider, PlaceSearch: FakePlaceSearch };
+const fakeMaps: MapsAdapter = { Provider: FakeProvider };
 
 function routeService(walk: RouteService["walk"]): RouteService {
   return { walk };
@@ -101,7 +131,7 @@ function geolocation(run: (success: PositionCallback, failure: PositionErrorCall
 }
 
 function pickPlace(location: Coordinate): void {
-  act(() => world.searchProps?.onPlace(location));
+  act(() => fieldProps().onPlace(location));
 }
 
 const denied = fakePositionError(1);
@@ -115,52 +145,13 @@ afterEach(() => {
   world.status = "ready";
   world.load = vi.fn();
   world.service = null;
-  world.searchProps = null;
+  captured.props = null;
+  captured.handFocusWhenUnavailable = false;
   override.fare = null;
   Reflect.deleteProperty(navigator, "geolocation");
 });
 afterAll(() => {
   Reflect.deleteProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT");
-});
-
-test("METRO-88 idle: search, the location button and the consent line, and no result", () => {
-  render(<NearestStation maps={fakeMaps} />);
-  expect(screen.getByRole("heading", { level: 1, name: copy.heading })).toBeTruthy();
-  expect(screen.getByRole("group", { name: copy.searchLabel })).toBeTruthy();
-  // METRO-101: the hint is visible and is the description handed to the widget.
-  expect(screen.getByText(copy.searchHint)).toBeTruthy();
-  expect(world.searchProps?.description).toBe(copy.searchHint);
-  expect(world.searchProps?.labelId).toBe("place-label");
-  const button = screen.getByRole("button", { name: copy.locateButton });
-  expect(button.getAttribute("aria-describedby")).toBe("consent");
-  const consent = document.getElementById("consent")?.textContent ?? "";
-  expect(consent).toContain("not sent to our server");
-  expect(consent).toContain("goes to Google");
-  expect(screen.queryByRole("alert")).toBeNull();
-  expect(screen.queryByRole("heading", { name: copy.resultHeading })).toBeNull();
-});
-
-/**
- * The name the real widget was measured to expose: owner probe 2026-11-08 (METRO-101), relayed and not re-run
- * by an agent; not a Google guarantee. e2e/maps-stub.ts holds the e2e copy (vitest does not import from e2e/).
- */
-const MEASURED_GOOGLE_NAME = "Search For a Place";
-
-test("METRO-101 copy guard: our visible label stays contained in the name Google was measured to expose", () => {
-  // This checks our copy only, not the real widget. WCAG 2.5.3 compares case-insensitively; the Dhaka wording
-  // lives in the hint, not the label.
-  expect(MEASURED_GOOGLE_NAME.toLowerCase()).toContain(copy.searchLabel.toLowerCase());
-  expect(copy.searchLabel).not.toContain("Dhaka");
-});
-
-test("METRO-88 the search gets a Dhaka bias derived from the dataset, not a hard-coded point", () => {
-  render(<NearestStation maps={fakeMaps} />);
-  const { center, radiusMeters } = world.searchProps?.bias ?? { center: null, radiusMeters: 0 };
-  expect(radiusMeters).toBe(25_000);
-  expect(center?.lat).toBeGreaterThan(23.7);
-  expect(center?.lat).toBeLessThan(23.9);
-  expect(center?.lng).toBeGreaterThan(90.3);
-  expect(center?.lng).toBeLessThan(90.5);
 });
 
 const heading = (name: string): HTMLElement => screen.getByRole("heading", { level: 2, name });
@@ -170,36 +161,29 @@ function must<T>(value: T | null | undefined): T {
   return value;
 }
 
-/** The locating status: the one `output` (the place-search notice is a separate status region). */
+/** The locating status: the one `output` (the search field, with its own status region, is a fake here). */
 const locatingStatus = (): HTMLElement => must(document.querySelector("output"));
 
-/** The estimate shown in the result: "about" then a figure then "straight-line distance · est.". */
-const distanceText = (): string => must(document.querySelector(".metric__value")).textContent;
-
-const smallNoticeElement = (): HTMLElement | null =>
-  document.querySelector<HTMLElement>(".notice[data-size=sm]");
 const good = (): void => geolocation((success) => success(fakePosition(23.87, 90.367, 20)));
 const pressLocate = (): void => {
   fireEvent.click(screen.getByRole("button", { name: copy.locateButton }));
 };
 const ROUTE_TEXT = "about 1.2 km, 15 min · est.";
 
-test("METRO-88 a selected place shows the nearest station, the labelled estimate and the walking route", async () => {
-  const walk = vi.fn<RouteService["walk"]>(() => Promise.resolve(route(1234, 900)));
-  world.service = routeService(walk);
+test("METRO-88 idle: search, the location button and the consent line, and no result", () => {
   render(<NearestStation maps={fakeMaps} />);
-  pickPlace(NEAR_UTTARA_NORTH);
-  expect(await screen.findByText(ROUTE_TEXT)).toBeTruthy();
-  const station = heading("Uttara North");
-  expect(station.getAttribute("tabindex")).toBe("-1");
-  expect(document.activeElement).toBe(station);
-  expect(screen.getByText(copy.distanceLabel)).toBeTruthy();
-  expect(distanceText()).toMatch(/^\d+ m$/u);
-  expect(walk).toHaveBeenCalledTimes(1);
-  const [from, to] = walk.mock.calls[0] ?? [];
-  expect(from).toEqual(NEAR_UTTARA_NORTH);
-  expect(to).toEqual(Core.baselineDataset.stations[0]?.coordinate);
+  expect(screen.getByRole("heading", { level: 1, name: copy.heading })).toBeTruthy();
+  // METRO-163: one field for stations and places, handed the 16 stations; the old label and hint are gone.
+  expect(screen.getByRole("textbox", { name: "fake search box" })).toBeTruthy();
+  expect(fieldProps().stations).toHaveLength(16);
+  expect(screen.queryByText("Suggestions favor places in Dhaka.")).toBeNull();
+  const button = screen.getByRole("button", { name: copy.locateButton });
+  expect(button.getAttribute("aria-describedby")).toBe("consent");
+  const consent = document.getElementById("consent")?.textContent ?? "";
+  expect(consent).toContain("not sent to our server");
+  expect(consent).toContain("goes to Google");
   expect(screen.queryByRole("alert")).toBeNull();
+  expect(screen.queryByRole("heading", { name: copy.resultHeading })).toBeNull();
 });
 
 test("METRO-88 the route shows loading while the routes library is not ready, and asks for it once", () => {
@@ -210,76 +194,6 @@ test("METRO-88 the route shows loading while the routes library is not ready, an
   expect(screen.getByText(copy.routeLoading)).toBeTruthy();
   expect(heading("Uttara North")).toBeTruthy();
   expect(world.load).toHaveBeenCalledExactlyOnceWith();
-});
-
-test("METRO-114 Maps unavailable: the label, hint and field are gone and only the notice shows", () => {
-  world.status = "unavailable";
-  render(<NearestStation maps={fakeMaps} />);
-  expect(screen.getByText(copy.searchUnavailable)).toBeTruthy();
-  expect(screen.queryByText(copy.searchLabel)).toBeNull();
-  expect(screen.queryByText(copy.searchHint)).toBeNull();
-  expect(document.querySelector("[data-fake-search]")).toBeNull();
-  expect(screen.queryByRole("textbox")).toBeNull();
-  // A status region, mounted from the start, not an alert: it is part of the page, not an interruption.
-  expect(screen.queryByRole("alert")).toBeNull();
-  expect(screen.getByText(copy.searchUnavailable).closest("output")).not.toBeNull();
-});
-
-function setOnline(value: boolean | null): void {
-  if (value === null) Reflect.deleteProperty(navigator, "onLine");
-  else Object.defineProperty(navigator, "onLine", { configurable: true, value });
-}
-
-test("METRO-114 offline at render shows the offline notice from the start and no field, then restores on online", () => {
-  setOnline(false);
-  try {
-    render(<NearestStation maps={fakeMaps} />);
-    expect(screen.getByText(copy.searchNoConnection)).toBeTruthy();
-    // The handoff's own sentence; it claims offline use, which the shell worker now backs (METRO-106).
-    expect(copy.searchNoConnection).toBe(
-      "You’re offline. Stations and fares still work. Place search returns when you reconnect. Pick a station instead.",
-    );
-    expect(screen.queryByText(copy.searchLabel)).toBeNull();
-    expect(document.querySelector("[data-fake-search]")).toBeNull();
-    setOnline(true);
-    act(() => {
-      window.dispatchEvent(new Event("online"));
-    });
-    expect(screen.queryByText(copy.searchNoConnection)).toBeNull();
-    expect(screen.getByText(copy.searchLabel)).toBeTruthy();
-    expect(document.querySelector("[data-fake-search]")).not.toBeNull();
-  } finally {
-    setOnline(null);
-  }
-});
-
-test("METRO-114 the label is a real label for the plain input and the hint is visible", () => {
-  render(<NearestStation maps={fakeMaps} />);
-  const label = screen.getByText(copy.searchLabel);
-  expect(label.tagName).toBe("LABEL");
-  expect(label.getAttribute("for")).toBe("place-input");
-  expect(screen.getByText(copy.searchHint)).toBeTruthy();
-  expect(world.searchProps?.hintId).toBe("place-hint");
-});
-
-test("METRO-114 the library failing after the user focused the field moves focus to the notice", () => {
-  render(<NearestStation maps={fakeMaps} />);
-  const box = screen.getByRole("textbox", { name: "fake search box" });
-  act(() => box.focus());
-  expect(document.activeElement).toBe(box);
-  // The field is removed under the focus; jsdom-like DOMs drop focus to the body.
-  publish({ status: "unavailable" });
-  const notice = must(document.querySelector<HTMLElement>(".notice[data-size=sm]"));
-  expect(notice.textContent).toContain(copy.searchUnavailable);
-  expect(document.activeElement).toBe(notice);
-});
-
-test("METRO-114 the library failing when focus was elsewhere takes no focus", () => {
-  render(<NearestStation maps={fakeMaps} />);
-  const button = screen.getByRole("button", { name: copy.locateButton });
-  act(() => button.focus());
-  publish({ status: "unavailable" });
-  expect(document.activeElement).toBe(button);
 });
 
 test("METRO-114 a good device fix asks for exactly one walking route and shows it as an estimate", async () => {
@@ -377,18 +291,6 @@ test("METRO-114 a stored failure followed by a new service object does not ask a
   } finally {
     vi.useRealTimers();
   }
-});
-
-test("METRO-114 a library failure later does not pull focus from a user who clicked away from the field", () => {
-  render(<NearestStation maps={fakeMaps} />);
-  const box = screen.getByRole("textbox", { name: "fake search box" });
-  act(() => box.focus());
-  // Focus leaves for nothing (a click on blank page): the field no longer holds focus.
-  act(() => box.blur());
-  expect(document.activeElement === document.body || document.activeElement === null).toBe(true);
-  publish({ status: "unavailable" });
-  expect(smallNoticeElement()).not.toBeNull();
-  expect(document.activeElement).not.toBe(smallNoticeElement());
 });
 
 test("METRO-114 exactly one request: the settled count is one without StrictMode", async () => {
@@ -561,16 +463,9 @@ test("METRO-88 an invalid location is the empty state", () => {
   expect(screen.queryByRole("link", { name: /Directions/u })).toBeNull();
 });
 
-test("METRO-114 while Maps loads the plain field stays: there is no loading message", () => {
-  world.status = "loading";
-  render(<NearestStation maps={fakeMaps} />);
-  expect(document.querySelector("[data-fake-search]")).not.toBeNull();
-  expect(screen.getByText(copy.searchLabel)).toBeTruthy();
-});
-
 test("METRO-88 a search failure shows fixed copy, location still works and a later place clears it", () => {
   render(<NearestStation maps={fakeMaps} />);
-  act(() => world.searchProps?.onFailure());
+  act(() => fieldProps().onPlaceFailure());
   expect(screen.getByRole("alert").textContent).toBe(copy.searchUnavailable);
   pickPlace(NEAR_MOTIJHEEL);
   expect(screen.queryByText(copy.searchUnavailable)).toBeNull();
@@ -1011,7 +906,7 @@ test("METRO-103 a coarse fix shows the rough-location notice, no station, no pin
   expect(onLocation).toHaveBeenCalledWith(null);
   // The consent line and the place search stay.
   expect(screen.getByText(copy.consent)).toBeTruthy();
-  expect(world.searchProps).not.toBeNull();
+  expect(captured.props).not.toBeNull();
 });
 
 test("METRO-103 a fix with unknown accuracy is treated as rough, with copy that states no size", async () => {
@@ -1189,6 +1084,11 @@ test("METRO-114 typing in the place search tells the screen, focus alone does no
   expect(engage).toHaveBeenCalledTimes(1);
 });
 
+function setOnline(value: boolean | null): void {
+  if (value === null) Reflect.deleteProperty(navigator, "onLine");
+  else Object.defineProperty(navigator, "onLine", { configurable: true, value });
+}
+
 // METRO-120: a notice's suggested next step names only what is available right now.
 const NOTICE_CASES = [
   {
@@ -1264,7 +1164,6 @@ test("METRO-120 no connection: the notice names picking a station until the conn
     const back = screen.getByRole("group", { name: copy.denied.search });
     expect(back.textContent).toBe(copy.denied.search + copy.searchLabel);
     expect(screen.queryByText(copy.denied.pick)).toBeNull();
-    expect(screen.getByText(copy.searchLabel, { selector: "label" })).toBeTruthy();
   } finally {
     setOnline(null);
   }
@@ -1300,45 +1199,50 @@ test("METRO-120 place search failing while focus is on the page takes no focus, 
   expect(document.activeElement).not.toBe(now);
 });
 
-/** A search field that, as it leaves, hands focus to the page's first button (focus already has a new home). */
-function FocusHandingSearch(props: PlaceSearchProps) {
-  useEffect(
-    () => () => {
-      document.querySelector("button")?.focus();
-    },
-    [],
-  );
-  return (
-    <fieldset aria-labelledby={props.labelId}>
-      <input aria-label="fake search box" />
-    </fieldset>
-  );
-}
-
-const handingMaps: MapsAdapter = { Provider: FakeProvider, PlaceSearch: FocusHandingSearch };
-
-test("METRO-114 the library failing leaves focus alone when it already moved to another control as the field left", () => {
-  render(<NearestStation maps={handingMaps} />);
-  act(() => screen.getByRole("textbox", { name: "fake search box" }).focus());
-  publish({ status: "unavailable" });
-  const button = screen.getByRole("button", { name: copy.locateButton });
-  expect(document.activeElement).toBe(button);
-  const notice = must(document.querySelector<HTMLElement>(".notice[data-size=sm]"));
-  expect(notice.textContent).toContain(copy.searchUnavailable);
-  expect(document.activeElement).not.toBe(notice);
-});
-
 test("METRO-120 place search failing leaves focus alone when it already moved to another control as the action left", async () => {
+  captured.handFocusWhenUnavailable = true;
   geolocation((_success, failure) => failure(timeout));
-  render(<NearestStation maps={handingMaps} />);
+  render(<NearestStation maps={fakeMaps} />);
   pressLocate();
   const group = await screen.findByRole("group", { name: copy.unavailable.search });
   act(() => within(group).getByRole("button", { name: copy.searchLabel }).focus());
   publish({ status: "unavailable" });
   const now = screen.getByRole("group", { name: copy.unavailable.pick });
   expect(document.activeElement).not.toBe(now);
-  // The field handed focus to the page's first button as it left; the notice did not take it back.
+  // The field handed focus to the page's first button as the action left; the notice did not take it back.
   const first = must(document.querySelector<HTMLElement>("button"));
   expect(document.activeElement).toBe(first);
   expect(first.textContent).toBe(copy.tryAgain);
+});
+
+test("METRO-163 a station chosen in the field is handed to the screen with how it was chosen", () => {
+  const onPickStation = vi.fn();
+  render(<NearestStation maps={fakeMaps} onPickStation={onPickStation} />);
+  const [station] = fieldProps().stations;
+  if (station === undefined) throw new Error("no station");
+  act(() => fieldProps().onStation(station, "pointer"));
+  expect(onPickStation).toHaveBeenCalledExactlyOnceWith(station, "pointer");
+});
+
+test("METRO-163 a station chosen with no screen listening does nothing", () => {
+  render(<NearestStation maps={fakeMaps} />);
+  const [station] = fieldProps().stations;
+  if (station === undefined) throw new Error("no station");
+  expect(() => act(() => fieldProps().onStation(station, "keyboard"))).not.toThrow();
+});
+
+test("METRO-163 the locate button in the field does what Use my location does", async () => {
+  geolocation((success) => success(fakePosition(NEAR_UTTARA_NORTH.lat, NEAR_UTTARA_NORTH.lng, 20)));
+  render(<NearestStation maps={fakeMaps} />);
+  act(() => fieldProps().onLocate());
+  expect(await screen.findByRole("heading", { level: 2, name: "Uttara North" })).toBeTruthy();
+});
+
+test("METRO-163 the search action in a notice moves focus into the one field", async () => {
+  geolocation((_success, failure) => failure(denied));
+  render(<NearestStation maps={fakeMaps} />);
+  pressLocate();
+  const group = await screen.findByRole("group", { name: copy.denied.search });
+  fireEvent.click(within(group).getByRole("button", { name: copy.searchLabel }));
+  expect(document.activeElement).toBe(document.getElementById("place-search-input"));
 });
