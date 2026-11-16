@@ -52,29 +52,35 @@ interface Current {
 }
 
 interface State {
-  readonly api: ToastApi;
   readonly current: Current | null;
   readonly show: (options: ToastOptions, ms?: number) => void;
   readonly leave: () => void;
   readonly gone: () => void;
 }
 
+/**
+ * Two contexts, so a screen that calls `useToast` is not re-rendered by every toast change: the API (stable for
+ * the life of the shell) is what `useToast` returns, and the state (the toast on screen) is read only by
+ * `ToastLive` and `ToastRegion`.
+ */
+const ApiContext = createContext<ToastApi | null>(null);
 const StateContext = createContext<State | null>(null);
-
-function useToastState(): State {
-  const state = useContext(StateContext);
-  if (state === null) throw new Error("useToast needs AppShell");
-  return state;
-}
 
 /** The toast API for a screen. Throws outside `AppShell`, so a misplaced caller fails visibly. */
 export function useToast(): ToastApi {
-  return useToastState().api;
+  const api = useContext(ApiContext);
+  if (api === null) throw new Error("useToast needs AppShell");
+  return api;
 }
 
 const reducedMotion = (): boolean => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-/** The toast provider (METRO-158): one toast at a time, owned by `AppShell`; the region is `ToastRegion`. */
+/**
+ * The toast provider (METRO-158): one toast at a time, owned by `AppShell`; the region is `ToastRegion`.
+ * "Never two at once" covers provider toasts only. The service-worker update prompt (`sw/register.ts`) is KEPT as
+ * its own DOM, not moved onto this provider (it has no timer, an "Updating..." state and must outlive a later
+ * toast), and shares the `.toast-region` element with it: React owns only its own child there.
+ */
 export function ToastProvider({ children }: { readonly children: ReactNode }): ReactElement {
   const [current, setCurrent] = useState<Current | null>(null);
   const seq = useRef(0);
@@ -107,10 +113,14 @@ export function ToastProvider({ children }: { readonly children: ReactNode }): R
     [show, leave],
   );
   const state = useMemo<State>(
-    () => ({ api, current, show, leave, gone }),
-    [api, current, show, leave, gone],
+    () => ({ current, show, leave, gone }),
+    [current, show, leave, gone],
   );
-  return <StateContext value={state}>{children}</StateContext>;
+  return (
+    <ApiContext value={api}>
+      <StateContext value={state}>{children}</StateContext>
+    </ApiContext>
+  );
 }
 
 /**
@@ -120,7 +130,8 @@ export function ToastProvider({ children }: { readonly children: ReactNode }): R
  * stay in the accessibility tree). An error toast is not spoken here: its visible text is `role="alert"`.
  */
 export function ToastLive(): ReactElement {
-  const { current } = useToastState();
+  const state = useContext(StateContext);
+  const current = state === null ? null : state.current;
   const spoken = current !== null && !current.leaving && current.tone === "ok";
   return (
     <output className="toast-live visually-hidden">
@@ -131,16 +142,23 @@ export function ToastLive(): ReactElement {
 
 /** The content of the shell's toast region: the one toast on screen, if any. */
 export function ToastRegion(): ReactElement | null {
-  const { current } = useToastState();
-  return current === null ? null : <Toast key={current.id} toast={current} />;
+  const state = useContext(StateContext);
+  if (state === null || state.current === null) return null;
+  return <Toast key={state.current.id} toast={state.current} state={state} />;
 }
 
-function focusPanel(): void {
-  document.querySelector<HTMLElement>(".panel__scroll")?.focus();
+/**
+ * Keyboard focus was on a toast control that is about to go. The panel takes it, except while the sheet peeks:
+ * focus entering the panel's content opens a peeking sheet to half (AppShell), which a toast must not do, so the
+ * sheet's grip takes it (the handle controls do not open the sheet, ADR-0021).
+ */
+function handOffFocus(): void {
+  const peeking = document.querySelector(".app")?.getAttribute("data-snap") === "peek";
+  document.querySelector<HTMLElement>(peeking ? ".panel__grip" : ".panel__scroll")?.focus();
 }
 
-function Toast({ toast }: { readonly toast: Current }): ReactElement {
-  const { show, leave, gone } = useToastState();
+function Toast({ toast, state }: { readonly toast: Current; readonly state: State }): ReactElement {
+  const { show, leave, gone } = state;
   const root = useRef<HTMLDivElement>(null);
   const used = useRef(false);
   const left = useRef(toast.ms);
@@ -169,7 +187,7 @@ function Toast({ toast }: { readonly toast: Current }): ReactElement {
   const close = (action: () => void): void => {
     const hadFocus = root.current?.contains(document.activeElement) === true;
     action();
-    if (hadFocus) focusPanel();
+    if (hadFocus) handOffFocus();
   };
   const undo = toast.undo;
   return (
@@ -206,7 +224,13 @@ function Toast({ toast }: { readonly toast: Current }): ReactElement {
             if (used.current) return;
             used.current = true;
             close(() => {
-              undo();
+              try {
+                undo();
+              } catch (error) {
+                // A callback that throws leaves the change in place: the button must work again.
+                used.current = false;
+                throw error;
+              }
               show({ text: shellCopy.undone }, UNDONE_MS);
             });
           }}

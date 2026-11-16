@@ -77,7 +77,12 @@ function button(document: Document, className: string, text: string): HTMLButton
   return element;
 }
 
-/** Mounts the empty status region the prompt will be filled into, in the shell's toast region. */
+/**
+ * Mounts the empty status region the prompt will be filled into, in the shell's toast region. The prompt is its own
+ * DOM, not a toast of the shell's provider (`shell/toast.tsx`): "one toast at a time" does not cover it, and the two
+ * share `.toast-region`, where React owns only its own child. Its focus handoff on Dismiss duplicates the provider's
+ * (and, unlike it, does not spare a peeking sheet): a follow-up should share one helper.
+ */
 function mountRegion(document: Document): HTMLElement {
   const region = document.createElement("div");
   region.setAttribute("role", "status");

@@ -4,7 +4,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, expect, test, vi } from "vi
 
 import { AppShell } from "./AppShell";
 import { shellCopy } from "./copy";
-import { useToast } from "./toast";
+import { ToastLive, ToastRegion, useToast } from "./toast";
 import type { ToastApi } from "./toast";
 
 beforeAll(() => {
@@ -24,7 +24,10 @@ afterAll(() => {
 });
 
 /** Renders the shell with a probe that hands the toast API to the test. */
-function mount(): { api: () => ToastApi; container: HTMLElement } {
+function mount(initialSnap?: "peek" | "half" | "full"): {
+  api: () => ToastApi;
+  container: HTMLElement;
+} {
   const held: { current: ToastApi | null } = { current: null };
   function Probe(): null {
     const api = useToast();
@@ -34,7 +37,7 @@ function mount(): { api: () => ToastApi; container: HTMLElement } {
     return null;
   }
   const { container } = render(
-    <AppShell>
+    <AppShell {...(initialSnap === undefined ? {} : { initialSnap })}>
       <Probe />
     </AppShell>,
   );
@@ -348,4 +351,92 @@ test("METRO-158 useToast outside the shell fails visibly", () => {
   const spy = vi.spyOn(console, "error").mockImplementation(() => {});
   expect(() => render(<Stray />)).toThrow("useToast needs AppShell");
   spy.mockRestore();
+});
+
+test("METRO-158 a keyboard Dismiss or Undo at a peeking sheet hands focus to the grip and does not open the sheet", () => {
+  const { api, container } = mount("peek");
+  const sheet = (): string | null =>
+    container.querySelector(".app")?.getAttribute("data-snap") ?? null;
+  const grip = container.querySelector<HTMLElement>(".panel__grip");
+  act(() => api().show({ text: "One", undo: () => {} }));
+  act(() => undoButton().focus());
+  fireEvent.click(undoButton());
+  expect(document.activeElement).toBe(grip);
+  expect(sheet()).toBe("peek");
+  wait(2680);
+  act(() => api().show({ text: "Two" }));
+  act(() => dismissButton().focus());
+  fireEvent.click(dismissButton());
+  expect(document.activeElement).toBe(grip);
+  expect(sheet()).toBe("peek");
+});
+
+test("METRO-158 a half or full sheet gets focus on the panel, as before", () => {
+  const { api } = mount("full");
+  act(() => api().show({ text: "Saved" }));
+  act(() => dismissButton().focus());
+  fireEvent.click(dismissButton());
+  expect(document.activeElement).toBe(document.querySelector(".panel__scroll"));
+});
+
+test("METRO-158 an Undo callback that throws leaves a working Undo and the error is not swallowed", () => {
+  const { api } = mount();
+  const undo = vi
+    .fn<() => void>()
+    .mockImplementationOnce(() => {
+      throw new Error("boom");
+    })
+    .mockImplementation(() => {});
+  const seen: unknown[] = [];
+  const onError = (event: ErrorEvent): void => {
+    seen.push(event.error);
+    event.preventDefault();
+  };
+  window.addEventListener("error", onError);
+  act(() => api().show({ text: "Saved", undo }));
+  fireEvent.click(undoButton());
+  expect(undo).toHaveBeenCalledTimes(1);
+  expect(seen).toHaveLength(1);
+  // The toast is still the one with Undo, and pressing again works.
+  expect(toast().textContent).toContain("Saved");
+  fireEvent.click(undoButton());
+  window.removeEventListener("error", onError);
+  expect(undo).toHaveBeenCalledTimes(2);
+  expect(toast().textContent).toContain(shellCopy.undone);
+});
+
+test("METRO-158 a screen that calls useToast is not re-rendered when a toast shows or leaves", () => {
+  const rendered = vi.fn();
+  let show: ToastApi["show"] | null = null;
+  function Consumer(): null {
+    const api = useToast();
+    rendered();
+    useEffect(() => {
+      show = api.show;
+    });
+    return null;
+  }
+  render(
+    <AppShell>
+      <Consumer />
+    </AppShell>,
+  );
+  const before = rendered.mock.calls.length;
+  act(() => show?.({ text: "Saved", undo: () => {} }));
+  expect(toasts()).toHaveLength(1);
+  wait(6000);
+  wait(180);
+  expect(toasts()).toHaveLength(0);
+  expect(rendered).toHaveBeenCalledTimes(before);
+});
+
+test("METRO-158 the region and the announcer draw nothing outside the provider", () => {
+  const { container } = render(
+    <>
+      <ToastRegion />
+      <ToastLive />
+    </>,
+  );
+  expect(container.querySelector(".toast")).toBeNull();
+  expect(container.querySelector("output")?.textContent).toBe("");
 });
