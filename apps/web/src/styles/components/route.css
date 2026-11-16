@@ -101,6 +101,9 @@
     var(--shadow-2);
   transition: transform 260ms var(--ease-spring);
 }
+.route__swap[data-flipped] {
+  transform: rotate(180deg);
+} /* the app toggles data-flipped on every swap */
 .route__swap:hover {
   color: var(--color-accent);
 }

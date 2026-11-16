@@ -72,7 +72,7 @@
   --side-w: 360px;
   --ctl-h: 52px;
   --tabbar-h: 64px;
-  --sheet-peek: 250px;
+  --sheet-peek: 262px;
   --sheet-half: 58dvh;
   /* The sheet's top edge at full height sits --sheet-top below the screen top. The space under the sheet,
      --sheet-reserve, is the tab bar and its gap; `.app--plain` (no nav drawn) shrinks it. Full height is
@@ -80,6 +80,7 @@
   --sheet-top: 64px;
   --sheet-reserve: calc(var(--tabbar-h) + 20px);
   --sheet-h: var(--sheet-half);
+  --sheet-rest: var(--sheet-half);
   --color-bg: #f2f6f6;
   --color-fg: #0d0f12;
   --color-card: #ffffff;
@@ -91,7 +92,7 @@
   --color-muted: rgb(11 122 132 / 0.06);
   --color-muted-2: rgb(11 122 132 / 0.11);
   --color-hair: rgb(13 15 18 / 0.08);
-  --color-ctl-line: #80868e;
+  --color-ctl-line: #72787f;
   --color-accent: #0b7a84;
   --color-accent-hover: #08626a;
   --color-accent-2: #1d6fb8;
@@ -133,7 +134,7 @@
   --color-muted: rgb(120 220 210 / 0.07);
   --color-muted-2: rgb(120 220 210 / 0.12);
   --color-hair: rgb(255 255 255 / 0.075);
-  --color-ctl-line: #6e767e;
+  --color-ctl-line: #828a92;
   --color-accent: #3fd5c8;
   --color-accent-hover: #7be4da;
   --color-accent-2: #8cc8ff;
@@ -169,7 +170,7 @@
     --color-muted: rgb(120 220 210 / 0.07);
     --color-muted-2: rgb(120 220 210 / 0.12);
     --color-hair: rgb(255 255 255 / 0.075);
-    --color-ctl-line: #6e767e;
+    --color-ctl-line: #828a92;
     --color-accent: #3fd5c8;
     --color-accent-hover: #7be4da;
     --color-accent-2: #8cc8ff;

@@ -22,7 +22,7 @@ Read when: building or changing components in `apps/web/src`, interaction, focus
 - `e2e/fixtures.ts`: fails any test on a console error, an uncaught page error or an axe violation (a deliberate error must use `allowedConsoleError`). `scripts/ui-docs.test.ts` fails if an axe scan bypasses `AXE_TAGS`. Fix the page, not the fixture.
 - `e2e/error-fallback.e2e.ts`: fails if the fallback lacks the named alert, focus, a 2px outline, retry, or leaks the thrown message.
 - `e2e/accessibility.e2e.ts`, `e2e/keyboard.ts`: fail on keyboard and ARIA snapshot regressions.
-- `scripts/design-contrast.test.ts` (53 handoff pairs, both themes), `scripts/css-rules.test.ts` (no inline style, no colour literal outside `tokens.css`, load order), `e2e/design-foundation.e2e.ts` (themes, no flash, axe light and dark, preferences, sheet). Fix the token or rule, not the test.
+- `scripts/design-contrast.test.ts` (81 handoff pairs, both themes), `scripts/css-rules.test.ts` (no inline style, no colour literal outside `tokens.css`, load order), `e2e/design-foundation.e2e.ts` (themes, no flash, axe light and dark, preferences, sheet). Fix the token or rule, not the test.
 
 ## Read more
 

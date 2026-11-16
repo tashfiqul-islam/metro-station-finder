@@ -1,0 +1,49 @@
+/* recents.css: Recent places. Colours only via var(--…). */
+
+/* Recent places (v1): the last four places the rider chose, kept in memory only (ADR-0009; no localStorage).
+   The header is .block__head with a .btn--ghost.btn--sm "Clear". */
+.recents {
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  border-radius: var(--radius-card);
+  background: var(--color-raised);
+  box-shadow:
+    var(--shadow-rim),
+    0 0 0 1px var(--color-hair),
+    var(--shadow-1);
+}
+.recents__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 48px;
+  padding: 8px 12px;
+  border-radius: var(--radius-row);
+  text-align: left;
+  color: var(--color-fg);
+  font-weight: var(--fw-semibold);
+  transition: background-color var(--dur-fast);
+}
+.recents__item:hover {
+  background: var(--color-muted);
+}
+.recents__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-pill);
+  background: var(--color-muted);
+  color: var(--color-muted-fg);
+}
+.recents__label {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

@@ -77,10 +77,10 @@ test("extractTokens finds nothing in a stylesheet without the three blocks", () 
   expect(extractTokens(":root { --a: 1;").light).toEqual({});
 });
 
-test("the pair table is the handoff's 53 rows", () => {
-  expect(PAIRS).toHaveLength(53);
-  expect(PAIRS.filter(([kind]) => kind === "text")).toHaveLength(32);
-  expect(new Set(PAIRS.map(([, use, fg, bg]) => `${use}|${fg}|${bg}`)).size).toBe(53);
+test("the pair table is the handoff's 81 rows (53 of revision 1 and 28 of revisions 2 and 3)", () => {
+  expect(PAIRS).toHaveLength(81);
+  expect(PAIRS.filter(([kind]) => kind === "text")).toHaveLength(52);
+  expect(new Set(PAIRS.map(([, use, fg, bg]) => `${use}|${fg}|${bg}`)).size).toBe(81);
 });
 
 for (const theme of ["light", "dark"] as const) {
@@ -90,14 +90,15 @@ for (const theme of ["light", "dark"] as const) {
     expect(
       failing.map((r) => `${r.use}: ${r.fg} on ${r.bg} ${r.ratio.toFixed(2)} < ${r.need}`),
     ).toEqual([]);
-    expect(results).toHaveLength(53);
+    expect(results).toHaveLength(81);
   });
 
   test(`every opaque ${theme} pair reproduces the figure the handoff published`, () => {
     const published = PAIRS.map((row) => (theme === "light" ? row[5] : row[6]));
     const compared = evaluatePairs(tokens[theme])
       .map((result, index) => ({ result, figure: published[index] ?? 0 }))
-      .filter(({ result }) => result.exact);
+      // A figure of 0 is one the handoff did not publish for this theme.
+      .filter(({ result, figure }) => result.exact && figure > 0);
     expect(compared.length).toBeGreaterThan(30);
     for (const { result, figure } of compared) {
       expect(Math.abs(result.ratio - figure), result.use).toBeLessThan(0.011);
@@ -115,6 +116,15 @@ for (const theme of ["light", "dark"] as const) {
     }
   });
 }
+
+test('"a on b" paints token a over every surface b can be, and chains read right to left', () => {
+  const light = tokens.light;
+  const card = parseColor(light["--color-card"] ?? "");
+  const soft = parseColor(light["--color-accent-soft"] ?? "");
+  expect(surfaces(light, "accent-soft on card")).toEqual([composite(soft, card)]);
+  expect(surfaces(light, "muted on glass-thick")).toHaveLength(2);
+  expect(surfaces(light, "accent-soft on pop")).toHaveLength(2);
+});
 
 /** The header brand (METRO-105): not in the handoff table, so checked here with the same rules. */
 const BRAND_PAIRS: readonly PairRow[] = [

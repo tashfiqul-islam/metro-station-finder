@@ -1,0 +1,26 @@
+/* trip-opts.css: Trip options, direction (text) and travel mode (icons). Both are .seg radio groups (line.css); changing either re-plans. Colours only via var(--…). */
+
+.trip-opts {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.trip-opts .seg {
+  flex: 1;
+  min-width: 0;
+}
+.trip-opts .seg__opt {
+  padding: 0 6px;
+  min-width: 0;
+}
+.trip-opts .seg--icons {
+  flex: none;
+  grid-template-columns: repeat(3, 44px);
+}
+.trip-opts .seg--icons .seg__opt {
+  padding: 0;
+}
+/* When Motorbike is not offered (build-time list of modes), the group has two options. */
+.trip-opts .seg--icons[data-modes="2"] {
+  grid-template-columns: repeat(2, 44px);
+}

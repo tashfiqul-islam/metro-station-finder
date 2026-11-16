@@ -1,0 +1,67 @@
+/* line-card.css: Line card, the live line over two links (fares, stations). Replaces the two large tiles. Colours only via var(--…). */
+
+.line-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: var(--radius-tile);
+  background: var(--color-raised);
+  box-shadow:
+    var(--shadow-rim),
+    0 0 0 1px var(--color-hair),
+    var(--shadow-1);
+}
+.line-card__links {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-top: 1px solid var(--color-hair);
+}
+.line-card__link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 68px;
+  padding: 10px 12px;
+  color: var(--color-fg);
+  text-decoration: none;
+  transition: background-color var(--dur-fast);
+}
+.line-card__link + .line-card__link {
+  border-left: 1px solid var(--color-hair);
+}
+.line-card__link:hover {
+  background: var(--color-muted);
+}
+.line-card__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent-soft);
+  color: var(--color-on-soft);
+}
+.line-card__text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.line-card__value {
+  font-size: var(--fs-16);
+  line-height: 1.1;
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.line-card__label {
+  font-size: var(--fs-12);
+  color: var(--color-muted-fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

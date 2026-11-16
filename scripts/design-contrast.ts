@@ -1,6 +1,6 @@
 /**
  * METRO-105 (ADR-0021): WCAG contrast of the design tokens, computed from `apps/web/src/styles/tokens.css`
- * for both themes. The pairs are the 53 rows of the design handoff's accessibility table (the same list is
+ * for both themes. The pairs are the 81 rows of the design handoff's accessibility table (53 of revision 1, 28 of revisions 2 and 3) (the same list is
  * checked in light and dark). A semi-transparent surface is composited over every backdrop it can sit on and the
  * lowest ratio counts: `glass` over the map background and the page (the map planes were removed in METRO-115; the line and labels the map draws behind a sheet when panned are not judged); `raised`, `muted`, `muted-2` and `accent-soft`
  * over the card, the page and the glass panel over each backdrop. This is stricter than the handoff, which
@@ -165,6 +165,13 @@ const colorOf = (tokens: Tokens, name: string): Rgba => {
 
 /** Every opaque colour the token can appear as on screen (see the file comment). */
 export function surfaces(tokens: Tokens, name: string): Rgba[] {
+  // "a on b": token a painted over every surface b can be (rev 2 and 3 rows, e.g. "accent-soft on raised on glass-thick",
+  // "muted on glass-thick", "glass-thick on accent"); chains read right to left.
+  const split = name.indexOf(" on ");
+  if (split !== -1) {
+    const top = colorOf(tokens, name.slice(0, split));
+    return surfaces(tokens, name.slice(split + 4)).map((base) => composite(top, base));
+  }
   const color = colorOf(tokens, name);
   if (color[3] === 1) return [color];
   const backdrops = BACKDROPS.map((backdrop) => colorOf(tokens, backdrop));
@@ -291,7 +298,7 @@ export const PAIRS: readonly PairRow[] = [
   ["non-text", "Focus ring on page", "focus", "bg", 3, 4.67, 10.95],
   ["non-text", "Focus ring on glass panel", "focus", "glass", 3, 4.82, 10.4],
   ["non-text", "Focus ring on card", "focus", "card", 3, 5.08, 9.98],
-  ["non-text", "Field and radio boundary (ctl-line) on card", "ctl-line", "card", 3, 3.67, 3.93],
+  ["non-text", "Field and radio boundary (ctl-line) on card", "ctl-line", "card", 3, 4.46, 5.18],
   ["non-text", "Map line start on map background", "mark-a", "map-bg", 3, 4.36, 10.7],
   ["non-text", "Map line end on map background", "mark-b", "map-bg", 3, 4.49, 10.94],
   ["non-text", "Station pin ring on map background", "map-pin-ring", "map-bg", 3, 4.36, 10.7],
@@ -317,4 +324,89 @@ export const PAIRS: readonly PairRow[] = [
   ["non-text", "Toast close icon on inverse", "on-inverse-2", "inverse", 3, 10.15, 7.33],
   ["non-text", "Toast chip on inverse", "accent-inverse", "inverse", 3, 10.57, 6.38],
   ["non-text", "Mark station ring on page", "mark-station", "bg", 3, 17.63, 17.92],
+  // Revision 2 and 3 rows (METRO-157). A published figure of 0 means the handoff gave none for that theme.
+  ["text", "Open in Google Maps label", "on-accent", "accent", 4.5, 5.08, 10.4],
+  ["text", "Result insight on result card", "fg", "raised", 4.5, 19.11, 15.41],
+  ["text", 'Insight link ("Switch to …")', "accent", "raised", 4.5, 5.06, 9.42],
+  [
+    "text",
+    "Compared: station name on selected row",
+    "fg",
+    "accent-soft on raised on glass-thick",
+    4.5,
+    16.69,
+    11.56,
+  ],
+  [
+    "text",
+    "Compared: meta on selected row",
+    "muted-fg",
+    "accent-soft on raised on glass-thick",
+    4.5,
+    5.5,
+    4.88,
+  ],
+  ["text", "Compared and step meta on card", "muted-fg", "raised", 4.5, 6.3, 6.51],
+  ["text", "Step text on card", "fg", "raised", 4.5, 19.11, 15.41],
+  [
+    "non-text",
+    "Search: locate glyph on its chip",
+    "on-soft",
+    "accent-soft on raised on glass-thick",
+    3,
+    7.22,
+    11.3,
+  ],
+  [
+    "non-text",
+    "Search field outline, panel over map background",
+    "ctl-line",
+    "glass-thick",
+    3,
+    4.23,
+    5.4,
+  ],
+  [
+    "non-text",
+    "Search field outline, panel over a white road tile",
+    "ctl-line",
+    "glass-thick on map-road",
+    3,
+    4.33,
+    0,
+  ],
+  [
+    "non-text",
+    "Search field outline, panel over the metro line",
+    "ctl-line",
+    "glass-thick on accent",
+    3,
+    3.47,
+    3.74,
+  ],
+  [
+    "non-text",
+    "Search field outline, panel over route ink or a light map label",
+    "ctl-line",
+    "glass-thick on fg",
+    3,
+    3.04,
+    3.23,
+  ],
+  ["text", "Trip options: unselected label", "muted-fg", "muted on glass-thick", 4.5, 5.54, 6.36],
+  ["text", "Trip options: selected label", "fg", "thumb", 4.5, 19.19, 10.8],
+  ["text", "Palette: option label", "fg", "pop", 4.5, 19.02, 16.4],
+  ["text", "Palette: hint, group label", "muted-fg", "pop", 4.5, 6.27, 6.93],
+  ["text", "Palette: option label on active row", "fg", "accent-soft on pop", 4.5, 16.62, 12.49],
+  ["text", "Palette: hint on active row", "muted-fg", "accent-soft on pop", 4.5, 5.48, 5.27],
+  ["text", "Palette: footer hints", "muted-fg", "muted on pop", 4.5, 5.79, 6.07],
+  ["non-text", "Palette: active icon chip glyph", "on-accent", "accent", 3, 5.08, 10.4],
+  ["text", "Map: alternative station time label", "map-label", "map-pin", 4.5, 19.19, 16.33],
+  ["text", "Map: chosen station time label", "map-halo", "map-label", 4.5, 16.47, 17.5],
+  ["non-text", "Map: route on map background", "map-walk", "map-bg", 3, 16.47, 17.5],
+  ["non-text", "Map: route over a road", "map-walk", "map-road", 3, 19.19, 15.88],
+  ["text", "Map: Google place labels (style array)", "map-area", "map-bg", 4.5, 5.43, 7.39],
+  ["text", "Map: Google water labels (style array)", "map-water-ink", "map-water", 4.5, 5.46, 7.68],
+  ["text", "Line card: value", "fg", "raised", 4.5, 19.11, 15.41],
+  ["text", "Line card: label", "muted-fg", "raised", 4.5, 6.3, 6.51],
 ];

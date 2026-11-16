@@ -6,11 +6,19 @@
   position: absolute;
   z-index: var(--z-toast);
   left: 50%;
-  bottom: calc(var(--sheet-h) + var(--sheet-reserve) + 20px);
+  /* The snapped height (--sheet-rest), not the live one: a toast does not follow a drag and glides when the snap
+     changes. The handoff's fixed 104px is the 84px tab-bar reserve plus 20px; --sheet-reserve keeps the plain case. */
+  bottom: calc(var(--sheet-rest) + var(--sheet-reserve) + 20px);
   transform: translateX(-50%);
+  transition: bottom var(--dur-sheet) var(--ease-sheet);
   width: max-content;
   max-width: calc(100% - 24px);
   pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .toast-region {
+    transition: none;
+  }
 }
 @media (min-width: 768px) {
   .toast-region {

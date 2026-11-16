@@ -464,10 +464,10 @@ test.describe("user preferences", () => {
         "Resize panel. Now peek height. Drag, or use the arrow keys.",
       );
 
-      // The sheet animates to peek (250 px); measure the grip only once it has stopped.
+      // The sheet animates to peek (262 px); measure the grip only once it has stopped.
       await expect
         .poll(async () => Math.round((await page.locator(".panel").boundingBox())?.height ?? 0))
-        .toBe(250);
+        .toBe(262);
       const box = await grip.boundingBox();
       if (box === null) throw new Error("the grip has no box");
       const x = box.x + box.width / 2;

@@ -140,19 +140,33 @@
     var(--shadow-3);
   transition: height var(--dur-sheet) var(--ease-sheet);
 }
+/* --sheet-full is the handoff's name for the full height. The handoff fixes it at 100dvh - 148px - the safe-area
+   inset (148 = 64 top + 84 reserve). Here it is computed from --sheet-top and --sheet-reserve on `.app`, where
+   `.app--plain` can shrink the reserve: the same height as the handoff's with a nav, taller without one (ADR-0021). */
+.app {
+  --sheet-full: calc(
+    100dvh - var(--sheet-top) - var(--sheet-reserve) - env(safe-area-inset-bottom)
+  );
+}
+/* --sheet-h is the live height (a drag overwrites it); --sheet-rest is the snapped height only, so what sits above
+   the sheet (the toast) does not follow a drag. */
 .app[data-snap="peek"] {
   --sheet-h: var(--sheet-peek);
+  --sheet-rest: var(--sheet-peek);
 }
 .app[data-snap="half"] {
   --sheet-h: var(--sheet-half);
+  --sheet-rest: var(--sheet-half);
 }
 .app[data-snap="full"] {
-  --sheet-h: calc(100dvh - var(--sheet-top) - var(--sheet-reserve) - env(safe-area-inset-bottom));
+  --sheet-h: var(--sheet-full);
+  --sheet-rest: var(--sheet-full);
 }
 .panel[data-dragging] {
   transition: none;
 } /* while dragging, the app writes --sheet-h on .app via CSSOM */
 .panel__handle {
+  position: relative;
   flex: none;
   display: flex;
   align-items: center;

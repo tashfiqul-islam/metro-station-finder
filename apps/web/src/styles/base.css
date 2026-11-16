@@ -205,6 +205,8 @@ html.vt-theme *::after {
   .btn,
   .combo,
   .place-slot,
+  .search,
+  .seg,
   .notice,
   .toast,
   .card-like {

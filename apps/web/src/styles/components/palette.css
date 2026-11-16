@@ -1,6 +1,7 @@
 /* palette.css: Command palette. Colours only via var(--…). Breakpoint 768px. */
 
 @import "../tokens-parts.css";
+@import "../fonts-mono.css";
 
 /* ════════════ Command palette ════════════ */
 .palette {
@@ -12,75 +13,190 @@
   align-items: flex-start;
   padding: 12vh 16px 16px;
   background: var(--color-scrim);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  animation: fade var(--dur-fast) ease-out both;
 }
 .palette__box {
   width: 100%;
-  max-width: 560px;
-  max-height: 70vh;
+  max-width: 580px;
+  max-height: min(70vh, 560px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   border-radius: var(--radius-tile);
-  background: var(--color-glass-thick);
-  -webkit-backdrop-filter: var(--blur);
-  backdrop-filter: var(--blur);
+  background: var(--color-pop);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  backdrop-filter: blur(40px) saturate(180%);
   box-shadow:
     var(--shadow-rim),
     0 0 0 1px var(--color-hair),
     var(--shadow-3);
-  animation: rise var(--dur-base) var(--ease-out) both;
+  animation: palette-in 240ms var(--ease-out) both;
 }
 .palette__field {
+  flex: none;
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  height: 56px;
-  padding: 0 12px 0 16px;
+  gap: var(--space-3);
+  height: 60px;
+  padding: 0 18px;
   border-bottom: 1px solid var(--color-hair);
-  color: var(--color-muted-fg);
+  color: var(--color-accent);
 }
 .palette__input {
   flex: 1;
+  min-width: 0;
   height: 100%;
   font-size: var(--fs-16);
+  font-weight: var(--fw-medium);
+  letter-spacing: -0.01em;
   color: var(--color-fg);
 }
-.palette__esc {
-  font-family: var(--font-mono);
-  font-size: var(--fs-11);
-  padding: 2px 6px;
-  border-radius: var(--radius-xs);
-  box-shadow: inset 0 0 0 1px var(--color-ctl-line);
-  color: var(--color-muted-fg);
-}
 .palette__list {
+  flex: 1;
+  min-height: 0;
   overflow: auto;
-  padding: 6px;
+  padding: 6px 6px 8px;
+  scroll-padding: 40px 0 8px;
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
+.palette__group {
+  padding: 12px 12px 6px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-11);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--track-caps);
+  text-transform: uppercase;
+  color: var(--color-muted-fg);
+}
+/* The active option is the only highlighted row: the pointer moves aria-selected, so there is no separate hover style. */
 .palette__item {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  min-height: var(--target);
-  padding: 0 12px;
+  min-height: 48px;
+  padding: 0 10px 0 8px;
   border-radius: var(--radius-field);
   cursor: pointer;
   color: var(--color-fg);
 }
-.palette__item:hover,
 .palette__item[aria-selected="true"] {
-  background: var(--color-muted-2);
+  background: var(--color-accent-soft);
 }
-.palette__item .icon {
+.palette__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  background: var(--color-muted);
   color: var(--color-muted-fg);
+}
+.palette__item[aria-selected="true"] .palette__icon {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
 }
 .palette__label {
   flex: 1;
+  min-width: 0;
+  font-size: var(--fs-15);
+  font-weight: var(--fw-medium);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .palette__hint {
+  font-family: var(--font-mono);
+  font-size: var(--fs-11);
+  color: var(--color-muted-fg);
+  white-space: nowrap;
+}
+.palette__enter {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-xs);
+  background: var(--color-card);
+  box-shadow:
+    0 0 0 1px var(--color-hair),
+    0 1px 0 var(--color-hair);
+  color: var(--color-on-soft);
+}
+.palette__item[aria-selected="true"] .palette__enter {
+  display: inline-flex;
+}
+.palette__foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  height: 42px;
+  padding: 0 16px;
+  border-top: 1px solid var(--color-hair);
+  background: var(--color-muted);
   font-size: var(--fs-12);
   color: var(--color-muted-fg);
+}
+.palette__keys {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.palette__key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 4px;
+  border-radius: var(--radius-xs);
+  background: var(--color-card);
+  box-shadow:
+    0 0 0 1px var(--color-hair),
+    0 1px 0 var(--color-hair);
+  font-family: var(--font-mono);
+  font-size: var(--fs-10);
+  font-weight: var(--fw-semibold);
+  color: var(--color-fg);
+}
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes palette-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.975);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .palette,
+  .palette__box {
+    animation: none;
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .palette,
+  .palette__box {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
 }
