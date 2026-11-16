@@ -280,9 +280,9 @@ test("METRO-105 a slice can set the snap through useSheet and outside the shell 
   spy.mockRestore();
 });
 
-test("METRO-105 the toast region renders toasts and no element has a style attribute at rest", () => {
-  const { container } = render(<AppShell toasts={<p>saved</p>}>x</AppShell>);
-  expect(screen.getByRole("region", { name: "Notifications" }).textContent).toBe("saved");
+test("METRO-105 the toast region is present and empty, and no element has a style attribute at rest", () => {
+  const { container } = render(<AppShell>x</AppShell>);
+  expect(screen.getByRole("region", { name: "Notifications" }).textContent).toBe("");
   expect(container.querySelectorAll("[style]")).toHaveLength(0);
 });
 
@@ -316,7 +316,7 @@ test("METRO-105 focus in the content leaves a half or full sheet where it is", (
 
 test("METRO-105 each snap change is announced politely as panel text", () => {
   render(<AppShell>x</AppShell>);
-  const status = screen.getByRole("status");
+  const status = must(document.querySelector("output:not(.toast-live)"));
   expect(status.textContent).toBe("Panel half height");
   expect(status.className).toBe("visually-hidden");
   fireEvent.click(grip());
@@ -377,7 +377,7 @@ test("METRO-105 a key press after a drag that ended off the grip is not swallowe
 
 test("METRO-111 the map slot comes after the panel in the DOM, so the header and panel are reached first", () => {
   const { container } = render(
-    <AppShell map={<button type="button">map control</button>} toasts={<p>note</p>}>
+    <AppShell map={<button type="button">map control</button>}>
       <button type="button">panel control</button>
     </AppShell>,
   );
