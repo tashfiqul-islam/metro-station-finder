@@ -57,7 +57,7 @@ function Pending(): ReactNode {
   );
 }
 
-/** Gives each failure region its own message id, so two failed features on one page never share one. */
+/** Gives each failure region its own message id, so two failed features on one page never share one. A module counter, because a class component cannot use `useId`. */
 let failureCount = 0;
 
 /**

@@ -81,6 +81,7 @@ test("METRO-104 while the chunk is pending a fixed polite status shows, then the
   expect(bars?.getAttribute("aria-hidden")).toBe("true");
   expect(bars?.querySelectorAll(".skeleton__bar")).toHaveLength(3);
   expect(bars?.querySelector(".skeleton__bar--short")).not.toBeNull();
+  expect(container.querySelector("svg")).toBeNull();
   expect(container.querySelector("[aria-busy], [role=progressbar]")).toBeNull();
   expect(container.textContent).not.toContain("Loaded");
   await act(async () => {

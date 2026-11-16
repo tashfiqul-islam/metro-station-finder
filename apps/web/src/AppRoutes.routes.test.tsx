@@ -96,6 +96,22 @@ test("METRO-159 a screen's map is shown on its own route only", async () => {
   expect(document.querySelector(".app__map-frame")).toBeNull();
 });
 
+test("METRO-159 a map is not kept when its screen unmounts: A, then B with no map, then A shows none until A sets one", async () => {
+  render(<AppRoutes routes={two} />);
+  const show = await screen.findByRole("button", { name: "Show map" });
+  await act(async () => {
+    show.click();
+  });
+  expect(screen.getByText("First map")).toBeTruthy();
+  await goTo("/second");
+  await screen.findByRole("heading", { name: "Second screen" });
+  expect(document.querySelector(".app__map-frame")).toBeNull();
+  await goTo("/");
+  await screen.findByRole("heading", { name: "First screen" });
+  expect(screen.queryByText("First map")).toBeNull();
+  expect(document.querySelector(".app__map-frame")).toBeNull();
+});
+
 test("METRO-159 AC3 a route whose loader rejects shows the failure with focus on its container", async () => {
   const errorSpy = vi.spyOn(console, "error").mockImplementation(vi.fn());
   const failing: RouteTable = [

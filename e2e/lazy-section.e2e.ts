@@ -28,17 +28,23 @@ test.describe("lazy section states (METRO-159)", () => {
         await gate.promise;
         await route.continue();
       });
-      await page.goto("/");
-      const pending = page.locator("output.lazy");
-      await expect(pending).toHaveText("Loading");
-      await expect(pending).toHaveRole("status");
-      await expect(pending.locator(".lazy__bars")).toHaveAttribute("aria-hidden", "true");
-      expect((await axeBuilder(page).analyze()).violations.map((v) => v.id)).toEqual([]);
-      gate.resolve();
-      await expect(
-        page.getByRole("heading", { level: 1, name: "Nearest Metro station" }),
-      ).toBeVisible();
-      await expect(pending).toBeHidden();
+      try {
+        // `commit`: the parked chunk must not be something the `load` event waits for.
+        await page.goto("/", { waitUntil: "commit" });
+        const pending = page.locator("output.lazy");
+        await expect(pending).toHaveText("Loading");
+        await expect(pending).toHaveRole("status");
+        await expect(pending.locator(".lazy__bars")).toHaveAttribute("aria-hidden", "true");
+        expect((await axeBuilder(page).analyze()).violations.map((v) => v.id)).toEqual([]);
+        gate.resolve();
+        await expect(
+          page.getByRole("heading", { level: 1, name: "Nearest Metro station" }),
+        ).toBeVisible();
+        await expect(pending).toBeHidden();
+      } finally {
+        // Release the parked request even when an assertion failed, so the failure is reported, not a teardown stall.
+        gate.resolve();
+      }
     });
 
     test(`METRO-159 when the screen chunk cannot load the failure takes focus, is not an alert and passes axe in ${theme}`, async ({

@@ -36,7 +36,14 @@ export function AppRoutes({ routes = appRoutes }: AppRoutesProps) {
     return [toEntry(head), ...tail.map(toEntry)];
   }, [routes]);
   const [slot, setSlot] = useState<MapSlot | null>(null);
+  const [shownPath, setShownPath] = useState<string | null>(null);
   const { path, Screen } = matchRoute(entries, usePathname());
+  // A new route starts with no map: the one a screen left behind is dropped, so coming back to it (or a route
+  // that never sets one) never shows a stale map. Adjusting state during render, as React documents for this.
+  if (shownPath !== path) {
+    setShownPath(path);
+    setSlot(null);
+  }
   // Stable per route, so a screen can list it as an effect dependency.
   const setMap = useCallback(
     (next: ReactNode) => {
