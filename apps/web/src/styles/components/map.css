@@ -44,12 +44,6 @@
 .map__bg {
   fill: var(--color-map-bg);
 }
-.map__plane--1 {
-  fill: var(--color-map-plane-1);
-}
-.map__plane--2 {
-  fill: var(--color-map-plane-2);
-}
 .map__dot {
   fill: var(--color-map-dot);
 }
