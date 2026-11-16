@@ -77,10 +77,10 @@ test("extractTokens finds nothing in a stylesheet without the three blocks", () 
   expect(extractTokens(":root { --a: 1;").light).toEqual({});
 });
 
-test("the pair table is the handoff's 53 rows", () => {
-  expect(PAIRS).toHaveLength(53);
-  expect(PAIRS.filter(([kind]) => kind === "text")).toHaveLength(32);
-  expect(new Set(PAIRS.map(([, use, fg, bg]) => `${use}|${fg}|${bg}`)).size).toBe(53);
+test("the pair table is the handoff's 81 rows (53 of revision 1 and 28 of revisions 2 and 3)", () => {
+  expect(PAIRS).toHaveLength(81);
+  expect(PAIRS.filter(([kind]) => kind === "text")).toHaveLength(52);
+  expect(new Set(PAIRS.map(([, use, fg, bg]) => `${use}|${fg}|${bg}`)).size).toBe(81);
 });
 
 for (const theme of ["light", "dark"] as const) {
@@ -90,18 +90,38 @@ for (const theme of ["light", "dark"] as const) {
     expect(
       failing.map((r) => `${r.use}: ${r.fg} on ${r.bg} ${r.ratio.toFixed(2)} < ${r.need}`),
     ).toEqual([]);
-    expect(results).toHaveLength(53);
+    expect(results).toHaveLength(81);
   });
 
   test(`every opaque ${theme} pair reproduces the figure the handoff published`, () => {
     const published = PAIRS.map((row) => (theme === "light" ? row[5] : row[6]));
     const compared = evaluatePairs(tokens[theme])
       .map((result, index) => ({ result, figure: published[index] ?? 0 }))
-      .filter(({ result }) => result.exact);
+      // A figure of 0 is one the handoff did not publish for this theme.
+      .filter(({ result, figure }) => result.exact && figure > 0);
     expect(compared.length).toBeGreaterThan(30);
     for (const { result, figure } of compared) {
       expect(Math.abs(result.ratio - figure), result.use).toBeLessThan(0.011);
     }
+  });
+
+  test(`every revision 2 and 3 ${theme} pair on a translucent surface reproduces the published figure over the handoff's backdrop`, () => {
+    // The gate judges these rows at their worst backdrop (map background and page); the handoff published one
+    // figure, measured over the map background, so that single backdrop is recomputed and compared.
+    let compared = 0;
+    for (const [index, row] of PAIRS.entries()) {
+      const figure = theme === "light" ? row[5] : row[6];
+      const [result] = evaluatePairs(tokens[theme], [row]);
+      if (index < FIRST_REVISION_2_ROW || figure === 0 || result?.exact !== false) continue;
+      const backdrop = HANDOFF_BACKDROP[row[3]];
+      expect(backdrop, row[1]).toBeDefined();
+      const [one] = evaluatePairs(tokens[theme], [
+        [row[0], row[1], row[2], backdrop ?? "", row[4], 0, 0],
+      ]);
+      expect(Math.abs((one?.ratio ?? 0) - figure), row[1]).toBeLessThan(0.011);
+      compared += 1;
+    }
+    expect(compared).toBe(16);
   });
 
   test(`translucent ${theme} surfaces are judged at their worst backdrop, never better than any one of them`, () => {
@@ -115,6 +135,44 @@ for (const theme of ["light", "dark"] as const) {
     }
   });
 }
+
+/** Rows 0 to 52 are revision 1; the rest are revision 2 and 3 (METRO-157). */
+const FIRST_REVISION_2_ROW = 53;
+
+/**
+ * The single backdrop the handoff measured each translucent family over: the map background, under the glass panel
+ * (`glass-thick`, what `.panel` paints), the raised card on that panel, and the palette box (`pop`).
+ */
+const HANDOFF_BACKDROP: Readonly<Record<string, string>> = {
+  "glass-thick": "glass-thick on map-bg",
+  raised: "raised on glass-thick on map-bg",
+  "accent-soft on raised on glass-thick": "accent-soft on raised on glass-thick on map-bg",
+  "muted on glass-thick": "muted on glass-thick on map-bg",
+  "thumb on muted on glass-thick": "thumb on muted on glass-thick on map-bg",
+  pop: "pop on map-bg",
+  "accent-soft on pop": "accent-soft on pop on map-bg",
+  "muted on pop": "muted on pop on map-bg",
+};
+
+test("the only revision 2 and 3 row without a published figure is dark panel over a white road tile", () => {
+  const unpublished = PAIRS.flatMap((row, index) =>
+    index < FIRST_REVISION_2_ROW
+      ? []
+      : (["light", "dark"] as const)
+          .filter((theme) => (theme === "light" ? row[5] : row[6]) === 0)
+          .map((theme) => `${theme}: ${row[1]}`),
+  );
+  expect(unpublished).toEqual(["dark: Search field outline, panel over a white road tile"]);
+});
+
+test('"a on b" paints token a over every surface b can be, and chains read right to left', () => {
+  const light = tokens.light;
+  const card = parseColor(light["--color-card"] ?? "");
+  const soft = parseColor(light["--color-accent-soft"] ?? "");
+  expect(surfaces(light, "accent-soft on card")).toEqual([composite(soft, card)]);
+  expect(surfaces(light, "muted on glass-thick")).toHaveLength(2);
+  expect(surfaces(light, "accent-soft on pop")).toHaveLength(2);
+});
 
 /** The header brand (METRO-105): not in the handoff table, so checked here with the same rules. */
 const BRAND_PAIRS: readonly PairRow[] = [

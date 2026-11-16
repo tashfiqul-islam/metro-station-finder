@@ -3,11 +3,11 @@ const SNAPS = ["peek", "half", "full"] as const;
 export type Snap = (typeof SNAPS)[number];
 
 /**
- * CSS values: `--sheet-peek` 250px, `--sheet-half` 58dvh, and full = 100dvh - `--sheet-top` (64px) -
+ * CSS values: `--sheet-peek` 262px, `--sheet-half` 58dvh, and full = 100dvh - `--sheet-top` (64px) -
  * `--sheet-reserve` - safe-area-bottom. The reserve is the tab bar and its gap (84px) when a section nav is
  * drawn and the 8px side gap when it is not, so the full-height inset is 148px with a nav and 72px without.
  */
-const PEEK_PX = 250;
+const PEEK_PX = 262;
 const HALF_RATIO = 0.58;
 const FULL_INSET_WITH_NAV_PX = 64 + 84;
 const FULL_INSET_PLAIN_PX = 64 + 8;

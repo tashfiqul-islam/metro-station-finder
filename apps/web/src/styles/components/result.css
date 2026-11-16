@@ -48,9 +48,21 @@
   gap: 3px;
   min-width: 0;
 }
+.metric--hero {
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 10px;
+}
 .metric--end {
   align-items: flex-end;
   text-align: right;
+}
+.metric__stack {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  padding-bottom: 1px;
 }
 .metric__about {
   font-size: var(--fs-12);
@@ -71,6 +83,46 @@
 .metric__unit {
   font-size: var(--fs-15);
   font-weight: var(--fw-strong);
+}
+.metric__unit .icon {
+  color: var(--color-accent);
+}
+.metric__dist {
+  font-size: var(--fs-18);
+  font-weight: var(--fw-strong);
+  letter-spacing: var(--track-snug);
+  font-variant-numeric: tabular-nums;
+}
+/* Why this station: one sentence, plain text. */
+.result__insight {
+  font-size: var(--fs-14);
+  line-height: 1.45;
+  font-weight: var(--fw-medium);
+  color: var(--color-fg);
+  text-wrap: pretty;
+}
+.result__insight-btn {
+  color: var(--color-accent);
+  font-weight: var(--fw-strong);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.result__insight-btn:hover {
+  color: var(--color-accent-hover);
+}
+.result__more {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) auto;
+  gap: var(--space-2);
+}
+.result__more .btn {
+  min-height: 46px;
+  padding: 0 14px;
+  min-width: 0;
+}
+.result__more .btn--icon {
+  width: 46px;
+  padding: 0;
 }
 .metric__label {
   display: flex;

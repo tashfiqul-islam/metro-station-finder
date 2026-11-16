@@ -10,8 +10,11 @@ import { installMapsStub, searchForPlace } from "./maps-stub";
  * Everything runs against the built app with the stubbed Maps API: no Google request leaves the machine.
  */
 const MAP_NAME = "Schematic map of MRT Line 6";
+// The map frame at peek is the viewport height minus 64 (top) and minus the 262 px peek, the 8 px reserve and the 8 px
+// gap under it: 652 - 342 = 310 px, the frame the 640 px viewport gave when peek was 250 (640 - 330). With 640 it is
+// 298, below the 300 px the zoom test needs, so the 320 px viewport is 652 px tall (METRO-157, peek 262).
 const SIZES = [
-  { name: "320 px", width: 320, height: 640 },
+  { name: "320 px", width: 320, height: 652 },
   { name: "390 px", width: 390, height: 844 },
 ] as const;
 

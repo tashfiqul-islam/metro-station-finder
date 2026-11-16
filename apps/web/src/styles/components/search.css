@@ -1,0 +1,99 @@
+/* search.css: Search field (one combobox over stations and places) and its attribution line. Colours only via var(--…). */
+
+/* We draw every pixel, so the field, the listbox and the keyboard model are ours. The locate button inside it is the
+   quiet twin of .locate. */
+.search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 60px;
+  padding: 0 8px;
+  border-radius: var(--radius-pill);
+  background: var(--color-card);
+  box-shadow: inset 0 0 0 1px var(--color-ctl-line);
+  transition: box-shadow var(--dur-base);
+}
+.search:focus-within {
+  box-shadow:
+    inset 0 0 0 2px var(--color-focus),
+    0 0 0 6px var(--color-accent-soft);
+}
+.search__lead {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: var(--target);
+  height: var(--target);
+  border-radius: var(--radius-pill);
+  color: var(--color-muted-fg);
+  transition:
+    background-color var(--dur-base),
+    color var(--dur-base);
+}
+.search:focus-within .search__lead,
+.search[data-filled] .search__lead {
+  background: var(--color-accent-soft);
+  color: var(--color-on-soft);
+}
+.search__input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  font-size: var(--fs-16);
+  font-weight: var(--fw-medium);
+  letter-spacing: -0.01em;
+  color: var(--color-fg);
+}
+.search__input:focus-visible {
+  outline: none;
+} /* the container shows the ring */
+.search__clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: var(--target);
+  height: var(--target);
+  border-radius: var(--radius-pill);
+  color: var(--color-fg);
+}
+.search__clear:hover {
+  background: var(--color-muted);
+}
+.search__sep {
+  flex: none;
+  width: 1px;
+  height: 24px;
+  background: var(--color-hair);
+}
+.search__locate {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: var(--target);
+  height: var(--target);
+  border-radius: var(--radius-pill);
+  background: var(--color-accent-soft);
+  color: var(--color-on-soft);
+  transition:
+    background-color var(--dur-fast),
+    color var(--dur-fast);
+}
+.search__locate:hover {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+.search-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+/* Google attribution under the Places group. Required whenever place suggestions are listed. */
+.search__attr {
+  padding: 6px 10px 4px;
+  font-size: var(--fs-12);
+  color: var(--color-muted-fg);
+  text-align: right;
+}

@@ -1,0 +1,81 @@
+/* compare.css: Compared, the shortlisted stations ranked by time. A row switches the plan to that station. Colours only via var(--…). */
+
+@import "../fonts-mono.css";
+
+.compare {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px;
+  border-radius: var(--radius-tile);
+  background: var(--color-raised);
+  box-shadow:
+    var(--shadow-rim),
+    0 0 0 1px var(--color-hair),
+    var(--shadow-1);
+}
+.compare__row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 14px 8px 12px;
+  border-radius: var(--radius-row);
+  text-align: left;
+  color: var(--color-fg);
+  transition: background-color var(--dur-fast);
+}
+.compare__row:hover {
+  background: var(--color-muted);
+}
+.compare__row[aria-pressed="true"] {
+  background: var(--color-accent-soft);
+}
+.compare__radio {
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-pill);
+  border: 1.5px solid var(--color-ctl-line);
+  background: var(--color-card);
+  transition: border var(--dur-fast);
+}
+.compare__row[aria-pressed="true"] .compare__radio {
+  border: 5px solid var(--color-accent);
+}
+.compare__text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.compare__name {
+  font-size: var(--fs-15);
+  font-weight: var(--fw-strong);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.compare__meta {
+  font-family: var(--font-mono);
+  font-size: var(--fs-11);
+  color: var(--color-muted-fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.compare__time {
+  font-size: var(--fs-15);
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--track-snug);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+@media (forced-colors: active) {
+  .compare__row[aria-pressed="true"] {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+}

@@ -11,6 +11,24 @@
   cursor: grab;
   user-select: none;
 }
+/* Production: Google Maps is the base (.gmap), styled by the map style, and this SVG is a transparent overlay of our own
+   marks (.map--overlay) positioned through the OverlayView projection. Only stations take pointer events there.
+   Fallback (Google failed or offline): the same SVG draws the whole schematic and handles its own pan and zoom. */
+.gmap {
+  position: absolute;
+  inset: 0;
+}
+.map--overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  cursor: default;
+  touch-action: auto;
+}
+.map--overlay .map__station {
+  pointer-events: auto;
+  cursor: pointer;
+}
 /* Phones: the frame ends where the sheet starts, and what is panned or zoomed past that edge paints behind the sheet.
    The clip keeps it out of the header above and the screen edges: only the bottom is open (METRO-115). */
 @media not all and (min-width: 768px) {
@@ -105,6 +123,58 @@
   stroke-dasharray: 2 6;
   animation: walk-march 1.1s linear infinite;
 }
+/* Route from the Routes polyline. Walking is a dotted line that marches in the direction of travel; riding and
+   driving are solid. The casing keeps it legible over roads. */
+.map__route-casing {
+  stroke: var(--color-map-halo);
+  opacity: 0.85;
+}
+.map__route {
+  stroke: var(--color-map-walk);
+}
+.map__route--walk {
+  stroke-dasharray: 0.1 8;
+  animation: walk-march 1.1s linear infinite;
+}
+/* Shortlisted stations carry their travel time. The chosen one uses .map__pill; the others use the quiet variant. */
+.map__pill--alt {
+  fill: var(--color-map-pin);
+  stroke: var(--color-hair);
+}
+.map__pill-text--alt {
+  fill: var(--color-map-label);
+}
+.map__origin {
+  fill: var(--color-map-label);
+  stroke: var(--color-map-pin);
+}
+.map__origin-eye {
+  fill: var(--color-map-pin);
+}
+/* Base-map stand-ins used only by the schematic fallback (Google draws these in production). */
+.map__water {
+  stroke: var(--color-map-water);
+}
+.map__road-case {
+  stroke: var(--color-map-road-edge);
+}
+.map__road {
+  stroke: var(--color-map-road);
+}
+.map__area {
+  fill: var(--color-map-area);
+  font-family: var(--font-sans);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.map__area--water {
+  fill: var(--color-map-water-ink);
+  font-style: italic;
+  font-weight: var(--fw-medium);
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
 @keyframes walk-march {
   to {
     stroke-dashoffset: -16;
@@ -112,7 +182,8 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .map__me-pulse,
-  .map__walk {
+  .map__walk,
+  .map__route--walk {
     animation: none;
   }
 }

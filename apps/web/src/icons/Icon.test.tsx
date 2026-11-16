@@ -19,9 +19,9 @@ const icons = Object.entries(modules).flatMap(([file, exports]) =>
   Object.entries(exports).map(([name, shapes]) => ({ file, name, shapes })),
 );
 
-test("METRO-105 the handoff icon set has 31 icons, one module each, with at least one shape", () => {
-  expect(Object.keys(modules)).toHaveLength(31);
-  expect(icons).toHaveLength(31);
+test("METRO-105 the handoff icon set has 39 icons, one module each, with at least one shape", () => {
+  expect(Object.keys(modules)).toHaveLength(39);
+  expect(icons).toHaveLength(39);
   for (const { file, name, shapes } of icons) {
     // The file name is the export name in kebab case: `locate-off.ts` exports `locateOff`.
     const kebab = name.replaceAll(/[A-Z]/gu, (letter) => `-${letter.toLowerCase()}`);
