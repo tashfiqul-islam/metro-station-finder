@@ -7,8 +7,12 @@
 export interface Session<Token> {
   /** The open session's token, started now when there is none. */
   readonly token: () => Token;
-  /** Closes the session: after a selection (`fetchFields`) or an abandoned search. Safe to call when none is open. */
-  readonly end: () => void;
+  /**
+   * Closes the session: after a selection (`fetchFields`) or an abandoned search. Safe to call when none is open.
+   * With `token`, closes only the session that token belongs to: a token that is no longer the open one (its
+   * session ended earlier) leaves the newer session alone.
+   */
+  readonly end: (token?: Token) => void;
 }
 
 export function createSession<Token>(make: () => Token): Session<Token> {
@@ -18,8 +22,8 @@ export function createSession<Token>(make: () => Token): Session<Token> {
       open ??= { token: make() };
       return open.token;
     },
-    end: () => {
-      open = null;
+    end: (token) => {
+      if (token === undefined || open?.token === token) open = null;
     },
   };
 }

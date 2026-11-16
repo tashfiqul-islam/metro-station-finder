@@ -205,7 +205,7 @@ test.describe("security headers and caching (METRO-31)", () => {
     const reached = page.waitForRequest(/^https:\/\/maps\.googleapis\.com\//u);
     await page
       .getByRole("combobox", { name: "Search a place or station", exact: true })
-      .fill("Gulshan");
+      .fill("Sample");
     await reached;
   });
 

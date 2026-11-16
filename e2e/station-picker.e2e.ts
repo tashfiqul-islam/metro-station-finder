@@ -6,6 +6,7 @@ import type { Locator, Page } from "@playwright/test";
 import { axeBuilder, expect, test } from "./fixtures";
 import { linksAreTabbable } from "./keyboard";
 import { installMapsStub } from "./maps-stub";
+import type { MapsStub } from "./maps-stub";
 
 /**
  * METRO-112: station search and the station result (local data), in the real build with the enforced CSP. A pick
@@ -15,14 +16,26 @@ import { installMapsStub } from "./maps-stub";
  */
 const MAP_NAME = "Schematic map of MRT Line 6";
 
-async function open(page: Page, saved?: "light" | "dark"): Promise<void> {
+async function open(page: Page, saved?: "light" | "dark"): Promise<MapsStub> {
   if (saved !== undefined) {
     await page.addInitScript((value) => localStorage.setItem("msf-theme", value), saved);
   }
-  await installMapsStub(page, { emptySuggestions: true });
+  const stub = await installMapsStub(page, { emptySuggestions: true });
   await page.goto("/");
   await expect(page.getByRole("application", { name: MAP_NAME, exact: true })).toBeVisible();
   await expect(combo(page)).toBeVisible();
+  return stub;
+}
+
+/**
+ * A whole station name asks Google nothing (METRO-163): no script and no Autocomplete request, read from what the
+ * stub recorded, so the guarantee does not depend on the stub answering anything.
+ */
+async function expectNoGoogleAsked(stub: MapsStub): Promise<void> {
+  const calls = await stub.calls();
+  expect(calls.autocomplete).toEqual([]);
+  expect(calls.scriptUrls).toEqual([]);
+  expect(calls.fetchFields).toEqual([]);
 }
 
 const combo = (page: Page): Locator =>
@@ -124,8 +137,9 @@ test.describe("station picker", () => {
   test("METRO-112 a pick shows the station, the fare range, the footnote and the highlight on the map, and nothing about a walk", async ({
     page,
   }) => {
-    await open(page);
-    await pick(page, "karwan");
+    const stub = await open(page);
+    await pick(page, "Karwan Bazar");
+    await expectNoGoogleAsked(stub);
     const result = page.getByRole("article");
     await expect(result.getByRole("heading", { level: 2, name: "Karwan Bazar" })).toBeFocused();
     await expect(result).toContainText("Stop 12 of 16");
@@ -160,8 +174,9 @@ test.describe("station picker", () => {
   test("METRO-112 the Directions link carries only the station's public coordinates", async ({
     page,
   }) => {
-    await open(page);
+    const stub = await open(page);
     await pick(page, "motijheel");
+    await expectNoGoogleAsked(stub);
     const link = page.getByRole("link", { name: /^Directions in Google Maps/u });
     await expect(link).toHaveAttribute("target", "_blank");
     await expect(link).toHaveAttribute("rel", "noopener noreferrer");
@@ -268,8 +283,9 @@ test.describe("station picker", () => {
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await open(page);
+    const stub = await open(page);
     await pick(page, "farmgate");
+    await expectNoGoogleAsked(stub);
     await page.getByRole("button", { name: "Show on map" }).click();
     expect(await snap(page)).toBe("peek");
     await expect(page.getByRole("application", { name: MAP_NAME, exact: true })).toBeFocused();
@@ -362,7 +378,7 @@ test.describe("station picker", () => {
 
   test("METRO-112 the picker and its result use no inline style", async ({ page }) => {
     await open(page);
-    await pick(page, "karwan");
+    await pick(page, "Karwan Bazar");
     expect(await page.locator(".pick [style], .pick[style]").count()).toBe(0);
     expect(await page.locator("[style]").count()).toBe(0);
   });
@@ -380,7 +396,7 @@ test.describe("station picker", () => {
     page.on("requestfailed", (request) => settled.add(request.url()));
     page.on("websocket", (socket) => requests.push(socket.url()));
     await page.route("**/api/vitals", (route) => route.fulfill({ status: 204 }));
-    await open(page);
+    const stub = await open(page);
     await expect
       .poll(() => requests.some((url) => url.includes("web-vitals-")), { timeout: 10_000 })
       .toBe(true);
@@ -400,16 +416,19 @@ test.describe("station picker", () => {
       .toBe(0);
     const loaded = requests.length;
     await context.setOffline(true);
-    await pick(page, "karwan");
+    // Whole station names and a two-character text, so this does not depend on the browser's offline emulation
+    // to keep Google out: none of them asks Google at all.
+    await pick(page, "Karwan Bazar");
     await expect(page.getByRole("heading", { level: 2, name: "Karwan Bazar" })).toBeFocused();
     await expect(page.locator("svg.map .map__pin--hl")).toHaveCount(1);
-    await combo(page).fill("Sadarghat");
+    await combo(page).fill("zz");
     await expect(page.getByText("No station matches that name.")).toBeVisible();
     await page.getByRole("button", { name: "Browse all 16 stations" }).click();
     await expect(popup(page).getByRole("option")).toHaveCount(16);
     await page.keyboard.press("ArrowDown");
     await page.keyboard.press("Enter");
     await expect(page.getByRole("article")).toBeVisible();
+    await expectNoGoogleAsked(stub);
     // Not one request after the network went away: no fetch, no beacon, no image, no stylesheet, no socket.
     expect(requests.slice(loaded).filter((url) => !url.endsWith("/api/vitals"))).toEqual([]);
     const origin = new URL(baseURL ?? "").origin;

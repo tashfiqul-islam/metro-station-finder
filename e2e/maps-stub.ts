@@ -92,13 +92,21 @@ const STUB_SCRIPT = `
       text: text(name + ", " + detail),
       mainText: text(name),
       secondaryText: text(detail),
-      toPlace: () => ({
-        location: { lat: () => location.lat, lng: () => location.lng },
-        fetchFields: async (request) => {
-          state.fetchFields.push(request.fields);
-          if (state.options.fetchFails) throw new Error("secret lat=" + location.lat);
-        },
-      }),
+      // Like Google's Place: no location until fetchFields has resolved, so reading it early throws.
+      toPlace: () => {
+        let fetched = false;
+        return {
+          get location() {
+            if (!fetched) throw new Error("location read before fetchFields resolved");
+            return { lat: () => location.lat, lng: () => location.lng };
+          },
+          fetchFields: async (request) => {
+            state.fetchFields.push(request.fields);
+            if (state.options.fetchFails) throw new Error("secret lat=" + location.lat);
+            fetched = true;
+          },
+        };
+      },
     },
   });
   const libraries = {

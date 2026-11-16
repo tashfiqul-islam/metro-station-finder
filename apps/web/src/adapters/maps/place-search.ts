@@ -101,21 +101,31 @@ export function createPlaceSearch(
   bounds: Bounds = lineBounds(baselineDataset.stations),
 ): PlaceSearchService {
   const session = createSession(() => new api.AutocompleteSessionToken());
-  let predictions = new Map<string, PredictionLike>();
+  /**
+   * Every prediction listed in the session so far, with the token it was fetched under. Answers only add to it, so
+   * a late answer for older text never removes what a newer one listed; a choice empties it.
+   */
+  let predictions = new Map<string, { prediction: PredictionLike; token: object }>();
+  /** Counts choices: an answer that was asked before the latest choice must not list anything again. */
+  let epoch = 0;
   return {
     suggest: async (text) => {
+      const asked = epoch;
+      const token = session.token();
       const { suggestions } = await api.AutocompleteSuggestion.fetchAutocompleteSuggestions({
         input: text,
         includedRegionCodes: REGION_CODES,
         locationRestriction: bounds,
-        sessionToken: session.token(),
+        sessionToken: token,
       });
-      const found = new Map<string, PredictionLike>();
+      const found = new Set<string>();
       const listed: PlaceSuggestion[] = [];
       for (const { placePrediction } of suggestions) {
         if (placePrediction === null || found.has(placePrediction.placeId)) continue;
         if (listed.length === MAX_PLACES) break;
-        found.set(placePrediction.placeId, placePrediction);
+        found.add(placePrediction.placeId);
+        if (asked === epoch)
+          predictions.set(placePrediction.placeId, { prediction: placePrediction, token });
         const main = placePrediction.mainText ?? placePrediction.text;
         listed.push({
           id: placePrediction.placeId,
@@ -124,16 +134,17 @@ export function createPlaceSearch(
           range: firstRange(main),
         });
       }
-      predictions = found;
       return listed;
     },
     choose: async (suggestion): Promise<Coordinate> => {
-      const prediction = predictions.get(suggestion.id);
-      // The session ends with this call whatever the answer is: its token is never used for another request.
-      session.end();
+      const entry = predictions.get(suggestion.id);
+      epoch += 1;
       predictions = new Map();
-      if (prediction === undefined) throw new Error("Unknown suggestion");
-      const place = prediction.toPlace();
+      if (entry === undefined) throw new Error("Unknown suggestion");
+      // The session this prediction belongs to ends with this call whatever the answer is: its token is never
+      // used for another request. A newer session (another search) is left alone.
+      session.end(entry.token);
+      const place = entry.prediction.toPlace();
       await place.fetchFields({ fields: PLACE_FIELDS });
       const { location } = place;
       if (location === null || location === undefined) throw new Error("No location");

@@ -26,11 +26,13 @@ export function hasExactStation(stations: readonly Station[], text: string): boo
 
 /**
  * The text to send to Places, or null when the volume rules say no request: fewer than three characters (counted
- * on the trimmed text, by code point) or a whole station name already typed. The one place these rules live.
+ * on the trimmed text, by code point), no letter or number in it ("---" asks nothing), or a whole station name
+ * already typed. The one place these rules live.
  */
 export function placeQuery(stations: readonly Station[], text: string): string | null {
   const trimmed = text.trim();
   if (Array.from(trimmed).length < MIN_PLACE_CHARACTERS) return null;
+  if (!/[\p{L}\p{N}]/u.test(trimmed)) return null;
   return hasExactStation(stations, trimmed) ? null : trimmed;
 }
 

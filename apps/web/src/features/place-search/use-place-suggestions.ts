@@ -1,5 +1,5 @@
 import type { Station } from "@metro/core";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { PlaceSearchService, PlaceSuggestion } from "../../adapters/maps/context";
 import { DEBOUNCE_MS, placeQuery } from "./model";
@@ -55,6 +55,16 @@ export function usePlaceSuggestions({
   useEffect(() => {
     if (query !== null) load();
   }, [query, load]);
+
+  // The search is over when the text no longer asks for places (under three characters, no letter or number, a
+  // whole station name) and when the field goes: the session ends, so the next query starts a new one. Not on
+  // blur: a blur comes before the click that chooses an option.
+  const asking = useRef(false);
+  useEffect(() => {
+    if (wanted === null && asking.current) service?.abandon();
+    asking.current = wanted !== null;
+  }, [wanted, service]);
+  useEffect(() => () => service?.abandon(), [service]);
 
   useEffect(() => {
     if (query === null || service === null) return noop;

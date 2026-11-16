@@ -143,9 +143,9 @@ async function main(): Promise<boolean> {
     version: null,
     cspMessages: [],
     placesRequests: 0,
-    googleBeforeFocus: 0,
-    focusAfterSwap: null,
+    googleBeforeQuery: 0,
     placesDuringTabWalk: 0,
+    placesAfterQuery: 0,
     routesRequests: 0,
     stationShown: false,
     routeShown: false,
@@ -170,7 +170,7 @@ async function main(): Promise<boolean> {
       if (host === "places.googleapis.com") run.placesRequests += 1;
       if (host === "routes.googleapis.com") run.routesRequests += 1;
       // METRO-114: nothing from Google before the place search is first focused.
-      if (!focused && GOOGLE_HOST.test(host)) run.googleBeforeFocus += 1;
+      if (!focused && GOOGLE_HOST.test(host)) run.googleBeforeQuery += 1;
     });
     let step = "open the page";
     try {
@@ -185,7 +185,6 @@ async function main(): Promise<boolean> {
       await page.keyboard.type("Gu", { delay: 120 });
       await page.waitForTimeout(1000);
       focused = true;
-      run.focusAfterSwap = null;
       step = "type the query so that places are asked for (is VITE_GOOGLE_MAPS_API_KEY set?)";
       await field.fill("");
       // Accessibility, first read: the search block is our own markup, read through the browser's tree like
@@ -230,6 +229,9 @@ async function main(): Promise<boolean> {
         step = "typing did not reach Places (no Places request seen)";
         throw new Error("no places request");
       }
+      // One request per pause: the keys were typed 120 ms apart, so the 180 ms debounce let one request through.
+      await page.waitForTimeout(1500);
+      run.placesAfterQuery = run.placesRequests;
       // Maps loads once a text asks for places, so the version can be read only now.
       const version: unknown = await page.evaluate("window.google?.maps?.version ?? null");
       run.version = typeof version === "string" ? version : null;

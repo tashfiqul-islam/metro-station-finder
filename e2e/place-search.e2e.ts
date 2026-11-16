@@ -140,12 +140,12 @@ test.describe("volume rules (METRO-163)", () => {
     }
     expect((await calls(stub)).map((call) => call.input)).toEqual([placeQuery("uttara")]);
     // The control: a text the rules allow is asked, after the pause.
-    await field.fill("Gulshan");
+    await field.fill("Sample");
     await page.clock.runFor(DEBOUNCE_MS - 1);
     expect(await calls(stub)).toHaveLength(1);
     await page.clock.runFor(1);
     await expect.poll(async () => (await calls(stub)).length).toBe(2);
-    expect((await calls(stub))[1]?.input).toBe("Gulshan");
+    expect((await calls(stub))[1]?.input).toBe("Sample");
   });
 
   test("METRO-163 AC1 nothing from Google loads until a text asks for places", async ({ page }) => {
@@ -280,7 +280,7 @@ test.describe("the list and the keys (METRO-163)", () => {
       ),
     );
     expect(order).toEqual(["group", "group", "search__attr"]);
-    const labels = await page
+    const labels = await listbox(page)
       .getByRole("group")
       .evaluateAll((groups) => groups.map((group) => group.textContent.slice(0, 8)));
     expect(labels[0]).toContain("Stations");
@@ -309,7 +309,7 @@ test.describe("the list and the keys (METRO-163)", () => {
   }) => {
     await open(page, { emptySuggestions: true });
     const field = placeSearch(page);
-    await field.fill("Sadarghat");
+    await field.fill("Nowhere Town");
     const empty = page.locator(".empty");
     await expect(empty).toContainText("No station matches that name.");
     await expect(field).toHaveAttribute("aria-expanded", "false");
@@ -711,7 +711,7 @@ test.describe("places that cannot be asked for (METRO-163)", () => {
       page,
     }) => {
       await open(page, { scriptFails: true });
-      await placeSearch(page).fill("Sadarghat");
+      await placeSearch(page).fill("Nowhere Town");
       await expect(page.locator(".empty")).toContainText("No station matches that name.");
       await expect(page.locator("output .notice")).toContainText(NOTICE);
     });
@@ -730,6 +730,20 @@ test.describe("places that cannot be asked for (METRO-163)", () => {
       await expect(group.getByRole("button", { name: "Try again" })).toBeFocused();
       await expect(group.getByRole("button", { name: "Search for a place" })).toHaveCount(0);
     });
+  });
+
+  test("METRO-163 AC4 a failed request for text that matches no station still shows the warning under the field", async ({
+    page,
+  }) => {
+    const stub = await open(page, { suggestFails: true });
+    const field = placeSearch(page);
+    await field.fill("Nowhere Town");
+    await expect.poll(async () => (await calls(stub)).length).toBe(1);
+    await expect(page.locator("output .notice")).toContainText(NOTICE);
+    await expect(page.locator("output .notice")).toBeVisible();
+    await expect(page.locator(".empty")).toContainText("No station matches that name.");
+    await expect(field).toHaveAttribute("aria-expanded", "false");
+    await expect(page.locator("body")).not.toContainText("secret");
   });
 
   test("METRO-163 AC4 a failed request replaces the group for that text, and typing again asks again", async ({
@@ -843,7 +857,7 @@ test.describe("axe on the new field (METRO-163)", () => {
         await field.fill("mir");
         await expect(placeOptions(page)).toHaveCount(2);
         await scan("open list with places and the attribution row");
-        await field.fill("Sadarghat");
+        await field.fill("Nowhere Town");
         await expect(placeOptions(page).first()).toBeVisible();
         await field.press("ArrowDown");
         await scan("a place active");
@@ -860,7 +874,7 @@ test.describe("axe on the new field (METRO-163)", () => {
         await page.reload();
         await expect(page.getByText(NO_CONNECTION)).toBeVisible();
         await scan("offline notice");
-        await placeSearch(page).fill("Sadarghat");
+        await placeSearch(page).fill("Nowhere Town");
         await expect(page.locator(".empty")).toBeVisible();
         await scan("empty state with the notice");
         await placeSearch(page).fill("mir");

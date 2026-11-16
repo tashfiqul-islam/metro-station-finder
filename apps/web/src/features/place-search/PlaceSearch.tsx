@@ -146,6 +146,8 @@ export function PlaceSearch({
   const searching = typed && text.trim() !== "";
   const noMatch = searching && rows.length === 0 && !suggestions.pending;
   const noticeInList = expanded && view === "unavailable";
+  // A failed request with no station to list: the list stays closed, so the notice shows under the field instead.
+  const noticeUnder = view === "unavailable" && rows.length === 0;
   const stationRows = rows.filter((row) => row.kind === "station");
   const placeRows = rows.filter((row) => row.kind === "place");
   const status = !searching
@@ -219,7 +221,6 @@ export function PlaceSearch({
 
   function chooseStation(station: Station, source: "keyboard" | "pointer"): void {
     latest.current += 1;
-    suggestions.abandon();
     settle(station.name);
     onStation(station, source);
   }
@@ -262,7 +263,6 @@ export function PlaceSearch({
     setBrowsing(false);
     setOpen(true);
     setActiveKey(undefined);
-    if (next.trim() === "") suggestions.abandon();
     onEngage();
   }
 
@@ -307,7 +307,6 @@ export function PlaceSearch({
         } else if (text !== "") {
           event.preventDefault();
           latest.current += 1;
-          suggestions.abandon();
           setText("");
           setTyped(false);
           setBrowsing(false);
@@ -329,7 +328,6 @@ export function PlaceSearch({
 
   function clear(): void {
     latest.current += 1;
-    suggestions.abandon();
     setText("");
     setTyped(false);
     setBrowsing(false);
@@ -340,7 +338,6 @@ export function PlaceSearch({
 
   function browseAll(): void {
     latest.current += 1;
-    suggestions.abandon();
     setText("");
     setTyped(false);
     setBrowsing(true);
@@ -522,8 +519,10 @@ export function PlaceSearch({
         ) : null}
       </div>
       {/* A status region that is always mounted. A notice that appears later (a failed load, the connection back) fills a region that was already there, which is the reliable way to be announced; one that is there from the first render is simply part of the page. The list shows the same words in the Places group's place while it is open, and then this copy is for screen readers only. */}
-      <output className={available || noticeInList ? "visually-hidden" : undefined}>
-        {available ? null : (
+      <output
+        className={noticeInList || (available && !noticeUnder) ? "visually-hidden" : undefined}
+      >
+        {available && !noticeUnder ? null : (
           <div className="notice" data-tone="warn" data-size="sm">
             <span className="notice__chip" aria-hidden="true">
               <Icon icon={search} size={16} />

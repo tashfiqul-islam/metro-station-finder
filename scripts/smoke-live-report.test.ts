@@ -31,9 +31,9 @@ const accessibility = {
 };
 
 const base = {
-  googleBeforeFocus: 0,
-  focusAfterSwap: "inner-input" as const,
+  googleBeforeQuery: 0,
   placesDuringTabWalk: 0,
+  placesAfterQuery: 1,
   accessibility,
   version: "3.66.2",
   cspMessages: [],
@@ -66,10 +66,10 @@ test("a clean run passes and prints only counts, the version and the verdict", (
   expect(lines).toEqual([
     "Maps version: 3.66.2",
     "CSP messages: 0",
-    "Google requests before the first focus: 0 (expected 0)",
-    "Focus after the swap (read before any click): on the inner input (read through an open shadow root)",
+    "Google requests before the first query: 0 (expected 0)",
     "Places requests (host places.googleapis.com): 3",
     "Places requests during the Tab walk: 0 (expected 0)",
+    "Places requests after the query: 1 (expected 1)",
     "Routes requests (host routes.googleapis.com): 1",
     "Accessibility (roles and names only):",
     '  Search control: combobox "Search for a place"',
@@ -940,31 +940,21 @@ test("a description longer than the cap prints 1000+ and never its text", () => 
   );
 });
 
-test("METRO-114 a Google request before the first focus fails the run and is printed", () => {
-  const { lines, pass } = liveReport({ ...base, googleBeforeFocus: 1 });
+test("METRO-114 a Google request before the first query fails the run and is printed", () => {
+  const { lines, pass } = liveReport({ ...base, googleBeforeQuery: 1 });
   expect(pass).toBe(false);
-  expect(lines).toContain("Google requests before the first focus: 1 (expected 0)");
+  expect(lines).toContain("Google requests before the first query: 1 (expected 0)");
   expect(liveReport(base).lines).toContain(
-    "Google requests before the first focus: 0 (expected 0)",
+    "Google requests before the first query: 0 (expected 0)",
   );
 });
 
-const focusReport = (focusAfterSwap: Parameters<typeof liveReport>[0]["focusAfterSwap"]) =>
-  liveReport({ ...base, focusAfterSwap });
-
-test("METRO-114 the focus after the swap names where focus is, and is information, never a failure", () => {
-  expect(focusReport("inner-input").lines).toContain(
-    "Focus after the swap (read before any click): on the inner input (read through an open shadow root)",
+test("METRO-163 the run fails unless the Tab walk sent no Places request and the query sent exactly one", () => {
+  expect(liveReport({ ...base, placesDuringTabWalk: 1 }).pass).toBe(false);
+  expect(liveReport({ ...base, placesAfterQuery: 0 }).pass).toBe(false);
+  expect(liveReport({ ...base, placesAfterQuery: 2 }).pass).toBe(false);
+  expect(liveReport({ ...base, placesAfterQuery: 2 }).lines).toContain(
+    "Places requests after the query: 2 (expected 1)",
   );
-  const host = focusReport("host-only");
-  expect(host.lines).toContain(
-    "Focus after the swap (read before any click): on the widget host; the inner input is not readable (closed shadow root) or not focused",
-  );
-  expect(host.pass).toBe(true);
-  const away = focusReport("elsewhere");
-  expect(away.lines).toContain("Focus after the swap (read before any click): not on the widget");
-  expect(away.pass).toBe(true);
-  expect(focusReport(null).lines).toContain(
-    "Focus after the swap (read before any click): not read",
-  );
+  expect(liveReport(base).pass).toBe(true);
 });

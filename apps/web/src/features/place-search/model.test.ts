@@ -10,14 +10,26 @@ test("METRO-163 a request needs three characters: one or two ask nothing, three 
   expect(placeQuery(stations, "")).toBeNull();
   expect(placeQuery(stations, "g")).toBeNull();
   expect(placeQuery(stations, "gu")).toBeNull();
-  expect(placeQuery(stations, "gul")).toBe("gul");
+  expect(placeQuery(stations, "sam")).toBe("sam");
 });
 
 test("METRO-163 the three characters are counted on the trimmed text, by code point", () => {
   expect(placeQuery(stations, "  gu  ")).toBeNull();
-  expect(placeQuery(stations, " gul ")).toBe("gul");
+  expect(placeQuery(stations, " sam ")).toBe("sam");
   expect(placeQuery(stations, "\u{1F600}\u{1F600}")).toBeNull();
-  expect(placeQuery(stations, "\u{1F600}\u{1F600}\u{1F600}")).toBe("\u{1F600}\u{1F600}\u{1F600}");
+  // Three code points ask (one is a letter), though they are four UTF-16 units; three symbols alone do not.
+  expect(placeQuery(stations, "a\u{1F600}\u{1F600}")).toBe("a\u{1F600}\u{1F600}");
+  expect(placeQuery(stations, "\u{1F600}\u{1F600}\u{1F600}")).toBeNull();
+});
+
+test("METRO-163 a text with no letter and no number asks nothing, however long", () => {
+  expect(placeQuery(stations, "---")).toBeNull();
+  expect(placeQuery(stations, "   ...   ")).toBeNull();
+  expect(placeQuery(stations, "+++-- ")).toBeNull();
+  expect(placeQuery(stations, "--a")).toBe("--a");
+  expect(placeQuery(stations, "1--")).toBe("1--");
+  // Letters of any script count.
+  expect(placeQuery(stations, "মিরপুর")).toBe("মিরপুর");
 });
 
 test("METRO-163 a whole station name asks nothing, whatever the case, spaces or hyphens", () => {

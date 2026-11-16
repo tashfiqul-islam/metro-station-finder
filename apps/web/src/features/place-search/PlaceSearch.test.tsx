@@ -28,10 +28,15 @@ function deferred<T>() {
   return { promise, ...handle };
 }
 
-const GULSHAN: PlaceSuggestion = { id: "g1", name: "Gulshan 1", detail: "Dhaka", range: [0, 3] };
-const GULSHAN_2: PlaceSuggestion = { id: "g2", name: "Gulshan 2", detail: "", range: null };
+const PLACE_A: PlaceSuggestion = {
+  id: "g1",
+  name: "Sample Place A",
+  detail: "Dhaka",
+  range: [0, 3],
+};
+const PLACE_B: PlaceSuggestion = { id: "g2", name: "Sample Place B", detail: "", range: null };
 
-function fakeService(places: readonly PlaceSuggestion[] = [GULSHAN, GULSHAN_2]) {
+function fakeService(places: readonly PlaceSuggestion[] = [PLACE_A, PLACE_B]) {
   return {
     suggest: vi.fn<PlaceSearchService["suggest"]>(() => Promise.resolve(places)),
     choose: vi.fn<PlaceSearchService["choose"]>(() => Promise.resolve({ lat: 23.8, lng: 90.4 })),
@@ -134,7 +139,7 @@ function keydownOn(target: EventTarget, init: KeyboardEventInit): KeyboardEvent 
 }
 
 /** Lets the debounce pass and the answer arrive. */
-async function pause(ms = DEBOUNCE_MS): Promise<void> {
+async function pause(ms = 180): Promise<void> {
   await act(async () => {
     await vi.advanceTimersByTimeAsync(ms);
   });
@@ -200,10 +205,10 @@ test("METRO-163 Stations come first, then Places, and the Places group ends with
   expect(groups.map((group) => group.getAttribute("aria-labelledby"))).toHaveLength(2);
   expect(within(must(groups[0])).getByText("Stations")).toBeTruthy();
   expect(within(must(groups[1])).getByText("Places")).toBeTruthy();
-  expect(names()).toEqual(["Mirpur 11", "Mirpur 10", "Gulshan 1", "Gulshan 2"]);
+  expect(names()).toEqual(["Mirpur 11", "Mirpur 10", "Sample Place A", "Sample Place B"]);
   const place = must(options()[2]);
   expect(place.textContent).toContain("Dhaka");
-  expect(place.querySelector(".option__match")?.textContent).toBe("Gul");
+  expect(place.querySelector(".option__match")?.textContent).toBe("Sam");
   expect(options()[3]?.querySelector(".option__sub")).toBeNull();
   const attribution = must(screen.getByText("Google Maps"));
   expect(attribution.className).toBe("search__attr");
@@ -223,17 +228,17 @@ test("METRO-163 the arrows move across both groups, skip the attribution row and
     key("ArrowDown");
     seen.push(activeName());
   }
-  expect(seen).toEqual(["Mirpur 10", "Gulshan 1", "Gulshan 2", "Mirpur 11"]);
+  expect(seen).toEqual(["Mirpur 10", "Sample Place A", "Sample Place B", "Mirpur 11"]);
   key("ArrowUp");
-  expect(activeName()).toBe("Gulshan 2");
+  expect(activeName()).toBe("Sample Place B");
   key("ArrowUp");
-  expect(activeName()).toBe("Gulshan 1");
+  expect(activeName()).toBe("Sample Place A");
 });
 
 test("METRO-163 a place is never active until the rider moves to it: Enter with only places does nothing", async () => {
   setup();
-  await typeAndWait("gulshan");
-  expect(names()).toEqual(["Gulshan 1", "Gulshan 2"]);
+  await typeAndWait("sample");
+  expect(names()).toEqual(["Sample Place A", "Sample Place B"]);
   expect(box().hasAttribute("aria-activedescendant")).toBe(false);
   const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
   expect(send(box(), event)).toBe(true);
@@ -308,12 +313,12 @@ test("METRO-163 Enter on a station picks it: the text is its name, the list clos
 test("METRO-163 Enter on a place fetches its location once and reports it; the text is the place name", async () => {
   const service = fakeService();
   setup({ service });
-  await typeAndWait("gulshan");
+  await typeAndWait("sample");
   key("ArrowDown");
-  expect(activeName()).toBe("Gulshan 1");
+  expect(activeName()).toBe("Sample Place A");
   key("Enter");
-  expect(service.choose).toHaveBeenCalledExactlyOnceWith(GULSHAN);
-  expect(box().value).toBe("Gulshan 1");
+  expect(service.choose).toHaveBeenCalledExactlyOnceWith(PLACE_A);
+  expect(box().value).toBe("Sample Place A");
   expect(box().getAttribute("aria-expanded")).toBe("false");
   await pause(0);
   expect(callbacks.onPlace).toHaveBeenCalledExactlyOnceWith({ lat: 23.8, lng: 90.4 });
@@ -326,7 +331,7 @@ test("METRO-163 a place whose location cannot be fetched is reported without a c
   const service = fakeService();
   service.choose.mockRejectedValueOnce(new Error("secret lat=23.8"));
   setup({ service });
-  await typeAndWait("gulshan");
+  await typeAndWait("sample");
   key("ArrowDown");
   key("Enter");
   await pause(0);
@@ -339,7 +344,7 @@ test("METRO-163 a place answering after a later choice is dropped", async () => 
   const answer = deferred<{ lat: number; lng: number }>();
   service.choose.mockReturnValueOnce(answer.promise);
   setup({ service });
-  await typeAndWait("gulshan");
+  await typeAndWait("sample");
   key("ArrowDown");
   key("Enter");
   type("farm");
@@ -357,7 +362,7 @@ test("METRO-163 a late failure after a later choice is dropped too", async () =>
   const answer = deferred<{ lat: number; lng: number }>();
   service.choose.mockReturnValueOnce(answer.promise);
   setup({ service });
-  await typeAndWait("gulshan");
+  await typeAndWait("sample");
   key("ArrowDown");
   key("Enter");
   type("farm");
@@ -371,7 +376,7 @@ test("METRO-163 a late failure after a later choice is dropped too", async () =>
 test("METRO-163 a suggestion with no service to choose it fails visibly, not silently", async () => {
   const service = fakeService();
   const view = setup({ service });
-  await typeAndWait("gulshan");
+  await typeAndWait("sample");
   key("ArrowDown");
   view.update({ service: null });
   key("Enter");
@@ -447,8 +452,9 @@ test("METRO-163 emptying the text by hand ends the session", () => {
   service.abandon.mockClear();
   type("");
   expect(service.abandon).toHaveBeenCalledTimes(1);
+  // Already not asking: blank text ends nothing more.
   type("   ");
-  expect(service.abandon).toHaveBeenCalledTimes(2);
+  expect(service.abandon).toHaveBeenCalledTimes(1);
 });
 
 test("METRO-163 the locate button in the field does what Use my location does, and ends the session", () => {
@@ -545,7 +551,7 @@ test("METRO-124 a press that ends without a blur, or after focus came back, leav
 
 test("METRO-163 no match: the empty state names it, Browse all stays after blur, and lists all 16 stations", async () => {
   setup({ service: fakeService([]) });
-  await typeAndWait("Sadarghat");
+  await typeAndWait("Nowhere Town");
   const status = feedback();
   expect(status.textContent).toBe("No station matches that name.");
   expect(status.querySelector("button")).toBeNull();
@@ -569,17 +575,17 @@ test("METRO-163 no match: the empty state names it, Browse all stays after blur,
 
 test("METRO-163 browsing is left by typing, by a pick and by a clear", async () => {
   setup({ service: fakeService([]) });
-  await typeAndWait("Sadarghat");
+  await typeAndWait("Nowhere Town");
   fireEvent.click(screen.getByRole("button", { name: "Browse all 16 stations" }));
   expect(options()).toHaveLength(16);
   type("mir");
   expect(options()).toHaveLength(2);
-  await typeAndWait("Sadarghat");
+  await typeAndWait("Nowhere Town");
   fireEvent.click(screen.getByRole("button", { name: "Browse all 16 stations" }));
   key("Enter");
   expect(callbacks.onStation).toHaveBeenCalledTimes(1);
   expect(box().getAttribute("aria-expanded")).toBe("false");
-  await typeAndWait("Sadarghat");
+  await typeAndWait("Nowhere Town");
   fireEvent.click(screen.getByRole("button", { name: "Browse all 16 stations" }));
   key("Escape");
   key("Escape");
@@ -588,24 +594,24 @@ test("METRO-163 browsing is left by typing, by a pick and by a clear", async () 
 
 test("METRO-163 with no match the empty state waits for a Places answer that is on its way", async () => {
   setup();
-  type("Sadarghat");
+  type("Nowhere Town");
   expect(screen.queryByRole("button", { name: "Browse all 16 stations" })).toBeNull();
   expect(feedback().textContent).toBe("0 stations");
   await pause();
-  expect(names()).toEqual(["Gulshan 1", "Gulshan 2"]);
+  expect(names()).toEqual(["Sample Place A", "Sample Place B"]);
   expect(feedback().textContent).toBe("0 stations, 2 places");
 });
 
 test("METRO-163 with no match and no places the empty state shows once the answer is empty", async () => {
   setup({ service: fakeService([]) });
-  type("Sadarghat");
+  type("Nowhere Town");
   await pause();
   expect(feedback().textContent).toBe("No station matches that name.");
   expect(screen.getByRole("button", { name: "Browse all 16 stations" })).toBeTruthy();
 });
 
 test("METRO-163 the one polite status announces the counts after each input, and nothing stale", async () => {
-  setup({ service: fakeService([GULSHAN]) });
+  setup({ service: fakeService([PLACE_A]) });
   const status = feedback();
   expect(status.textContent).toBe("");
   type("m");
@@ -662,16 +668,16 @@ test("METRO-163 no request under three characters, and none for a whole station 
 test("METRO-163 three characters ask once, after 180 ms of no typing, with the latest text", async () => {
   const service = fakeService();
   setup({ service });
-  type("gul");
-  await pause(DEBOUNCE_MS - 1);
+  type("sam");
+  await pause(179);
   expect(service.suggest).not.toHaveBeenCalled();
-  type("guls");
-  await pause(DEBOUNCE_MS - 1);
-  type("gulsh");
-  await pause(DEBOUNCE_MS - 1);
+  type("samp");
+  await pause(179);
+  type("sampl");
+  await pause(179);
   expect(service.suggest).not.toHaveBeenCalled();
   await pause(1);
-  expect(service.suggest).toHaveBeenCalledExactlyOnceWith("gulsh");
+  expect(service.suggest).toHaveBeenCalledExactlyOnceWith("sampl");
   expect(callbacks.load).toHaveBeenCalledWith();
   // Nothing more happens by itself.
   await pause(5000);
@@ -681,9 +687,9 @@ test("METRO-163 three characters ask once, after 180 ms of no typing, with the l
 test("METRO-163 a request is asked for again when the text changes, in the same session", async () => {
   const service = fakeService();
   setup({ service });
-  await typeAndWait("gul");
-  await typeAndWait("gulsh");
-  expect(service.suggest.mock.calls.map((call) => call[0])).toEqual(["gul", "gulsh"]);
+  await typeAndWait("sam");
+  await typeAndWait("sampl");
+  expect(service.suggest.mock.calls.map((call) => call[0])).toEqual(["sam", "sampl"]);
   expect(service.abandon).not.toHaveBeenCalled();
 });
 
@@ -692,10 +698,10 @@ test("METRO-163 suggestions for older text are never shown when a newer text is 
   const answer = deferred<readonly PlaceSuggestion[]>();
   service.suggest.mockReturnValueOnce(answer.promise);
   setup({ service });
-  await typeAndWait("gul");
+  await typeAndWait("sam");
   type("mirp");
   await act(async () => {
-    answer.resolve([GULSHAN]);
+    answer.resolve([PLACE_A]);
     await Promise.resolve();
   });
   expect(names()).toEqual(["Mirpur 11", "Mirpur 10"]);
@@ -707,7 +713,7 @@ test("METRO-163 an answer that arrives after the text changed again is ignored, 
   const answer = deferred<readonly PlaceSuggestion[]>();
   service.suggest.mockReturnValueOnce(answer.promise);
   setup({ service });
-  await typeAndWait("gul");
+  await typeAndWait("sam");
   type("m");
   await act(async () => {
     answer.reject(new Error("late"));
@@ -726,7 +732,7 @@ test("METRO-163 while the libraries load the rider waits with the stations; the 
   view.update({ service });
   await pause();
   expect(service.suggest).toHaveBeenCalledExactlyOnceWith("mirp");
-  expect(names()).toContain("Gulshan 1");
+  expect(names()).toContain("Sample Place A");
 });
 
 test("METRO-163 a failed request replaces the Places group with the notice, with no attribution row", async () => {
@@ -889,7 +895,7 @@ test("METRO-163 opening the list scrolls the field with its list into view, and 
 test("METRO-163 StrictMode runs the effects twice and still asks once per text", async () => {
   const service = fakeService();
   render(<StrictMode>{tree(stateOf({ service }))}</StrictMode>);
-  await typeAndWait("gulsh");
+  await typeAndWait("sampl");
   expect(service.suggest).toHaveBeenCalledTimes(1);
 });
 
@@ -901,4 +907,60 @@ test("METRO-163 the field uses no network, no inline style and no style attribut
   expect(fetchSpy).not.toHaveBeenCalled();
   expect(document.querySelector("style, [style]")).toBeNull();
   vi.unstubAllGlobals();
+});
+
+test("METRO-163 the debounce is 180 ms (the constant the rule is written with)", () => {
+  expect(DEBOUNCE_MS).toBe(180);
+});
+
+test("METRO-163 a query that drops under three characters, or becomes a whole station name, ends the session", async () => {
+  const service = fakeService();
+  setup({ service });
+  await typeAndWait("karwan");
+  service.abandon.mockClear();
+  type("ka");
+  expect(service.abandon).toHaveBeenCalledTimes(1);
+  await typeAndWait("karwan");
+  service.abandon.mockClear();
+  type("Karwan Bazar");
+  expect(service.abandon).toHaveBeenCalledTimes(1);
+  await typeAndWait("karwan");
+  service.abandon.mockClear();
+  type("---");
+  expect(service.abandon).toHaveBeenCalledTimes(1);
+});
+
+test("METRO-163 a blur does not end the session: the click that chooses an option comes after it", async () => {
+  const service = fakeService();
+  setup({ service });
+  await typeAndWait("sample");
+  service.abandon.mockClear();
+  fireEvent.blur(box());
+  expect(service.abandon).not.toHaveBeenCalled();
+});
+
+test("METRO-163 the session ends when the field goes", async () => {
+  const service = fakeService();
+  const view = setup({ service });
+  await typeAndWait("sample");
+  service.abandon.mockClear();
+  view.unmount();
+  expect(service.abandon).toHaveBeenCalledWith();
+});
+
+test("METRO-163 a failed request with no station to list still shows the warning, under the field", async () => {
+  const service = fakeService();
+  service.suggest.mockRejectedValueOnce(new Error("secret key=abc"));
+  setup({ service });
+  await typeAndWait("Nowhere Town");
+  expect(box().getAttribute("aria-expanded")).toBe("false");
+  const region = must(document.querySelector<HTMLElement>("output .notice"));
+  expect(region.textContent).toBe(copy.searchUnavailable);
+  expect(region.closest("output")?.className).toBe("");
+  expect(document.querySelector(".empty")?.textContent).toContain("No station matches that name.");
+  expect(document.body.textContent).not.toContain("secret");
+  // The next text asks again and the warning goes.
+  await typeAndWait("Nowhere Tow");
+  expect(service.suggest).toHaveBeenCalledTimes(2);
+  expect(document.querySelector("output .notice")).toBeNull();
 });

@@ -30,6 +30,18 @@ test("METRO-163 a finished session is never reused: the next token is new", () =
   expect(session.token().id).toBe(3);
 });
 
+test("METRO-163 ending a token that is no longer the open one leaves the open session alone", () => {
+  const { make } = counter();
+  const session = createSession(make);
+  const first = session.token();
+  session.end();
+  const second = session.token();
+  session.end(first);
+  expect(session.token()).toBe(second);
+  session.end(second);
+  expect(session.token()).not.toBe(second);
+});
+
 test("METRO-163 ending with no open session makes no token", () => {
   const { make, made } = counter();
   createSession(make).end();
