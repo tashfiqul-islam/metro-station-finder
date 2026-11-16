@@ -234,7 +234,7 @@ test("METRO-163 a late answer for older text never removes what a newer answer l
   expect(listedOld?.id).toBe("old");
 });
 
-test("METRO-163 both answers of one session stay choosable, whatever order they arrive in", async () => {
+test("METRO-163 both answers of one session are choosable whatever order they arrive in, and a choice empties the list", async () => {
   const first = deferred<{ suggestions: SuggestionLike[] }>();
   const second = deferred<{ suggestions: SuggestionLike[] }>();
   const answers = [first, second];
@@ -301,4 +301,105 @@ test("METRO-163 a failed request rejects and leaves the session open for the nex
   await expect(search.suggest("sam")).rejects.toThrow("quota");
   await search.suggest("sam");
   expect(FakeToken.made).toBe(1);
+});
+
+test("METRO-163 an unknown suggestion changes nothing: the listed places stay choosable and the session stays open", async () => {
+  FakeToken.made = 0;
+  const { api, requests } = fakeApi([
+    prediction("p1", "Sample Place A", place(1, 1)),
+    prediction("p2", "Sample Place B", place(2, 2)),
+  ]);
+  const search = createPlaceSearch(api);
+  await search.suggest("sam");
+  await expect(search.choose({ id: "nope", name: "x", detail: "", range: null })).rejects.toThrow(
+    "Unknown suggestion",
+  );
+  await search.suggest("samp");
+  expect(requests[1]?.sessionToken).toBe(requests[0]?.sessionToken);
+  await expect(search.choose({ id: "p2", name: "", detail: "", range: null })).resolves.toEqual({
+    lat: 2,
+    lng: 2,
+  });
+});
+
+test("METRO-163 choosing a prediction of an earlier session keeps the newer session's answer in flight", async () => {
+  FakeToken.made = 0;
+  const inFlight = deferred<{ suggestions: SuggestionLike[] }>();
+  const { api, requests } = fakeApi([], (request) =>
+    request.input === "two"
+      ? inFlight.promise
+      : Promise.resolve({ suggestions: [prediction("a", "Sample Place A", place(1, 1))] }),
+  );
+  const search = createPlaceSearch(api);
+  const [first] = await search.suggest("one");
+  search.abandon();
+  const newer = search.suggest("two");
+  await search.choose(must(first));
+  inFlight.resolve({ suggestions: [prediction("b", "Sample Place B", place(2, 2))] });
+  const [listed] = await newer;
+  await expect(search.choose(must(listed))).resolves.toEqual({ lat: 2, lng: 2 });
+  expect(requests[1]?.sessionToken).not.toBe(requests[0]?.sessionToken);
+});
+
+test("METRO-163 a late answer from an ended session does not replace what the open session stored", async () => {
+  const late = deferred<{ suggestions: SuggestionLike[] }>();
+  const older = place(1, 1);
+  const newer = place(9, 9);
+  const { api } = fakeApi([], (request) =>
+    request.input === "one"
+      ? late.promise
+      : Promise.resolve({ suggestions: [prediction("x", "Sample Place A", newer)] }),
+  );
+  const search = createPlaceSearch(api);
+  const slow = search.suggest("one");
+  search.abandon();
+  await search.suggest("two");
+  late.resolve({ suggestions: [prediction("x", "Sample Place A", older)] });
+  await slow;
+  await expect(search.choose({ id: "x", name: "", detail: "", range: null })).resolves.toEqual({
+    lat: 9,
+    lng: 9,
+  });
+  expect(older.fetchFields).not.toHaveBeenCalled();
+});
+
+test("METRO-163 an answer of an earlier session may fill an id the open session never stored", async () => {
+  const late = deferred<{ suggestions: SuggestionLike[] }>();
+  const { api } = fakeApi([], (request) =>
+    request.input === "one"
+      ? late.promise
+      : Promise.resolve({ suggestions: [prediction("y", "Sample Place B", place(2, 2))] }),
+  );
+  const search = createPlaceSearch(api);
+  const slow = search.suggest("one");
+  search.abandon();
+  await search.suggest("two");
+  late.resolve({ suggestions: [prediction("x", "Sample Place A", place(1, 1))] });
+  await slow;
+  await expect(search.choose({ id: "x", name: "", detail: "", range: null })).resolves.toEqual({
+    lat: 1,
+    lng: 1,
+  });
+});
+
+test("METRO-163 only the latest predictions are kept, so memory does not grow with every search", async () => {
+  let call = 0;
+  const { api } = fakeApi([], () => {
+    call += 1;
+    return Promise.resolve({
+      suggestions: [0, 1, 2, 3].map((index) =>
+        prediction(`q${call}-${index}`, `Sample Place ${index}`, place(call, index)),
+      ),
+    });
+  });
+  const search = createPlaceSearch(api);
+  for (let round = 0; round < 4; round += 1) await search.suggest(`sam${round}`);
+  // 16 listed over four answers: the oldest four are gone, the latest twelve stay choosable.
+  await expect(search.choose({ id: "q1-0", name: "", detail: "", range: null })).rejects.toThrow(
+    "Unknown suggestion",
+  );
+  await expect(search.choose({ id: "q2-0", name: "", detail: "", range: null })).resolves.toEqual({
+    lat: 2,
+    lng: 0,
+  });
 });

@@ -13,6 +13,8 @@ export interface Session<Token> {
    * session ended earlier) leaves the newer session alone.
    */
   readonly end: (token?: Token) => void;
+  /** The open session's token, or undefined when none is open. Makes no token. */
+  readonly peek: () => Token | undefined;
 }
 
 export function createSession<Token>(make: () => Token): Session<Token> {
@@ -22,6 +24,7 @@ export function createSession<Token>(make: () => Token): Session<Token> {
       open ??= { token: make() };
       return open.token;
     },
+    peek: () => open?.token,
     end: (token) => {
       if (token === undefined || open?.token === token) open = null;
     },

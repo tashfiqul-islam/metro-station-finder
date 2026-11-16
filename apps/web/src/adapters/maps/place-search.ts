@@ -10,6 +10,9 @@ export const PLACE_FIELDS = ["location"];
 /** Bangladesh (CLDR code, lower case in the docs): suggestions are limited to this region. */
 export const REGION_CODES = ["bd"];
 
+/** The latest predictions kept for choosing, a few lists' worth: older ones are dropped. */
+const MAX_KEPT = 12;
+
 /** At most this many place suggestions are listed (the handoff). */
 export const MAX_PLACES = 4;
 
@@ -102,15 +105,27 @@ export function createPlaceSearch(
 ): PlaceSearchService {
   const session = createSession(() => new api.AutocompleteSessionToken());
   /**
-   * Every prediction listed in the session so far, with the token it was fetched under. Answers only add to it, so
-   * a late answer for older text never removes what a newer one listed; a choice empties it.
+   * The predictions the list may still show, by place id, with the token each was fetched under. Answers only add to
+   * it (a late answer for older text never removes what a newer one listed, and never replaces an entry the open
+   * session stored), a choice removes the entries of the session it ends, and it holds the latest few only.
    */
-  let predictions = new Map<string, { prediction: PredictionLike; token: object }>();
-  /** Counts choices: an answer that was asked before the latest choice must not list anything again. */
-  let epoch = 0;
+  const entries = new Map<string, { prediction: PredictionLike; token: object }>();
+  /** Sessions a choice has ended: an answer asked under one lists nothing afterwards. */
+  const finished = new WeakSet();
+  function remember(prediction: PredictionLike, token: object): void {
+    if (finished.has(token)) return;
+    const existing = entries.get(prediction.placeId);
+    if (existing !== undefined && existing.token !== token && existing.token === session.peek())
+      return;
+    entries.delete(prediction.placeId);
+    entries.set(prediction.placeId, { prediction, token });
+    for (const [id] of entries) {
+      if (entries.size <= MAX_KEPT) break;
+      entries.delete(id);
+    }
+  }
   return {
     suggest: async (text) => {
-      const asked = epoch;
       const token = session.token();
       const { suggestions } = await api.AutocompleteSuggestion.fetchAutocompleteSuggestions({
         input: text,
@@ -124,8 +139,7 @@ export function createPlaceSearch(
         if (placePrediction === null || found.has(placePrediction.placeId)) continue;
         if (listed.length === MAX_PLACES) break;
         found.add(placePrediction.placeId);
-        if (asked === epoch)
-          predictions.set(placePrediction.placeId, { prediction: placePrediction, token });
+        remember(placePrediction, token);
         const main = placePrediction.mainText ?? placePrediction.text;
         listed.push({
           id: placePrediction.placeId,
@@ -134,15 +148,18 @@ export function createPlaceSearch(
           range: firstRange(main),
         });
       }
+      // What is returned for an ended session is not stored, so the caller's list may show it but a choice of it
+      // is refused; the hook drops an answer for text that is no longer typed.
       return listed;
     },
     choose: async (suggestion): Promise<Coordinate> => {
-      const entry = predictions.get(suggestion.id);
-      epoch += 1;
-      predictions = new Map();
+      const entry = entries.get(suggestion.id);
+      // An unknown suggestion changes nothing: not the entries, not the open session.
       if (entry === undefined) throw new Error("Unknown suggestion");
       // The session this prediction belongs to ends with this call whatever the answer is: its token is never
-      // used for another request. A newer session (another search) is left alone.
+      // used for another request, and nothing it listed stays choosable. A newer session is left alone.
+      finished.add(entry.token);
+      for (const [id, other] of entries) if (other.token === entry.token) entries.delete(id);
       session.end(entry.token);
       const place = entry.prediction.toPlace();
       await place.fetchFields({ fields: PLACE_FIELDS });

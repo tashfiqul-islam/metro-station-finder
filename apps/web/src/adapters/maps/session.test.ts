@@ -47,3 +47,14 @@ test("METRO-163 ending with no open session makes no token", () => {
   createSession(make).end();
   expect(made()).toBe(0);
 });
+
+test("METRO-163 peek shows the open token and makes none", () => {
+  const { make, made } = counter();
+  const session = createSession(make);
+  expect(session.peek()).toBeUndefined();
+  expect(made()).toBe(0);
+  const first = session.token();
+  expect(session.peek()).toBe(first);
+  session.end();
+  expect(session.peek()).toBeUndefined();
+});

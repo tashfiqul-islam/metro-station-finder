@@ -164,13 +164,14 @@ async function main(): Promise<boolean> {
       const text = message.text();
       if (text.includes("Content Security Policy")) csp.push(text);
     });
-    let focused = false;
+    let queried = false;
     page.on("request", (request: Request) => {
       const { host } = new URL(request.url());
       if (host === "places.googleapis.com") run.placesRequests += 1;
       if (host === "routes.googleapis.com") run.routesRequests += 1;
-      // METRO-114: nothing from Google before the place search is first focused.
-      if (!focused && GOOGLE_HOST.test(host)) run.googleBeforeQuery += 1;
+      // METRO-163: nothing from Google before a query that asks for places (below, the field is focused and two
+      // characters typed first: still nothing may reach Google).
+      if (!queried && GOOGLE_HOST.test(host)) run.googleBeforeQuery += 1;
     });
     let step = "open the page";
     try {
@@ -184,7 +185,7 @@ async function main(): Promise<boolean> {
       await field.focus();
       await page.keyboard.type("Gu", { delay: 120 });
       await page.waitForTimeout(1000);
-      focused = true;
+      queried = true;
       step = "type the query so that places are asked for (is VITE_GOOGLE_MAPS_API_KEY set?)";
       await field.fill("");
       // Accessibility, first read: the search block is our own markup, read through the browser's tree like
@@ -218,7 +219,9 @@ async function main(): Promise<boolean> {
       run.placesDuringTabWalk = baseline;
       step = "type the query";
       await field.click();
-      await page.keyboard.type(QUERY, { delay: 120 });
+      // One input event, so one request after the debounce whatever the machine's speed (typing key by key
+      // could straddle the 180 ms pause and send two).
+      await field.fill(QUERY);
       // Typing never throws when the inner input was not focused. A Places request proves the keys
       // arrived; wait a bounded time for one. No retry: each attempt would bill.
       const deadline = Date.now() + 10_000;
@@ -229,9 +232,10 @@ async function main(): Promise<boolean> {
         step = "typing did not reach Places (no Places request seen)";
         throw new Error("no places request");
       }
-      // One request per pause: the keys were typed 120 ms apart, so the 180 ms debounce let one request through.
-      await page.waitForTimeout(1500);
-      run.placesAfterQuery = run.placesRequests;
+      // One request for one input event. The count is read as a difference from before the query, after a short
+      // window in which a second request would show up (nothing else is waited for by time).
+      await page.waitForTimeout(500);
+      run.placesAfterQuery = run.placesRequests - baseline;
       // Maps loads once a text asks for places, so the version can be read only now.
       const version: unknown = await page.evaluate("window.google?.maps?.version ?? null");
       run.version = typeof version === "string" ? version : null;
