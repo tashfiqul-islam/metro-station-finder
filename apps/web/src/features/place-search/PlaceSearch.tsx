@@ -135,7 +135,18 @@ export function PlaceSearch({
   });
   const stationMatches = listStations(stations, typed || browsing ? text : "", browsing);
   const view = placesView(suggestions.wanted, !available || suggestions.failed, suggestions.places);
-  const rows = buildRows(stationMatches, view === "list" ? suggestions.places : []);
+  const liveRows = buildRows(stationMatches, view === "list" ? suggestions.places : []);
+  /**
+   * The rows as they were when a pointer press began, until it ends (METRO-124, METRO-163): places that arrive
+   * between the press and its release would grow the list and move the control under the pointer, so the release
+   * would land elsewhere. They appear when the press is over.
+   */
+  const [held, setHeld] = useState<readonly Row[] | null>(null);
+  const rows = held ?? liveRows;
+  const liveRowsRef = useRef(liveRows);
+  useEffect(() => {
+    liveRowsRef.current = liveRows;
+  });
   const expanded = open && rows.length > 0;
   const activeRow = !expanded
     ? undefined
@@ -189,11 +200,13 @@ export function PlaceSearch({
   useEffect(() => {
     const press = (): void => {
       pressing.current = true;
+      setHeld(liveRowsRef.current);
     };
     const release = (event: Event): void => {
       // A modifier held during the press is not the end of it.
       if (event instanceof KeyboardEvent && MODIFIERS.has(event.key)) return;
       pressing.current = false;
+      setHeld(null);
       if (!closeAfterPress.current) return;
       closeAfterPress.current = false;
       setOpen(false);
@@ -348,7 +361,7 @@ export function PlaceSearch({
   }
 
   function renderRow(row: Row): ReactElement {
-    const active = row === activeRow;
+    const active = row.key === activeRow?.key;
     const shell = (children: ReactElement): ReactElement => (
       // oxlint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/interactive-supports-focus -- ARIA combobox option: focus stays on the input, keys are handled there (aria-activedescendant)
       <div

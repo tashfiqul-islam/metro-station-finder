@@ -964,3 +964,36 @@ test("METRO-163 a failed request with no station to list still shows the warning
   expect(service.suggest).toHaveBeenCalledTimes(2);
   expect(document.querySelector("output .notice")).toBeNull();
 });
+
+test("METRO-124 places that arrive during a press wait for its release, so the control under the pointer does not move", async () => {
+  const service = fakeService();
+  const answer = deferred<readonly PlaceSuggestion[]>();
+  service.suggest.mockReturnValueOnce(answer.promise);
+  setup({ service });
+  type("mirp");
+  await pause(180);
+  expect(names()).toEqual(["Mirpur 11", "Mirpur 10"]);
+  fireEvent.pointerDown(document.body);
+  fireEvent.blur(box());
+  await act(async () => {
+    answer.resolve([PLACE_A, PLACE_B]);
+    await Promise.resolve();
+  });
+  // The press is still on: the list is as it was.
+  expect(names()).toEqual(["Mirpur 11", "Mirpur 10"]);
+  expect(screen.queryByText("Google Maps")).toBeNull();
+  fireEvent.mouseUp(document.body);
+  fireEvent.focus(box());
+  key("ArrowDown");
+  expect(names()).toEqual(["Mirpur 11", "Mirpur 10", "Sample Place A", "Sample Place B"]);
+});
+
+test("METRO-124 places that arrived before a press stay in the list through it", async () => {
+  setup();
+  await typeAndWait("mirp");
+  expect(names()).toHaveLength(4);
+  fireEvent.pointerDown(document.body);
+  expect(names()).toHaveLength(4);
+  fireEvent.mouseUp(document.body);
+  expect(names()).toHaveLength(4);
+});
