@@ -14,6 +14,7 @@ import { directionsUrl, fareRange, stopLabel } from "./station-facts";
 
 import "../../styles/components/typography.css";
 import "../../styles/components/button.css";
+import "../../styles/components/button-rest.css";
 import "../../styles/components/roundel.css";
 import "../../styles/components/result.css";
 import "../../styles/components/ticket.css";

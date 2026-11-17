@@ -355,7 +355,9 @@ test("METRO-112 the one polite status announces the count after each input, and 
   key("Enter");
   expect(status.textContent).toBe("");
   expect(
-    document.querySelectorAll("[role=status], [role=alert], [aria-live], output"),
+    document.querySelectorAll(
+      ":is([role=status], [role=alert], [aria-live], output):not(.toast-live)",
+    ),
   ).toHaveLength(2);
 });
 

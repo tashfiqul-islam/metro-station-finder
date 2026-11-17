@@ -7,6 +7,9 @@ export const shellCopy = {
   brandName: ["Metro", "Station Finder"] as const,
   navLabel: "Sections",
   toastRegion: "Notifications",
+  undo: "Undo",
+  dismiss: "Dismiss",
+  undone: "Change undone",
   themeName: { system: "System", light: "Light", dark: "Dark" } as const satisfies Record<
     ThemePreference,
     string
