@@ -66,8 +66,21 @@ export function usePlaceSuggestions({
   }, [wanted, service]);
   useEffect(() => () => service?.abandon(), [service]);
 
+  // The pause is counted from the last keystroke, not from when Maps arrives: the timer starts with the text, and a
+  // request follows as soon as both the pause has passed and the library is there (a slow library load must not
+  // add a second pause).
+  const [paused, setPaused] = useState<string | null>(null);
   useEffect(() => {
-    if (query === null || service === null) return noop;
+    if (query === null) return noop;
+    const timer = setTimeout(() => setPaused(query), DEBOUNCE_MS);
+    return () => {
+      clearTimeout(timer);
+      setPaused(null);
+    };
+  }, [query]);
+
+  useEffect(() => {
+    if (query === null || service === null || paused !== query) return noop;
     let current = true;
     const ask = async (): Promise<void> => {
       try {
@@ -78,12 +91,11 @@ export function usePlaceSuggestions({
         if (current) setAnswer({ query, places: null });
       }
     };
-    const timer = setTimeout(() => void ask(), DEBOUNCE_MS);
+    void ask();
     return () => {
       current = false;
-      clearTimeout(timer);
     };
-  }, [query, service]);
+  }, [query, service, paused]);
 
   const abandon = useCallback((): void => service?.abandon(), [service]);
 

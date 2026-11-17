@@ -997,3 +997,32 @@ test("METRO-124 places that arrived before a press stay in the list through it",
   fireEvent.mouseUp(document.body);
   expect(names()).toHaveLength(4);
 });
+
+test("METRO-163 the pause is counted from the last keystroke: a request follows the library at once, without a second pause", async () => {
+  const service = fakeService();
+  const view = setup({ service: null, status: "loading" });
+  type("sample");
+  // The pause passes while Maps is still loading: nothing can be asked yet.
+  await pause(1000);
+  expect(service.suggest).not.toHaveBeenCalled();
+  view.update({ service });
+  // No further 180 ms: the request is made as the library arrives.
+  await act(async () => {
+    await Promise.resolve();
+  });
+  expect(service.suggest).toHaveBeenCalledExactlyOnceWith("sample");
+});
+
+test("METRO-163 typing back to an earlier text starts a new pause, not an instant request", async () => {
+  const service = fakeService();
+  setup({ service });
+  await typeAndWait("sample");
+  expect(service.suggest).toHaveBeenCalledTimes(1);
+  type("samples");
+  type("sample");
+  expect(service.suggest).toHaveBeenCalledTimes(1);
+  await pause(179);
+  expect(service.suggest).toHaveBeenCalledTimes(1);
+  await pause(1);
+  expect(service.suggest).toHaveBeenCalledTimes(2);
+});
