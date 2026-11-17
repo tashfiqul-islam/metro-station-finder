@@ -49,8 +49,8 @@ export interface PressHold<T> {
  * has done its work); a mouse release without a click (a drag off the control) or a pointer that ended with no mouse
  * events at all (touch, pen) after `TOUCH_FALLBACK_MS`; a cancelled pointer; and, whatever else is going on, at once
  * on a context menu, a key that is not a modifier, the window losing focus, the page being hidden and `release()`,
- * and after `HOLD_MAX_MS` as an absolute bound. A mouse release or a click proves the gesture is over, so it also
- * forgets pointers whose up never came. Only the first pointer down takes the snapshot; a second finger never
+ * and after `HOLD_MAX_MS` as an absolute bound. Every end forgets all pointers, so one whose up and cancel never came
+ * cannot hold the list past the click, the fallback or the cap. Only the first pointer down takes the snapshot; a second finger never
  * retakes it, and one finger lifting while another is down does not end the hold. Every end runs the deferred close.
  */
 export function usePressHold<T>(live: T, onClose: () => void): PressHold<T> {
@@ -101,14 +101,8 @@ export function usePressHold<T>(live: T, onClose: () => void): PressHold<T> {
       pointers.current.delete(event.pointerId);
       if (pointers.current.size === 0) finish();
     };
-    const mouseUp = (): void => {
-      pointers.current.clear();
-      armFallback();
-    };
-    const click = (): void => {
-      pointers.current.clear();
-      finish();
-    };
+    const mouseUp = armFallback;
+
     const key = (event: KeyboardEvent): void => {
       if (!MODIFIERS.has(event.key)) finish();
     };
@@ -119,7 +113,7 @@ export function usePressHold<T>(live: T, onClose: () => void): PressHold<T> {
     document.addEventListener("pointerup", up, true);
     document.addEventListener("pointercancel", cancel, true);
     document.addEventListener("mouseup", mouseUp, true);
-    document.addEventListener("click", click);
+    document.addEventListener("click", finish);
     document.addEventListener("contextmenu", finish, true);
     document.addEventListener("keydown", key, true);
     document.addEventListener("visibilitychange", away);
@@ -131,7 +125,7 @@ export function usePressHold<T>(live: T, onClose: () => void): PressHold<T> {
       document.removeEventListener("pointerup", up, true);
       document.removeEventListener("pointercancel", cancel, true);
       document.removeEventListener("mouseup", mouseUp, true);
-      document.removeEventListener("click", click);
+      document.removeEventListener("click", finish);
       document.removeEventListener("contextmenu", finish, true);
       document.removeEventListener("keydown", key, true);
       document.removeEventListener("visibilitychange", away);
