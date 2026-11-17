@@ -1,7 +1,7 @@
 import type { Locator, Page } from "@playwright/test";
 
 import { axeBuilder, expect, test } from "./fixtures";
-import { installMapsStub, plainSearch, stubGeolocation } from "./maps-stub";
+import { installMapsStub, placeQuery, placeSearch, stubGeolocation } from "./maps-stub";
 import type { MapsStub } from "./maps-stub";
 
 /**
@@ -44,7 +44,7 @@ const CASES: readonly {
   },
 ];
 
-const locate = (page: Page): Locator => page.getByRole("button", { name: "Use my location" });
+const locate = (page: Page): Locator => page.locator("button.locate");
 const smallNotice = (page: Page): Locator => page.locator(".notice[data-size='sm']");
 
 /** Pretends the browser reports no connection, until `reconnect` runs. */
@@ -85,12 +85,13 @@ async function settle(page: Page): Promise<void> {
 }
 
 /**
- * A Maps load that is already under way and fails when the test releases the held script (METRO-129). The first focus of the plain field starts it;
- * pressing "Use my location" then moves focus out of the field (so the field is not what held focus) and the
- * notice's first action takes it. When the load fails, that action is removed under the focus.
+ * A Maps load that is already under way and fails when the test releases the held script (METRO-129). A text that
+ * asks for places starts it (METRO-163: Google loads when places are first wanted); pressing "Use my location" then
+ * moves focus out of the field and the notice's first action takes it. When the load fails, that action is removed
+ * under the focus.
  */
 async function startLoadThatFailsLater(page: Page): Promise<void> {
-  await plainSearch(page).focus();
+  await placeSearch(page).fill(placeQuery("uttara"));
   await locate(page).click();
 }
 
@@ -137,8 +138,9 @@ test.describe("a notice's next step is available right now (METRO-120)", () => {
       await expect(
         item.retry ? group.getByRole("button", { name: "Try again" }) : group,
       ).toBeFocused();
-      // The notice below says the same thing about place search: one story, not two.
-      await expect(smallNotice(page)).toContainText("Pick a station instead.");
+      // The notice under the field says the same thing about place search: one story, not two (METRO-163: it no
+      // longer names a step of its own, because station names keep working in the field).
+      await expect(smallNotice(page)).toContainText("Place search returns when you reconnect.");
       await expect(page.getByText(SEARCH)).toHaveCount(0);
       await expectAxeClean(page);
     });
@@ -158,7 +160,7 @@ test.describe("a notice's next step is available right now (METRO-120)", () => {
     const group = page.getByRole("group", { name: "Location is turned off. " + SEARCH });
     await expect(group.getByRole("button", { name: "Search for a place" })).toBeVisible();
     await expect(page.getByText(PICK)).toHaveCount(0);
-    await expect(plainSearch(page)).toBeVisible();
+    await expect(placeSearch(page)).toBeVisible();
     await expectAxeClean(page);
   });
 

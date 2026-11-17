@@ -9,11 +9,8 @@ export const copy = {
   heading: "Nearest Metro station",
   intro: "Find the nearest Dhaka MRT Line 6 station, the walk to it and the fare.",
   whereHeading: "Where are you?",
-  // The owner probe measured Google's input name as "Search For a Place" and no documented property sets it
-  // (METRO-101). WCAG 2.5.3 needs that name to contain this visible text, so the label is exactly those words.
-  // The hint is about bias only: results are also restricted to Bangladesh by includedRegionCodes ["bd"].
+  // The name of the action in a location notice, which moves focus to the one search field (METRO-163).
   searchLabel: "Search for a place",
-  searchHint: "Suggestions favor places in Dhaka.",
   locateButton: "Use my location",
   consent:
     "Your position and the place you choose are not sent to our server. What you type in the search goes to Google to suggest places. Your position goes to Google only to work out the walking route.",
@@ -41,12 +38,13 @@ export const copy = {
       "Your device could not say how precisely it found your position. The nearest station could be wrong, so none is shown. Search for a place instead.",
     pick: "Your device could not say how precisely it found your position. The nearest station could be wrong, so none is shown. Pick a station instead.",
   },
-  // METRO-114: the handoff's fixed string, with its "ln." read as "right now". The no-connection string is the
-  // handoff's own. It claims offline use, so it waited for the offline shell worker (METRO-106, ADR-0024); the
-  // built-output test of METRO-112 now allows that claim in this one place, and only with the worker built.
-  searchUnavailable: "Place search is unavailable right now. Pick a station instead.",
+  // METRO-163: the handoff's two fixed strings (revision 10, String catalogue). Station names keep working in the
+  // one field, so neither names a next step. The offline one claims offline use, so it waited for the offline shell
+  // worker (METRO-106, ADR-0024); the built-output test of METRO-112 allows that claim in this one place, and only
+  // with the worker built.
+  searchUnavailable: "Place search is unavailable right now. Station names still work.",
   searchNoConnection:
-    "You’re offline. Stations and fares still work. Place search returns when you reconnect. Pick a station instead.",
+    "You’re offline. Stations and fares still work. Place search returns when you reconnect.",
   resultHeading: "Nearest station",
   empty: "No station could be found for that location.",
   // METRO-113: a location result. The distance is an estimate: the device position is a circle, not a point.

@@ -130,7 +130,7 @@ test.describe("desktop map", () => {
 });
 
 async function pick(page: Page, name: string): Promise<void> {
-  const box = page.getByRole("combobox", { name: "Or pick a station" });
+  const box = page.getByRole("combobox", { name: "Search a place or station" });
   await box.fill(name);
   await box.press("Enter");
   await expect(page.getByRole("heading", { level: 2, name })).toBeVisible();

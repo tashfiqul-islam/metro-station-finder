@@ -124,7 +124,7 @@ test.describe("line map", () => {
     page,
   }) => {
     await open(page);
-    await expect(page.getByRole("button", { name: "Use my location" })).toBeVisible();
+    await expect(page.locator("button.locate")).toBeVisible();
     await page.evaluate(() => {
       if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
     });

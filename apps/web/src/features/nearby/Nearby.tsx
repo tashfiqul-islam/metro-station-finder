@@ -1,4 +1,4 @@
-import type { StationId } from "@metro/core";
+import type { Station } from "@metro/core";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactElement, ReactNode } from "react";
 
@@ -7,7 +7,7 @@ import { useSheet } from "../../shell/AppShell";
 import { LineMap } from "../line-map/LineMap";
 import { NearestStation } from "../nearest-station/NearestStation";
 import type { LocationOutcome } from "../nearest-station/NearestStation";
-import { StationPicker } from "../station-picker/StationPicker";
+import { PickedStation } from "../station-picker/PickedStation";
 import { MapBoundary } from "./MapBoundary";
 
 import "./nearby-screen.css";
@@ -24,7 +24,7 @@ export interface NearbyProps {
  * highlight, the user pin, focus and the sheet snap all follow this one value.
  */
 type Current =
-  | { readonly kind: "pick"; readonly id: StationId }
+  | { readonly kind: "pick"; readonly station: Station }
   | { readonly kind: "location"; readonly outcome: LocationOutcome };
 
 /** Moves keyboard focus to the map (its one tab stop), where the current station is highlighted. */
@@ -34,15 +34,17 @@ function focusMap(): void {
 }
 
 /**
- * The Nearby screen (METRO-112, METRO-113): one lazy boundary loads the page, the line map and the station
- * picker together (ADR-0022), so the entry carries one loader instead of one per part. The map goes to the
- * shell through `setMap`, inside its own error boundary (the shell is outside this tree). Order: Use my
- * location, Search for a place, then Or pick a station, then the one current result.
+ * The Nearby screen (METRO-112, METRO-113, METRO-163): one lazy boundary loads the page, the line map and the
+ * search field together (ADR-0022), so the entry carries one loader instead of one per part. The map goes to the
+ * shell through `setMap`, inside its own error boundary (the shell is outside this tree). Order: the one search
+ * field (stations and places), Use my location, then the one current result.
  */
 export function Nearby({ maps, setMap }: NearbyProps): ReactElement {
   const { snap, setSnap } = useSheet();
   const [current, setCurrent] = useState<Current | null>(null);
   const [picks, setPicks] = useState(0);
+  /** How the last station pick was made: a click on an option keeps the field's ring off the result heading. */
+  const [source, setSource] = useState<"keyboard" | "pointer">("keyboard");
   /** "Show on map" presses, and how many of them have moved focus: focus waits for the sheet to leave full. */
   const [shows, setShows] = useState(0);
   const shown = useRef(0);
@@ -56,7 +58,7 @@ export function Nearby({ maps, setMap }: NearbyProps): ReactElement {
   }, [shows, snap]);
 
   const highlightedId =
-    current?.kind === "pick" ? current.id : (current?.outcome.stationId ?? null);
+    current?.kind === "pick" ? current.station.id : (current?.outcome.stationId ?? null);
   const position = current?.kind === "location" ? current.outcome.position : null;
 
   useEffect(() => {
@@ -79,6 +81,15 @@ export function Nearby({ maps, setMap }: NearbyProps): ReactElement {
     });
   }, []);
   const settle = useCallback((): void => setSnap("half"), [setSnap]);
+  const pickStation = useCallback(
+    (station: Station, how: "keyboard" | "pointer"): void => {
+      setSource(how);
+      setPicks((count) => count + 1);
+      setCurrent({ kind: "pick", station });
+      setSnap("half");
+    },
+    [setSnap],
+  );
   const engageSearch = useCallback((): void => setSnap("full"), [setSnap]);
 
   return (
@@ -89,13 +100,12 @@ export function Nearby({ maps, setMap }: NearbyProps): ReactElement {
       onLocation={onLocation}
       onSettle={settle}
       onSearchEngage={engageSearch}
+      onPickStation={pickStation}
       after={
-        <StationPicker
-          current={current?.kind === "pick"}
-          onPick={(id) => {
-            setPicks((count) => count + 1);
-            setCurrent({ kind: "pick", id });
-          }}
+        <PickedStation
+          station={current?.kind === "pick" ? current.station : null}
+          picks={picks}
+          source={source}
           onShowOnMap={() => setShows((count) => count + 1)}
         />
       }

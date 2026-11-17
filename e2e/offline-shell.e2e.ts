@@ -5,7 +5,7 @@ import { extname, join } from "node:path";
 import type { BrowserContext, Locator, Page } from "@playwright/test";
 
 import { axeBuilder, expect, test } from "./fixtures";
-import { installMapsStub, plainSearch, workerMayControl } from "./maps-stub";
+import { installMapsStub, placeSearch, workerMayControl } from "./maps-stub";
 
 /**
  * METRO-106 (ADR-0024): the offline app shell, in the real build. The first group runs against the same
@@ -47,7 +47,8 @@ const DIST = "apps/web/dist/client";
 const FIREFOX_OFFLINE =
   "Firefox: setOffline fails navigations with NS_ERROR_OFFLINE; see the static-server group";
 
-const combo = (page: Page): Locator => page.getByRole("combobox", { name: "Or pick a station" });
+const combo = (page: Page): Locator =>
+  page.getByRole("combobox", { name: "Search a place or station" });
 
 async function open(page: Page, base = ""): Promise<void> {
   await installMapsStub(page);
@@ -96,7 +97,8 @@ async function offlineJourney(page: Page, reportsOffline: boolean): Promise<void
   await expect(page.getByRole("application", { name: MAP_NAME, exact: true })).toBeVisible();
   await expect(combo(page)).toBeVisible();
   // Picker, result with fares, and the highlight on the schematic map.
-  await combo(page).fill("karwan");
+  // A whole station name, so Places is not asked (METRO-163: a partial name would ask Google).
+  await combo(page).fill("Karwan Bazar");
   await combo(page).press("Enter");
   const result = page.getByRole("article");
   await expect(result.getByRole("heading", { level: 2, name: "Karwan Bazar" })).toBeFocused();
@@ -104,17 +106,20 @@ async function offlineJourney(page: Page, reportsOffline: boolean): Promise<void
   await expect(result).toContainText("৳80");
   await expect(page.locator("svg.map .map__pin--hl")).toHaveCount(1);
   // The line list: every station.
-  await combo(page).fill("Sadarghat");
+  // Two characters match no station and ask Google nothing (METRO-163: the rule is three).
+  await combo(page).fill("zz");
   await page.getByRole("button", { name: "Browse all 16 stations" }).click();
-  await expect(page.getByRole("listbox", { name: "Stations" }).getByRole("option")).toHaveCount(16);
+  await expect(page.getByRole("listbox", { name: "Suggestions" }).getByRole("option")).toHaveCount(
+    16,
+  );
   await page.keyboard.press("Escape");
-  // Place search is replaced by the notice; no field, so no place text can be typed or sent. Only where the
-  // browser itself reports being offline (a stopped server does not change `navigator.onLine`).
+  // Place search says it is unavailable and station names still work in the same field. Only where the browser
+  // itself reports being offline (a stopped server does not change `navigator.onLine`).
   if (reportsOffline) {
     await expect(page.locator(".notice[data-size='sm']")).toContainText(
       "Stations and fares still work",
     );
-    await expect(page.getByRole("textbox")).toHaveCount(0);
+    await expect(combo(page)).toBeVisible();
   }
   // Nothing left the page for the API or Google: the page's own files came from the worker's cache.
   const origin = new URL(page.url()).origin;
@@ -261,7 +266,7 @@ test.describe("offline shell on the real server", () => {
   test("METRO-106 the place-search helpers refuse a page the worker may control", async ({
     page,
   }) => {
-    expect(() => plainSearch(page)).toThrow("must not be touched");
+    expect(() => placeSearch(page)).toThrow("must not be touched");
   });
 
   // The probes below post to the API and read an unknown API path: the 4xx answers are the point.
@@ -615,7 +620,7 @@ test.describe("update flow", () => {
           "",
       );
     // Start on the control just before the prompt in the tab order (the prompt is the last thing in the page),
-    // so the walk does not pass the place search: its first focus would ask for the Maps script.
+    // so the walk does not pass the search field.
     await page.evaluate(() => {
       const controls = [
         ...document.querySelectorAll<HTMLElement>(
@@ -765,7 +770,8 @@ test.describe("update flow", () => {
     expect(await page.evaluate(() => document.activeElement?.className)).toContain("panel__scroll");
     expect(await versionMarker(page)).toBeNull();
     // Still v1 and still working: the picker answers from the page.
-    await combo(page).fill("uttara");
+    // A whole station name: a worker-controlled page must not ask Google (METRO-163).
+    await combo(page).fill("Uttara North");
     await combo(page).press("Enter");
     await expect(page.getByRole("article")).toContainText("Uttara");
     // Dismissing does not apply the update: the new worker still waits, behind the old one, and v1 keeps its cache.

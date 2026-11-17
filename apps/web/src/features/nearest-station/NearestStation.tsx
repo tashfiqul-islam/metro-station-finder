@@ -1,11 +1,9 @@
 import { assessNearestReliability, baselineDataset, findNearestStation } from "@metro/core";
-import type { Coordinate, StationId } from "@metro/core";
+import type { Coordinate, Station, StationId } from "@metro/core";
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
-import { PLACE_INPUT_ID, useMaps } from "../../adapters/maps/context";
 import type { MapsAdapter } from "../../adapters/maps/context";
-import { focusSearchControl } from "../../adapters/maps/focus";
 import { Icon } from "../../icons/Icon";
 import { alert } from "../../icons/shapes/alert";
 import { chevronRight } from "../../icons/shapes/chevron-right";
@@ -13,13 +11,14 @@ import { locate as locateIcon } from "../../icons/shapes/locate";
 import { locateOff } from "../../icons/shapes/locate-off";
 import { refresh } from "../../icons/shapes/refresh";
 import { search } from "../../icons/shapes/search";
+import { PlaceSearch, SEARCH_INPUT_ID } from "../place-search/PlaceSearch";
+import { usePlacesAvailable } from "../place-search/use-places-available";
 import { copy } from "./copy";
 import { formatAccuracy } from "./format";
 import { locate } from "./geolocate";
 import { LocationNotice } from "./LocationNotice";
 import { LocationResult } from "./LocationResult";
 import { SearchingMark } from "./SearchingMark";
-import { useOnline } from "./use-online";
 
 import "../../styles/components/typography.css";
 import "../../styles/components/button.css";
@@ -32,15 +31,6 @@ import "../../styles/components/locate.css";
 import "./nearest-station.css";
 
 const stations = baselineDataset.stations;
-
-/** Suggestions lean toward the network: the mean of the station coordinates, not a hard-coded point. */
-const SEARCH_BIAS = {
-  center: {
-    lat: stations.reduce((sum, s) => sum + s.coordinate.lat, 0) / stations.length,
-    lng: stations.reduce((sum, s) => sum + s.coordinate.lng, 0) / stations.length,
-  },
-  radiusMeters: 25_000,
-};
 
 /** What the screen needs from a location result: the station to highlight and, for a device fix, the user pin. */
 export interface LocationOutcome {
@@ -67,8 +57,10 @@ interface ShownResult {
 
 interface SliceProps {
   readonly maps: MapsAdapter;
-  /** Content between the location controls and the result (the station picker, METRO-112). */
+  /** Content between the location controls and the result (a picked station's result, METRO-112). */
   readonly after?: ReactNode;
+  /** A station was picked in the search field: the screen makes it the current result and settles its sheet. */
+  readonly onPickStation?: (station: Station, source: "keyboard" | "pointer") => void;
   /** True while a picked station is the current result: the location result is hidden (one current result). */
   readonly suppressed?: boolean;
   /** A location result appeared (the outcome) or was cleared by a rough fix (null). */
@@ -76,9 +68,9 @@ interface SliceProps {
   /** Locating began, a result appeared or a notice showed: the screen snaps its sheet to half. */
   readonly onSettle?: () => void;
   /**
-   * The user is typing in the place search: the screen opens its sheet to full, so the suggestion popup has room
-   * above the fold (the station picker does the same, METRO-112). Focus alone does not call it, so Tab through the
-   * page never changes the sheet.
+   * The user is typing in the search field: the screen opens its sheet to full, so the suggestion popup has room
+   * above the fold (METRO-112, METRO-163). Focus alone does not call it, so Tab through the page never changes
+   * the sheet.
    */
   readonly onSearchEngage?: () => void;
   /**
@@ -106,30 +98,31 @@ function noticeText(notice: Notice, searchAvailable: boolean): string {
   return searchAvailable ? variants.search : variants.pick;
 }
 
+/** "Search for a place" in a notice: moves focus into the search field. */
+function focusSearch(): void {
+  document.getElementById(SEARCH_INPUT_ID)?.focus();
+}
+
 function Slice({
-  maps,
   after,
   suppressed = false,
   onLocation,
   onSettle,
   onSearchEngage,
+  onPickStation,
   pickSeq = 0,
 }: SliceProps) {
-  const { status } = useMaps();
   const [locating, setLocating] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [shown, setShown] = useState<ShownResult | null>(null);
+  /** A chosen place's location could not be fetched: the field stays, the alert says so. */
   const [searchFailed, setSearchFailed] = useState(false);
   /** Counts user actions; a slower earlier action (a position fix, say) must not overwrite a later one. */
   const latestAction = useRef(0);
   const results = useRef(0);
-  const searchBox = useRef<HTMLDivElement>(null);
-  const searchNotice = useRef<HTMLDivElement>(null);
-  /** True while focus sits in the search control, so losing the control to a failure can put focus somewhere. */
-  const searchHadFocus = useRef(false);
-  const online = useOnline();
-  // Offline, no key or a library that failed to load: the label, hint and field go, the notice stays (METRO-114).
-  const searchAvailable = online && status !== "unavailable";
+  // Offline, no key or a library that failed to load: place suggestions are not offered and the notices name the
+  // station step; the field itself keeps working for station names (METRO-163).
+  const { available: searchAvailable } = usePlacesAvailable();
   const locateButton = useRef<HTMLButtonElement>(null);
   /**
    * True once the user touches the search box (focus, key or input) after pressing "Use my location".
@@ -160,21 +153,6 @@ function Slice({
     },
     [],
   );
-
-  /** "Search for a place" in a notice: moves focus into the search field (the plain input or the widget). */
-  function focusSearch(): void {
-    focusSearchControl(searchBox.current);
-  }
-
-  // The field vanished under the user's focus (the library failed, or the connection dropped): the notice that
-  // replaced it takes focus, so focus does not fall to the page. Only when focus was in the field and is now lost.
-  useEffect(() => {
-    if (searchAvailable || !searchHadFocus.current) return;
-    searchHadFocus.current = false;
-    if (document.activeElement === null || document.activeElement === document.body) {
-      searchNotice.current?.focus();
-    }
-  }, [searchAvailable]);
 
   // Place search went away while a location notice showed (METRO-120): its "Search for a place" action leaves with
   // it. If focus was on that action it fell to the page; the notice takes it, so the keyboard user is not lost.
@@ -278,8 +256,8 @@ function Slice({
       {copy.tryAgain}
     </button>
   );
-  // A failed selection keeps the field (the user can search again); an unavailable library or no connection
-  // replaces the field with its notice below.
+  // A failed selection keeps the field (the user can search again); an unavailable library or no connection shows
+  // the field's own notice.
   const searchAlert = searchAvailable && searchFailed ? copy.searchUnavailable : null;
 
   return (
@@ -290,6 +268,24 @@ function Slice({
         <h2 className="section-label" id="where-heading">
           {copy.whereHeading}
         </h2>
+        <div role="presentation" onFocus={engage} onKeyDown={engage}>
+          <PlaceSearch
+            stations={stations}
+            onStation={(station, source) => onPickStation?.(station, source)}
+            onPlace={choosePlace}
+            onPlaceFailure={() => setSearchFailed(true)}
+            onLocate={() => void findMe()}
+            onEngage={() => {
+              engage();
+              onSearchEngage?.();
+            }}
+          />
+        </div>
+        {searchAlert !== null && (
+          <p className="ns-alert" role="alert">
+            {searchAlert}
+          </p>
+        )}
         {notice !== null && (
           <LocationNotice
             tone={notice.kind === "denied" ? "bad" : "warn"}
@@ -338,69 +334,6 @@ function Slice({
         <p className="consent" id="consent">
           {copy.consent}
         </p>
-        {/* A status region that is always mounted. A notice that appears later (a failed load, the connection back) fills a region that was already there, which is the reliable way to be announced; one that is there from the first render (no connection or no key at load) is simply part of the page and is not announced as news. */}
-        <output className={searchAvailable ? "visually-hidden" : undefined}>
-          {!searchAvailable && (
-            <div
-              ref={searchNotice}
-              className="notice"
-              data-tone="warn"
-              data-size="sm"
-              tabIndex={-1}
-            >
-              <span className="notice__chip" aria-hidden="true">
-                <Icon icon={search} size={16} />
-              </span>
-              <div className="notice__body">
-                <p className="notice__text">
-                  {online ? copy.searchUnavailable : copy.searchNoConnection}
-                </p>
-              </div>
-            </div>
-          )}
-        </output>
-        {searchAvailable && (
-          <>
-            <label className="ns-label" id="place-label" htmlFor={PLACE_INPUT_ID}>
-              {copy.searchLabel}
-            </label>
-            <p className="footnote" id="place-hint">
-              {copy.searchHint}
-            </p>
-            <div
-              ref={searchBox}
-              role="presentation"
-              onFocus={() => {
-                engage();
-                searchHadFocus.current = true;
-              }}
-              onBlur={() => {
-                // Any blur ends it, whether focus went to a control or to nothing (a click on the page): a failure
-                // that comes later must not pull focus from a user who is elsewhere.
-                searchHadFocus.current = false;
-              }}
-              onKeyDown={engage}
-              onInput={() => {
-                engage();
-                onSearchEngage?.();
-              }}
-            >
-              <maps.PlaceSearch
-                labelId="place-label"
-                hintId="place-hint"
-                description={copy.searchHint}
-                bias={SEARCH_BIAS}
-                onPlace={choosePlace}
-                onFailure={() => setSearchFailed(true)}
-              />
-            </div>
-          </>
-        )}
-        {searchAlert !== null && (
-          <p className="ns-alert" role="alert">
-            {searchAlert}
-          </p>
-        )}
       </section>
 
       {after}

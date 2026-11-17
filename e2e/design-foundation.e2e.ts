@@ -256,7 +256,7 @@ test.describe("user preferences", () => {
     await page.emulateMedia({ forcedColors: "active" });
     await open(page);
     expect(await page.evaluate(() => matchMedia("(forced-colors: active)").matches)).toBe(true);
-    const button = page.getByRole("button", { name: "Use my location" });
+    const button = page.locator("button.locate");
     expect(await button.evaluate((node) => getComputedStyle(node).borderTopWidth)).toBe("1px");
     await button.focus();
     await page.keyboard.press("Shift+Tab");

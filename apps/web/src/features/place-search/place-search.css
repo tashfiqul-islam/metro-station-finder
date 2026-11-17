@@ -1,0 +1,34 @@
+/* place-search.css: the one search field's own rules, on top of fields.css and search.css. Tokens only. */
+
+@import "../../styles/tokens-parts.css";
+/* The popup is always in the DOM (aria-controls needs it) and shows only while expanded. It scrolls inside itself,
+   so a long list never pushes the page or hides behind the sheet's edge. */
+.listbox[hidden] {
+  display: none;
+}
+.listbox {
+  max-height: min(50dvh, 22rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+/* A group (Stations, Places): its label and its rows, spaced like the list itself. */
+.listbox__set {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+/* The status is always in the tree (a live region must exist before its text changes) but takes no room. */
+.search__feedback {
+  display: contents;
+}
+/* The focus ring is on the input itself, not only on its container: the keyboard check wants the focused control
+   to change its own look. The container keeps the soft halo of the handoff. */
+.search__input:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: 0;
+  border-radius: var(--radius-field);
+}

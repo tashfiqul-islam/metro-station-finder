@@ -3,7 +3,7 @@ import type { Locator, Page } from "@playwright/test";
 import { isRecord } from "../scripts/guards";
 import { axeBuilder, expect, test } from "./fixtures";
 import { linksAreTabbable } from "./keyboard";
-import { installMapsStub, stubGeolocation, widgetSearch } from "./maps-stub";
+import { installMapsStub, placeSearch, stubGeolocation } from "./maps-stub";
 
 /**
  * METRO-113: "Use my location" and every location state, in the real build with the enforced CSP and the
@@ -23,8 +23,9 @@ async function open(page: Page, saved?: "light" | "dark"): Promise<void> {
   await expect(locate(page)).toBeVisible();
 }
 
-const locate = (page: Page): Locator => page.getByRole("button", { name: "Use my location" });
-const combo = (page: Page): Locator => page.getByRole("combobox", { name: "Or pick a station" });
+const locate = (page: Page): Locator => page.locator("button.locate");
+const combo = (page: Page): Locator =>
+  page.getByRole("combobox", { name: "Search a place or station" });
 const heading = (page: Page, name: string): Locator =>
   page.getByRole("heading", { level: 2, name });
 const snap = (page: Page): Promise<string | null> => page.locator(".app").getAttribute("data-snap");
@@ -187,11 +188,10 @@ test.describe("use my location (METRO-113)", () => {
     await expect(notice.getByRole("button")).toHaveCount(1);
     await expect(page.getByRole("alert")).toHaveCount(0);
     expect(await snap(page)).toBe("half");
-    // Activating it moves focus into the search field: the plain input takes it, asks for the script, and the
-    // widget (the stub's input stands for Google's) replaces it with focus kept. Only the stub is verified.
+    // Activating it moves focus into the one search field (METRO-163).
     await search.click();
-    await expect(widgetSearch(page)).toBeFocused();
-    // Typing opens the sheet to full (METRO-114), like the station picker; focus alone does not.
+    await expect(placeSearch(page)).toBeFocused();
+    // Typing opens the sheet to full (METRO-114); focus alone does not.
     expect(await snap(page)).toBe("half");
     await page.keyboard.type("m");
     await expect.poll(() => snap(page)).toBe("full");
@@ -375,7 +375,7 @@ test.describe("use my location (METRO-113)", () => {
     expect(stub.blocked).toEqual([]);
   });
 
-  test("METRO-113 keyboard order: Home first, then Use my location, the search, the picker, the result link, then the map", async ({
+  test("METRO-113 keyboard order: Home first, then the search field, its locate button, Use my location, the result link, then the map", async ({
     page,
   }) => {
     await stubGeolocation(page, NEAR_UTTARA_NORTH);
@@ -403,17 +403,18 @@ test.describe("use my location (METRO-113)", () => {
     }
     const index = (text: string | RegExp): number =>
       stops.findIndex((stop) => (typeof text === "string" ? stop === text : text.test(stop)));
-    const locateAt = index(/^Use my location/u);
-    // The plain input is named "Search for a place"; if the Tab walk focused it, the widget (stub name "Search For
-    // a Place") has replaced it by the next stop. Either way there is one stop for the search, matched ignoring case.
-    const searchAt = index(/^search for a place$/iu);
-    const pickAt = index("Or pick a station");
-    expect(locateAt, "Use my location").toBeGreaterThan(-1);
-    expect(searchAt, "place search").toBeGreaterThan(locateAt);
-    expect(pickAt, "picker").toBeGreaterThan(searchAt);
+    // METRO-163: one field for stations and places, with a locate button inside it (the quiet twin of the page's
+    // own "Use my location"), so the walk meets "Use my location" twice: first in the field, then the button.
+    const searchAt = index("Search a place or station");
+    const locateStops = stops.flatMap((stop, at) => (stop === "Use my location" ? [at] : []));
+    expect(searchAt, "search field").toBeGreaterThan(-1);
+    expect(locateStops, "the two Use my location buttons").toHaveLength(2);
+    const [inFieldAt = -1, pageAt = -1] = locateStops;
+    expect(inFieldAt, "locate button in the field").toBeGreaterThan(searchAt);
+    expect(pageAt, "Use my location").toBeGreaterThan(inFieldAt);
     if (await linksAreTabbable(page)) {
       const dirAt = index(/^Directions in Google Maps/u);
-      expect(dirAt, "Directions").toBeGreaterThan(pickAt);
+      expect(dirAt, "Directions").toBeGreaterThan(pageAt);
       // The map and its three buttons come last: the walk ends on "Show whole line".
       expect(stops.at(-1)).toBe("Show whole line");
       expect(stops.length - 1).toBeGreaterThan(dirAt);

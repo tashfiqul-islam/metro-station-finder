@@ -6,7 +6,7 @@ Read when: starting a new feature, slice, adapter or screen. Copy the reference 
 
 - The slice is the app: `AppRoutes.tsx` mounts it at every path inside `AppShell` (no router yet), as a lazy chunk ([ADR-0021](../adr/0021-design-foundation-styling.md)). Add a router with the second screen. The shell owns the `main` landmark: a slice renders no `main`.
 - Flow: pure rule in `packages/core` (browser-safe, public entry only) → port and adapter in `apps/web/src/adapters/<provider>` → feature in `apps/web/src/features/<name>` → wiring in `AppRoutes.tsx`. Files to copy:
-  - `adapters/maps/context.ts` (the port types a feature sees, `useMaps`), `provider.tsx` (loads once), `place-search.tsx`, `routes.ts`, `libraries.ts`, `config.ts` (pinned version, key reader).
+  - `adapters/maps/context.ts` (the port types a feature sees, `useMaps`), `provider.tsx` (loads once), `place-search.ts` and `session.ts` (suggestions with our own session token), `routes.ts`, `libraries.ts`, `config.ts` (pinned version, key reader).
   - `features/nearest-station/NearestStation.tsx` (receives `MapsAdapter` as a prop), `copy.ts`, `format.ts`, `geolocate.ts`.
 - Only `adapters/maps` imports Google libraries or touches `google.maps` and `window.google`. A feature gets the adapter by prop and reads status and routes through `useMaps()`; tests pass a fake and never load Google. Convert every Google value to a plain `Coordinate` or number before it leaves the adapter.
 - Core runs in the browser, so the position and the chosen place never reach `/api/*` or a log. Device position only after a button press, with the consent line next to it.

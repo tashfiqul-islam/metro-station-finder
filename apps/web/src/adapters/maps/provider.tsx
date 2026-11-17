@@ -2,9 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
 import { readMapsKey } from "./config";
-import { MapsContext, PlacesContext, UNAVAILABLE } from "./context";
-import type { MapsState, PlacesApi } from "./context";
+import { MapsContext, UNAVAILABLE } from "./context";
+import type { MapsState } from "./context";
 import { loadLibraries, resetLibraries } from "./libraries";
+import { createPlaceSearch } from "./place-search";
+import type { PlacesApi } from "./place-search";
 import { createRouteService } from "./routes";
 import type { RouteApi } from "./routes";
 
@@ -85,19 +87,20 @@ function Loader({ apiKey, load, reset, children }: LoaderProps) {
   }, [libraries, reset]);
 
   const state = useMemo<MapsState>(() => {
-    if (libraries === null) return { ...(askedOnce ? LOADING_STATE : IDLE_STATE), load: request };
+    if (libraries === null)
+      return { ...(askedOnce ? LOADING_STATE : IDLE_STATE), places: null, load: request };
     if (libraries === "failed" || libraries === "failed-no-connection") {
       return { ...UNAVAILABLE, load: request };
     }
-    return { status: "ready", routes: createRouteService(libraries.routes.Route), load: request };
+    return {
+      status: "ready",
+      routes: createRouteService(libraries.routes.Route),
+      places: createPlaceSearch(libraries.places),
+      load: request,
+    };
   }, [libraries, askedOnce, request]);
-  const places = typeof libraries === "object" && libraries !== null ? libraries.places : null;
 
-  return (
-    <PlacesContext value={places}>
-      <MapsContext value={state}>{children}</MapsContext>
-    </PlacesContext>
-  );
+  return <MapsContext value={state}>{children}</MapsContext>;
 }
 
 interface ProviderProps {
@@ -110,8 +113,8 @@ interface ProviderProps {
 }
 
 /**
- * Loads the Maps JavaScript API once, and only when a feature asks with `load()` (the first focus of the place
- * search, the first walking route): mounting it loads nothing (METRO-114). With no key nothing ever loads and the
+ * Loads the Maps JavaScript API once, and only when a feature asks with `load()` (the first search that needs
+ * places, the first walking route): mounting it loads nothing (METRO-114). With no key nothing ever loads and the
  * status is `unavailable` (a visible state, never a silent one).
  */
 export function MapsProvider({

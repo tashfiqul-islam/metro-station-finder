@@ -5,8 +5,6 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "@playwright/test";
 import type { Browser, CDPSession, ConsoleMessage, Page, Request } from "@playwright/test";
 
-// The one reviewed script-to-app import (pinned by script-imports.test.ts): copy.ts has no imports.
-import { copy } from "../apps/web/src/features/nearest-station/copy.ts";
 import {
   MAX_TAB_STOPS,
   addTabStop,
@@ -32,10 +30,10 @@ import { smokePort } from "./smoke-port.ts";
  */
 const web = fileURLToPath(new URL("../apps/web", import.meta.url));
 const vite = fileURLToPath(new URL("../node_modules/vite/bin/vite.js", import.meta.url));
-/** Hosts the page may only reach after the first focus of the place search (METRO-114). */
+/** Hosts the page may only reach once a typed text asks for places (METRO-163). */
 const GOOGLE_HOST = /(^|\.)(googleapis|gstatic|google|googleusercontent)\.com$/u;
-/** A neighbourhood name, not an address or a person's place. */
-const QUERY = "Motijheel";
+/** A neighbourhood name, not an address or a person's place, and not a station name (a station name asks Google nothing). */
+const QUERY = "Gulshan";
 
 async function waitForServer(origin: string, server: ChildProcess): Promise<void> {
   for (let attempt = 0; attempt < 120; attempt += 1) {
@@ -145,9 +143,9 @@ async function main(): Promise<boolean> {
     version: null,
     cspMessages: [],
     placesRequests: 0,
-    googleBeforeFocus: 0,
-    focusAfterSwap: null,
+    googleBeforeQuery: 0,
     placesDuringTabWalk: 0,
+    placesAfterQuery: 0,
     routesRequests: 0,
     stationShown: false,
     routeShown: false,
@@ -166,51 +164,32 @@ async function main(): Promise<boolean> {
       const text = message.text();
       if (text.includes("Content Security Policy")) csp.push(text);
     });
-    let focused = false;
+    let queried = false;
     page.on("request", (request: Request) => {
       const { host } = new URL(request.url());
       if (host === "places.googleapis.com") run.placesRequests += 1;
       if (host === "routes.googleapis.com") run.routesRequests += 1;
-      // METRO-114: nothing from Google before the place search is first focused.
-      if (!focused && GOOGLE_HOST.test(host)) run.googleBeforeFocus += 1;
+      // METRO-163: nothing from Google before a query that asks for places (below, the field is focused and two
+      // characters typed first: still nothing may reach Google).
+      if (!queried && GOOGLE_HOST.test(host)) run.googleBeforeQuery += 1;
     });
     let step = "open the page";
     try {
       await page.goto(`${origin}/`);
-      step = "open the page and find the plain place search input";
-      // METRO-114: the field starts as a plain input and nothing from Google has loaded. Give the page time to
-      // settle, then count what reached Google before the first focus (expected 0).
-      const plain = page.getByRole("textbox", { name: "Search for a place", exact: true });
-      await plain.waitFor({ state: "visible", timeout: 30_000 });
+      step = "open the page and find the search field";
+      // METRO-163: the one search field starts with nothing from Google loaded. Give the page time to settle, then
+      // focus it and type two characters (below the three the rule needs): still nothing may reach Google.
+      const field = page.getByRole("combobox", { name: "Search a place or station", exact: true });
+      await field.waitFor({ state: "visible", timeout: 30_000 });
       await page.waitForTimeout(2000);
-      focused = true;
-      step =
-        "wait for the place search element (is VITE_GOOGLE_MAPS_API_KEY set, and did Maps load after the first focus?)";
-      // The first focus loads Maps and Places and swaps the widget in, keeping focus.
-      await plain.focus();
-      // Google's PlaceAutocompleteElement keeps its input in a shadow root that is probably closed
-      // (Unverified), so no locator can reach the input. Drive the host element like a user instead:
-      // a click focuses the inner input, then the keyboard types into it.
-      const host = page.locator("gmp-place-autocomplete").first();
-      await host.waitFor({ state: "attached", timeout: 30_000 });
-      // Focus kept after the swap?
-      // Read now, before the Tab walk and the click move focus. The page can see inside the host only through an
-      // open shadow root; a closed one reads as "host-only".
-      const active: unknown = await page.evaluate(`(() => {
-        const el = document.activeElement;
-        if (el === null || el.tagName !== "GMP-PLACE-AUTOCOMPLETE") return "elsewhere";
-        const inner = el.shadowRoot === null ? null : el.shadowRoot.activeElement;
-        return inner !== null && inner.tagName === "INPUT" ? "inner-input" : "host-only";
-      })()`);
-      run.focusAfterSwap =
-        active === "inner-input" || active === "host-only" || active === "elsewhere"
-          ? active
-          : null;
-      // Read right away, so the version prints even when a later step fails.
-      const version: unknown = await page.evaluate("window.google?.maps?.version ?? null");
-      run.version = typeof version === "string" ? version : null;
-      // Accessibility, first read: the closed shadow root hides the input from locators, but the browser's
-      // own tree should include it (Unverified; the report says when it does not). Tab does not search.
+      await field.focus();
+      await page.keyboard.type("Gu", { delay: 120 });
+      await page.waitForTimeout(1000);
+      queried = true;
+      step = "type the query so that places are asked for (is VITE_GOOGLE_MAPS_API_KEY set?)";
+      await field.fill("");
+      // Accessibility, first read: the search block is our own markup, read through the browser's tree like
+      // before (the report says when a read fails). Tab does not search.
       step = "read the accessibility tree";
       // From here a read was attempted, so the report prints its lines (failed reads as such).
       let reads: AccessibilityRun = {
@@ -227,9 +206,7 @@ async function main(): Promise<boolean> {
       reads = {
         ...reads,
         afterAttach:
-          attached === null || attachedIds === null
-            ? null
-            : snapshotEntries(attached, attachedIds, copy.searchHint),
+          attached === null || attachedIds === null ? null : snapshotEntries(attached, attachedIds),
         tabOrder: walk.order,
         tabEnd: walk.end,
       };
@@ -240,9 +217,11 @@ async function main(): Promise<boolean> {
       // snapshot. The report prints the walk count so the owner can see it.
       const baseline = run.placesRequests;
       run.placesDuringTabWalk = baseline;
-      step = "focus the place search element and type the query";
-      await host.click();
-      await page.keyboard.type(QUERY, { delay: 120 });
+      step = "type the query";
+      await field.click();
+      // One input event, so one request after the debounce whatever the machine's speed (typing key by key
+      // could straddle the 180 ms pause and send two).
+      await field.fill(QUERY);
       // Typing never throws when the inner input was not focused. A Places request proves the keys
       // arrived; wait a bounded time for one. No retry: each attempt would bill.
       const deadline = Date.now() + 10_000;
@@ -250,9 +229,16 @@ async function main(): Promise<boolean> {
         await page.waitForTimeout(250);
       }
       if (!typingReachedWidget(baseline, run.placesRequests)) {
-        step = "typing did not reach the widget (no Places request seen)";
+        step = "typing did not reach Places (no Places request seen)";
         throw new Error("no places request");
       }
+      // One request for one input event. The count is read as a difference from before the query, after a short
+      // window in which a second request would show up (nothing else is waited for by time).
+      await page.waitForTimeout(500);
+      run.placesAfterQuery = run.placesRequests - baseline;
+      // Maps loads once a text asks for places, so the version can be read only now.
+      const version: unknown = await page.evaluate("window.google?.maps?.version ?? null");
+      run.version = typeof version === "string" ? version : null;
       await page.waitForTimeout(1500);
       // Second read, with the suggestions showing.
       const suggested = await readTree(cdp);
@@ -262,10 +248,10 @@ async function main(): Promise<boolean> {
         afterSuggestions:
           suggested === null || suggestedIds === null
             ? null
-            : snapshotEntries(suggested, suggestedIds, copy.searchHint),
+            : snapshotEntries(suggested, suggestedIds),
       };
       run.accessibility = reads;
-      step = "choose the first suggestion (ArrowDown, Enter)";
+      step = "choose the first place (ArrowDown, Enter)";
       await page.keyboard.press("ArrowDown");
       await page.keyboard.press("Enter");
       step = "show the nearest station";

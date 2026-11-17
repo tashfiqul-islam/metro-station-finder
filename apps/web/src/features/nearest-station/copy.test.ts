@@ -1,24 +1,26 @@
 import { expect, test } from "vitest";
 
+import { searchCopy } from "../place-search/copy";
 import { pickerCopy } from "../station-picker/copy";
 import { copy } from "./copy";
 import type { NoticeVariants } from "./copy";
 
 /**
- * METRO-120 guard. Scope, exactly: every entry of `features/nearest-station/copy.ts` and of
- * `features/station-picker/copy.ts`. Copy written anywhere else (the shell, the error fallback) is not scanned.
+ * METRO-120 guard. Scope, exactly: every entry of `features/nearest-station/copy.ts`, of
+ * `features/place-search/copy.ts` and of `features/station-picker/copy.ts`. Copy written anywhere else (the shell, the error fallback) is not scanned.
  */
 const SEARCH_STEP = "Search for a place instead.";
 const PICK_STEP = "Pick a station instead.";
 
 /**
- * Plain strings that may mention search because they are not a suggested next step: the field's own label and
- * hint, the consent line, the two statements that place search is unavailable, and the picker's own name-search
- * texts. A new key that mentions search must be a `{ search, pick }` pair or be added here on purpose.
+ * Plain strings that may mention search because they are not a suggested next step: the action's own label, the
+ * consent line, the two statements that place search is unavailable, and the field's own label, placeholder and
+ * clear button (METRO-163). A new key that mentions search must be a `{ search, pick }` pair or be added here on purpose.
  */
 const MAY_MENTION_SEARCH: Record<string, readonly string[]> = {
-  nearest: ["searchLabel", "searchHint", "consent", "searchUnavailable", "searchNoConnection"],
-  picker: ["hint", "clear"],
+  nearest: ["searchLabel", "consent", "searchUnavailable", "searchNoConnection"],
+  search: ["label", "placeholder", "clear"],
+  picker: [],
 };
 
 type Entry = { source: string; key: string; value: unknown };
@@ -41,7 +43,11 @@ function isFunction(value: unknown): value is (...args: unknown[]) => unknown {
   return typeof value === "function";
 }
 
-const entries: Entry[] = [...expand("nearest", copy), ...expand("picker", pickerCopy)];
+const entries: Entry[] = [
+  ...expand("nearest", copy),
+  ...expand("search", searchCopy),
+  ...expand("picker", pickerCopy),
+];
 
 function isVariants(value: unknown): value is NoticeVariants {
   return (
@@ -96,10 +102,9 @@ test("METRO-120 guard: a plain string mentions search only where it is not a nex
   expect(plain.filter((e) => /search for a place/iu.test(e.value)).map((e) => e.key)).toEqual([
     "searchLabel",
   ]);
-  // Any "instead" step in a plain string is the available one.
-  const steps = plain.filter((e) => /instead/iu.test(e.value));
-  expect(steps.length).toBeGreaterThan(0);
-  expect(steps.filter((e) => !e.value.endsWith(PICK_STEP))).toEqual([]);
+  // Since METRO-163 station names keep working in the one field, so no plain string names a step ("instead"):
+  // the next steps live only in the { search, pick } pairs above.
+  expect(plain.filter((e) => /instead/iu.test(e.value))).toEqual([]);
 });
 
 test("METRO-120 guard: the guard itself fails on a stray notice (a mutation check)", () => {

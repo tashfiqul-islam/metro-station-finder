@@ -11,8 +11,9 @@ import { installMapsStub, stubGeolocation } from "./maps-stub";
 const NEAR_UTTARA_NORTH = { lat: 23.87, lng: 90.367 } as const;
 const MAP_NAME = "Schematic map of MRT Line 6";
 
-const locate = (page: Page): Locator => page.getByRole("button", { name: "Use my location" });
-const combo = (page: Page): Locator => page.getByRole("combobox", { name: "Or pick a station" });
+const locate = (page: Page): Locator => page.locator("button.locate");
+const combo = (page: Page): Locator =>
+  page.getByRole("combobox", { name: "Search a place or station" });
 const resultName = (page: Page): Locator => page.locator("h2.result__name");
 
 async function open(page: Page): Promise<void> {
@@ -69,7 +70,10 @@ test.describe("focus ring after script-moved focus (METRO-118)", () => {
     await press(combo(page), info);
     // `fill` types no key, so the last input stays the pointer.
     await combo(page).fill("motijheel");
-    await press(page.getByRole("listbox", { name: "Stations" }).getByRole("option").first(), info);
+    await press(
+      page.getByRole("listbox", { name: "Suggestions" }).getByRole("option").first(),
+      info,
+    );
     await expect(resultName(page)).toBeFocused();
     await animationsEnded(page);
     expect(await ring(resultName(page))).toEqual({ outline: false, shadow: false });
@@ -83,7 +87,10 @@ test.describe("focus ring after script-moved focus (METRO-118)", () => {
     await open(page);
     await press(combo(page), info);
     await page.keyboard.type("motijheel");
-    await press(page.getByRole("listbox", { name: "Stations" }).getByRole("option").first(), info);
+    await press(
+      page.getByRole("listbox", { name: "Suggestions" }).getByRole("option").first(),
+      info,
+    );
     await expect(resultName(page)).toBeFocused();
     await animationsEnded(page);
     expect(await ring(resultName(page))).toEqual({ outline: false, shadow: false });
