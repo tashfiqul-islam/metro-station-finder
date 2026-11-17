@@ -1,6 +1,6 @@
 import { appendFileSync, readFileSync } from "node:fs";
 
-import { assertNotFoundEnvelope } from "../gates/api-envelope.ts";
+import { assertNotFoundEnvelope } from "./api-envelope.ts";
 
 /**
  * Helpers for the per-pull-request Cloudflare preview job (METRO-13, docs/specifications/cloudflare-preview.md).

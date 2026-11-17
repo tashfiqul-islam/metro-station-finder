@@ -44,6 +44,6 @@ We will apply the existing limits, 250,000 raw and 80,000 gzip, to the first-vis
 
 ## Confirmation
 
-- `scripts/gates/bundle-budget.test.ts` (Bun, 100 percent): first-visit over, ceiling over, a lazy chunk that leaves the first visit unchanged, manifest missing, garbage, no entry and missing file, transitive imports and shared chunks counted once, cycles, lazy CSS excluded, a dynamic import inside a static chunk, per-file gzip and ordering. `scripts/policy/gates.test.ts` runs `scripts/gates/bundle.ts` on built fixtures.
+- `scripts/gates/bundle-budget.test.ts` (Bun, 100 percent): first-visit over, ceiling over, a lazy chunk that leaves the first visit unchanged, manifest missing, garbage, no entry and missing file, transitive imports and shared chunks counted once, cycles, lazy CSS excluded, a dynamic import inside a static chunk, per-file gzip and ordering. `scripts/gates/gates.test.ts` runs `scripts/gates/bundle.ts` on built fixtures.
 - `apps/web/src/lazy-feature.test.tsx` and `apps/web/src/vitals.test.ts` (Vitest, 100 percent): pending then content, failure copy without the error text, the reload button (no second import), focus and roles; no load before the scheduler runs, failures swallowed without a log.
 - `e2e/vitals.e2e.ts` and `e2e/web-vitals-lab.e2e.ts`: beacons still arrive and the lab LCP and CLS stay under their limits.

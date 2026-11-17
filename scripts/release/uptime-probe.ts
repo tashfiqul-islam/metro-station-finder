@@ -1,4 +1,4 @@
-import { type EnvelopeProblem, envelopeProblem } from "../gates/api-envelope.ts";
+import { type EnvelopeProblem, envelopeProblem } from "./api-envelope.ts";
 
 /**
  * Synthetic uptime check (METRO-44 part A, docs/agents/uptime-runbook.md). `bun scripts/release/uptime-probe.ts <base-url>`
