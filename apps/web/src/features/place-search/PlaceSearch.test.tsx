@@ -1026,3 +1026,79 @@ test("METRO-163 typing back to an earlier text starts a new pause, not an instan
   await pause(1);
   expect(service.suggest).toHaveBeenCalledTimes(2);
 });
+
+/** A press is in progress and places have arrived meanwhile: the list still shows what it showed at the press. */
+async function pressWithPlacesWaiting(text = "mirp") {
+  const service = fakeService();
+  const answer = deferred<readonly PlaceSuggestion[]>();
+  service.suggest.mockReturnValueOnce(answer.promise);
+  setup({ service });
+  type(text);
+  await pause(180);
+  fireEvent.pointerDown(document.body);
+  await act(async () => {
+    answer.resolve([PLACE_A, PLACE_B]);
+    await Promise.resolve();
+  });
+  return service;
+}
+
+test("METRO-124 a press whose pointer ends with no mouse release still lets the list go, after the same task", async () => {
+  await pressWithPlacesWaiting();
+  fireEvent.pointerUp(document.body);
+  // The mouse release and the click that follow land on the list as it was.
+  expect(names()).toHaveLength(2);
+  await pause(0);
+  expect(names()).toHaveLength(4);
+});
+
+test("METRO-124 a context menu that swallows the release lets the list go", async () => {
+  await pressWithPlacesWaiting();
+  expect(names()).toHaveLength(2);
+  fireEvent.contextMenu(document.body);
+  expect(names()).toHaveLength(4);
+});
+
+test("METRO-124 the window losing focus, or the page being hidden, lets the list go; a visibility change that keeps it visible does not", async () => {
+  await pressWithPlacesWaiting();
+  const visibility = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+  fireEvent(document, new Event("visibilitychange"));
+  expect(names()).toHaveLength(2);
+  visibility.mockReturnValue("hidden");
+  fireEvent(document, new Event("visibilitychange"));
+  expect(names()).toHaveLength(4);
+  cleanup();
+  await pressWithPlacesWaiting();
+  fireEvent(window, new Event("blur"));
+  expect(names()).toHaveLength(4);
+});
+
+test("METRO-124 new text ends a hold even with no release: the list follows the text, not the press", async () => {
+  await pressWithPlacesWaiting();
+  expect(names()).toEqual(["Mirpur 11", "Mirpur 10"]);
+  type("mirpur 11");
+  expect(names()).toEqual(["Mirpur 11"]);
+});
+
+test("METRO-124 places held back never turn into a false No match, and the status counts what the list shows", async () => {
+  const service = fakeService();
+  const answer = deferred<readonly PlaceSuggestion[]>();
+  service.suggest.mockReturnValueOnce(answer.promise);
+  setup({ service });
+  type("Nowhere Town");
+  await pause(180);
+  expect(document.querySelector(".empty")).toBeNull();
+  fireEvent.pointerDown(document.body);
+  await act(async () => {
+    answer.resolve([PLACE_A, PLACE_B]);
+    await Promise.resolve();
+  });
+  // Held: still no list, and no "no match" claim while results are waiting behind the press.
+  expect(document.querySelector(".empty")).toBeNull();
+  expect(feedback().textContent).not.toContain("No station matches");
+  expect(feedback().textContent).toBe("0 stations");
+  fireEvent.mouseUp(document.body);
+  fireEvent.focus(box());
+  expect(feedback().textContent).toBe("0 stations, 2 places");
+  expect(document.querySelector(".empty")).toBeNull();
+});

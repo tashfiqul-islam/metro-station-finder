@@ -135,17 +135,30 @@ export function PlaceSearch({
   });
   const stationMatches = listStations(stations, typed || browsing ? text : "", browsing);
   const view = placesView(suggestions.wanted, !available || suggestions.failed, suggestions.places);
+  const stationCount = stationMatches.length;
   const liveRows = buildRows(stationMatches, view === "list" ? suggestions.places : []);
+  const searching = typed && text.trim() !== "";
   /**
-   * The rows as they were when a pointer press began, until it ends (METRO-124, METRO-163): places that arrive
+   * Everything the list and its status show, computed together from one state. While a pointer press is in
+   * progress the model of the moment the press began is kept whole (METRO-124, METRO-163): places that arrive
    * between the press and its release would grow the list and move the control under the pointer, so the release
-   * would land elsewhere. They appear when the press is over.
+   * would land elsewhere. Rows, "no match", the unavailable notice and the count are all from the same snapshot,
+   * so the status never says "no match" about results that are only held back; the newest state shows when the
+   * press ends.
    */
-  const [held, setHeld] = useState<readonly Row[] | null>(null);
-  const rows = held ?? liveRows;
-  const liveRowsRef = useRef(liveRows);
+  const live = {
+    rows: liveRows,
+    view,
+    noMatch: searching && liveRows.length === 0 && !suggestions.pending,
+    stationCount,
+    placeCount: liveRows.length - stationCount,
+  };
+  const [held, setHeld] = useState<typeof live | null>(null);
+  const shown = held ?? live;
+  const { rows } = shown;
+  const liveRef = useRef(live);
   useEffect(() => {
-    liveRowsRef.current = liveRows;
+    liveRef.current = live;
   });
   const expanded = open && rows.length > 0;
   const activeRow = !expanded
@@ -154,18 +167,17 @@ export function PlaceSearch({
       ? rows.find((row) => row.kind === "station")
       : rows.find((row) => row.key === activeKey);
   const activeId = activeRow === undefined ? undefined : optionId(activeRow);
-  const searching = typed && text.trim() !== "";
-  const noMatch = searching && rows.length === 0 && !suggestions.pending;
-  const noticeInList = expanded && view === "unavailable";
+  const { noMatch } = shown;
+  const noticeInList = expanded && shown.view === "unavailable";
   // A failed request with no station to list: the list stays closed, so the notice shows under the field instead.
-  const noticeUnder = view === "unavailable" && rows.length === 0;
+  const noticeUnder = shown.view === "unavailable" && rows.length === 0;
   const stationRows = rows.filter((row) => row.kind === "station");
   const placeRows = rows.filter((row) => row.kind === "place");
   const status = !searching
     ? ""
     : noMatch
       ? searchCopy.noMatch
-      : searchCopy.count(stationRows.length, placeRows.length);
+      : searchCopy.count(shown.stationCount, shown.placeCount);
 
   useEffect(() => {
     if (activeId !== undefined) revealOption(activeId);
@@ -198,29 +210,53 @@ export function PlaceSearch({
   const pressing = useRef(false);
   const closeAfterPress = useRef(false);
   useEffect(() => {
+    // Every way a press can end lets the list go: the release itself, a pointer that ended without a mouse
+    // release (a touch tap, a pen), a context menu that swallowed it, a cancelled press, a key, and the window
+    // losing focus or being hidden. Nothing else holds the list.
+    const unhold = (): void => {
+      pressing.current = false;
+      setHeld(null);
+    };
     const press = (): void => {
       pressing.current = true;
-      setHeld(liveRowsRef.current);
+      setHeld(liveRef.current);
     };
     const release = (event: Event): void => {
       // A modifier held during the press is not the end of it.
       if (event instanceof KeyboardEvent && MODIFIERS.has(event.key)) return;
-      pressing.current = false;
-      setHeld(null);
+      unhold();
       if (!closeAfterPress.current) return;
       closeAfterPress.current = false;
       setOpen(false);
       setActiveKey(null);
     };
+    // A pointer that ends is followed by its mouse release in the same task; waiting one task lets that release (and
+    // the click) land on the list as it was, and still ends a press that has none.
+    let ended: ReturnType<typeof setTimeout> | undefined;
+    const pointerUp = (event: Event): void => {
+      ended = setTimeout(() => release(event), 0);
+    };
+    const away = (): void => {
+      if (document.visibilityState === "hidden") unhold();
+    };
     document.addEventListener("pointerdown", press, true);
+    document.addEventListener("pointerup", pointerUp, true);
     document.addEventListener("mouseup", release, true);
     document.addEventListener("pointercancel", release, true);
+    document.addEventListener("contextmenu", release, true);
     document.addEventListener("keydown", release, true);
+    document.addEventListener("visibilitychange", away);
+    window.addEventListener("blur", unhold);
     return () => {
+      clearTimeout(ended);
       document.removeEventListener("pointerdown", press, true);
+      document.removeEventListener("pointerup", pointerUp, true);
       document.removeEventListener("mouseup", release, true);
       document.removeEventListener("pointercancel", release, true);
+      document.removeEventListener("contextmenu", release, true);
       document.removeEventListener("keydown", release, true);
+      document.removeEventListener("visibilitychange", away);
+      window.removeEventListener("blur", unhold);
     };
   }, []);
 
@@ -270,6 +306,9 @@ export function PlaceSearch({
 
   function onChange(event: ChangeEvent<HTMLInputElement>): void {
     const next = event.target.value;
+    // New text (typed, pasted, dictated, autofilled) ends any hold: the list must follow the text.
+    pressing.current = false;
+    setHeld(null);
     latest.current += 1;
     setText(next);
     setTyped(true);
