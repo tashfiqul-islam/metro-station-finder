@@ -31,6 +31,19 @@ function firstVersion(table: Record<string, unknown>, keys: readonly string[]): 
   return undefined;
 }
 
+/** The exact version a lock entry declares for one of its `dependencies` (`[id, registry, { dependencies }, hash]`). */
+function declaredDependency(
+  table: Record<string, unknown>,
+  key: string,
+  dependency: string,
+): string | undefined {
+  const entry = table[key];
+  const meta: unknown = Array.isArray(entry) ? entry[2] : undefined;
+  const dependencies = isRecord(meta) ? meta["dependencies"] : undefined;
+  const version = isRecord(dependencies) ? dependencies[dependency] : undefined;
+  return typeof version === "string" ? version : undefined;
+}
+
 /** The `vitest` peer range in the plugin's `bun.lock` entry (`[id, registry, { peerDependencies }, integrity]`). */
 function pluginVitestPeer(table: Record<string, unknown>): string | undefined {
   const entry = table[PLUGIN];
@@ -118,6 +131,22 @@ export function checkVitestSync(input: VitestSyncInput): string[] {
     problems.push(
       `plugin wrangler ${pluginWrangler} and repository wrangler ${rootWrangler} must share major.minor`,
     );
+
+  // The versions the lock entries themselves declare must be the versions the fallback resolved. This is what
+  // keeps the check meaningful when Bun lists no nested copy: the plugin pins its wrangler, and its miniflare and
+  // that wrangler pin their workerd, so a root entry that drifted from those pins is caught here.
+  const miniflareKey =
+    lockVersion(table, `${PLUGIN}/miniflare`) === undefined ? "miniflare" : `${PLUGIN}/miniflare`;
+  const wranglerKey = pluginWranglerNested ? `${PLUGIN}/wrangler` : "wrangler";
+  for (const [owner, dependency, resolved] of [
+    [PLUGIN, "wrangler", pluginWrangler],
+    [miniflareKey, "workerd", fromMiniflare],
+    [wranglerKey, "workerd", fromWrangler],
+  ] as const) {
+    const wanted = declaredDependency(table, owner, dependency);
+    if (wanted !== undefined && resolved !== undefined && wanted !== resolved)
+      problems.push(`${owner} declares ${dependency} ${wanted} but bun.lock resolves ${resolved}`);
+  }
 
   const vitestGroup = groupMembers(input.renovate, "vitest");
   for (const name of ["vitest", "@vitest/**"])

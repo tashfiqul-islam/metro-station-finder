@@ -61,14 +61,37 @@ test("METRO-77 the repository's Vitest, coverage, plugin, miniflare and workerd 
   expect(checkVitestSync(await realInput())).toEqual([]);
 });
 
-test("METRO-77 control: the real lock gives the plugin its own miniflare and the repository's wrangler and workerd", async () => {
-  const table = packages(await realInput());
-  // Plugin 1.8 pins the repository's wrangler, so Bun lists no copy of it (nor of workerd) under the plugin:
-  // the rule is then that the plugin's miniflare and wrangler reach the same root workerd (METRO-164).
+test("METRO-77 control: the real lock has the plugin's miniflare, a workerd and the lock entries declare versions to check", async () => {
+  const input = await realInput();
+  const table = packages(input);
+  // Layout independent (METRO-164): whether Bun nests a copy under the plugin or shares the root one, the plugin's
+  // miniflare entry and a root workerd exist, and the plugin entry declares the wrangler the gate compares.
   expect(Object.hasOwn(table, "@cloudflare/vitest-plugin/miniflare")).toBe(true);
-  expect(Object.hasOwn(table, "@cloudflare/vitest-plugin/wrangler")).toBe(false);
-  expect(Object.hasOwn(table, "@cloudflare/vitest-plugin/miniflare/workerd")).toBe(false);
   expect(Object.hasOwn(table, "workerd")).toBe(true);
+  const plugin = table["@cloudflare/vitest-plugin"];
+  const meta: unknown = Array.isArray(plugin) ? plugin[2] : undefined;
+  const dependencies = isRecord(meta) ? meta["dependencies"] : undefined;
+  expect(isRecord(dependencies) ? dependencies["wrangler"] : undefined).toBe(
+    lockedVersion(input, "wrangler"),
+  );
+});
+
+test("METRO-164 rejects a root workerd that drifted from the workerd the plugin's miniflare and wrangler declare", async () => {
+  const input = await realInput();
+  setLockVersion(input, "workerd", "1.20260101.0");
+  const message = checkVitestSync(input).join("\n");
+  expect(message).toContain("@cloudflare/vitest-plugin/miniflare declares workerd");
+  expect(message).toContain("wrangler declares workerd");
+  expect(message).toContain("but bun.lock resolves 1.20260101.0");
+});
+
+test("METRO-164 rejects a root wrangler that drifted from the wrangler the plugin pins", async () => {
+  const input = await realInput();
+  const pinned = lockedVersion(input, "wrangler");
+  setLockVersion(input, "wrangler", "4.170.0");
+  expect(checkVitestSync(input)).toContain(
+    `@cloudflare/vitest-plugin declares wrangler ${pinned} but bun.lock resolves 4.170.0`,
+  );
 });
 
 test("METRO-164 the nested layout is held to the same rule and passes when its workerd versions agree", async () => {
