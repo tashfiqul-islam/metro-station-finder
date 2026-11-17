@@ -184,7 +184,7 @@ test("METRO-79 every web test file imports its API from vitest, never bun:test o
   for (const name of names) {
     const source = await readFile(join(dir, name), "utf8");
     expect(source, name).toMatch(/from "vitest"/u);
-    expect(source, name).not.toMatch(/bun:test|jest\./u);
+    expect(source, name).not.toMatch(/bun:test|\bjest\./u);
   }
 });
 
