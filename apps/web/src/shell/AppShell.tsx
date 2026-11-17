@@ -15,6 +15,7 @@ import {
   smallerSnap,
 } from "./sheet";
 import type { Snap } from "./sheet";
+import { ToastLive, ToastProvider, ToastRegion } from "./toast";
 
 interface Sheet {
   readonly snap: Snap;
@@ -46,14 +47,12 @@ interface AppShellProps {
   readonly nav?: ReactNode;
   /** Map region slot. */
   readonly map?: ReactNode;
-  /** Toast region content. The region is always present so a polite announcement can reach it. */
-  readonly toasts?: ReactNode;
   readonly initialSnap?: Snap;
 }
 
 /**
  * The layout shell (METRO-105, ADR-0021): header, optional section nav, one `main` panel that is a bottom sheet
- * below 768 px and a sidebar above, a map slot and a toast region. DOM order is header, nav, main, then the map slot and the toast region,
+ * below 768 px and a sidebar above, a map slot and a toast region (METRO-158: one toast at a time, `useToast()`). DOM order is header, nav, main, then the map slot and the toast region,
  * which is also the focus order. It holds mechanism only; screens and their copy belong to the slices.
  */
 export function AppShell({
@@ -63,7 +62,6 @@ export function AppShell({
   actions,
   nav,
   map,
-  toasts,
   initialSnap = "half",
 }: AppShellProps): ReactElement {
   const [snap, setSnap] = useState<Snap>(initialSnap);
@@ -82,50 +80,53 @@ export function AppShell({
 
   return (
     <SheetContext value={sheet}>
-      <div className={nav === undefined ? "app app--plain" : "app"} data-snap={snap} ref={app}>
-        <header className="app-header">
-          {brand ?? <Brand />}
-          <span className="app-header__spacer" />
-          {actions}
-          <ThemeToggle />
-        </header>
-        {nav}
-        <main
-          className={nav === undefined ? "panel panel--plain" : "panel"}
-          id="panel"
-          ref={panel}
-          {...(label === undefined ? {} : { "aria-label": label })}
-        >
-          <PanelHandle
-            snap={snap}
-            setSnap={setSnap}
-            app={app}
-            panel={panel}
-            hasNav={nav !== undefined}
-          />
-          {/* Slice-agnostic rule: keyboard focus entering the content of a peeking sheet opens it to half, so a
+      <ToastProvider>
+        <div className={nav === undefined ? "app app--plain" : "app"} data-snap={snap} ref={app}>
+          <header className="app-header">
+            {brand ?? <Brand />}
+            <span className="app-header__spacer" />
+            {actions}
+            <ThemeToggle />
+          </header>
+          {nav}
+          <main
+            className={nav === undefined ? "panel panel--plain" : "panel"}
+            id="panel"
+            ref={panel}
+            {...(label === undefined ? {} : { "aria-label": label })}
+          >
+            <PanelHandle
+              snap={snap}
+              setSnap={setSnap}
+              app={app}
+              panel={panel}
+              hasNav={nav !== undefined}
+            />
+            {/* Slice-agnostic rule: keyboard focus entering the content of a peeking sheet opens it to half, so a
               keyboard user never sits in a clipped control. Typing, a result, "show on map" and the like are
               slice rules (METRO-15) that call `useSheet().setSnap`. */}
-          <div
-            className="panel__scroll"
-            tabIndex={-1}
-            onFocus={() => {
-              if (snap === "peek") setSnap("half");
-            }}
-          >
-            <div className="panel__body">{children}</div>
-          </div>
-        </main>
-        {/* After the panel in the DOM, so the focus order is header, nav, panel, map (handoff). The painted
+            <div
+              className="panel__scroll"
+              tabIndex={-1}
+              onFocus={() => {
+                if (snap === "peek") setSnap("half");
+              }}
+            >
+              <div className="panel__body">{children}</div>
+            </div>
+          </main>
+          {/* After the panel in the DOM, so the focus order is header, nav, panel, map (handoff). The painted
             stack does not depend on DOM order: the map is z-map (0), the panel z-sheet or z-panel, the header
             z-header, so it stays behind them. */}
-        <div className="app__map">
-          {map === undefined ? null : <div className="app__map-frame">{map}</div>}
+          <div className="app__map">
+            {map === undefined ? null : <div className="app__map-frame">{map}</div>}
+          </div>
+          <section className="toast-region" aria-label={shellCopy.toastRegion}>
+            <ToastRegion />
+          </section>
+          <ToastLive />
         </div>
-        <section className="toast-region" aria-label={shellCopy.toastRegion}>
-          {toasts}
-        </section>
-      </div>
+      </ToastProvider>
     </SheetContext>
   );
 }

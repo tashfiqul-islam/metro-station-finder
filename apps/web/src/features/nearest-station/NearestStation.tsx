@@ -22,8 +22,10 @@ import { SearchingMark } from "./SearchingMark";
 
 import "../../styles/components/typography.css";
 import "../../styles/components/button.css";
+import "../../styles/components/button-rest.css";
 import "../../styles/components/notice.css";
 import "../../styles/components/empty.css";
+import "../../styles/components/empty-rest.css";
 import "../../styles/components/status.css";
 import "../../styles/components/locate.css";
 import "./nearest-station.css";

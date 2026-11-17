@@ -1,7 +1,5 @@
 /* toast.css: Toast. Colours only via var(--…). Breakpoint 768px. */
 
-@import "../tokens-parts.css";
-
 .toast-region {
   position: absolute;
   z-index: var(--z-toast);
