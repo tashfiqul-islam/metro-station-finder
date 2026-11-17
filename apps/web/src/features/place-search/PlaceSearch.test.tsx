@@ -1328,3 +1328,40 @@ test("METRO-124 one finger's cancelled pointer does not end the hold while anoth
   fireEvent.pointerCancel(document.body, { pointerId: 0 });
   expect(names()).toHaveLength(4);
 });
+
+test("METRO-124 one finger lifting with its mouse release while another is down does not start the fallback", async () => {
+  await pressWithPlacesWaiting();
+  fireEvent.pointerDown(document.body, { pointerId: 2 });
+  fireEvent.pointerUp(document.body, { pointerId: 0 });
+  fireEvent.mouseUp(document.body);
+  await pause(TOUCH_FALLBACK_MS);
+  expect(names()).toHaveLength(2);
+  // The second finger lifts: its release ends the hold.
+  mouseRelease(document.body, 2);
+  expect(names()).toHaveLength(4);
+});
+
+test("METRO-124 a control that stops the click is released by the fallback, not the click", async () => {
+  await pressWithPlacesWaiting();
+  const stopper = document.createElement("button");
+  stopper.addEventListener("click", (event) => event.stopPropagation());
+  document.body.append(stopper);
+  fireEvent.pointerUp(stopper);
+  fireEvent.mouseUp(stopper);
+  fireEvent.click(stopper);
+  await pause(TOUCH_FALLBACK_MS - 1);
+  expect(names()).toHaveLength(2);
+  await pause(1);
+  expect(names()).toHaveLength(4);
+  stopper.remove();
+});
+
+test("METRO-124 a click with no pointer down (Space or Enter on a control) changes nothing and starts no timer", async () => {
+  setup();
+  await typeAndWait("mirp");
+  const before = vi.getTimerCount();
+  const rows = names();
+  fireEvent.click(document.body);
+  expect(vi.getTimerCount()).toBe(before);
+  expect(names()).toEqual(rows);
+});

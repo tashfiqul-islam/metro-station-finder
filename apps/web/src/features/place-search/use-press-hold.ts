@@ -50,8 +50,11 @@ export interface PressHold<T> {
  * events at all (touch, pen) after `TOUCH_FALLBACK_MS`; a cancelled pointer; and, whatever else is going on, at once
  * on a context menu, a key that is not a modifier, the window losing focus, the page being hidden and `release()`,
  * and after `HOLD_MAX_MS` as an absolute bound. Every end forgets all pointers, so one whose up and cancel never came
- * cannot hold the list past the click, the fallback or the cap. Only the first pointer down takes the snapshot; a second finger never
- * retakes it, and one finger lifting while another is down does not end the hold. Every end runs the deferred close.
+ * cannot hold the list past the click, the fallback or the cap. Only the first pointer down takes the snapshot; a
+ * second finger never retakes it, and one finger lifting (with its mouse release) while another is down does not end
+ * the hold. Every end runs the deferred close. A press that lasts longer than `HOLD_MAX_MS` is released at the cap by
+ * design (the tradeoff for never freezing the list), and a control whose click handler stops propagation is released
+ * by the fallback instead of the click.
  */
 export function usePressHold<T>(live: T, onClose: () => void): PressHold<T> {
   const [held, setHeld] = useState<T | null>(null);
@@ -93,16 +96,18 @@ export function usePressHold<T>(live: T, onClose: () => void): PressHold<T> {
       cap.current = setTimeout(finish, HOLD_MAX_MS);
       setHeld(liveRef.current);
     };
+    /** The fallback runs only when no pointer is down: another finger still pressing keeps the hold. */
+    const armWhenIdle = (): void => {
+      if (pointers.current.size === 0) armFallback();
+    };
     const up = (event: PointerEvent): void => {
       pointers.current.delete(event.pointerId);
-      if (pointers.current.size === 0) armFallback();
+      armWhenIdle();
     };
     const cancel = (event: PointerEvent): void => {
       pointers.current.delete(event.pointerId);
       if (pointers.current.size === 0) finish();
     };
-    const mouseUp = armFallback;
-
     const key = (event: KeyboardEvent): void => {
       if (!MODIFIERS.has(event.key)) finish();
     };
@@ -112,7 +117,7 @@ export function usePressHold<T>(live: T, onClose: () => void): PressHold<T> {
     document.addEventListener("pointerdown", down, true);
     document.addEventListener("pointerup", up, true);
     document.addEventListener("pointercancel", cancel, true);
-    document.addEventListener("mouseup", mouseUp, true);
+    document.addEventListener("mouseup", armWhenIdle, true);
     document.addEventListener("click", finish);
     document.addEventListener("contextmenu", finish, true);
     document.addEventListener("keydown", key, true);
@@ -124,7 +129,7 @@ export function usePressHold<T>(live: T, onClose: () => void): PressHold<T> {
       document.removeEventListener("pointerdown", down, true);
       document.removeEventListener("pointerup", up, true);
       document.removeEventListener("pointercancel", cancel, true);
-      document.removeEventListener("mouseup", mouseUp, true);
+      document.removeEventListener("mouseup", armWhenIdle, true);
       document.removeEventListener("click", finish);
       document.removeEventListener("contextmenu", finish, true);
       document.removeEventListener("keydown", key, true);
