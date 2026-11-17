@@ -4,7 +4,7 @@ Status: the script and manifest are Repo-verified; the live settings are the own
 
 ## What is checked
 
-`scripts/github-settings.ts` compares the live repository settings with the manifest `EXPECTED_SETTINGS` in the same file. It makes seven read-only `gh api <path>` GET calls (no `-X`, no `--method`, no fields) and prints one line per item: `PASS`, `FAIL` or `INFO`. Any `FAIL` exits non-zero.
+`scripts/release/github-settings.ts` compares the live repository settings with the manifest `EXPECTED_SETTINGS` in the same file. It makes seven read-only `gh api <path>` GET calls (no `-X`, no `--method`, no fields) and prints one line per item: `PASS`, `FAIL` or `INFO`. Any `FAIL` exits non-zero.
 
 | Item                            | Endpoint                                                        | Expected                                                                     |
 | ------------------------------- | --------------------------------------------------------------- | ---------------------------------------------------------------------------- |

@@ -17,7 +17,7 @@ Read when: adding or reading logs, traces or request signals, changing Workers L
 
 ## Enforced by
 
-- `scripts/observability-config.test.ts`: parses `wrangler.jsonc` and fails if either environment's whole `observability` object differs from the one above. Change the config and this list together in a reviewed change.
+- `scripts/policy/observability-config.test.ts`: parses `wrangler.jsonc` and fails if either environment's whole `observability` object differs from the one above. Change the config and this list together in a reviewed change.
 - `apps/api/src/observability.test.ts`: fails if a log line gains a field outside the allow-list or a request id is not echoed or replaced as above.
 
 ## Read more

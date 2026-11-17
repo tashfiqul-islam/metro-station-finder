@@ -7,7 +7,7 @@
     "skipLibCheck": true
   },
   "include": [
-    "./*.ts",
+    "./*/*.ts",
     "../apps/web/vite.config.ts",
     "../vitest.config.ts",
     "../apps/api/vitest.config.ts",
@@ -15,11 +15,11 @@
     "../.dependency-cruiser.mts"
   ],
   "exclude": [
-    "./*.test.ts",
-    "./configuration.ts",
-    "./hooks-status.ts",
-    "./mise-lock.ts",
-    "./tools.ts",
-    "./vitest-sync.ts"
+    "./*/*.test.ts",
+    "./gates/configuration.ts",
+    "./gates/hooks-status.ts",
+    "./gates/mise-lock.ts",
+    "./gates/tools.ts",
+    "./gates/vitest-sync.ts"
   ]
 }

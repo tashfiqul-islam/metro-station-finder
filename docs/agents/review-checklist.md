@@ -20,8 +20,8 @@ Read when: reviewing a committed diff as the independent reviewer, or disposing 
 
 ## Enforced by
 
-- `scripts/reviewer-record.ts`: fails a PR without a linked, head-bound `Reviewer` record. Fix the body, not the check.
-- `scripts/independent-review.test.ts`: fails if the reviewer definition gains write tools or loses its link to this file.
+- `scripts/ci/reviewer-record.ts`: fails a PR without a linked, head-bound `Reviewer` record. Fix the body, not the check.
+- `scripts/ci/independent-review.test.ts`: fails if the reviewer definition gains write tools or loses its link to this file.
 
 ## Read more
 

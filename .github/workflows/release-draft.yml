@@ -56,7 +56,7 @@ jobs:
           install_args: node
           cache: false # this job holds the release credential; never restore a cache into it
       - name: Create the draft GitHub release
-        run: node scripts/release-draft.ts
+        run: node scripts/release/release-draft.ts
         env:
           RELEASE_TAG: ${{ inputs.tag }}
           RELEASE_TARGET: ${{ inputs.target }}

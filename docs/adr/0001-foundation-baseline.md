@@ -14,7 +14,7 @@ The independent Metro rebuild started with a scaffold whose decisions were recor
 2. **TypeScript 7 compiler with a TypeScript 6 API seam.** `tsc` is TypeScript 7. `@typescript/typescript6` supplies only the JavaScript compiler API used by the core import guard and dependency-cruiser. See [METRO-16 evidence](../evidence/metro-16.md).
 3. **Hono on a Cloudflare Worker.** `apps/api` is a Hono application with a Worker default export, run locally in workerd. See [workspace boundaries](../development.md#boundaries-and-choices).
 4. **React and Vite.** `apps/web` is a React DOM application built with Vite. Frontend stack choices beyond this (router, styling, data fetching, internationalisation) are not decided here.
-5. **Core purity.** `packages/core` is dependency-free and uses ES types only; `scripts/boundaries.ts` enforces it. See [architecture](../agents/architecture.md).
+5. **Core purity.** `packages/core` is dependency-free and uses ES types only; `scripts/gates/boundaries.ts` enforces it. See [architecture](../agents/architecture.md).
 6. **Plane as issue tracker.** Tickets, specifications and readiness live in Plane; GitHub is the code host only. See the [Plane adapter](../agents/plane.md).
 
 > Superseded 2026-11-15 by [ADR-0026](0026-github-tracker.md) (planning#152): tracking moved to GitHub issues in metro-station-finder/planning. The text above is left as written.
@@ -31,5 +31,5 @@ Alternatives were not recorded when these decisions were made; they are not reco
 
 ## Confirmation
 
-- `scripts/configuration.ts` (pins, cooldown, trusted dependencies), `scripts/tools.ts` and `scripts/boundaries.ts` (core purity), all run by `bun run check`.
+- `scripts/gates/configuration.ts` (pins, cooldown, trusted dependencies), `scripts/gates/tools.ts` and `scripts/gates/boundaries.ts` (core purity), all run by `bun run check`.
 - Decisions 3 to 6 (Hono Worker, React and Vite, Plane) have no dedicated test beyond the build, smoke and the documents they link: `None (policy)` for those.

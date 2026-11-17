@@ -13,9 +13,9 @@ Read when: you need the rebuild, cutover or legacy-baseline facts that hold only
 
 ## Enforced by
 
-- `scripts/base-branch.ts` (`branches:check`): fails when the base-branch documents disagree.
-- `scripts/docs-drift.test.ts`: fails a document that presents the legacy baseline as current without its banner. Add the banner; do not edit the check.
-- `scripts/cutover-preflight.ts` (`bun run cutover:preflight`): read-only report of the switch preconditions.
+- `scripts/gates/base-branch.ts` (`branches:check`): fails when the base-branch documents disagree.
+- `scripts/gates/docs-drift.test.ts`: fails a document that presents the legacy baseline as current without its banner. Add the banner; do not edit the check.
+- `scripts/release/cutover-preflight.ts` (`bun run cutover:preflight`): read-only report of the switch preconditions.
 
 ## Read more
 

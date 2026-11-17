@@ -23,12 +23,12 @@ Read when: choosing a process skill, preparing a specification or tickets, or ch
 
 - Domain docs are single-context: skills read the glossary, parity doc and the ADRs that touch the area. A missing optional file is not reported. Use glossary terms in names, titles and tests. If a needed term is missing, report the gap rather than coining one. If output contradicts an ADR, say so explicitly.
 - `docs/agents/skills.lock.json` pins 35 reviewed files by SHA256 for `claude-code`. Installing or updating skills is a separate authorized environment change; never overwrite shared skills to pass the lock. Read changed instructions and supporting files, compare process ownership, tracker publication rules and vocabulary, update the lock only after review (uppercase SHA256 from `Get-FileHash -Algorithm SHA256`), review the lock diff with the behavior change, and never auto-regenerate pins to silence drift. A newly required supporting file is read, reviewed and pinned first. Before any install or update, inventory existing locations and metadata and save the reviewed files and metadata outside the product tree for rollback. Record commands and results; restore the saved content if adoption fails and rerun the hashes. Do not claim a rollback was tested unless it was.
-- Verify with `scripts/verify-metro-preparation.ps1 -SkillRoots $roots` and `scripts/test-metro-preparation.ps1 -SkillRoots $roots` (PowerShell 7; supply the real installation roots for `superpowers`, `pocock` and `tooling`). A missing root or file, path escape or changed byte stops validation.
+- Verify with `scripts/windows/verify-metro-preparation.ps1 -SkillRoots $roots` and `scripts/windows/test-metro-preparation.ps1 -SkillRoots $roots` (PowerShell 7; supply the real installation roots for `superpowers`, `pocock` and `tooling`). A missing root or file, path escape or changed byte stops validation.
 
 ## Enforced by
 
-- `scripts/docs-drift.test.ts`: fails if the lock loses `agent: claude-code`, names a Codex path or a user home path.
-- `scripts/verify-metro-preparation.ps1`: fails on missing, escaped or changed files. Fix the install or review and re-pin; do not edit the check.
+- `scripts/gates/docs-drift.test.ts`: fails if the lock loses `agent: claude-code`, names a Codex path or a user home path.
+- `scripts/windows/verify-metro-preparation.ps1`: fails on missing, escaped or changed files. Fix the install or review and re-pin; do not edit the check.
 
 ## Read more
 

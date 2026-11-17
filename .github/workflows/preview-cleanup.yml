@@ -51,13 +51,13 @@ jobs:
       - name: Install dependencies
         run: bun run bootstrap
       - name: Require the Cloudflare secrets
-        run: node scripts/preview.ts secrets
+        run: node scripts/release/preview.ts secrets
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
       - name: Name the preview Worker
         id: name
-        run: node scripts/preview.ts name
+        run: node scripts/release/preview.ts name
       - name: Delete the preview Worker
         env:
           WORKER: ${{ steps.name.outputs.name }}

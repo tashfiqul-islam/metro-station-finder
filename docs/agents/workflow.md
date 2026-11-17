@@ -39,10 +39,10 @@ Read when: preparing or implementing a ticket, opening or reviewing a PR, commit
 
 ## Enforced by
 
-- `scripts/reviewer-record.ts` (`Reviewer record` workflow): fails a PR without that record.
-- `scripts/commit-message.ts`: rejects non-Conventional subjects and a `Signed-off-by` with an AI-agent address; names are not matched, no trailer is required. Extend its identity list only with a test.
-- `scripts/base-branch.ts` (`branches:check`): fails when CONTRIBUTING.md, this file and tracker.md name different bases.
-- `validateTag` (`scripts/release-sync.ts`): fails a tag that breaks the grammar.
+- `scripts/ci/reviewer-record.ts` (`Reviewer record` workflow): fails a PR without that record.
+- `scripts/ci/commit-message.ts`: rejects non-Conventional subjects and an AI-agent `Signed-off-by`; names are not matched, no trailer is required. Extend its identity list only with a test.
+- `scripts/gates/base-branch.ts` (`branches:check`): fails when CONTRIBUTING.md, this file and tracker.md name different bases.
+- `validateTag` (`scripts/release/release-sync.ts`): fails a tag that breaks the grammar.
 
 ## Read more
 

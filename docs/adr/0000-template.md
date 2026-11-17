@@ -4,7 +4,7 @@
 - Date: YYYY-MM-DD
 - Ticket and specification: METRO-NN, specification identity and revision
 
-The status vocabulary is MADR 4.0.0's (proposed, accepted, rejected, deprecated, superseded by ADR-NNNN). A short qualifier in parentheses may follow, for example `Accepted (plan only)`. `Superseded by ADR-NNNN` must name an ADR that exists. `scripts/adr.test.ts` checks the header, the status and the section list of every ADR. Delete this paragraph in a real ADR.
+The status vocabulary is MADR 4.0.0's (proposed, accepted, rejected, deprecated, superseded by ADR-NNNN). A short qualifier in parentheses may follow, for example `Accepted (plan only)`. `Superseded by ADR-NNNN` must name an ADR that exists. `scripts/policy/adr.test.ts` checks the header, the status and the section list of every ADR. Delete this paragraph in a real ADR.
 
 ## Context
 

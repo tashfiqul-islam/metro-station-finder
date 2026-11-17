@@ -4,7 +4,7 @@ Identity: release-sync. Immutable revision: 2026-11-04-r2 (r2 adds the Plane rel
 
 ## Behaviour
 
-The workflow `.github/workflows/release-sync.yml` runs on `release` (`published`, `edited`, `unpublished`, `deleted`) and on manual `workflow_dispatch(tag)`. It calls `scripts/release-sync.ts`, which reads **current** GitHub state for the tag (not the event payload), so replays and out-of-order events converge.
+The workflow `.github/workflows/release-sync.yml` runs on `release` (`published`, `edited`, `unpublished`, `deleted`) and on manual `workflow_dispatch(tag)`. It calls `scripts/release/release-sync.ts`, which reads **current** GitHub state for the tag (not the event payload), so replays and out-of-order events converge.
 
 | #   | Rule                                                                                                                                                                                                                                                                                                                                                                               |
 | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

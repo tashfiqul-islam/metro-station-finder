@@ -1,6 +1,6 @@
 import { attach, type WorkerConfig, type WorkerScope } from "./worker";
 
-/** Replaced at build time by `scripts/sw-plugin.ts` (version, precache list, kill flag). */
+/** Replaced at build time by `scripts/build/sw-plugin.ts` (version, precache list, kill flag). */
 declare const SW_CONFIG: WorkerConfig;
 
 const isScope = (value: unknown): value is WorkerScope =>

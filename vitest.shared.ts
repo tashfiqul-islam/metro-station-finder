@@ -1,4 +1,4 @@
-// Test options every Vitest config must spread (scripts/configuration.ts enforces it). A project does not
+// Test options every Vitest config must spread (scripts/gates/configuration.ts enforces it). A project does not
 // inherit the root `test` options, so ordering lives here: with `shuffle` only in the root config, tests
 // inside a project's files kept their source order (measured in workerd, METRO-77).
 //

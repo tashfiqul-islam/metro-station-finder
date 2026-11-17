@@ -83,4 +83,4 @@ Measured (owner's third live run, 2026-11-08 19:17, relayed in a comment on PR #
 
 For the next run, the three report lines above still print and read the same way (the exact line descriptions are in the steps above). See the [METRO-102 evidence](../evidence/metro-102.md) and the specification's METRO-102 subsection.
 
-The one script-to-app import (`smoke-live.ts` reads the hint from the feature's `copy.ts`, which has no imports) is pinned by `scripts/script-imports.test.ts`: any other script import under `apps/` fails it. It was chosen over a duplicated constant so the hint cannot drift.
+The one script-to-app import (`smoke-live.ts` reads the hint from the feature's `copy.ts`, which has no imports) is pinned by `scripts/policy/script-imports.test.ts`: any other script import under `apps/` fails it. It was chosen over a duplicated constant so the hint cannot drift.

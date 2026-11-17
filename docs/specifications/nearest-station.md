@@ -95,7 +95,7 @@ Owner-delegated decisions of 2026-11-05, based on [Dhaka MRT Line-6 research](..
 - A2: Given `baselineDataset`, then it has 16 stations with unique IDs, no label shared by two stations, a 16x16 symmetric fare table with a zero diagonal and 256 finite cells, legacy order, and every legacy label from both arrays (including the old spellings `Shahbagh` and `Bijoy Sharani`) resolves to the station at its position. The dataset equals the legacy names and coordinates except the three documented deviations (A2a), and its aliases are exactly the reviewed set (`stations/dataset.test.ts`).
 - A2a: Given the legacy snapshot embedded in `stations/dataset.test.ts`, then the only differences from `baselineDataset` are the name of `shahbagh`, the name of `bijoy-sharani` and the coordinate of `bijoy-sharani`; any other drift fails. All 256 fare cells are also compared with the legacy matrix embedded in the test (generated from `fareMatrix` in `af903d7:src/services/fareCalculation.ts`); no fare deviates.
 - A3: Tests cover tie order (forward, reversed and duplicate-coordinate), invalid coordinates (NaN, out of range, both axes), empty dataset, unknown station, same-station fare and an unknown fare never being zero, including a malformed matrix cell (`stations.test.ts`).
-- A4: Given a core domain file that imports core application or data code, then dependency-cruiser fails with `core-domain-imports-only-domain` (`scripts/layering.test.ts`); application and data importing the domain passes.
+- A4: Given a core domain file that imports core application or data code, then dependency-cruiser fails with `core-domain-imports-only-domain` (`scripts/policy/layering.test.ts`); application and data importing the domain passes.
 
 ### Hardening
 
@@ -110,7 +110,7 @@ Latitude exactly ±90 and longitude exactly ±180 are accepted; just beyond is r
 - S1: `packages/core/src/index.ts` public exports (`index.test.ts`).
 - S2: `findNearestStation`, `resolveStation`, `findFare` (`stations.test.ts`).
 - S3: `baselineDataset` fixture (`stations/dataset.test.ts`).
-- S4: dependency-cruiser layering (`scripts/layering.test.ts`).
+- S4: dependency-cruiser layering (`scripts/policy/layering.test.ts`).
 
 ### Check plan
 

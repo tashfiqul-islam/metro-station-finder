@@ -43,4 +43,4 @@ A spike ported three tests (ARIA snapshot, axe scan, header and CSP checks) to W
 
 ## Confirmation
 
-None (policy). Playwright stays enforced by `bun run smoke` and the `Build and smoke` CI job as in ADR-0005; no check forbids adding another browser tool. `scripts/adr.test.ts` validates this document's header and sections.
+None (policy). Playwright stays enforced by `bun run smoke` and the `Build and smoke` CI job as in ADR-0005; no check forbids adding another browser tool. `scripts/policy/adr.test.ts` validates this document's header and sections.

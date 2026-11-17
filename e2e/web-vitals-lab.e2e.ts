@@ -1,12 +1,12 @@
 import type { Page } from "@playwright/test";
 
-import { isRecord } from "../scripts/guards";
+import { isRecord } from "../scripts/lib/guards";
 import {
   describeVitals,
   evaluateVitals,
   type LayoutShift,
   type VitalsMeasurement,
-} from "../scripts/vitals-lab";
+} from "../scripts/smoke/vitals-lab";
 import { expect, test } from "./fixtures";
 import { installMapsStub, workerMayControl } from "./maps-stub";
 

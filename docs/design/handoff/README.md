@@ -4,7 +4,7 @@ DO NOT EDIT. This folder is a frozen snapshot of the owner's design handoff, a v
 
 This is not an agent guide, so the 6,144-byte guide cap does not apply. It is not a station data source: `packages/core/src/stations/dataset.ts` is unchanged, and the coordinates in `handoff.md` are public station or mock values.
 
-How the repository tools treat the folder (pinned by `scripts/design-handoff.test.ts`):
+How the repository tools treat the folder (pinned by `scripts/policy/design-handoff.test.ts`):
 
 - Configured ignore: the formatter (`.oxfmtrc.json` `ignorePatterns`). `.gitattributes` also marks the folder `-text` and the font files `binary`, so git never rewrites line endings.
 - Not scoped to docs, so they never read it: the linter, knip, dependency-cruiser, the css-rules guard and the bundle gate.

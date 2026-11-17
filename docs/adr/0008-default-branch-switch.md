@@ -96,4 +96,4 @@ What can be undone depends on the stage; the commands are in the [runbook](../ag
 
 ## Confirmation
 
-- `scripts/cutover-plan.test.ts` and `scripts/cutover-preflight.test.ts` (`bun run cutover:preflight`) check the plan and preconditions. The switch itself is an owner action: `None (policy)`.
+- `scripts/release/cutover-plan.test.ts` and `scripts/release/cutover-preflight.test.ts` (`bun run cutover:preflight`) check the plan and preconditions. The switch itself is an owner action: `None (policy)`.

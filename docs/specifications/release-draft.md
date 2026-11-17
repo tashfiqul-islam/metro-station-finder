@@ -13,7 +13,7 @@ Identity: release-draft. Immutable revision: 2026-11-04-r2 (r2 after independent
 
 ## Behaviour
 
-The workflow `.github/workflows/release-draft.yml` runs only on manual `workflow_dispatch`. It calls `scripts/release-draft.ts`.
+The workflow `.github/workflows/release-draft.yml` runs only on manual `workflow_dispatch`. It calls `scripts/release/release-draft.ts`.
 
 | #   | Rule                                                                                                                                                                                                                                                                                                                                                           |
 | --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

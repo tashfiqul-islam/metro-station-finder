@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 
-import { isRecord } from "../scripts/guards";
+import { isRecord } from "../scripts/lib/guards";
 import { GOOGLE_HOSTS, expect } from "./fixtures";
 
 /**

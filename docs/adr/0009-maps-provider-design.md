@@ -104,7 +104,7 @@ Default stays Google. We use an alternative (for example MapLibre with another p
 
 ## Confirmation
 
-- `scripts/maps-design.test.ts` checks this ADR. No map code exists yet; the first map slice must add its own checks.
+- `scripts/policy/maps-design.test.ts` checks this ADR. No map code exists yet; the first map slice must add its own checks.
 
 ## Amendment 2026-11-08 (METRO-100): quota caps as set
 
@@ -165,7 +165,7 @@ These six notes record amendments 1 to 6 of the redesign proposal ([metro-statio
 - New rule: no `mapId` and no `marker` library. The map is themed with styler arrays, which a `mapId` would disable. The line, stations, route, labels and the origin marker are our own SVG overlay positioned through an `OverlayView` projection. Keyboard and screen-reader access stay: station pins are focusable overlay groups with accessible names, and the visible station list stays the primary reading path.
 - Reason: Advanced Markers require a map ID (Context7-verified 2026-11-05, Context above), and a map ID disables styler-array theming (Web-verified 2026-11-17, per the proposal). The schematic map already draws the line, pins and labels as SVG, which the overlay can reuse (Inferred).
 - Cost: none added; one library fewer to load. The map-ID creation task under METRO-57 is withdrawn, and "Owner work: ... map ID ..." in Consequences no longer includes it.
-- Code and tests: the map and overlay code stays inside `apps/web/src/adapters/maps/`, so `scripts/google-containment.test.ts` needs no change (Repo-verified, the test exists and checks that `google.maps` is used only in the adapter). The styler-array module does not exist yet (Repo-verified: nothing named `map-style` under `apps/web/src/adapters/maps/`); the base-map ticket adds it. `scripts/maps-design.test.ts` still finds `DEMO_MAP_ID` in the accepted text above, which is why that text stays.
+- Code and tests: the map and overlay code stays inside `apps/web/src/adapters/maps/`, so `scripts/gates/google-containment.test.ts` needs no change (Repo-verified, the test exists and checks that `google.maps` is used only in the adapter). The styler-array module does not exist yet (Repo-verified: nothing named `map-style` under `apps/web/src/adapters/maps/`); the base-map ticket adds it. `scripts/policy/maps-design.test.ts` still finds `DEMO_MAP_ID` in the accepted text above, which is why that text stays.
 
 ### Amendment 5: sessions, `AutocompleteSuggestion` with our own token
 

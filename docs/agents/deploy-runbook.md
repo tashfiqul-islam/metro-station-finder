@@ -1,6 +1,6 @@
 # Production deploy runbook
 
-Status: plan. Nothing here has been run. Decisions and sources are in [ADR-0012](../adr/0012-production-deploy.md); the workflow is `.github/workflows/production-deploy.yml`, its logic `scripts/production.ts`. Every write below is an owner action; an agent runs only the read-only checks in steps 5 (settings check) and 6. Commands are PowerShell or Git Bash.
+Status: plan. Nothing here has been run. Decisions and sources are in [ADR-0012](../adr/0012-production-deploy.md); the workflow is `.github/workflows/production-deploy.yml`, its logic `scripts/release/production.ts`. Every write below is an owner action; an agent runs only the read-only checks in steps 5 (settings check) and 6. Commands are PowerShell or Git Bash.
 
 ```powershell
 $R = "tashfiqul-islam/metro-station-finder"
@@ -48,7 +48,7 @@ The config sets top-level `workers_dev: false` and leaves `preview_urls` unset (
 
 The domain cutover is its own owner-authorized step ([cutover runbook](cutover-runbook.md) step 4). Connect it to the Worker `metro-scaffold`, then confirm `https://<domain>/` serves the app and an unknown `/api/x` answers the 404 envelope.
 
-Redirect www to the apex (METRO-127, live; created through the Cloudflare API on the owner's request and verified with curl). Zone `metro-station-finder.com`, Redirect Rules ruleset `ab1a6ccc5ea3440fb18d9e42216de457` (phase `http_request_dynamic_redirect`), rule `0d1a854ae4084756b2fc142c2ca26e1f`: requests whose host is `www.metro-station-finder.com` get a 301 to `https://metro-station-finder.com` with the path and query preserved. The apex is canonical (`scripts/site-origin.ts`).
+Redirect www to the apex (METRO-127, live; created through the Cloudflare API on the owner's request and verified with curl). Zone `metro-station-finder.com`, Redirect Rules ruleset `ab1a6ccc5ea3440fb18d9e42216de457` (phase `http_request_dynamic_redirect`), rule `0d1a854ae4084756b2fc142c2ca26e1f`: requests whose host is `www.metro-station-finder.com` get a 301 to `https://metro-station-finder.com` with the path and query preserved. The apex is canonical (`scripts/build/site-origin.ts`).
 
 - Keep `www.metro-station-finder.com` attached to the Worker `metro-scaffold` as well as the apex. Both names are attached today; do not detach www when changing domains, and re-run the check after any domain change.
 - Check (read-only): `curl.exe -sI https://www.metro-station-finder.com/` shows `301` and `location: https://metro-station-finder.com/`.
@@ -59,7 +59,7 @@ Redirect www to the apex (METRO-127, live; created through the Cloudflare API on
 First run the read-only settings check. It makes nine `gh api` GET calls and changes nothing; it must print only `PASS` lines and exit 0 before you set the variable. A repository-level Cloudflare secret or variable would let a run in an unprotected, auto-created `production` environment proceed, which is why the check fails on one.
 
 ```powershell
-mise exec -- node scripts/production.ts check-settings $R
+mise exec -- node scripts/release/production.ts check-settings $R
 ```
 
 Expected output:
@@ -129,11 +129,11 @@ mise exec -- bunx wrangler rollback <version-id> --name metro-scaffold --message
 
 A rollback does not change bindings or stored data ([Cloudflare](https://developers.cloudflare.com/workers/versions-and-deployments/rollbacks/), Web-verified 2026-11-05). It does not undo the GitHub deployment record; if the release must be retracted, follow the rollback section of the [cutover runbook](cutover-runbook.md).
 
-The first real run proves these Unverified points; if a step fails the job stops or rolls back, and the fix is a reviewed change to the workflow or `scripts/production.ts`: the live JSON of `wrangler deployments status --json` (the parser `currentVersionId` follows the installed Wrangler source and fails closed on anything else), that `versions deploy` accepts `@0%`, that the version override also selects the static asset set for `/`, and that the token has every permission it needs. Live verification with a throwaway tag is not part of METRO-57.
+The first real run proves these Unverified points; if a step fails the job stops or rolls back, and the fix is a reviewed change to the workflow or `scripts/release/production.ts`: the live JSON of `wrangler deployments status --json` (the parser `currentVersionId` follows the installed Wrangler source and fails closed on anything else), that `versions deploy` accepts `@0%`, that the version override also selects the static asset set for `/`, and that the token has every permission it needs. Live verification with a throwaway tag is not part of METRO-57.
 
 ## 8. Share image check (METRO-122, after the first deploy and after any change to `apps/web/brand/og-default.svg`)
 
-The share image is served at `https://metro-station-finder.com/og/og-default.png` (apex, canonical; the origin is one constant in `scripts/site-origin.ts`). Until the first production deploy that URL answers with the old scaffold or a 404. After a deploy:
+The share image is served at `https://metro-station-finder.com/og/og-default.png` (apex, canonical; the origin is one constant in `scripts/build/site-origin.ts`). Until the first production deploy that URL answers with the old scaffold or a 404. After a deploy:
 
 ```powershell
 curl.exe -sI https://metro-station-finder.com/og/og-default.png            # expect 200 and content-type: image/png

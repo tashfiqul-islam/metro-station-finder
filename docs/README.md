@@ -1,6 +1,6 @@
 # Documentation map
 
-Every file under `docs/` has exactly one kind. The Kinds table defines the kinds and the Map table assigns files to them. Machine-checked by `scripts/docs-structure.test.ts`: a docs file with no map row, a map row that matches no file, a map row whose kind is not in the Kinds table, a kind in the Kinds table that no row uses, and task-list items (`- [ ]`) in `docs/specifications/`. Every other "must never contain" entry and every naming rule is advisory and enforced only by review. Method and the full file list: [inventory](evidence/docs-inventory-2026-11.md). Agents start from the root `CLAUDE.md`, which routes to the guides.
+Every file under `docs/` has exactly one kind. The Kinds table defines the kinds and the Map table assigns files to them. Machine-checked by `scripts/gates/docs-structure.test.ts`: a docs file with no map row, a map row that matches no file, a map row whose kind is not in the Kinds table, a kind in the Kinds table that no row uses, and task-list items (`- [ ]`) in `docs/specifications/`. Every other "must never contain" entry and every naming rule is advisory and enforced only by review. Method and the full file list: [inventory](evidence/docs-inventory-2026-11.md). Agents start from the root `CLAUDE.md`, which routes to the guides.
 
 ## Kinds
 
@@ -67,14 +67,14 @@ First cell is a path: a trailing `/` covers a directory, otherwise it is one fil
 
 ## Status vocabulary
 
-- ADR: `Proposed`, `Accepted`, `Rejected`, `Deprecated`, `Superseded by ADR-NNNN` (checked by `scripts/adr.test.ts`).
+- ADR: `Proposed`, `Accepted`, `Rejected`, `Deprecated`, `Superseded by ADR-NNNN` (checked by `scripts/policy/adr.test.ts`).
 - Runbooks may open with `Status: plan` until run. Evidence and plans carry a date instead of a status.
-- Content that describes only the legacy baseline carries the `Historical baseline` banner (checked by `scripts/docs-drift.test.ts`).
+- Content that describes only the legacy baseline carries the `Historical baseline` banner (checked by `scripts/gates/docs-drift.test.ts`).
 - No other status words are enforced; do not invent new ones without extending this section.
 
 ## Guide template and size caps
 
-Every guide under `docs/agents/` uses one shape: `# <Area>`, a `Read when:` line, then `## Rules` (one imperative rule per line, reason where not obvious), `## Enforced by` (script, what it fails on, fix the code not the check) and `## Read more` (ADR, evidence). History, measurements, rejected options and run IDs go to the ADR or evidence file they came from, with a link back. The root `AGENTS.md` is at most 8,192 bytes and each guide at most 6,144 bytes; runbooks (map kind `runbook`) are exempt. `scripts/agent-docs-size.test.ts` checks both caps.
+Every guide under `docs/agents/` uses one shape: `# <Area>`, a `Read when:` line, then `## Rules` (one imperative rule per line, reason where not obvious), `## Enforced by` (script, what it fails on, fix the code not the check) and `## Read more` (ADR, evidence). History, measurements, rejected options and run IDs go to the ADR or evidence file they came from, with a link back. The root `AGENTS.md` is at most 8,192 bytes and each guide at most 6,144 bytes; runbooks (map kind `runbook`) are exempt. `scripts/gates/agent-docs-size.test.ts` checks both caps.
 
 ## Adding a document
 

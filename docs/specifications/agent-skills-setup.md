@@ -32,7 +32,7 @@ No Plane state, label, module or workspace changes. No `CONTEXT.md` or ADR creat
 
 - SKL-S1: link and anchor resolution over AGENTS.md and docs/agents (SKL-1).
 - SKL-S2: text search for forbidden instructions and Status names against the project's Status options (SKL-2/3/4).
-- SKL-S3: `bun run check` and `scripts/verify-metro-preparation.ps1` (SKL-5).
+- SKL-S3: `bun run check` and `scripts/windows/verify-metro-preparation.ps1` (SKL-5).
 
 Documentation-only: checks fail on base because the section and documents do not exist.
 

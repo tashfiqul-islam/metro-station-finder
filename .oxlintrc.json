@@ -156,7 +156,7 @@
       // Vitest; apps/api and apps/web are never listed. An override replaces the rule config above for these
       // files, so the `bun:test` ban from the test override is repeated here and must stay in step with it; as a
       // result non-test files under these directories are barred from `bun:test` too, which is intentional and
-      // proven by a fixture in scripts/test-hygiene.test.ts.
+      // proven by a fixture in scripts/policy/test-hygiene.test.ts.
       "files": ["scripts/**", "packages/**"],
       "rules": {
         "eslint/no-restricted-imports": [
