@@ -1,10 +1,10 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { chromiumRasteriser } from "../scripts/brand-chromium";
-import { cliMain, manifestFiles } from "../scripts/build-brand-assets";
-import { firstVisitFiles, parseManifest } from "../scripts/bundle-budget";
-import { OG_IMAGE_PATH, SITE_ORIGIN } from "../scripts/site-origin";
+import { chromiumRasteriser } from "../scripts/build/brand-chromium";
+import { cliMain, manifestFiles } from "../scripts/build/build-brand-assets";
+import { OG_IMAGE_PATH, SITE_ORIGIN } from "../scripts/build/site-origin";
+import { firstVisitFiles, parseManifest } from "../scripts/gates/bundle-budget";
 import { expect, test } from "./fixtures";
 import { installMapsStub } from "./maps-stub";
 

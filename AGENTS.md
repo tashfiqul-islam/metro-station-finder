@@ -57,7 +57,7 @@ differ and cannot be linted, without copying root policy.
 | Google Maps, Places, Routes    | `apps/web/src/adapters/maps/`              |
 | Journey, keyboard, axe         | `e2e/`                                     |
 | Logo, icons, manifest          | `apps/web/brand/`, `docs/product/brand.md` |
-| Repository gate                | `scripts/<gate>.ts` with `<gate>.test.ts`  |
+| Repository gate                | `scripts/gates/<gate>.ts` + `.test.ts`     |
 
 Allowed imports (dependency-cruiser): web to core and contracts; api to core and contracts;
 contracts to core. Used today: web to core; api to contracts. web and api never import each other.

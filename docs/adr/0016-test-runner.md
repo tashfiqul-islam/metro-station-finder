@@ -67,7 +67,7 @@ Other costs:
 Must be revisited:
 
 - when the CI cost is first measured (first ticket's pull request; the 5 to 20 s estimate is Unverified);
-- when Bun ships branch coverage (the tripwire in `scripts/coverage.test.ts` fires; the case for Vitest then rests on workerd and isolation);
+- when Bun ships branch coverage (the tripwire in `scripts/policy/coverage.test.ts` fires; the case for Vitest then rests on workerd and isolation);
 - at each Vitest or plugin major.
 
 ## Alternatives considered
@@ -79,13 +79,13 @@ Must be revisited:
 
 ## Confirmation
 
-Today: `scripts/adr.test.ts` checks this ADR's shape. Nothing else enforces the decision until a ticket lands (None, policy). When stages land, the gates are:
+Today: `scripts/policy/adr.test.ts` checks this ADR's shape. Nothing else enforces the decision until a ticket lands (None, policy). When stages land, the gates are:
 
 - the `vitest.config.ts` thresholds (`perFile: true`, lines, functions, branches; 90 when written, 100 since METRO-126) fail that stage's `check`;
-- `scripts/configuration.ts` and `scripts/test-order.test.ts` fail when `sequence.shuffle` is off or a fixed `seed` is set in a Vitest config (added in ticket 1, so ordering is enforced from the first Vitest file);
-- `scripts/test-hygiene.test.ts` fixtures import `vitest` and prove each `jest/*` rule rejects a weak test;
+- `scripts/gates/configuration.ts` and `scripts/policy/test-order.test.ts` fail when `sequence.shuffle` is off or a fixed `seed` is set in a Vitest config (added in ticket 1, so ordering is enforced from the first Vitest file);
+- `scripts/policy/test-hygiene.test.ts` fixtures import `vitest` and prove each `jest/*` rule rejects a weak test;
 - `eslint/no-restricted-imports` keeps rejecting `bun:test`;
-- the tripwire in `scripts/coverage.test.ts` is removed only in the final stage, if there is one.
+- the tripwire in `scripts/policy/coverage.test.ts` is removed only in the final stage, if there is one.
 
 ## Follow-up ticket drafts (tickets 1 and 2 created in Plane; 3 and 4 are not)
 
@@ -100,15 +100,15 @@ Common acceptance for every ticket: per-file lines and functions gate kept (90 p
      - port the 5 `apps/api/src/*.test.ts` files and add one `exports.default.fetch` test;
      - run Vitest beside `bun test` in `check` and CI;
      - a version-sync check or a Renovate group that keeps `wrangler`, `vitest` and the plugin's `miniflare` and `workerd` together, because the spike resolved three wrangler, three miniflare and two workerd copies;
-     - ordering enforced from the first Vitest file: `scripts/configuration.ts` and `scripts/test-order.test.ts` re-pointed to fail when a Vitest config lacks `sequence.shuffle` or sets a fixed `seed`;
-     - lint: `scripts/test-hygiene.test.ts` fixtures importing `vitest` for each `jest/*` rule, so vitest-importing files are covered from day one while Bun files keep the existing fixtures.
+     - ordering enforced from the first Vitest file: `scripts/gates/configuration.ts` and `scripts/policy/test-order.test.ts` re-pointed to fail when a Vitest config lacks `sequence.shuffle` or sets a fixed `seed`;
+     - lint: `scripts/policy/test-hygiene.test.ts` fixtures importing `vitest` for each `jest/*` rule, so vitest-importing files are covered from day one while Bun files keep the existing fixtures.
    - Preconditions: run the three spike samples on ubuntu (the hosted runner image) and record the result, including whether the `workerd` postinstall must run there.
    - Acceptance:
      - the workerd proof test passes;
      - `app.ts` meets the per-file thresholds including branches;
      - for `index.ts`, either it appears in the coverage table and meets the thresholds, or the evidence explains why it does not and the gate is stated without it (in the spike it was absent from both tables, cause Unverified);
      - seed printed;
-     - `tsc -b` includes the new project and `scripts/tsc-build.test.ts` expectations are updated;
+     - `tsc -b` includes the new project and `scripts/policy/tsc-build.test.ts` expectations are updated;
      - lcov uploaded as a CI artifact;
      - the old API `bun test` files removed in the same pull request;
      - the CI `Checks` delta measured and recorded.
@@ -116,8 +116,8 @@ Common acceptance for every ticket: per-file lines and functions gate kept (90 p
    - Scope: `apps/web` project with `environment: "happy-dom"`; port the 7 `apps/web/src/*.test.*` files; delete `dom-test-env.ts` and `dom-test-env.test.ts`; update `tsconfig.dom-test.json` (Vitest and DOM types, no Bun types); keep `main.test.tsx` as the one entry-file exception.
    - Acceptance: no global swap anywhere; per-file thresholds including branches for every web source file; run on 12 seeds as before; the "Component test DOM" paragraph in [testing](../agents/testing.md) replaced.
 3. **Go or no-go on `scripts` and `packages`, then the scripts tests.** (Draft note added with METRO-82: re-measure the stage 3 go/no-go criteria against `bun test --parallel=4` on the hosted runner, which is what `check` runs now, not against serial Bun. The Bun baseline moved: locally on 20 cores serial Bun took 95.3 s and `--parallel=4` 37.4 s (about 2.5x), while on the hosted runner the change is small and within run-to-run noise (`bun test` rows 63.8, 98.6, 78.5 and 92.4 s parallel against 98.7 and 80.0 s serial), see [the METRO-82 evidence](../evidence/metro-82.md). The 1.25 times threshold and the 30 s CI growth limit are unchanged proposals for the owner to confirm.) First step is only measurement: run the `scripts` and `packages` tests under Vitest (try Node and `bun --bun` for the pool runtime), measure full-suite wall time and the files under the branch gate, and compare with the criterion in the Decision.
-   - If the criterion holds: port the 62 `scripts` tests (shared `spawnSync` helper in `scripts/test-support.ts`, `import.meta.dirname`, `vi` for `jest`, keep the `EBUSY` retry); define `coverage.include` and a reviewed `exclude` for the files no test loads (`bundle.ts`, `dependency-parser.ts`, `format.ts`, `secrets.ts`, `tools.ts`; `scaffold-status.ts` was in this list until METRO-93 deleted it); add tests for files under the branch gate or get a recorded owner re-baseline.
+   - If the criterion holds: port the 62 `scripts` tests (shared `spawnSync` helper in `scripts/lib/test-support.ts`, `import.meta.dirname`, `vi` for `jest`, keep the `EBUSY` retry); define `coverage.include` and a reviewed `exclude` for the files no test loads (`bundle.ts`, `dependency-parser.ts`, `format.ts`, `secrets.ts`, `tools.ts`; `scaffold-status.ts` was in this list until METRO-93 deleted it); add tests for files under the branch gate or get a recorded owner re-baseline.
    - If it fails: stop. Record a no-go in [testing](../agents/testing.md) with the measured numbers. Stopping after web is a valid end state.
 4. **Packages on Vitest and remove Bun test.** Only after a go in ticket 3.
-   - Scope: port `packages/core` and `packages/contracts` tests; delete `bun test` from `check`, the `[test]` coverage settings in `bunfig.toml` and `bun-types/test-globals` in `tsconfig.test.json`; remove the tripwire in `scripts/coverage.test.ts`; re-point `scripts/coverage-scope.ts` and docs ([testing](../agents/testing.md), [quality gates](../agents/quality-gates.md), [development](../development.md)).
-   - Acceptance: `bun run check` green with one runner; the `bun:test` ban and every `jest/*` rule still proven by `scripts/test-hygiene.test.ts`.
+   - Scope: port `packages/core` and `packages/contracts` tests; delete `bun test` from `check`, the `[test]` coverage settings in `bunfig.toml` and `bun-types/test-globals` in `tsconfig.test.json`; remove the tripwire in `scripts/policy/coverage.test.ts`; re-point `scripts/gates/coverage-scope.ts` and docs ([testing](../agents/testing.md), [quality gates](../agents/quality-gates.md), [development](../development.md)).
+   - Acceptance: `bun run check` green with one runner; the `bun:test` ban and every `jest/*` rule still proven by `scripts/policy/test-hygiene.test.ts`.

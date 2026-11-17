@@ -28,4 +28,4 @@ Not recorded when this ADR was written; not reconstructed here.
 
 ## Confirmation
 
-- `scripts/release-sync.test.ts` and `scripts/release-workflow.test.ts`.
+- `scripts/release/release-sync.test.ts` and `scripts/release/release-workflow.test.ts`.

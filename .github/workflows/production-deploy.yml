@@ -92,7 +92,7 @@ jobs:
           PRODUCTION_DEPLOY_ENABLED: ${{ vars.PRODUCTION_DEPLOY_ENABLED }}
           REF_TYPE: ${{ github.ref_type }}
           REF_NAME: ${{ github.ref_name }}
-        run: node scripts/production.ts guard
+        run: node scripts/release/production.ts guard
       - name: Require the Cloudflare credentials
         # An inline test: the token is in the environment of this one trivial step and of the Wrangler steps
         # only, never of Node, Bun or any repository script.
@@ -104,7 +104,7 @@ jobs:
           test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "CLOUDFLARE_ACCOUNT_ID is missing in the GitHub environment production; nothing was deployed." >&2; exit 1; }
       - name: Name the version
         id: label
-        run: node scripts/production.ts label # reads the runner's own GITHUB_SHA, GITHUB_RUN_ID and GITHUB_RUN_ATTEMPT
+        run: node scripts/release/production.ts label # reads the runner's own GITHUB_SHA, GITHUB_RUN_ID and GITHUB_RUN_ATTEMPT
       - name: Build with the default configuration (no CLOUDFLARE_ENV)
         run: bun run build
       - name: Read the deployment that serves production now
@@ -114,7 +114,7 @@ jobs:
         run: bunx wrangler deployments status --name "$WORKER" --json > "$RUNNER_TEMP/current.json"
       - name: Record the version that serves production now
         id: previous
-        run: node scripts/production.ts current "$RUNNER_TEMP/current.json"
+        run: node scripts/release/production.ts current "$RUNNER_TEMP/current.json"
       - name: Upload the new version without deploying it
         env:
           LABEL: ${{ steps.label.outputs.label }}
@@ -126,7 +126,7 @@ jobs:
         run: bunx wrangler versions upload --config apps/web/dist/metro_scaffold/wrangler.json --name "$WORKER" --tag "$LABEL" --message "Production $REF_NAME $COMMIT" --var "PREVIEW_SHA:$COMMIT"
       - name: Read the uploaded version id
         id: upload
-        run: node scripts/production.ts version "$RUNNER_TEMP/wrangler-output.ndjson"
+        run: node scripts/release/production.ts version "$RUNNER_TEMP/wrangler-output.ndjson"
       - name: Stage the new version at 0 percent
         id: stage
         env:
@@ -139,7 +139,7 @@ jobs:
         env:
           COMMIT: ${{ github.sha }}
           VERSION: ${{ steps.upload.outputs.version }}
-        run: node scripts/production.ts smoke "$PRODUCTION_URL" "$COMMIT" "$VERSION"
+        run: node scripts/release/production.ts smoke "$PRODUCTION_URL" "$COMMIT" "$VERSION"
       - name: Roll the new version out to 100 percent
         id: promote
         env:
@@ -150,13 +150,13 @@ jobs:
       - name: Smoke production and prove it serves the released commit
         env:
           COMMIT: ${{ github.sha }}
-        run: node scripts/production.ts smoke "$PRODUCTION_URL" "$COMMIT"
+        run: node scripts/release/production.ts smoke "$PRODUCTION_URL" "$COMMIT"
       - name: Soak
         run: sleep "$SOAK_SECONDS"
       - name: Smoke production again after the soak
         env:
           COMMIT: ${{ github.sha }}
-        run: node scripts/production.ts smoke "$PRODUCTION_URL" "$COMMIT"
+        run: node scripts/release/production.ts smoke "$PRODUCTION_URL" "$COMMIT"
       - name: Roll back to the previous version
         if: ${{ (failure() || cancelled()) && steps.previous.outputs.current != '' && steps.stage.outcome != 'skipped' }}
         id: rollback
@@ -168,7 +168,7 @@ jobs:
         run: bunx wrangler rollback "$PREVIOUS" --name "$WORKER" --message "Automatic rollback of $COMMIT after a failed deploy" --yes
       - name: Smoke production after the rollback
         if: ${{ (failure() || cancelled()) && steps.rollback.outcome == 'success' }}
-        run: node scripts/production.ts smoke "$PRODUCTION_URL"
+        run: node scripts/release/production.ts smoke "$PRODUCTION_URL"
       - name: Record the deploy in the job summary
         if: ${{ always() }}
         env:

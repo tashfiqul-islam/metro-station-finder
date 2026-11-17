@@ -9,7 +9,7 @@ hooks {
   }
   ["commit-msg"] {
     steps {
-      ["conventional"] { check = "node scripts/commit-message.ts {{commit_msg_file}}" }
+      ["conventional"] { check = "node scripts/ci/commit-message.ts {{commit_msg_file}}" }
     }
   }
   ["pre-push"] {

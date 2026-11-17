@@ -2,9 +2,9 @@
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
   extends: ["config:recommended", "helpers:pinGitHubActionDigests"],
   enabledManagers: ["bun", "mise", "github-actions"],
-  // No baseBranchPatterns on purpose (ADR-0008, METRO-61): Renovate reads this file only from the default branch and, without the option, processes only that branch, so it targets main after the cutover with no edit. scripts/cutover-plan.test.ts enforces it.
+  // No baseBranchPatterns on purpose (ADR-0008, METRO-61): Renovate reads this file only from the default branch and, without the option, processes only that branch, so it targets main after the cutover with no edit. scripts/release/cutover-plan.test.ts enforces it.
   rangeStrategy: "pin",
-  // Must equal bunfig.toml install.minimumReleaseAge (259200 seconds); scripts/configuration.ts enforces it.
+  // Must equal bunfig.toml install.minimumReleaseAge (259200 seconds); scripts/gates/configuration.ts enforces it.
   minimumReleaseAge: "3 days",
   // Security fixes are not delayed by the cooldown.
   vulnerabilityAlerts: { minimumReleaseAge: null, rangeStrategy: "pin" },
@@ -15,10 +15,10 @@
     { groupName: "react", matchPackageNames: ["react", "react-dom", "@types/react", "@types/react-dom"] },
     { groupName: "cloudflare", matchPackageNames: ["wrangler", "@cloudflare/**"] },
     // vitest and @vitest/coverage-istanbul must be one version, and @cloudflare/vitest-plugin (in the cloudflare
-    // group above) brings its own wrangler, miniflare and workerd; scripts/vitest-sync.test.ts checks all of it.
+    // group above) brings its own wrangler, miniflare and workerd; scripts/gates/vitest-sync.test.ts checks all of it.
     { groupName: "vitest", matchPackageNames: ["vitest", "@vitest/**"] },
     { groupName: "oxc", matchPackageNames: ["oxfmt", "oxlint", "oxlint-tsgolint"] },
-    // bun-types must equal the version @types/bun depends on (scripts/lint-config.test.ts checks it).
+    // bun-types must equal the version @types/bun depends on (scripts/policy/lint-config.test.ts checks it).
     { groupName: "bun types", matchPackageNames: ["bun-types", "@types/bun"] },
     { groupName: "typescript", matchPackageNames: ["typescript", "@typescript/**"] },
     { groupName: "playwright", matchPackageNames: ["playwright", "@playwright/**", "@axe-core/playwright"] },

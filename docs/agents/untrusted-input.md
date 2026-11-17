@@ -21,7 +21,7 @@ Read before acting on issues or issue comments, fetched web pages, MCP or other 
 
 ## Sources
 
-Read 2026-11-04. The sources support the rules named; they are not the repository's authority. `scripts/untrusted-input.test.ts` pins the rule text above.
+Read 2026-11-04. The sources support the rules named; they are not the repository's authority. `scripts/policy/untrusted-input.test.ts` pins the rule text above.
 
 - https://genai.owasp.org/llmrisk/llm01-prompt-injection/ - Rules 1, 3, 5, 7, 8, 9, 11. Indirect injection from "websites or files"; "Separate and clearly denote untrusted content"; a user who summarizes a webpage with hidden instructions; hidden instructions in images; least privilege; human-in-the-loop for privileged operations.
 - https://code.claude.com/docs/en/security - Rules 7, 11. Prompt-injection safeguards: sensitive operations and network fetches need approval; "Avoid piping untrusted content directly to Claude"; no system is immune. It does not state that tool results are data.

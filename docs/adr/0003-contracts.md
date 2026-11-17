@@ -33,5 +33,5 @@ The status moved from the page importing core directly to a Worker response the 
 
 ## Confirmation
 
-- `contracts-imports-only-core-and-schema-library` and `contracts-public-entry-only` in `.dependency-cruiser.mts`, proven red by `scripts/layering.test.ts`.
+- `contracts-imports-only-core-and-schema-library` and `contracts-public-entry-only` in `.dependency-cruiser.mts`, proven red by `scripts/policy/layering.test.ts`.
 - (Removed by METRO-93.) The compile-time `Equal` assertion in `packages/contracts/src/index.ts` (`bun run typecheck`) and `packages/contracts/src/contracts.test.ts`.

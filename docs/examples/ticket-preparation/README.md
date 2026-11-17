@@ -14,8 +14,8 @@ $reviewedRoots = @{
     pocock = 'C:/Users/Tashfiq/.agents/skills'
     tooling = 'C:/Users/Tashfiq/.agents/skills'
 }
-& ./scripts/verify-metro-preparation.ps1 -SkillRoots $reviewedRoots
-& ./scripts/test-metro-preparation.ps1 -SkillRoots $reviewedRoots
+& ./scripts/windows/verify-metro-preparation.ps1 -SkillRoots $reviewedRoots
+& ./scripts/windows/test-metro-preparation.ps1 -SkillRoots $reviewedRoots
 ```
 
 The validator verifies the [content lock](../../agents/skills.lock.json) before checking exact source fields, stable IDs, ticket count and dependency graph. JSON object property order is ignored; array order is preserved. Missing files, content drift, omissions, unknown/reversed/cyclic blockers and identity drift fail visibly. The negative runner mutates temporary fixture copies only and verifies expected failure reasons; it never changes installed skills. A successful result proves this bounded example under the reviewed roots, not general conversion correctness.

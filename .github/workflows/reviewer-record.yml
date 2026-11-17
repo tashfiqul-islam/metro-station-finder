@@ -52,4 +52,4 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPOSITORY: ${{ github.repository }}
           GH_TOKEN: ${{ github.token }}
-        run: node scripts/reviewer-record.ts
+        run: node scripts/ci/reviewer-record.ts

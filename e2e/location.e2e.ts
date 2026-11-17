@@ -1,6 +1,6 @@
 import type { Locator, Page } from "@playwright/test";
 
-import { isRecord } from "../scripts/guards";
+import { isRecord } from "../scripts/lib/guards";
 import { axeBuilder, expect, test } from "./fixtures";
 import { linksAreTabbable } from "./keyboard";
 import { installMapsStub, placeSearch, stubGeolocation } from "./maps-stub";

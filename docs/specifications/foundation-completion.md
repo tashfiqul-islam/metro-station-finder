@@ -15,7 +15,7 @@ Source: Plane Page 646323d4-2031-452a-a23c-dd64da4e9a32, project 1ab13b1b-d537-4
 
 1. Guidance has drifted since METRO-12 merged. `docs/agents/ui.md` still calls Playwright/axe "proposed". `security.md` says scans are "pending METRO-12". `architecture.md`, `development.md` and `README.md` say CI and graph gates are absent or still pending. `domain.md` shows a nonexistent `src/` layout. Two different Playwright install commands are documented.
 2. The `docs/examples/plane-preparation/README.md` snippet omits the `tooling` root that `skills.lock.json` requires, so running it verbatim fails with `Missing skill root: tooling`.
-3. The Gitleaks version is hardcoded in `mise.toml`, `scripts/configuration.ts` and `scripts/secrets.ts`. The guard does not cover `secrets.ts`.
+3. The Gitleaks version is hardcoded in `mise.toml`, `scripts/gates/configuration.ts` and `scripts/gates/secrets.ts`. The guard does not cover `secrets.ts`.
 4. Missing: a committed Markdown link gate (METRO-17 ran a one-off), ADR directory, LICENSE, SECURITY, CONTRIBUTING, PR template, `CLAUDE.md` entry point and editor recommendations.
 5. Missing: dependency update automation, release cooldown, workflow security lint, commit-message enforcement, CI caching, Git-history secret scan and remote branch rules. The branches were observed unprotected on 2026-11-03.
 6. Local runtime uses the pinned unstable API `unstable_startWorker`. Web and Worker run as separate servers with no same-origin integration. `vite.config.ts` compiles JSX through oxc without `@vitejs/plugin-react`, so there is no React Fast Refresh.
@@ -49,7 +49,7 @@ Four ordered child slices: `hygiene`, `supply-chain`, `dev-runtime`, `test-pyram
 - Never weaken strict compiler flags, assertions, the bundle budget (250000 raw / 80000 gzip) or thresholds. No fallback paths. On incompatibility, stop that step and report the evidence.
 - TDD: each criterion gets a failing check before the implementation.
 - Bun is the package manager; commands are PowerShell. Signed commits. Every fixture git process uses `cleanGitEnv()`.
-- Core stays dependency-free (`scripts/boundaries.ts` unchanged for core).
+- Core stays dependency-free (`scripts/gates/boundaries.ts` unchanged for core).
 - Every material decision gets an ADR in `docs/adr/`.
 
 ## Slice hygiene — Truthful docs, decision records and repository hygiene
@@ -59,12 +59,12 @@ Four ordered child slices: `hygiene`, `supply-chain`, `dev-runtime`, `test-pyram
 - Required tools/data: pinned mise toolchain, PowerShell 7, reviewed skill roots for the preparation validator.
 - Scope:
   1. Correct stale guidance in `README.md` and `docs/agents/{ui,security,architecture,testing,quality-gates,domain}.md`, plus `docs/development.md`. Unify on a single Playwright browser install command. Fix the `tooling` root in `docs/examples/plane-preparation/README.md`.
-  2. Add a committed Markdown link gate, `scripts/links.ts` with tests. It checks every relative link and heading anchor in tracked and newly added non-ignored `.md` files, and is wired into `check`. External URLs are not fetched.
+  2. Add a committed Markdown link gate, `scripts/gates/links.ts` with tests. It checks every relative link and heading anchor in tracked and newly added non-ignored `.md` files, and is wired into `check`. External URLs are not fetched.
   3. Add `docs/adr/`: `0000-template.md` (MADR-style: status, context, decision, consequences, alternatives) and `0001-foundation-baseline.md`, recording the existing decisions: Bun + mise, the TS 7 compiler with the TS 6 API seam, the Hono Worker, React/Vite, core purity, Plane as tracker. Link it from `docs/agents/architecture.md` and `domain.md`.
   4. Add `LICENSE` (MIT, `Copyright (c) 2026 Tashfiqul Islam`) and `"license": "MIT"` in the root manifest. Add `SECURITY.md` (private reporting through GitHub Security Advisories; no public issues), `CONTRIBUTING.md` (links to development, workflow and quality gates; no duplicated policy) and `.github/pull_request_template.md` (ticket ID, spec revision, checks run with results, unrun checks, review disposition).
   5. Add a `CLAUDE.md` whose only content imports `@AGENTS.md`. No duplicated policy.
   6. Add `.vscode/extensions.json` and `.vscode/settings.json`: Oxc formatter/linter, EditorConfig, format on save, workspace TypeScript. Verify the extension IDs.
-  7. Make the Gitleaks pin single-sourced: `scripts/secrets.ts` reads the version from `mise.toml` through the configuration module. Give every mise task a `description`.
+  7. Make the Gitleaks pin single-sourced: `scripts/gates/secrets.ts` reads the version from `mise.toml` through the configuration module. Give every mise task a `description`.
   8. Extend CODEOWNERS to `CLAUDE.md`, `LICENSE`, `SECURITY.md`, `.vscode/`, `docs/adr/` and `.github/pull_request_template.md`.
   9. Commit this specification mirror, the handoff plan and new `docs/evidence/metro-foundation-hygiene.md`.
 - Exclusions: no edits to historical `docs/evidence/*` files, no gate-policy weakening, no new product docs.
@@ -77,13 +77,13 @@ Four ordered child slices: `hygiene`, `supply-chain`, `dev-runtime`, `test-pyram
 - Acceptance FND-H4: Given the repository root, when licensing and contribution are inspected, then `LICENSE` holds the exact MIT text, the manifest declares `MIT`, and `SECURITY.md`, `CONTRIBUTING.md` and the PR template exist and are linked from README.
   - Failure check: a missing file breaks the README link gate.
 - Acceptance FND-H5: Given `CLAUDE.md`, when it is read, then it consists only of the `@AGENTS.md` import.
-- Acceptance FND-H6: Given the Gitleaks pin in `mise.toml`, when it changes, then `scripts/secrets.ts` invokes that exact version and the configuration guard still rejects a missing pin.
+- Acceptance FND-H6: Given the Gitleaks pin in `mise.toml`, when it changes, then `scripts/gates/secrets.ts` invokes that exact version and the configuration guard still rejects a missing pin.
   - Failure check: a unit test with a temporary mise file proves the derived version. A missing pin fails with `tools.gitleaks`.
 - Testing seams:
   - FND-HS1: link gate over temporary Markdown fixtures (H1, H3, H4).
   - FND-HS2: text scan plus the real `verify-metro-preparation.ps1` and `test-metro-preparation.ps1` runs (H2).
   - FND-HS3: configuration and secret-version unit tests (H6).
-- Check plan: focused `bun test scripts/links.test.ts` and `scripts/configuration.test.ts`, then `bun run check` and both preparation scripts. Base fails H1 (no gate), H2 (snippet) and H6 (hardcoded version).
+- Check plan: focused `bun test scripts/gates/links.test.ts` and `scripts/gates/configuration.test.ts`, then `bun run check` and both preparation scripts. Base fails H1 (no gate), H2 (snippet) and H6 (hardcoded version).
 - Review needs: AFK. The owner only confirms the license holder name.
 
 ## Slice supply-chain — Current dependencies, update automation and hardened CI
@@ -101,7 +101,7 @@ Four ordered child slices: `hygiene`, `supply-chain`, `dev-runtime`, `test-pyram
      - Weekly lock-file maintenance, dependency dashboard, PR concurrency limit.
      - Validate with a pinned official validator inside `check`. A guard test fails if the Renovate and Bun cooldowns differ.
   4. Pin actionlint and zizmor in mise. Add `lint:workflows` to `check`; it rejects unpinned actions, template injection and excessive permissions.
-  5. Add a `commit-msg` hook in `hk.pkl` that runs `scripts/commit-message.ts`. It accepts Conventional Commits types `feat|fix|refactor|docs|test|chore|perf|ci|style|build|revert`, an optional scope, `!` and a body, and passes Git merge and revert subjects. CI validates every commit in the PR range with the same script (checkout `fetch-depth: 0`).
+  5. Add a `commit-msg` hook in `hk.pkl` that runs `scripts/ci/commit-message.ts`. It accepts Conventional Commits types `feat|fix|refactor|docs|test|chore|perf|ci|style|build|revert`, an optional scope, `!` and a body, and passes Git merge and revert subjects. CI validates every commit in the PR range with the same script (checkout `fetch-depth: 0`).
   6. CI hardening:
      - SHA-pinned `actions/cache` for the Bun install cache, keyed on `bun.lock`, and for Playwright browsers, keyed on the Playwright version.
      - A Gitleaks full-history scan (`gitleaks git`, redacted) in the `security` job.
@@ -113,10 +113,10 @@ Four ordered child slices: `hygiene`, `supply-chain`, `dev-runtime`, `test-pyram
   - Failure check: a manifest edited without a lock update fails the frozen bootstrap.
 - Acceptance FND-S2: Given the Renovate configuration, when the pinned validator runs, then it passes.
   - Failure checks: a fixture with an unknown option fails validation. A fixture where the Renovate cooldown differs from bunfig fails the guard test.
-- Acceptance FND-S3: Given `bunfig.toml` without `minimumReleaseAge`, when `bun run scripts/tools.ts` runs, then it exits nonzero naming `install.minimumReleaseAge`.
+- Acceptance FND-S3: Given `bunfig.toml` without `minimumReleaseAge`, when `bun run scripts/gates/tools.ts` runs, then it exits nonzero naming `install.minimumReleaseAge`.
 - Acceptance FND-S4: Given workflow fixtures, when `lint:workflows` runs, then it rejects `uses: actions/checkout@v4` (unpinned), a `${{ github.event.pull_request.title }}` used inside `run:`, and `permissions: write-all`. The real workflow passes.
 - Acceptance FND-S5: Given a disposable hook fixture, when a commit uses `update stuff`, then the commit is rejected and the index is preserved. `feat(core): add x` and a Git merge subject are accepted. The PR-range mode exits nonzero when any commit in the range is invalid.
-- Acceptance FND-S6: Given the workflow, when it is inspected and run, then the caches are keyed on `bun.lock` and the Playwright version, the history scan runs, the required context is still `Quality gates`, and `scripts/ci-results.test.ts` still passes unchanged.
+- Acceptance FND-S6: Given the workflow, when it is inspected and run, then the caches are keyed on `bun.lock` and the Playwright version, the history scan runs, the required context is still `Quality gates`, and `scripts/ci/ci-results.test.ts` still passes unchanged.
 - Acceptance FND-S7 (HITL): Given owner action, when the rulesets are read back, then they match the required list. Otherwise the evidence names each missing control and the reason.
 - Testing seams:
   - FND-SS1: configuration guard with temporary bunfig/Renovate files (S2, S3).
@@ -176,8 +176,8 @@ Four ordered child slices: `hygiene`, `supply-chain`, `dev-runtime`, `test-pyram
 - Scope:
   1. Coverage: `bun test --coverage` with `[test] coverageThreshold = { lines = 0.9, functions = 0.9 }` (Bun enforces it per file) and an lcov reporter to `coverage/`. `check` runs with coverage. Any `coveragePathIgnorePatterns` entry needs a written reason and must not exclude product source. CI uploads the lcov artifact.
   2. API in-process tests use Hono `app.request()`: status 200, 404 envelope, schema validity, method-not-allowed behavior per the ADR.
-  3. React component tests run under Bun with `@happy-dom/global-registrator` and `@testing-library/react`, covering loading, success and error states with a stubbed fetch. Add a dedicated DOM-test tsconfig, and extend `scripts/types.test.ts` so Bun globals stay rejected in web source while DOM-test files compile.
-  4. Replace `scripts/smoke.ts` with `@playwright/test` and a `playwright.config.ts`:
+  3. React component tests run under Bun with `@happy-dom/global-registrator` and `@testing-library/react`, covering loading, success and error states with a stubbed fetch. Add a dedicated DOM-test tsconfig, and extend `scripts/policy/types.test.ts` so Bun globals stay rejected in web source while DOM-test files compile.
+  4. Replace `scripts/smoke/smoke.ts` with `@playwright/test` and a `playwright.config.ts`:
      - `webServer` = built `vite preview`.
      - Projects: Chromium, Firefox, WebKit desktop, plus one mobile viewport.
      - `retries: 0` everywhere (a flaky test is a defect).

@@ -4,10 +4,10 @@ Status: written for METRO-44 part A on 2026-11-08; the hosted scheduled behaviou
 
 ## What the probe is (Repo-verified)
 
-`.github/workflows/uptime-probe.yml` runs `bun scripts/uptime-probe.ts` with no secret, no environment and `contents: read`. The script makes two requests and nothing else:
+`.github/workflows/uptime-probe.yml` runs `bun scripts/release/uptime-probe.ts` with no secret, no environment and `contents: read`. The script makes two requests and nothing else:
 
 1. `GET /` must be 200, `text/html`, with `x-content-type-options`, `x-frame-options`, `referrer-policy`, `permissions-policy` at the values in `apps/web/public/_headers` and a non-empty `content-security-policy`.
-2. `GET /api/uptime-probe-does-not-exist` with a generated `x-request-id` (`uptime-probe-<base36 time>`) must be the 404 error envelope, echo that exact `x-request-id`, and carry the four fixed security headers of `apps/api/src/app.ts`. The envelope check is shared with the preview smoke (`scripts/api-envelope.ts`).
+2. `GET /api/uptime-probe-does-not-exist` with a generated `x-request-id` (`uptime-probe-<base36 time>`) must be the 404 error envelope, echo that exact `x-request-id`, and carry the four fixed security headers of `apps/api/src/app.ts`. The envelope check is shared with the preview smoke (`scripts/gates/api-envelope.ts`).
 
 The four expected header values are compared by a test with `_headers` and with `apps/api/src/security-headers.test.ts`, so a header change fails a test first. Each request has a 10 s limit that also covers reading the body (a server that sends headers and then stalls ends as a timeout); the body is read up to 16 KB; redirects are not followed (any 3xx fails). Every failure is one fixed message; the script never prints a body, a header value, an error text or the URL beyond its origin. The base URL must be a bare https origin with a DNS name: IP literals, `localhost` and local suffixes are refused, and `http://127.0.0.1` is accepted only when `PROBE_ALLOW_LOOPBACK=1`, which only the tests set.
 
@@ -18,7 +18,7 @@ The four expected header values are compared by a test with `_headers` and with 
 - Unset variable: a scheduled run skips the whole job (job-level `if`). GitHub shows it as Skipped, not green, with no notification. A dispatch with no URL, and a variable that is set but invalid, still fail loudly.
 - The window to know: the default-branch switch ([cutover runbook](cutover-runbook.md) step 3) comes before `PRODUCTION_URL` is set, so from the switch until the variable exists the schedule runs and every run is Skipped. Nothing is watching production in that window.
 - Residual risk: someone deletes or blanks the variable later and the probe goes quiet, because skipped runs raise no alarm. Mitigations: the cutover gate in the cutover runbook (variable set, dispatch green, a recent non-skipped scheduled run) and the monthly check below.
-- The schedule is inert until the default-branch switch (GitHub runs schedules only from the default branch). Dispatch needs the file on the default branch too (a dispatch from a pull request branch answered HTTP 404), so before the switch run the script by hand: `bun scripts/uptime-probe.ts <origin>`. After the switch: `gh workflow run uptime-probe.yml --repo $R --ref main` or Actions, Uptime probe, Run workflow (Unverified until run).
+- The schedule is inert until the default-branch switch (GitHub runs schedules only from the default branch). Dispatch needs the file on the default branch too (a dispatch from a pull request branch answered HTTP 404), so before the switch run the script by hand: `bun scripts/release/uptime-probe.ts <origin>`. After the switch: `gh workflow run uptime-probe.yml --repo $R --ref main` or Actions, Uptime probe, Run workflow (Unverified until run).
 - A failed run is announced only by GitHub's normal workflow-failure notifications (same decision as the token check, [maintenance runbook](maintenance-runbook.md)); routing to the owner depends on their notification settings (Unverified). No pager exists.
 
 ## Monthly owner check

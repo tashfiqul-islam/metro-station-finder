@@ -20,8 +20,8 @@ Read when: reading, preparing, creating or changing tickets, specs, labels, fiel
 
 ## Enforced by
 
-- `scripts/tracker-sync.ts` (`.github/workflows/tracker-sync.yml`): Status moves from pull requests; tested in `tracker-sync.test.ts`.
-- `scripts/base-branch.ts` (`branches:check`): fails when this file, workflow.md and CONTRIBUTING.md name different base branches. Change them together.
+- `scripts/ci/tracker-sync.ts` (`.github/workflows/tracker-sync.yml`): Status moves from pull requests; tested in `tracker-sync.test.ts`.
+- `scripts/gates/base-branch.ts` (`branches:check`): fails when this file, workflow.md and CONTRIBUTING.md name different base branches. Change them together.
 
 ## Read more
 

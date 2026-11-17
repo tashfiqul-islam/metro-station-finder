@@ -138,7 +138,7 @@ Independent review (code). Owner: the live check before merge.
 | A silently deleted pinned Maps version falls back to the default channel | The live check fails unless `google.maps.version` starts with `3.66`; bump quarterly.                                         |
 | Free-tier numbers change (the pricing page is undated)                   | Re-read the page on each implementation; caps are project quotas set by the owner.                                            |
 | A future test reaches real Google with the fake key                      | The shared e2e fixture aborts and fails any unstubbed Google request.                                                         |
-| Google types leak into features through the ambient global               | `scripts/google-containment.test.ts` fails on `google.maps` or `window.google` outside the adapter.                           |
+| Google types leak into features through the ambient global               | `scripts/gates/google-containment.test.ts` fails on `google.maps` or `window.google` outside the adapter.                     |
 | WebKit logs its own select stylesheet under the CSP                      | Tolerated once per test by exact match, WebKit only, kept honest by a test.                                                   |
 
 ## Unverified items

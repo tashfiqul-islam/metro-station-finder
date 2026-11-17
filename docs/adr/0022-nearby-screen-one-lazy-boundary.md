@@ -25,7 +25,7 @@ We will load the Nearby screen (the nearest-station page, the Maps adapter, the 
 - The map is drawn in the shell, outside the screen's tree, so it sits in its own `MapBoundary` (a contained message and Reload); when the screen's chunk fails to load, no map frame is drawn.
 - The picker makes no offline claim in its copy: the offline cache is METRO-106. The data and the map are local, so the picker needs no network once the screen has loaded.
 - The icons the picker uses live in `picker-icons.ts` in the lazy chunk, as `control-icons.ts` does for the map, because importing them from `icon-data.ts` puts them in the entry. `picker-icons.test.ts` fails if a shape drifts.
-- The mockups' "Sample data" tag never ships: the `.tag--sample` rule is removed from `common.css`, `scripts/no-mock-markers.test.ts` scans the shipped sources and `e2e/station-picker.e2e.ts` scans the built files.
+- The mockups' "Sample data" tag never ships: the `.tag--sample` rule is removed from `common.css`, `scripts/policy/no-mock-markers.test.ts` scans the shipped sources and `e2e/station-picker.e2e.ts` scans the built files.
 
 ## Consequences
 
@@ -50,5 +50,5 @@ We will load the Nearby screen (the nearest-station page, the Maps adapter, the 
 
 - `apps/web/src/features/station-picker/*.test.ts(x)`, `apps/web/src/features/nearby/Nearby.test.tsx`: roles, names, keys, focus, sheet rules, the result's content, the Directions URL and the absence of distance and walk words.
 - `e2e/station-picker.e2e.ts`: the same in the built app, tab order, axe in light and dark, reduced motion with a control, no inline style, offline with a listener attached before load, the list on top and scrolling inside itself at full, and the built files free of the mock markers.
-- `scripts/no-mock-markers.test.ts`: no "Sample data", `mock-only` or `tag--sample` in the shipped sources, with a control.
+- `scripts/policy/no-mock-markers.test.ts`: no "Sample data", `mock-only` or `tag--sample` in the shipped sources, with a control.
 - `bun run bundle:check`: the first-visit limits.

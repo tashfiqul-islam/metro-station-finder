@@ -70,7 +70,7 @@ These tests do not exist yet; the slice must add them and show each failing on b
 | T7  | Fake key only in tests; a scan proves no real key pattern is committed (existing secret scan)                                        | Gate             |
 | T8  | Place Details request uses only the Essentials field list `location`, `formattedAddress`                                             | Unit             |
 
-Repo test today: `scripts/maps-design.test.ts` checks this document and the ADR (status Accepted, sections, key-restriction and quota content, a SKU row per call, one row per test id).
+Repo test today: `scripts/policy/maps-design.test.ts` checks this document and the ADR (status Accepted, sections, key-restriction and quota content, a SKU row per call, one row per test id).
 
 ## Open items
 

@@ -27,4 +27,4 @@ Not recorded when this ADR was written; not reconstructed here.
 
 ## Confirmation
 
-- `scripts/preview-workflow.test.ts` and `scripts/preview.test.ts`. The end-to-end deploy is Unverified until the `preview` environment secrets exist.
+- `scripts/release/preview-workflow.test.ts` and `scripts/release/preview.test.ts`. The end-to-end deploy is Unverified until the `preview` environment secrets exist.

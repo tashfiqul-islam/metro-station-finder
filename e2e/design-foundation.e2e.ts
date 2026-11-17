@@ -268,7 +268,7 @@ test.describe("user preferences", () => {
   });
 
   // Playwright has no reduced-transparency option, so Chromium is driven through DevTools. Only Chromium can
-  // do this, so the other browsers skip; `scripts/design-contrast.test.ts` asserts the override exists for
+  // do this, so the other browsers skip; `scripts/gates/design-contrast.test.ts` asserts the override exists for
   // every theme selector as text. In Chromium a build that cannot emulate the preference fails here.
   const SOLID_PANEL = { light: "rgb(250, 251, 252)", dark: "rgb(16, 18, 21)" } as const;
   const TRANSPARENCY_CASES = [

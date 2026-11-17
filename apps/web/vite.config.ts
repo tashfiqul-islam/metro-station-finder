@@ -3,9 +3,9 @@ import babel from "@rolldown/plugin-babel";
 import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import { build, defineConfig } from "vite";
 
-import { siteOriginPlugin } from "../../scripts/site-origin.ts";
-import { smokePort } from "../../scripts/smoke-port.ts";
-import { serviceWorkerPlugin, type WorkerConfig } from "../../scripts/sw-plugin.ts";
+import { siteOriginPlugin } from "../../scripts/build/site-origin.ts";
+import { serviceWorkerPlugin, type WorkerConfig } from "../../scripts/build/sw-plugin.ts";
+import { smokePort } from "../../scripts/smoke/smoke-port.ts";
 
 /**
  * Bundles the offline shell worker (METRO-106, ADR-0023) as one classic script with the build's config
@@ -50,6 +50,6 @@ export default defineConfig({
   // The first-visit bundle budget reads dist/client/.vite/manifest.json (METRO-104, ADR-0020).
   build: { manifest: true },
   server: { host: "127.0.0.1", port: 5173, strictPort: true },
-  // METRO-130: SMOKE_PORT (set by scripts/smoke.ts) picks the preview port; strictPort makes a clash fail loudly.
+  // METRO-130: SMOKE_PORT (set by scripts/smoke/smoke.ts) picks the preview port; strictPort makes a clash fail loudly.
   preview: { host: "127.0.0.1", port: smokePort(process.env), strictPort: true },
 });

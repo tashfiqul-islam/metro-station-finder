@@ -1,8 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
-import { smokePort } from "./scripts/smoke-port.ts";
+import { smokePort } from "./scripts/smoke/smoke-port.ts";
 
-// METRO-130: `bun run smoke` (scripts/smoke.ts) resolves a free port and exports it as SMOKE_PORT; 4173 is the fallback.
+// METRO-130: `bun run smoke` (scripts/smoke/smoke.ts) resolves a free port and exports it as SMOKE_PORT; 4173 is the fallback.
 const origin = `http://127.0.0.1:${smokePort(process.env)}`;
 // The lab web-vitals spec runs on Chromium only (METRO-44 part C): see docs/evidence/metro-44c.md.
 // The brand-asset regeneration check needs Chromium to rasterise (METRO-107).

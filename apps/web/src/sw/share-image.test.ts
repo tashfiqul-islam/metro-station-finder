@@ -6,7 +6,7 @@ import { route, attach, type WorkerConfig, type WorkerScope } from "./worker";
  * METRO-122: the Open Graph share image is for link-preview crawlers. These tests prove only the worker side:
  * for a path that is not in the precache, `route()` passes and the fetch handler stays out of the way. The
  * precache list here is a fixture; that the build really leaves `og/og-default.png` out of the real list is
- * pinned in `scripts/sw-plugin.test.ts` (`shellPaths`), not here.
+ * pinned in `scripts/build/sw-plugin.test.ts` (`shellPaths`), not here.
  */
 const ORIGIN = "https://metro.test";
 const SHARE = `${ORIGIN}/og/og-default.png`;

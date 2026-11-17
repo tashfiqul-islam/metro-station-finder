@@ -7,11 +7,11 @@
     "scripts/**/*.test.ts",
     "packages/**/*.test.ts",
     "apps/**/*.test.ts",
-    "scripts/configuration.ts",
-    "scripts/hooks-status.ts",
-    "scripts/mise-lock.ts",
-    "scripts/tools.ts",
-    "scripts/vitest-sync.ts"
+    "scripts/gates/configuration.ts",
+    "scripts/gates/hooks-status.ts",
+    "scripts/gates/mise-lock.ts",
+    "scripts/gates/tools.ts",
+    "scripts/gates/vitest-sync.ts"
   ],
   "exclude": ["apps/api/**", "apps/web/**"]
 }

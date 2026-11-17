@@ -12,7 +12,7 @@ METRO-56 asked whether to keep this, move the base into a config package, or co-
 
 Facts (the labels say how each was established):
 
-- Repo-verified: the structure above, by reading the root `tsconfig*.json` files and `scripts/tsconfig-projects.test.ts`.
+- Repo-verified: the structure above, by reading the root `tsconfig*.json` files and `scripts/policy/tsconfig-projects.test.ts`.
 - Context7-verified and Web-verified (TypeScript `tsconfig` reference, "extends"): "Currently, the only top-level property that is excluded from inheritance is `references`." Context7 (TypeScript 2.1 release notes): `files`, `include` and `exclude` in the extending config overwrite the base, and relative paths resolve relative to the file they originate in. So a shared file can carry compiler options only, never include globs or solution references.
 - Context7-verified (TypeScript 3.2 release notes): a bare package name in `extends` is resolved by looking through `node_modules`, using the package's `tsconfig` field or a root `tsconfig.json`.
 - Experiment (Repo-verified on tsc 7.0.2, 2026-11-04, by the ticket author; not re-run for this ADR): extends through a package name works and honors the package `exports` map (a map that omits the file fails with TS6053). Inferred consequence: before `bun install` the package does not exist in `node_modules`, so every config extending it fails.
@@ -41,4 +41,4 @@ Facts (the labels say how each was established):
 
 ## Confirmation
 
-`scripts/tsconfig-projects.test.ts` (in `bun run check`) fails when: a project config is not referenced from the solution file or a reference points to a non-config (METRO-26); a project config does not extend the root `tsconfig.base.json` by a relative path; or the base holds anything but `compilerOptions` (so it cannot gain `references`, `include` or `files`). The revisit triggers are `None (policy)`.
+`scripts/policy/tsconfig-projects.test.ts` (in `bun run check`) fails when: a project config is not referenced from the solution file or a reference points to a non-config (METRO-26); a project config does not extend the root `tsconfig.base.json` by a relative path; or the base holds anything but `compilerOptions` (so it cannot gain `references`, `include` or `files`). The revisit triggers are `None (policy)`.

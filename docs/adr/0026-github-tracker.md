@@ -33,7 +33,7 @@ Pull requests move Status through `.github/workflows/tracker-sync.yml` and the G
 
 ## Confirmation
 
-- `scripts/base-branch.ts` (`branches:check`) reads `docs/agents/tracker.md`.
-- `scripts/routing.test.ts` routes ticket triggers to the tracker guide.
-- `scripts/tracker-sync.test.ts` and `scripts/tracker-sync-workflow.test.ts` test the status sync.
+- `scripts/gates/base-branch.ts` (`branches:check`) reads `docs/agents/tracker.md`.
+- `scripts/gates/routing.test.ts` routes ticket triggers to the tracker guide.
+- `scripts/ci/tracker-sync.test.ts` and `scripts/ci/tracker-sync-workflow.test.ts` test the status sync.
 - The rest is `None (policy)`.

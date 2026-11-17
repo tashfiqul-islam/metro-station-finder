@@ -46,7 +46,7 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: node scripts/changed-files.ts
+        run: node scripts/ci/changed-files.ts
   checks:
     name: Checks
     runs-on: ubuntu-24.04
@@ -70,7 +70,7 @@ jobs:
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: node scripts/commit-message.ts --range "$BASE_SHA..$HEAD_SHA"
+        run: node scripts/ci/commit-message.ts --range "$BASE_SHA..$HEAD_SHA"
       - name: Run all checks with per-command timing
         run: bun run check:timed
       - name: Upload lcov coverage
@@ -357,7 +357,7 @@ jobs:
           version: 2026.10.25
           install_args: node
       - name: Verify the required job results
-        run: node scripts/ci-results.ts
+        run: node scripts/ci/ci-results.ts
         env:
           REQUIRED_JOB_RESULTS: ${{ toJSON(needs) }}
   preview:
@@ -424,7 +424,7 @@ jobs:
       - name: Install dependencies
         run: bun run bootstrap
       - name: Require the Cloudflare secrets
-        run: node scripts/preview.ts secrets
+        run: node scripts/release/preview.ts secrets
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
@@ -437,7 +437,7 @@ jobs:
           if [ "$state" != "open" ]; then echo "Pull request $PR_NUMBER is $state; not deploying a preview that cleanup would miss." >&2; exit 1; fi
       - name: Name the preview Worker
         id: name
-        run: node scripts/preview.ts name
+        run: node scripts/release/preview.ts name
       - name: Build the preview environment
         run: bun run build
         env:
@@ -455,11 +455,11 @@ jobs:
         id: url
         env:
           WORKER: ${{ steps.name.outputs.name }}
-        run: node scripts/preview.ts url "$RUNNER_TEMP/deploy.log" "$WORKER"
+        run: node scripts/release/preview.ts url "$RUNNER_TEMP/deploy.log" "$WORKER"
       - name: Smoke the preview and prove it serves the checked commit
         env:
           PREVIEW_URL: ${{ steps.url.outputs.url }}
-        run: node scripts/preview.ts smoke "$PREVIEW_URL" "$PREVIEW_SHA"
+        run: node scripts/release/preview.ts smoke "$PREVIEW_URL" "$PREVIEW_SHA"
       - name: Count deployments
         id: deployments
         env:
@@ -468,7 +468,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           bunx wrangler deployments list --name "$WORKER" --json > "$RUNNER_TEMP/deployments.json"
-          node scripts/preview.ts deployments "$RUNNER_TEMP/deployments.json"
+          node scripts/release/preview.ts deployments "$RUNNER_TEMP/deployments.json"
       - name: Exercise rollback on the preview Worker
         if: ${{ steps.deployments.outputs.deployments >= 2 }}
         env:
@@ -478,7 +478,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           bunx wrangler rollback --name "$WORKER" --message "Preview rollback exercise for $PREVIEW_SHA"
-          node scripts/preview.ts smoke "$PREVIEW_URL"
+          node scripts/release/preview.ts smoke "$PREVIEW_URL"
       - name: Redeploy the checked commit after the rollback exercise
         if: ${{ always() && steps.deployments.outputs.deployments >= 2 }}
         env:
@@ -488,7 +488,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           bunx wrangler deploy --config apps/web/dist/metro_scaffold/wrangler.json --name "$WORKER" --var "PREVIEW_SHA:$PREVIEW_SHA"
-          node scripts/preview.ts smoke "$PREVIEW_URL" "$PREVIEW_SHA"
+          node scripts/release/preview.ts smoke "$PREVIEW_URL" "$PREVIEW_SHA"
       - name: Record the preview in the job summary
         env:
           PREVIEW_URL: ${{ steps.url.outputs.url }}

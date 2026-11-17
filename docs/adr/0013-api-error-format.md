@@ -53,4 +53,4 @@ Revisit (b) at the first additive response change, or the first native client (i
 
 - `apps/api/src/error-format.test.ts` fails if this file is missing or loses its decisions, if 404, 405 or 500 stop being `application/json` envelopes, gain a `status` member or gain a `Cache-Control`.
 - `packages/contracts/src/contracts.test.ts` (tests named `METRO-53 ADR-0013 ...`) fails if a response with an extra field is accepted, if a wrong field type is accepted, or if the contract objects stop being `strict_object`. Relaxing any of these requires changing a test on purpose.
-- `scripts/adr.test.ts` checks the structure of this file.
+- `scripts/policy/adr.test.ts` checks the structure of this file.

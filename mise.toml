@@ -1,5 +1,5 @@
 # Locked installs (METRO-45): mise.lock records per-platform URLs and checksums; locked mode fails when a
-# download differs from the lock or a tool is missing from it. scripts/configuration.ts enforces these.
+# download differs from the lock or a tool is missing from it. scripts/gates/configuration.ts enforces these.
 [settings]
 lockfile = true
 lockfile_platforms = ["windows-x64", "linux-x64"]
