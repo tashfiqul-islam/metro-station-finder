@@ -18,6 +18,7 @@ import { buildRows, listStations, placesView } from "./model";
 import type { Row } from "./model";
 import { usePlaceSuggestions } from "./use-place-suggestions";
 import { usePlacesAvailable } from "./use-places-available";
+import { usePressHold } from "./use-press-hold";
 
 import "../../styles/components/fields.css";
 import "../../styles/components/search.css";
@@ -45,17 +46,6 @@ interface PlaceSearchProps {
   /** The rider typed, cleared or asked for the full list: the sheet opens to full so the list has room. */
   readonly onEngage: () => void;
 }
-
-/** Keys that change how a press is read but do not end it. */
-const MODIFIERS: ReadonlySet<string> = new Set([
-  "Shift",
-  "Control",
-  "Alt",
-  "Meta",
-  "AltGraph",
-  "CapsLock",
-  "Fn",
-]);
 
 /** Scrolls the active option into the list; a browser without the method just skips it. */
 function revealOption(id: string): void {
@@ -152,20 +142,28 @@ export function PlaceSearch({
     noMatch: searching && liveRows.length === 0 && !suggestions.pending,
     stationCount,
     placeCount: liveRows.length - stationCount,
+    available,
+    online,
   };
-  const [held, setHeld] = useState<typeof live | null>(null);
-  const shown = held ?? live;
-  const { rows } = shown;
-  const liveRef = useRef(live);
-  useEffect(() => {
-    liveRef.current = live;
+  // METRO-124: a press on a control outside the list blurs the input at its mousedown. Closing the list then
+  // collapses the content, the scrolled panel clamps its scroll position and the control slides away from under
+  // the pointer, so the click lands elsewhere. The close waits for the press to end; a blur with no press in
+  // progress (Tab, a programmatic focus) closes at once.
+  const hold = usePressHold(live, () => {
+    setOpen(false);
+    setActiveKey(null);
   });
+  const { shown } = hold;
+  const { rows } = shown;
+  /** The active row of a list: the key the rider moved to, else the first station while typing. */
+  const activeIn = (list: readonly Row[]): Row | undefined => {
+    if (!open || list.length === 0) return undefined;
+    return activeKey === undefined
+      ? list.find((row) => row.kind === "station")
+      : list.find((row) => row.key === activeKey);
+  };
   const expanded = open && rows.length > 0;
-  const activeRow = !expanded
-    ? undefined
-    : activeKey === undefined
-      ? rows.find((row) => row.kind === "station")
-      : rows.find((row) => row.key === activeKey);
+  const activeRow = activeIn(rows);
   const activeId = activeRow === undefined ? undefined : optionId(activeRow);
   const { noMatch } = shown;
   const noticeInList = expanded && shown.view === "unavailable";
@@ -201,63 +199,6 @@ export function PlaceSearch({
     };
     document.addEventListener("keydown", slash);
     return () => document.removeEventListener("keydown", slash);
-  }, []);
-
-  // METRO-124: a press on a control outside the list blurs the input at its mousedown. Closing the list then
-  // collapses the content, the scrolled panel clamps its scroll position and the control slides away from under
-  // the pointer, so the click lands elsewhere. The close waits for the press to end (mouseup, or a cancel or
-  // a key); a blur with no press in progress (Tab, a programmatic focus) closes at once.
-  const pressing = useRef(false);
-  const closeAfterPress = useRef(false);
-  useEffect(() => {
-    // Every way a press can end lets the list go: the release itself, a pointer that ended without a mouse
-    // release (a touch tap, a pen), a context menu that swallowed it, a cancelled press, a key, and the window
-    // losing focus or being hidden. Nothing else holds the list.
-    const unhold = (): void => {
-      pressing.current = false;
-      setHeld(null);
-    };
-    const press = (): void => {
-      pressing.current = true;
-      setHeld(liveRef.current);
-    };
-    const release = (event: Event): void => {
-      // A modifier held during the press is not the end of it.
-      if (event instanceof KeyboardEvent && MODIFIERS.has(event.key)) return;
-      unhold();
-      if (!closeAfterPress.current) return;
-      closeAfterPress.current = false;
-      setOpen(false);
-      setActiveKey(null);
-    };
-    // A pointer that ends is followed by its mouse release in the same task; waiting one task lets that release (and
-    // the click) land on the list as it was, and still ends a press that has none.
-    let ended: ReturnType<typeof setTimeout> | undefined;
-    const pointerUp = (event: Event): void => {
-      ended = setTimeout(() => release(event), 0);
-    };
-    const away = (): void => {
-      if (document.visibilityState === "hidden") unhold();
-    };
-    document.addEventListener("pointerdown", press, true);
-    document.addEventListener("pointerup", pointerUp, true);
-    document.addEventListener("mouseup", release, true);
-    document.addEventListener("pointercancel", release, true);
-    document.addEventListener("contextmenu", release, true);
-    document.addEventListener("keydown", release, true);
-    document.addEventListener("visibilitychange", away);
-    window.addEventListener("blur", unhold);
-    return () => {
-      clearTimeout(ended);
-      document.removeEventListener("pointerdown", press, true);
-      document.removeEventListener("pointerup", pointerUp, true);
-      document.removeEventListener("mouseup", release, true);
-      document.removeEventListener("pointercancel", release, true);
-      document.removeEventListener("contextmenu", release, true);
-      document.removeEventListener("keydown", release, true);
-      document.removeEventListener("visibilitychange", away);
-      window.removeEventListener("blur", unhold);
-    };
   }, []);
 
   function settle(next: string): void {
@@ -307,8 +248,7 @@ export function PlaceSearch({
   function onChange(event: ChangeEvent<HTMLInputElement>): void {
     const next = event.target.value;
     // New text (typed, pasted, dictated, autofilled) ends any hold: the list must follow the text.
-    pressing.current = false;
-    setHeld(null);
+    hold.release();
     latest.current += 1;
     setText(next);
     setTyped(true);
@@ -327,32 +267,35 @@ export function PlaceSearch({
       event.nativeEvent.keyCode === 229
     )
       return;
-    const count = rows.length;
+    // A key ends any hold, so it acts on the live list, never on rows that were only held.
+    const count = liveRows.length;
+    const liveActive = activeIn(liveRows);
+    const liveExpanded = open && count > 0;
     switch (event.key) {
       case "ArrowDown":
       case "ArrowUp": {
         if (count === 0) return;
         event.preventDefault();
         const down = event.key === "ArrowDown";
-        const index = activeRow === undefined ? -1 : rows.indexOf(activeRow);
+        const index = liveActive === undefined ? -1 : liveRows.indexOf(liveActive);
         const next = down ? (index + 1) % count : index <= 0 ? count - 1 : index - 1;
-        if (!expanded) {
+        if (!liveExpanded) {
           setOpen(true);
           onEngage();
-          setActiveKey(rows[down ? 0 : count - 1]?.key);
+          setActiveKey(liveRows[down ? 0 : count - 1]?.key);
         } else {
-          setActiveKey(rows[next]?.key);
+          setActiveKey(liveRows[next]?.key);
         }
         return;
       }
       case "Enter": {
-        if (activeRow === undefined) return;
+        if (liveActive === undefined) return;
         event.preventDefault();
-        chooseRow(activeRow, "keyboard");
+        chooseRow(liveActive, "keyboard");
         return;
       }
       case "Escape": {
-        if (expanded) {
+        if (liveExpanded) {
           event.preventDefault();
           setOpen(false);
           setActiveKey(null);
@@ -478,12 +421,10 @@ export function PlaceSearch({
           value={text}
           onChange={onChange}
           onKeyDown={onKeyDown}
-          onFocus={() => {
-            closeAfterPress.current = false;
-          }}
+          onFocus={hold.cancelClose}
           onBlur={() => {
-            if (pressing.current) {
-              closeAfterPress.current = true;
+            if (hold.isPressed()) {
+              hold.closeWhenReleased();
               return;
             }
             setOpen(false);
@@ -572,16 +513,18 @@ export function PlaceSearch({
       </div>
       {/* A status region that is always mounted. A notice that appears later (a failed load, the connection back) fills a region that was already there, which is the reliable way to be announced; one that is there from the first render is simply part of the page. The list shows the same words in the Places group's place while it is open, and then this copy is for screen readers only. */}
       <output
-        className={noticeInList || (available && !noticeUnder) ? "visually-hidden" : undefined}
+        className={
+          noticeInList || (shown.available && !noticeUnder) ? "visually-hidden" : undefined
+        }
       >
-        {available && !noticeUnder ? null : (
+        {shown.available && !noticeUnder ? null : (
           <div className="notice" data-tone="warn" data-size="sm">
             <span className="notice__chip" aria-hidden="true">
               <Icon icon={search} size={16} />
             </span>
             <div className="notice__body">
               <p className="notice__text">
-                {online ? nearestCopy.searchUnavailable : nearestCopy.searchNoConnection}
+                {shown.online ? nearestCopy.searchUnavailable : nearestCopy.searchNoConnection}
               </p>
             </div>
           </div>

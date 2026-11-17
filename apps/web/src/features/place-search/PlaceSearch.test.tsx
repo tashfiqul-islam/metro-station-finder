@@ -10,6 +10,7 @@ import type { MapsState, PlaceSearchService, PlaceSuggestion } from "../../adapt
 import { copy } from "../nearest-station/copy";
 import { DEBOUNCE_MS } from "./model";
 import { PlaceSearch, SEARCH_INPUT_ID } from "./PlaceSearch";
+import { TOUCH_FALLBACK_MS } from "./use-press-hold";
 
 const stations = baselineDataset.stations;
 
@@ -483,6 +484,12 @@ test("METRO-163 leaving the input closes the list", () => {
   expect(box().hasAttribute("aria-activedescendant")).toBe(false);
 });
 
+/** The end of a mouse press as a browser sends it: the pointer ends, then the mouse release. */
+function mouseRelease(target: Element, pointerId = 0): void {
+  fireEvent.pointerUp(target, { pointerId });
+  fireEvent.mouseUp(target);
+}
+
 /** A blur that arrives with a pointer press in progress (the press that blurs the input at its mousedown). */
 function pressOutsideThenBlur(): void {
   fireEvent.pointerDown(document.body);
@@ -494,7 +501,7 @@ test("METRO-124 a press that blurs the input keeps the list until the press ends
   type("mir");
   pressOutsideThenBlur();
   expect(box().getAttribute("aria-expanded")).toBe("true");
-  fireEvent.mouseUp(document.body);
+  mouseRelease(document.body);
   expect(box().getAttribute("aria-expanded")).toBe("false");
   expect(box().hasAttribute("aria-activedescendant")).toBe(false);
   type("mir");
@@ -541,11 +548,11 @@ test("METRO-124 a press that ends without a blur, or after focus came back, leav
   setup();
   type("mir");
   fireEvent.pointerDown(box());
-  fireEvent.mouseUp(box());
+  mouseRelease(box());
   expect(box().getAttribute("aria-expanded")).toBe("true");
   pressOutsideThenBlur();
   fireEvent.focus(box());
-  fireEvent.mouseUp(document.body);
+  mouseRelease(document.body);
   expect(box().getAttribute("aria-expanded")).toBe("true");
 });
 
@@ -982,7 +989,7 @@ test("METRO-124 places that arrive during a press wait for its release, so the c
   // The press is still on: the list is as it was.
   expect(names()).toEqual(["Mirpur 11", "Mirpur 10"]);
   expect(screen.queryByText("Google Maps")).toBeNull();
-  fireEvent.mouseUp(document.body);
+  mouseRelease(document.body);
   fireEvent.focus(box());
   key("ArrowDown");
   expect(names()).toEqual(["Mirpur 11", "Mirpur 10", "Sample Place A", "Sample Place B"]);
@@ -994,7 +1001,7 @@ test("METRO-124 places that arrived before a press stay in the list through it",
   expect(names()).toHaveLength(4);
   fireEvent.pointerDown(document.body);
   expect(names()).toHaveLength(4);
-  fireEvent.mouseUp(document.body);
+  mouseRelease(document.body);
   expect(names()).toHaveLength(4);
 });
 
@@ -1043,12 +1050,14 @@ async function pressWithPlacesWaiting(text = "mirp") {
   return service;
 }
 
-test("METRO-124 a press whose pointer ends with no mouse release still lets the list go, after the same task", async () => {
+test("METRO-124 a pointer that ends with no mouse events lets the list go only after the fallback, which is longer than a task", async () => {
   await pressWithPlacesWaiting();
   fireEvent.pointerUp(document.body);
-  // The mouse release and the click that follow land on the list as it was.
-  expect(names()).toHaveLength(2);
   await pause(0);
+  expect(names()).toHaveLength(2);
+  await pause(TOUCH_FALLBACK_MS - 1);
+  expect(names()).toHaveLength(2);
+  await pause(1);
   expect(names()).toHaveLength(4);
 });
 
@@ -1097,7 +1106,7 @@ test("METRO-124 places held back never turn into a false No match, and the statu
   expect(document.querySelector(".empty")).toBeNull();
   expect(feedback().textContent).not.toContain("No station matches");
   expect(feedback().textContent).toBe("0 stations");
-  fireEvent.mouseUp(document.body);
+  mouseRelease(document.body);
   fireEvent.focus(box());
   expect(feedback().textContent).toBe("0 stations, 2 places");
   expect(document.querySelector(".empty")).toBeNull();
@@ -1117,6 +1126,124 @@ test("METRO-124 an empty answer that arrives during a press shows its empty stat
   });
   expect(document.querySelector(".empty")).toBeNull();
   expect(feedback().textContent).toBe("0 stations");
-  fireEvent.mouseUp(document.body);
+  mouseRelease(document.body);
   expect(document.querySelector(".empty")?.textContent).toContain("No station matches that name.");
+});
+
+test("METRO-124 the real order pointerdown, pointerup, mouseup, click: the click lands while the list is as it was, and the list goes at the mouse release", async () => {
+  const service = fakeService();
+  const answer = deferred<readonly PlaceSuggestion[]>();
+  service.suggest.mockReturnValueOnce(answer.promise);
+  setup({ service });
+  type("mirp");
+  await pause(180);
+  const locate = screen.getByRole("button", { name: "Use my location" });
+  fireEvent.pointerDown(locate, { pointerId: 1 });
+  fireEvent.blur(box());
+  await act(async () => {
+    answer.resolve([PLACE_A, PLACE_B]);
+    await Promise.resolve();
+  });
+  fireEvent.pointerUp(locate, { pointerId: 1 });
+  // Between the pointer ending and the mouse release nothing has moved.
+  expect(names()).toHaveLength(2);
+  fireEvent.mouseUp(locate);
+  expect(box().getAttribute("aria-expanded")).toBe("false");
+  fireEvent.click(locate);
+  expect(callbacks.onLocate).toHaveBeenCalledTimes(1);
+});
+
+test("METRO-124 with two fingers down, one finger's release does not end the hold, and the second finger takes no new snapshot", async () => {
+  const service = fakeService();
+  const answer = deferred<readonly PlaceSuggestion[]>();
+  service.suggest.mockReturnValueOnce(answer.promise);
+  setup({ service });
+  type("mirp");
+  await pause(180);
+  fireEvent.pointerDown(document.body, { pointerId: 1 });
+  await act(async () => {
+    answer.resolve([PLACE_A, PLACE_B]);
+    await Promise.resolve();
+  });
+  // The second finger arrives after places did: it must not retake the snapshot.
+  fireEvent.pointerDown(document.body, { pointerId: 2 });
+  expect(names()).toHaveLength(2);
+  mouseRelease(document.body, 1);
+  expect(names()).toHaveLength(2);
+  await pause(TOUCH_FALLBACK_MS);
+  expect(names()).toHaveLength(2);
+  mouseRelease(document.body, 2);
+  expect(names()).toHaveLength(4);
+});
+
+test("METRO-124 a modifier key does not end a hold; any other key does", async () => {
+  await pressWithPlacesWaiting();
+  for (const modifier of ["Shift", "Control", "Alt", "Meta", "AltGraph", "CapsLock", "Fn"]) {
+    fireEvent.keyDown(document.body, { key: modifier });
+    expect(names()).toHaveLength(2);
+  }
+  fireEvent.keyDown(document.body, { key: "a" });
+  expect(names()).toHaveLength(4);
+});
+
+test("METRO-124 a cancelled pointer lets the held list go", async () => {
+  await pressWithPlacesWaiting();
+  fireEvent.pointerCancel(document.body);
+  expect(names()).toHaveLength(4);
+});
+
+test("METRO-124 the fallback timer goes with the field: nothing is left to fire after it unmounts", async () => {
+  await pressWithPlacesWaiting();
+  fireEvent.pointerUp(document.body);
+  expect(vi.getTimerCount()).toBeGreaterThan(0);
+  cleanup();
+  expect(vi.getTimerCount()).toBe(0);
+});
+
+test("METRO-124 a new press cancels the fallback of the one before", async () => {
+  await pressWithPlacesWaiting();
+  fireEvent.pointerUp(document.body);
+  fireEvent.pointerDown(document.body);
+  await pause(TOUCH_FALLBACK_MS * 2);
+  expect(names()).toHaveLength(2);
+  mouseRelease(document.body);
+  expect(names()).toHaveLength(4);
+});
+
+test("METRO-124 places going unavailable or the connection dropping during a press change nothing on screen until the release", async () => {
+  const service = fakeService();
+  const view = setup({ service });
+  await typeAndWait("mirp");
+  fireEvent.pointerDown(document.body);
+  view.update({ service, status: "unavailable" });
+  expect(document.querySelector("output .notice")).toBeNull();
+  expect(names()).toHaveLength(4);
+  mouseRelease(document.body);
+  expect(document.querySelector("output .notice, [role=listbox] .notice")).not.toBeNull();
+  cleanup();
+  vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+  const second = setup({ service });
+  await typeAndWait("mirp");
+  fireEvent.pointerDown(document.body);
+  vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+  second.update({ service });
+  expect(screen.queryByText(copy.searchNoConnection)).toBeNull();
+  mouseRelease(document.body);
+  expect(screen.getByText(copy.searchNoConnection)).toBeTruthy();
+});
+
+test("METRO-124 a key during a hold acts on the live list, never on rows that were only held", async () => {
+  await pressWithPlacesWaiting();
+  expect(names()).toEqual(["Mirpur 11", "Mirpur 10"]);
+  key("ArrowUp");
+  // From the first row, ArrowUp wraps to the last of the live list (a place), not of the held one.
+  expect(activeName()).toBe("Sample Place B");
+});
+
+test("METRO-124 a blur that came with a press still closes the list when the window loses focus", async () => {
+  await pressWithPlacesWaiting();
+  fireEvent.blur(box());
+  expect(box().getAttribute("aria-expanded")).toBe("true");
+  fireEvent(window, new Event("blur"));
+  expect(box().getAttribute("aria-expanded")).toBe("false");
 });
