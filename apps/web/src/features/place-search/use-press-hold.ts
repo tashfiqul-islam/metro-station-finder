@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 /** Keys that change how a press is read but do not end it. */
 const MODIFIERS: ReadonlySet<string> = new Set([
@@ -20,6 +20,13 @@ const MODIFIERS: ReadonlySet<string> = new Set([
  */
 export const TOUCH_FALLBACK_MS = 500;
 
+/**
+ * The longest a hold can last, from the first pointer down. Longer than any real press, short enough that a lost
+ * release (a pointer whose up and cancel never came: a detached target, a scrollbar press) cannot freeze the list.
+ * When it passes, the hold ends whatever pointers are thought to be down, with the deferred close.
+ */
+export const HOLD_MAX_MS = 3000;
+
 export interface PressHold<T> {
   /** The state to draw: the one of the moment a press began while one is on, else the live one. */
   readonly shown: T;
@@ -38,29 +45,34 @@ export interface PressHold<T> {
  * press on a control and its release would move the control from under the pointer and the release would land
  * elsewhere, so what is drawn stays as it was when the press began and the newest state shows when it ends.
  *
- * One rule ends a hold, in every path: a hold ends when no pointer is down and one of these comes: the mouse
- * release or click, a cancelled pointer, or the fallback timer after a touch or pen pointer ended. A hold also
- * ends at once, whatever pointers are down, on a context menu, a key that is not a modifier, the window losing
- * focus, the page being hidden, and `release()`. Only the first pointer down takes the snapshot; a second finger
- * never retakes it and its release never ends the first finger's hold.
+ * What ends a hold: the click (listened to after the click handlers ran, so the list changes only after the press
+ * has done its work); a mouse release without a click (a drag off the control) or a pointer that ended with no mouse
+ * events at all (touch, pen) after `TOUCH_FALLBACK_MS`; a cancelled pointer; and, whatever else is going on, at once
+ * on a context menu, a key that is not a modifier, the window losing focus, the page being hidden and `release()`,
+ * and after `HOLD_MAX_MS` as an absolute bound. A mouse release or a click proves the gesture is over, so it also
+ * forgets pointers whose up never came. Only the first pointer down takes the snapshot; a second finger never
+ * retakes it, and one finger lifting while another is down does not end the hold. Every end runs the deferred close.
  */
 export function usePressHold<T>(live: T, onClose: () => void): PressHold<T> {
   const [held, setHeld] = useState<T | null>(null);
   const liveRef = useRef(live);
   const closeRef = useRef(onClose);
-  useEffect(() => {
+  // Layout effect: a pointer down right after a render must see that render, never a stale one.
+  useLayoutEffect(() => {
     liveRef.current = live;
     closeRef.current = onClose;
   });
   const pointers = useRef(new Set<number>());
   const active = useRef(false);
   const closing = useRef(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const fallback = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const cap = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  const end = useCallback((force: boolean): void => {
-    clearTimeout(timer.current);
-    if (force) pointers.current.clear();
-    if (pointers.current.size > 0) return;
+  /** The one place a hold ends: every timer, every pointer and the snapshot go, and the deferred close runs. */
+  const finish = useCallback((): void => {
+    clearTimeout(fallback.current);
+    clearTimeout(cap.current);
+    pointers.current.clear();
     active.current = false;
     setHeld(null);
     if (!closing.current) return;
@@ -69,58 +81,68 @@ export function usePressHold<T>(live: T, onClose: () => void): PressHold<T> {
   }, []);
 
   useEffect(() => {
+    const armFallback = (): void => {
+      clearTimeout(fallback.current);
+      fallback.current = setTimeout(finish, TOUCH_FALLBACK_MS);
+    };
     const down = (event: PointerEvent): void => {
       pointers.current.add(event.pointerId);
-      clearTimeout(timer.current);
+      clearTimeout(fallback.current);
       if (active.current) return;
       active.current = true;
+      cap.current = setTimeout(finish, HOLD_MAX_MS);
       setHeld(liveRef.current);
     };
     const up = (event: PointerEvent): void => {
       pointers.current.delete(event.pointerId);
-      if (pointers.current.size > 0) return;
-      clearTimeout(timer.current);
-      timer.current = setTimeout(() => end(false), TOUCH_FALLBACK_MS);
+      if (pointers.current.size === 0) armFallback();
     };
     const cancel = (event: PointerEvent): void => {
       pointers.current.delete(event.pointerId);
-      end(false);
+      if (pointers.current.size === 0) finish();
     };
-    const soft = (): void => end(false);
-    const hard = (): void => end(true);
+    const mouseUp = (): void => {
+      pointers.current.clear();
+      armFallback();
+    };
+    const click = (): void => {
+      pointers.current.clear();
+      finish();
+    };
     const key = (event: KeyboardEvent): void => {
-      if (!MODIFIERS.has(event.key)) end(true);
+      if (!MODIFIERS.has(event.key)) finish();
     };
     const away = (): void => {
-      if (document.visibilityState === "hidden") end(true);
+      if (document.visibilityState === "hidden") finish();
     };
     document.addEventListener("pointerdown", down, true);
     document.addEventListener("pointerup", up, true);
     document.addEventListener("pointercancel", cancel, true);
-    document.addEventListener("mouseup", soft, true);
-    document.addEventListener("click", soft, true);
-    document.addEventListener("contextmenu", hard, true);
+    document.addEventListener("mouseup", mouseUp, true);
+    document.addEventListener("click", click);
+    document.addEventListener("contextmenu", finish, true);
     document.addEventListener("keydown", key, true);
     document.addEventListener("visibilitychange", away);
-    window.addEventListener("blur", hard);
+    window.addEventListener("blur", finish);
     return () => {
-      clearTimeout(timer.current);
+      clearTimeout(fallback.current);
+      clearTimeout(cap.current);
       document.removeEventListener("pointerdown", down, true);
       document.removeEventListener("pointerup", up, true);
       document.removeEventListener("pointercancel", cancel, true);
-      document.removeEventListener("mouseup", soft, true);
-      document.removeEventListener("click", soft, true);
-      document.removeEventListener("contextmenu", hard, true);
+      document.removeEventListener("mouseup", mouseUp, true);
+      document.removeEventListener("click", click);
+      document.removeEventListener("contextmenu", finish, true);
       document.removeEventListener("keydown", key, true);
       document.removeEventListener("visibilitychange", away);
-      window.removeEventListener("blur", hard);
+      window.removeEventListener("blur", finish);
     };
-  }, [end]);
+  }, [finish]);
 
   return {
     shown: held ?? live,
     isPressed: () => active.current,
-    release: () => end(true),
+    release: finish,
     closeWhenReleased: () => {
       closing.current = true;
     },
