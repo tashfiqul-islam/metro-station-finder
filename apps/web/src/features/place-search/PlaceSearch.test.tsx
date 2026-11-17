@@ -1102,3 +1102,21 @@ test("METRO-124 places held back never turn into a false No match, and the statu
   expect(feedback().textContent).toBe("0 stations, 2 places");
   expect(document.querySelector(".empty")).toBeNull();
 });
+
+test("METRO-124 an empty answer that arrives during a press shows its empty state only after the press, so nothing moves under the pointer", async () => {
+  const service = fakeService();
+  const answer = deferred<readonly PlaceSuggestion[]>();
+  service.suggest.mockReturnValueOnce(answer.promise);
+  setup({ service });
+  type("Nowhere Town");
+  await pause(180);
+  fireEvent.pointerDown(document.body);
+  await act(async () => {
+    answer.resolve([]);
+    await Promise.resolve();
+  });
+  expect(document.querySelector(".empty")).toBeNull();
+  expect(feedback().textContent).toBe("0 stations");
+  fireEvent.mouseUp(document.body);
+  expect(document.querySelector(".empty")?.textContent).toContain("No station matches that name.");
+});
