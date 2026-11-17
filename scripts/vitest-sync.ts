@@ -22,6 +22,15 @@ function lockVersion(table: Record<string, unknown>, key: string): string | unde
   return entry[0].slice(entry[0].lastIndexOf("@") + 1);
 }
 
+/** The version of the first of these lock keys that exists (nearest first), or undefined. */
+function firstVersion(table: Record<string, unknown>, keys: readonly string[]): string | undefined {
+  for (const key of keys) {
+    const version = lockVersion(table, key);
+    if (version !== undefined) return version;
+  }
+  return undefined;
+}
+
 /** The `vitest` peer range in the plugin's `bun.lock` entry (`[id, registry, { peerDependencies }, integrity]`). */
 function pluginVitestPeer(table: Record<string, unknown>): string | undefined {
   const entry = table[PLUGIN];
@@ -78,17 +87,30 @@ export function checkVitestSync(input: VitestSyncInput): string[] {
   else if (peer === undefined) problems.push(`bun.lock lists no vitest peer range for ${PLUGIN}`);
   else if (vitest !== undefined && !Bun.semver.satisfies(vitest, peer))
     problems.push(`vitest ${vitest} is outside the peer range "${peer}" that ${PLUGIN} declares`);
-  const fromMiniflare = lockVersion(table, `${PLUGIN}/miniflare/workerd`);
-  const fromWrangler = lockVersion(table, `${PLUGIN}/wrangler/workerd`);
+  // Bun lists a copy under the plugin only when the root one does not satisfy the plugin's pin; otherwise the
+  // plugin uses the root copy (METRO-164: plugin 1.8.2 pins the repository's wrangler, so only its miniflare is
+  // nested). Resolve the way Bun does, nearest entry first, so both layouts are held to the same rule.
+  const pluginWranglerNested = lockVersion(table, `${PLUGIN}/wrangler`) !== undefined;
+  const fromMiniflare = firstVersion(table, [
+    `${PLUGIN}/miniflare/workerd`,
+    `${PLUGIN}/workerd`,
+    "workerd",
+  ]);
+  const fromWrangler = firstVersion(
+    table,
+    pluginWranglerNested
+      ? [`${PLUGIN}/wrangler/workerd`, `${PLUGIN}/workerd`, "workerd"]
+      : ["wrangler/workerd", "workerd"],
+  );
   if (fromMiniflare === undefined || fromWrangler === undefined)
     problems.push(
-      `bun.lock must resolve workerd under both ${PLUGIN}/miniflare and ${PLUGIN}/wrangler (nested entries missing)`,
+      `bun.lock must resolve workerd for both the ${PLUGIN} miniflare and its wrangler (no entry found)`,
     );
   else if (fromMiniflare !== fromWrangler)
     problems.push(
       `${PLUGIN} resolves two workerd versions: miniflare ${fromMiniflare}, wrangler ${fromWrangler}`,
     );
-  const pluginWrangler = lockVersion(table, `${PLUGIN}/wrangler`);
+  const pluginWrangler = firstVersion(table, [`${PLUGIN}/wrangler`, "wrangler"]);
   const rootWrangler = lockVersion(table, "wrangler");
   if (pluginWrangler === undefined || rootWrangler === undefined)
     problems.push("bun.lock must resolve wrangler for the repository and for the plugin");

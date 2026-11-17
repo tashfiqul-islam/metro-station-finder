@@ -28,6 +28,7 @@ Dependencies, tools and Actions were pinned by hand with no update automation, n
 ## Notes
 
 - 2026-11-05: The legacy Google Maps API key is deleted (confirmed by the owner).
+- 2026-11-17 (METRO-164): A third standing exception. `bun audit` reports GHSA-fc5q-39xc-vjpf (high, ReDoS through repeated extglobs) against `picomatch` 4.0.7, which is the newest release and has no patched version. `scan:dependencies` runs `bun audit --ignore=GHSA-fc5q-39xc-vjpf`, one exact advisory ID and nothing broader. `picomatch` is reached only through dev tools (`vite`, `vitest`, `knip`, `dependency-cruiser`, `@rolldown/plugin-babel`) with patterns written in this repository, so the exposure is Inferred to be none at runtime: it is not in the Worker or the web bundle (Repo-verified: a search of the built `apps/web/dist` finds no `picomatch`). Decided by the coordinator under the owner's standing delegation; the owner can reverse it. Remove the flag when a patched release is published, and re-check at every dependency update.
 
 ## Alternatives considered
 
