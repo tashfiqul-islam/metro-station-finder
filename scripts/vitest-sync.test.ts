@@ -33,6 +33,24 @@ function setLockVersion(input: VitestSyncInput, key: string, version: string): v
   entry[0] = `${name}@${version}`;
 }
 
+function lockedVersion(input: VitestSyncInput, key: string): string {
+  const entry = packages(input)[key];
+  if (!Array.isArray(entry)) throw new Error(`bun.lock has no ${key}`);
+  const id = String(entry[0]);
+  return id.slice(id.lastIndexOf("@") + 1);
+}
+
+/**
+ * The nested layout, on an edited copy: a copy of a root entry listed under the plugin, which Bun does when the
+ * root copy does not satisfy the plugin's pin (the lock had this for wrangler and workerd before plugin 1.8).
+ */
+function nest(input: VitestSyncInput, root: string, nested: string, version?: string): void {
+  const entry = packages(input)[root];
+  if (!Array.isArray(entry)) throw new Error(`bun.lock has no ${root}`);
+  packages(input)[nested] = structuredClone(entry);
+  if (version !== undefined) setLockVersion(input, nested, version);
+}
+
 function devDependencies(input: VitestSyncInput): Record<string, unknown> {
   const dev = input.manifest["devDependencies"];
   if (!isRecord(dev)) throw new Error("no devDependencies");
@@ -43,13 +61,45 @@ test("METRO-77 the repository's Vitest, coverage, plugin, miniflare and workerd 
   expect(checkVitestSync(await realInput())).toEqual([]);
 });
 
-test("METRO-77 control: the real lock really carries the plugin's own miniflare and wrangler", async () => {
-  const table = packages(await realInput());
-  for (const key of [
-    "@cloudflare/vitest-plugin/miniflare/workerd",
-    "@cloudflare/vitest-plugin/wrangler/workerd",
-  ])
-    expect(Object.hasOwn(table, key)).toBe(true);
+test("METRO-77 control: the real lock has the plugin's miniflare, a workerd and the lock entries declare versions to check", async () => {
+  const input = await realInput();
+  const table = packages(input);
+  // Layout independent (METRO-164): whether Bun nests a copy under the plugin or shares the root one, the plugin's
+  // miniflare entry and a root workerd exist, and the plugin entry declares the wrangler the gate compares.
+  expect(Object.hasOwn(table, "@cloudflare/vitest-plugin/miniflare")).toBe(true);
+  expect(Object.hasOwn(table, "workerd")).toBe(true);
+  const plugin = table["@cloudflare/vitest-plugin"];
+  const meta: unknown = Array.isArray(plugin) ? plugin[2] : undefined;
+  const dependencies = isRecord(meta) ? meta["dependencies"] : undefined;
+  expect(isRecord(dependencies) ? dependencies["wrangler"] : undefined).toBe(
+    lockedVersion(input, "wrangler"),
+  );
+});
+
+test("METRO-164 rejects a root workerd that drifted from the workerd the plugin's miniflare and wrangler declare", async () => {
+  const input = await realInput();
+  setLockVersion(input, "workerd", "1.20260101.0");
+  const message = checkVitestSync(input).join("\n");
+  expect(message).toContain("@cloudflare/vitest-plugin/miniflare declares workerd");
+  expect(message).toContain("wrangler declares workerd");
+  expect(message).toContain("but bun.lock resolves 1.20260101.0");
+});
+
+test("METRO-164 rejects a root wrangler that drifted from the wrangler the plugin pins", async () => {
+  const input = await realInput();
+  const pinned = lockedVersion(input, "wrangler");
+  setLockVersion(input, "wrangler", "4.170.0");
+  expect(checkVitestSync(input)).toContain(
+    `@cloudflare/vitest-plugin declares wrangler ${pinned} but bun.lock resolves 4.170.0`,
+  );
+});
+
+test("METRO-164 the nested layout is held to the same rule and passes when its workerd versions agree", async () => {
+  const input = await realInput();
+  nest(input, "workerd", "@cloudflare/vitest-plugin/miniflare/workerd");
+  nest(input, "workerd", "@cloudflare/vitest-plugin/wrangler/workerd");
+  nest(input, "wrangler", "@cloudflare/vitest-plugin/wrangler");
+  expect(checkVitestSync(input)).toEqual([]);
 });
 
 test("METRO-77 rejects vitest and @vitest/coverage-istanbul at different versions", async () => {
@@ -86,8 +136,9 @@ test("METRO-80 rejects a lock whose plugin entry has lost its vitest peer range"
 test("METRO-80 rejects a lock entry for a different plugin version than the manifest pin", async () => {
   const input = await realInput();
   setLockVersion(input, "@cloudflare/vitest-plugin", "1.4.0");
+  const pin = String(devDependencies(input)["@cloudflare/vitest-plugin"]);
   expect(checkVitestSync(input)).toContain(
-    "bun.lock resolves @cloudflare/vitest-plugin 1.4.0 but package.json pins 1.5.0",
+    `bun.lock resolves @cloudflare/vitest-plugin 1.4.0 but package.json pins ${pin}`,
   );
 });
 
@@ -113,30 +164,41 @@ test("METRO-77 rejects a missing Vitest package", async () => {
 
 test("METRO-77 rejects a plugin miniflare and wrangler that resolve different workerd versions", async () => {
   const input = await realInput();
-  setLockVersion(input, "@cloudflare/vitest-plugin/wrangler/workerd", "1.20260101.0");
-  expect(checkVitestSync(input).join("\n")).toContain("workerd");
+  nest(input, "wrangler", "@cloudflare/vitest-plugin/wrangler");
+  nest(input, "workerd", "@cloudflare/vitest-plugin/wrangler/workerd", "1.20260101.0");
+  expect(checkVitestSync(input)).toContain(
+    `@cloudflare/vitest-plugin resolves two workerd versions: miniflare ${lockedVersion(input, "workerd")}, wrangler 1.20260101.0`,
+  );
 });
 
-test("METRO-77 rejects a lock that has lost the plugin's workerd entries", async () => {
+test("METRO-164 rejects a plugin miniflare nested on a different workerd than the plugin's wrangler", async () => {
   const input = await realInput();
-  delete packages(input)["@cloudflare/vitest-plugin/miniflare/workerd"];
-  expect(checkVitestSync(input).join("\n")).toContain("workerd");
+  nest(input, "workerd", "@cloudflare/vitest-plugin/miniflare/workerd", "1.20260101.0");
+  expect(checkVitestSync(input).join("\n")).toContain("resolves two workerd versions");
+});
+
+test("METRO-77 rejects a lock that has lost the workerd the plugin resolves", async () => {
+  const input = await realInput();
+  delete packages(input)["workerd"];
+  expect(checkVitestSync(input).join("\n")).toContain(
+    "bun.lock must resolve workerd for both the @cloudflare/vitest-plugin miniflare and its wrangler",
+  );
 });
 
 test("METRO-77 rejects a plugin wrangler on a different minor than the repository's wrangler", async () => {
   const input = await realInput();
-  setLockVersion(input, "@cloudflare/vitest-plugin/wrangler", "4.99.0");
-  expect(checkVitestSync(input).join("\n")).toContain("wrangler");
+  nest(input, "wrangler", "@cloudflare/vitest-plugin/wrangler", "4.99.0");
+  expect(checkVitestSync(input).join("\n")).toContain(
+    "plugin wrangler 4.99.0 and repository wrangler",
+  );
 });
 
-test("METRO-92 rejects a lock that resolves no wrangler for the plugin or for the repository", async () => {
-  for (const key of ["@cloudflare/vitest-plugin/wrangler", "wrangler"]) {
-    const input = await realInput();
-    delete packages(input)[key];
-    expect(checkVitestSync(input)).toContain(
-      "bun.lock must resolve wrangler for the repository and for the plugin",
-    );
-  }
+test("METRO-92 rejects a lock that resolves no wrangler for the repository and so none for the plugin", async () => {
+  const input = await realInput();
+  delete packages(input)["wrangler"];
+  expect(checkVitestSync(input)).toContain(
+    "bun.lock must resolve wrangler for the repository and for the plugin",
+  );
 });
 
 test("METRO-92 a Renovate vitest group whose package names are not a list names no members", async () => {
